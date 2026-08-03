@@ -1,0 +1,136 @@
+{% load humanize %}
+{% load custom_filter %}
+<div class="watermark">{{ nombre_empresa }}</div>
+
+<div class="header-container">
+    <div class="header-left">
+        {% if logo_data %}
+            <img src="data:image/png;base64,{{ logo_data }}" class="logo-img">
+        {% endif %}
+    </div>
+
+    <div class="header-center">
+        <h1>{{ nombre_empresa }}</h1>
+
+        <div class="header-subtitle-row">
+            <h2>{{ factura_eslogan }}</h2>
+        </div>
+
+        <div class="header-subtitle-row-">
+            <h2><strong>Proveedor: </strong>{{ factura_proveedor }}</h2>
+            <span class="tech-brand">TECHRG</span>
+        </div>
+    </div>
+
+    <div class="header-right">
+        <div class="header-right-stack">
+            <span class="invoice-number-chip">
+                <span class="invoice-number-label">Factura N°</span>
+                <strong>000{{ pedido.id }}</strong>
+            </span>
+            <div class="contact-card">
+                <b class="nit">NIT: {{ factura_nit }}</b>
+                <b>{{ factura_proveedor }}</b>
+                <b>Cel: <span class="phone-highlight">{{ factura_telefono }}</span></b>
+                <span class="address-text">
+                    {{ factura_direccion }}<br>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="order-info-bar">
+    <div class="info-group info-group-cliente">
+        <span class="info-label">Cliente / Razón Social</span>
+        <span class="info-value">{{ pedido.cliente.nombre_cliente|title }}</span>
+    </div>
+
+    <div class="info-group info-group-fecha">
+        <span class="info-label">Fecha de entrega: </span>
+        <span class="info-value">{{ fecha_entrega|date:"d/m/Y" }}</span>
+    </div>
+    <div class="info-group info-group-direccion">
+        <span class="info-label">Direccion de entrega: </span>
+        <span class="info-value">{{ pedido.cliente.direccion_cliente|lower }}</span>
+    </div>
+</div>
+
+<div class="columns-wrapper">
+    <div class="main-columns-container">
+        {% for columna in columnas_normales %}
+        <div class="column">
+            {% for cat, items in columna %}
+            <div class="category-section">
+                <div class="category-header">{{ cat.nombre_categoria }}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Artículo</th>
+                            <th style="text-align: center;">Cant.</th>
+                            <th style="text-align: right;">Precio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td class="text-bold">
+                                {{ item.articulo }}
+                                <span style="font-weight:400; color:#64748b;">{{ item.pres }}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                {{ item.cant|fraction }}<span class="unit-pill">{{ item.unidad|lower }}</span>
+                            </td>
+                            <td style="text-align: right;" class="text-bold">
+                                $ {{ item.subtotal|floatformat:0|intcomma }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if categorias_especiales %}
+    <div class="category-section" style="margin-top: 10px; width: 100%;">
+        <div class="category-header">Otros Productos</div>
+
+        <div class="column-split-container">
+            {% for cat, items in categorias_especiales.items %}
+            {% for item in items %}
+            <div class="item-row-wrapper" style="border-bottom: 1px solid #f1f5f9;">
+                <table style="width: 100%; border: none;">
+                    <tbody>
+                        <tr>
+                            <td class="text-bold" style="width: 55%; border:none;">
+                                {{ item.articulo }} <span style="font-weight:400; color:#64748b;">{{ item.pres }}</span>
+                                <br><small style="color: #94a3b8; font-weight: 400;">{{ cat.nombre_categoria }}</small>
+                            </td>
+                            <td style="text-align: center; width: 20%; border:none;">
+                                {{ item.cant|fraction }}<span class="unit-pill">{{ item.unidad|lower }}</span>
+                            </td>
+                            <td style="text-align: right; width: 25%; border:none;" class="text-bold">
+                                ${{ item.subtotal|floatformat:0|intcomma }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+<div class="footer-container">
+    <div class="legal-notice">
+        <em>¡Gracias por preferir la calidad de La Gran Cosecha!</em>
+    </div>
+    <div class="total-card">
+        <span class="total-label">Total Pedido</span>
+        <span class="total-price">$ {{ pedido.total_pedido|floatformat:0|intcomma }}</span>
+    </div>
+</div>

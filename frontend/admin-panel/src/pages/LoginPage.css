@@ -1,0 +1,283 @@
+.login-page {
+  color: var(--dark);
+}
+
+.login-page .split-screen {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* --- Panel izquierdo: branding (mismo tratamiento que el hero de la tienda) --- */
+.login-page .left-panel {
+  flex: 1.2;
+  position: relative;
+  overflow: hidden;
+  color: white;
+  background:
+    radial-gradient(1100px 480px at 15% 0%, rgba(34, 197, 94, 0.32), transparent 60%),
+    radial-gradient(850px 480px at 90% 100%, rgba(245, 158, 11, 0.24), transparent 55%),
+    linear-gradient(135deg, #071a10, var(--verde-osc) 60%, var(--verde));
+  padding: 60px;
+  display: flex;
+  align-items: center;
+}
+
+.login-page .blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.5;
+  pointer-events: none;
+  animation: lp-flotar 9s ease-in-out infinite;
+  z-index: 0;
+}
+.login-page .blob.b1 { width: 320px; height: 320px; background: var(--verde-400); top: -80px; left: -60px; }
+.login-page .blob.b2 { width: 260px; height: 260px; background: var(--amber); bottom: -70px; right: 5%; animation-delay: 2s; }
+@keyframes lp-flotar {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-18px) translateX(12px); }
+}
+
+.login-page .content-wrapper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100%;
+  width: 100%;
+}
+
+.login-page .brand-identity {
+  border-left: 2px solid rgba(255, 255, 255, 0.2);
+  padding-left: 30px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-page .logo-box {
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 15px;
+  border-radius: var(--radio-sm);
+  display: inline-block;
+  width: fit-content;
+}
+
+.login-page .logo-box img {
+  max-width: 160px;
+  height: auto;
+  display: block;
+}
+
+.login-page .divider {
+  width: 42px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--amber);
+  margin: 6px 0 14px;
+}
+
+.login-page .system-name {
+  color: white;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.login-page .system-name span {
+  color: var(--amber);
+  font-weight: 700;
+}
+
+.login-page .legal-notice {
+  position: relative;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.75rem;
+  max-width: 320px;
+}
+
+/* --- Panel derecho: formulario --- */
+.login-page .right-panel {
+  flex: 0.8;
+  background-color: var(--fondo);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-page .login-container {
+  width: 100%;
+  max-width: 440px;
+  padding: 40px;
+}
+
+.login-page .form-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--dark);
+}
+
+.login-page .form-header p {
+  color: var(--gris);
+  font-size: 0.95rem;
+  margin: 0 0 40px;
+}
+
+.login-page .fade-in {
+  animation: lp-fade-in 0.4s ease-in-out;
+}
+
+@keyframes lp-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Inputs --- */
+.login-page .input-container {
+  margin-bottom: 25px;
+  position: relative;
+}
+
+.login-page .input-container label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--gris);
+  margin-bottom: 8px;
+}
+
+.login-page .input-container input {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  background: var(--superficie);
+  color: var(--dark);
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.login-page .input-container input:focus {
+  outline: none;
+  border-color: var(--verde);
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.14);
+}
+
+/* --- OTP --- */
+.login-page .otp-wrapper {
+  margin-top: 10px;
+}
+
+.login-page .otp-inputs {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+.login-page .otp-field {
+  width: 100%;
+  max-width: 50px;
+  height: 60px;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  background: var(--superficie);
+  color: var(--dark);
+  transition: all 0.2s;
+}
+
+.login-page .otp-field:focus {
+  border-color: var(--verde);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.14);
+  transform: translateY(-2px);
+}
+
+.login-page .resend-text {
+  text-align: center;
+  font-size: 0.85rem;
+  margin-top: 25px;
+  color: var(--gris);
+}
+
+.login-page .resend-text a {
+  color: var(--verde-osc);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* --- Botón --- */
+.login-page .btn-submit {
+  width: 100%;
+  padding: 16px;
+  background-color: var(--verde);
+  color: white;
+  border: none;
+  border-radius: var(--radio-sm);
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-page .btn-submit:hover:not(:disabled) {
+  background-color: var(--verde-osc);
+  box-shadow: 0 4px 12px rgba(15, 81, 50, 0.25);
+}
+
+.login-page .btn-submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login-page .btn-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* --- Mensajes --- */
+.login-page .error-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: var(--rojo);
+  padding: 0.7rem 1rem;
+  border-radius: var(--radio-sm);
+  margin-bottom: 25px;
+  font-size: 0.88rem;
+}
+
+.login-page .ok-box {
+  background: var(--verde-claro);
+  border: 1px solid #a7f3d0;
+  color: var(--verde-osc);
+  padding: 0.7rem 1rem;
+  border-radius: var(--radio-sm);
+  margin-bottom: 25px;
+  font-size: 0.88rem;
+}
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+  .login-page .left-panel { display: none; }
+  .login-page .right-panel { flex: 1; }
+  .login-page .login-container { max-width: 480px; }
+}
+
+@media (max-width: 480px) {
+  .login-page .otp-inputs { gap: 4px; }
+  .login-page .otp-field { height: 50px; font-size: 1.2rem; }
+}

@@ -1,0 +1,450 @@
+{% extends 'ui/pages/Dashboard/ui/Admin-Dashboard.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="p-4 lg:p-8">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- Header -->
+        <div
+            class="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">
+                    Biblioteca Multimedia
+                </h1>
+                <p class="text-slate-500 text-sm mt-1">
+                    Administra imágenes, videos y documentos de La Gran Cosecha.
+                </p>
+            </div>
+
+            <button
+                class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition text-white px-5 py-3 rounded-2xl text-sm font-semibold shadow">
+                + Cargar contenido
+            </button>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-5">
+                <p class="text-slate-500 text-sm">
+                    Total archivos
+                </p>
+                <h3 class="text-3xl font-bold text-slate-900 mt-2">
+                    1,254
+                </h3>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-5">
+                <p class="text-slate-500 text-sm">
+                    Imágenes
+                </p>
+                <h3 class="text-3xl font-bold text-emerald-600 mt-2">
+                    845
+                </h3>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-5">
+                <p class="text-slate-500 text-sm">
+                    Videos
+                </p>
+                <h3 class="text-3xl font-bold text-red-600 mt-2">
+                    72
+                </h3>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-5">
+                <p class="text-slate-500 text-sm">
+                    Documentos
+                </p>
+                <h3 class="text-3xl font-bold text-indigo-600 mt-2">
+                    337
+                </h3>
+            </div>
+
+        </div>
+
+        <!-- Buscador y filtros -->
+        <div class="bg-white rounded-3xl border border-slate-200 p-5">
+
+            <div class="flex flex-col lg:flex-row gap-4">
+
+                <div class="flex-1">
+                    <input type="text" placeholder="Buscar archivos..."
+                        class="w-full border border-slate-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <select
+                    class="border border-slate-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option>Todos los tipos</option>
+                    <option>Imágenes</option>
+                    <option>Videos</option>
+                    <option>Documentos</option>
+                </select>
+
+                <select
+                    class="border border-slate-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option>Más recientes</option>
+                    <option>Más antiguos</option>
+                    <option>Nombre A-Z</option>
+                    <option>Nombre Z-A</option>
+                </select>
+
+            </div>
+
+        </div>
+
+        <!-- Carpetas -->
+        <div class="space-y-4">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-800">
+                        Carpetas
+                    </h2>
+                    <p class="text-sm text-slate-500">
+                        Organiza tu contenido multimedia por categorías.
+                    </p>
+                </div>
+
+                <button
+                    class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition">
+
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+
+                    Crear carpeta
+                </button>
+
+            </div>
+
+            <!-- Grid -->
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+                <!-- Carpeta -->
+                <div
+                    class="group bg-white border border-slate-200 rounded-3xl p-5 hover:border-indigo-300 hover:shadow-lg transition cursor-pointer">
+
+                    <div class="flex items-start justify-between">
+
+                        <div class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-amber-600" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                            </svg>
+
+                        </div>
+
+                        <button
+                            class="opacity-0 group-hover:opacity-100 transition text-slate-400 hover:text-slate-700">
+                            ⋮
+                        </button>
+
+                    </div>
+
+                    <div class="mt-4">
+                        <h3 class="font-semibold text-slate-900">
+                            Productos
+                        </h3>
+
+                        <p class="text-sm text-slate-500 mt-1">
+                            320 archivos
+                        </p>
+
+                        <p class="text-xs text-slate-400 mt-3">
+                            Actualizada hace 2 días
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Carpeta -->
+                <div
+                    class="group bg-white border border-slate-200 rounded-3xl p-5 hover:border-indigo-300 hover:shadow-lg transition cursor-pointer">
+
+                    <div class="flex items-start justify-between">
+
+                        <div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center">
+
+                            <span class="text-2xl">📢</span>
+
+                        </div>
+
+                        <button
+                            class="opacity-0 group-hover:opacity-100 transition text-slate-400 hover:text-slate-700">
+                            ⋮
+                        </button>
+
+                    </div>
+
+                    <div class="mt-4">
+                        <h3 class="font-semibold text-slate-900">
+                            Promociones
+                        </h3>
+
+                        <p class="text-sm text-slate-500 mt-1">
+                            112 archivos
+                        </p>
+
+                        <p class="text-xs text-slate-400 mt-3">
+                            Actualizada ayer
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Carpeta -->
+                <div
+                    class="group bg-white border border-slate-200 rounded-3xl p-5 hover:border-indigo-300 hover:shadow-lg transition cursor-pointer">
+
+                    <div class="flex items-start justify-between">
+
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center">
+
+                            <span class="text-2xl">📱</span>
+
+                        </div>
+
+                        <button
+                            class="opacity-0 group-hover:opacity-100 transition text-slate-400 hover:text-slate-700">
+                            ⋮
+                        </button>
+
+                    </div>
+
+                    <div class="mt-4">
+                        <h3 class="font-semibold text-slate-900">
+                            Redes Sociales
+                        </h3>
+
+                        <p class="text-sm text-slate-500 mt-1">
+                            245 archivos
+                        </p>
+
+                        <p class="text-xs text-slate-400 mt-3">
+                            Actualizada hace 4 horas
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Carpeta -->
+                <div
+                    class="group bg-white border border-slate-200 rounded-3xl p-5 hover:border-indigo-300 hover:shadow-lg transition cursor-pointer">
+
+                    <div class="flex items-start justify-between">
+
+                        <div class="w-14 h-14 rounded-2xl bg-violet-100 flex items-center justify-center">
+
+                            <span class="text-2xl">📄</span>
+
+                        </div>
+
+                        <button
+                            class="opacity-0 group-hover:opacity-100 transition text-slate-400 hover:text-slate-700">
+                            ⋮
+                        </button>
+
+                    </div>
+
+                    <div class="mt-4">
+                        <h3 class="font-semibold text-slate-900">
+                            Documentos
+                        </h3>
+
+                        <p class="text-sm text-slate-500 mt-1">
+                            98 archivos
+                        </p>
+
+                        <p class="text-xs text-slate-400 mt-3">
+                            Actualizada hace 1 semana
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Biblioteca -->
+        <div class="space-y-3">
+
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-slate-800">
+                    Archivos recientes
+                </h2>
+
+                <span class="text-sm text-slate-500">
+                    24 resultados
+                </span>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
+
+                <!-- Archivo -->
+                <div
+                    class="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-lg transition cursor-pointer group">
+
+                    <div class="relative">
+                        <img src="https://placehold.co/600x400" class="w-full h-40 object-cover">
+
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition">
+                        </div>
+                    </div>
+
+                    <div class="p-4">
+                        <h3 class="font-medium text-slate-900 truncate">
+                            banner-promocion.jpg
+                        </h3>
+
+                        <div class="mt-2 flex items-center justify-between">
+                            <span class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full">
+                                Imagen
+                            </span>
+
+                            <span class="text-xs text-slate-500">
+                                2 MB
+                            </span>
+                        </div>
+
+                        <p class="text-xs text-slate-400 mt-2">
+                            Hace 2 días
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Archivo -->
+                <div
+                    class="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-lg transition cursor-pointer group">
+
+                    <div class="h-40 bg-red-100 flex items-center justify-center text-5xl">
+                        🎥
+                    </div>
+
+                    <div class="p-4">
+                        <h3 class="font-medium text-slate-900 truncate">
+                            promocion-mayo.mp4
+                        </h3>
+
+                        <div class="mt-2 flex items-center justify-between">
+                            <span class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">
+                                Video
+                            </span>
+
+                            <span class="text-xs text-slate-500">
+                                24 MB
+                            </span>
+                        </div>
+
+                        <p class="text-xs text-slate-400 mt-2">
+                            Hace 5 días
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Archivo -->
+                <div
+                    class="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-lg transition cursor-pointer group">
+
+                    <div class="h-40 bg-indigo-100 flex items-center justify-center text-5xl">
+                        📄
+                    </div>
+
+                    <div class="p-4">
+                        <h3 class="font-medium text-slate-900 truncate">
+                            catalogo-junio.pdf
+                        </h3>
+
+                        <div class="mt-2 flex items-center justify-between">
+                            <span class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full">
+                                Documento
+                            </span>
+
+                            <span class="text-xs text-slate-500">
+                                4 MB
+                            </span>
+                        </div>
+
+                        <p class="text-xs text-slate-400 mt-2">
+                            Hace 1 semana
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Archivo -->
+                <div
+                    class="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-lg transition cursor-pointer group">
+
+                    <img src="https://placehold.co/600x400" class="w-full h-40 object-cover">
+
+                    <div class="p-4">
+                        <h3 class="font-medium text-slate-900 truncate">
+                            producto-premium.jpg
+                        </h3>
+
+                        <div class="mt-2 flex items-center justify-between">
+                            <span class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full">
+                                Imagen
+                            </span>
+
+                            <span class="text-xs text-slate-500">
+                                1.4 MB
+                            </span>
+                        </div>
+
+                        <p class="text-xs text-slate-400 mt-2">
+                            Hace 8 días
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Archivo -->
+                <div
+                    class="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-lg transition cursor-pointer group">
+
+                    <img src="https://placehold.co/600x400" class="w-full h-40 object-cover">
+
+                    <div class="p-4">
+                        <h3 class="font-medium text-slate-900 truncate">
+                            portada-facebook.jpg
+                        </h3>
+
+                        <div class="mt-2 flex items-center justify-between">
+                            <span class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full">
+                                Imagen
+                            </span>
+
+                            <span class="text-xs text-slate-500">
+                                980 KB
+                            </span>
+                        </div>
+
+                        <p class="text-xs text-slate-400 mt-2">
+                            Hace 12 días
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

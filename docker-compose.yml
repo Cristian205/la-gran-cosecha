@@ -1,0 +1,64 @@
+# Orquestación completa: base de datos + backend API + 2 frontends React.
+# Uso:  docker compose up --build
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: la_gran_cosecha
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgresql12
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-cambia-esta-clave-en-produccion}
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,backend"
+      DATABASE_URL: postgres://postgres:postgresql12@db:5432/la_gran_cosecha
+      SECURE_SSL_REDIRECT: "False"
+      CORS_ALLOWED_ORIGINS: "http://localhost:8080,http://localhost:8081"
+      CSRF_TRUSTED_ORIGINS: "http://localhost:8080,http://localhost:8081"
+      MEDIA_ROOT: /app/media
+      # Correo: por defecto consola. Configura SMTP real para OTP en producción.
+      EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  storefront:
+    build:
+      context: ./frontend/storefront
+      args:
+        VITE_API_URL: /api
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+  admin-panel:
+    build:
+      context: ./frontend/admin-panel
+      args:
+        VITE_API_URL: /api
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+
+volumes:
+  pg_data:
+  media_data:

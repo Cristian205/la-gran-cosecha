@@ -1,0 +1,231 @@
+"""
+Configuración base compartida por todos los entornos.
+Los valores sensibles y específicos de entorno se leen de variables de entorno
+(.env) mediante django-environ. Ver .env.example.
+"""
+from datetime import timedelta
+from pathlib import Path
+
+import environ
+
+# BASE_DIR apunta a backend/
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+env = environ.Env(
+    DEBUG=(bool, False),
+)
+
+# Lee un archivo .env ubicado en backend/.env si existe
+environ.Env.read_env(BASE_DIR / ".env")
+
+# ==========================================================================
+# SEGURIDAD
+# ==========================================================================
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="unsafe-dev-key-change-me")
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+
+# ==========================================================================
+# APLICACIONES
+# ==========================================================================
+DJANGO_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.humanize",
+]
+
+THIRD_PARTY_APPS = [
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "corsheaders",
+    "django_filters",
+]
+
+LOCAL_APPS = [
+    "apps.common",
+    "apps.accounts",
+    "apps.catalog",
+    "apps.orders",
+    "apps.contact",
+    "apps.content",
+    "apps.notifications",
+    "apps.media",
+]
+
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
+# ==========================================================================
+# MIDDLEWARE
+# ==========================================================================
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.accounts.middleware.ForzarCambioPasswordMiddleware",
+]
+
+ROOT_URLCONF = "config.urls"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
+
+# ==========================================================================
+# BASE DE DATOS (PostgreSQL)
+# ==========================================================================
+DATABASES = {
+    "default": env.db(
+        "DATABASE_URL",
+        default="postgres://postgres:postgresql12@localhost:5432/la_gran_cosecha",
+    )
+}
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=600)
+
+# ==========================================================================
+# MODELO DE USUARIO PERSONALIZADO
+# ==========================================================================
+AUTH_USER_MODEL = "accounts.Usuario"
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 8},
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+]
+
+# ==========================================================================
+# INTERNACIONALIZACIÓN
+# ==========================================================================
+LANGUAGE_CODE = "es-co"
+TIME_ZONE = "America/Bogota"
+USE_I18N = True
+USE_TZ = True
+
+# ==========================================================================
+# ARCHIVOS ESTÁTICOS Y MEDIA
+# ==========================================================================
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = env("MEDIA_ROOT", default=str(BASE_DIR / "media"))
+
+# WhiteNoise: sirve estáticos comprimidos en producción sin depender de nginx.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    },
+}
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ==========================================================================
+# DJANGO REST FRAMEWORK
+# ==========================================================================
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+    "DEFAULT_PAGINATION_CLASS": "apps.common.pagination.DefaultPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_FILTER_BACKENDS": (
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ),
+}
+
+# ==========================================================================
+# SIMPLE JWT
+# ==========================================================================
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=env.int("JWT_ACCESS_MINUTES", default=30)
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=env.int("JWT_REFRESH_DAYS", default=1)
+    ),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+}
+
+# ==========================================================================
+# CORS
+# ==========================================================================
+CORS_ALLOWED_ORIGINS = env.list(
+    "CORS_ALLOWED_ORIGINS",
+    default=[
+        "http://localhost:5173",  # storefront (Vite)
+        "http://localhost:5174",  # admin-panel (Vite)
+    ],
+)
+CSRF_TRUSTED_ORIGINS = env.list(
+    "CSRF_TRUSTED_ORIGINS",
+    default=["http://localhost:5173", "http://localhost:5174"],
+)
+
+# ==========================================================================
+# CORREO (OTP administrativo)
+# ==========================================================================
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.console.EmailBackend",
+)
+EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL",
+    default="Seguridad La Gran Cosecha <no-reply@lagrancosecha.local>",
+)
+EMAIL_TIMEOUT = 10
+
+# ==========================================================================
+# PARÁMETROS DE NEGOCIO / OTP
+# ==========================================================================
+OTP_EXPIRY_MINUTES = env.int("OTP_EXPIRY_MINUTES", default=10)
+# Firma del ticket pre-auth entre paso 1 (password) y paso 2 (OTP)
+OTP_TICKET_SALT = "accounts.otp.ticket"

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    {% include "orders/pdf/_factura_styles.html" %}
+</head>
+<body>
+    {% for item in pedidos_data %}
+    <div class="{% if not forloop.last %}salto-pagina{% endif %}">
+        {% include "orders/pdf/_factura_body.html" with pedido=item.pedido categorias_normales=item.categorias_normales categorias_especiales=item.categorias_especiales fecha_entrega=item.fecha_entrega logo_data=logo_data nombre_empresa=nombre_empresa factura_eslogan=factura_eslogan factura_nit=factura_nit factura_proveedor=factura_proveedor factura_telefono=factura_telefono factura_direccion=factura_direccion only %}
+    </div>
+    {% endfor %}
+</body>
+</html>

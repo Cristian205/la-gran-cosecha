@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+    <title>La Gran Cosecha</title>
+
+    {% load static %}
+
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'ui/css/navbar.css' %}">
+    <link rel="stylesheet" href="{% static 'ui/css/hero.css' %}">
+    <link rel="stylesheet" href="{% static 'ui/css/contacto.css' %}">
+    <link rel="stylesheet" href="{% static 'ui/css/hacer_pedido.css' %}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+</head>
+
+<body>
+
+    {% include "ui/components/navbar.html" %}
+
+    <main class="main-content"><main>
+
+        {% block content %}
+        {% endblock %}
+
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{% static 'ui/js/navbar.js' %}"></script>
+    <script src="{% static 'ui/js/hacer_pedido.js' %}"></script>
+</body>
+
+</html>

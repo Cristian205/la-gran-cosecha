@@ -1,0 +1,192 @@
+{% extends "ui/index.html" %}
+{% load static %}
+
+{% block content %}
+
+<section class="contact-modern">
+
+    <!-- BACKGROUND EFFECT -->
+
+    <div class="contact-bg blur-left"></div>
+    <div class="contact-bg blur-right"></div>
+
+    <div class="contact-container">
+
+        <!-- LEFT -->
+
+        <div class="contact-info">
+
+            <span class="contact-badge">
+                ✨ Estamos para ayudarte
+            </span>
+
+            <h1>
+                Hablemos sobre
+                <span>tu próximo pedido</span>
+            </h1>
+
+            <p>
+                Contáctanos fácilmente y recibe atención rápida
+                para pedidos, cotizaciones o información sobre
+                nuestros productos frescos.
+            </p>
+
+            <!-- CONTACT CARDS -->
+
+            <div class="contact-cards">
+
+                <div class="contact-card">
+
+                    <div class="contact-icon">
+                        💬
+                    </div>
+
+                    <div>
+
+                        <span>WhatsApp</span>
+
+                        <strong>
+                            +57 300 123 4567
+                        </strong>
+
+                    </div>
+
+                </div>
+
+                <div class="contact-card">
+
+                    <div class="contact-icon">
+                        📞
+                    </div>
+
+                    <div>
+
+                        <span>Llámanos</span>
+
+                        <strong>
+                            +57 300 123 4567
+                        </strong>
+
+                    </div>
+
+                </div>
+
+                <div class="contact-card">
+
+                    <div class="contact-icon">
+                        📍
+                    </div>
+
+                    <div>
+
+                        <span>Ubicación</span>
+
+                        <strong>
+                            Soacha, Cundinamarca
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- BUTTONS -->
+
+            <div class="contact-buttons">
+
+                <a href="https://wa.me/573001234567"
+                   target="_blank"
+                   class="btn-contact-primary">
+
+                    Escribir por WhatsApp
+
+                </a>
+
+                <a href="tel:+573001234567"
+                   class="btn-contact-secondary">
+
+                    Llamar ahora
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <!-- RIGHT / FORM -->
+
+        <div class="contact-form-box">
+
+            <div class="form-header">
+
+                <span>Formulario rápido</span>
+
+                <h2>
+                    Envíanos un mensaje
+                </h2>
+
+            </div>
+
+            <form class="modern-form">
+
+                <div class="input-group">
+
+                    <label>Nombre completo</label>
+
+                    <input type="text"
+                           placeholder="Tu nombre"
+                           required>
+
+                </div>
+
+                <div class="input-row">
+
+                    <div class="input-group">
+
+                        <label>Correo</label>
+
+                        <input type="email"
+                               placeholder="correo@email.com"
+                               required>
+
+                    </div>
+
+                    <div class="input-group">
+
+                        <label>Teléfono</label>
+
+                        <input type="text"
+                               placeholder="+57 300 000 0000">
+
+                    </div>
+
+                </div>
+
+                <div class="input-group">
+
+                    <label>Mensaje</label>
+
+                    <textarea
+                        rows="5"
+                        placeholder="Escribe tu mensaje..."
+                        required></textarea>
+
+                </div>
+
+                <button type="submit"
+                        class="btn-submit">
+
+                    Enviar Mensaje
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}
