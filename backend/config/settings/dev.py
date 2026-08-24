@@ -14,3 +14,17 @@ EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
     default="django.core.mail.backends.console.EmailBackend",
 )
+
+# Sin esto los mensajes de nuestras apps por debajo de WARNING no llegan a la
+# terminal, porque Django solo configura sus propios loggers.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"simple": {"format": "%(levelname)s %(name)s: %(message)s"}},
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+    },
+    "loggers": {
+        "apps": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}

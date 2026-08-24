@@ -11,6 +11,7 @@ class Categoria(models.Model):
     estado_categoria = models.BooleanField(default=True)
     abreviatura = models.CharField(max_length=50)
     orden = models.PositiveIntegerField(default=0)
+    imagen = models.ImageField(upload_to="categorias/", blank=True, null=True)
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)

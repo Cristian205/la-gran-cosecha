@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
+  ChevronLeft,
+  ChevronRight,
+  FolderCog,
   History,
   ImageOff,
   Layers,
@@ -16,7 +19,7 @@ import {
   actualizarProducto,
   desactivarProducto,
   obtenerCategorias,
-  obtenerProductos,
+  obtenerPaginaProductos,
   obtenerUnidades,
 } from "../../api/resources";
 import type { Categoria, Producto, UnidadMedida } from "../../types";
@@ -24,6 +27,7 @@ import { extraerMensajeError, formatoPrecio, tienePermiso } from "../../utils";
 import { alertaError, confirmarAccion } from "../../utils/alertas";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../auth/AuthContext";
+import { CategoriesManagerModal } from "./CategoriesManagerModal";
 import { ProductFormModal } from "./ProductFormModal";
 import { PriceHistoryModal } from "./PriceHistoryModal";
 
@@ -34,6 +38,8 @@ const OPCIONES_ESTADO: { valor: EstadoFiltro; etiqueta: string }[] = [
   { valor: "activos", etiqueta: "Activos" },
   { valor: "inactivos", etiqueta: "Inactivos" },
 ];
+
+const TAMANOS_PAGINA = [50, 100, 150, 200];
 
 // Paleta con más tonos que categorías esperadas, para que nunca se repita un color
 // entre dos categorías (antes usaba id % 6 con solo 6 colores, y con más de 6
@@ -73,10 +79,14 @@ export function ProductsPage() {
   const [categoriaFiltro, setCategoriaFiltro] = useState<number | "">("");
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("todos");
   const [cargando, setCargando] = useState(true);
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(TAMANOS_PAGINA[0]);
+  const [total, setTotal] = useState(0);
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState<Producto | null>(null);
   const [historialDe, setHistorialDe] = useState<Producto | null>(null);
+  const [modalCategorias, setModalCategorias] = useState(false);
 
   const coloresCategoria = useMemo(() => coloresPorCategoria(categorias), [categorias]);
 
@@ -85,17 +95,26 @@ export function ProductsPage() {
 
   function cargar() {
     setCargando(true);
-    obtenerProductos({
+    obtenerPaginaProductos({
       search: busqueda || undefined,
       categoria: categoriaFiltro === "" ? undefined : categoriaFiltro,
       estado: estadoFiltro,
+      page: pagina,
+      page_size: porPagina,
     })
-      .then(setProductos)
+      .then(({ resultados, total }) => {
+        setProductos(resultados);
+        setTotal(total);
+      })
       .finally(() => setCargando(false));
   }
 
-  useEffect(() => {
+  function cargarCategorias() {
     obtenerCategorias().then(setCategorias);
+  }
+
+  useEffect(() => {
+    cargarCategorias();
     obtenerUnidades().then(setUnidades);
   }, []);
 
@@ -103,7 +122,17 @@ export function ProductsPage() {
     const t = setTimeout(cargar, 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busqueda, categoriaFiltro, estadoFiltro]);
+  }, [busqueda, categoriaFiltro, estadoFiltro, pagina, porPagina]);
+
+  // Al cambiar un filtro hay que volver al principio: quedarse en la página 7
+  // de un resultado que ahora tiene dos páginas mostraría una lista vacía.
+  useEffect(() => {
+    setPagina(1);
+  }, [busqueda, categoriaFiltro, estadoFiltro, porPagina]);
+
+  const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+  const desde = total === 0 ? 0 : (pagina - 1) * porPagina + 1;
+  const hasta = Math.min(pagina * porPagina, total);
 
   function limpiarFiltros() {
     setBusqueda("");
@@ -162,9 +191,14 @@ export function ProductsPage() {
     <>
       <div className="topbar">
         <h1>Catálogo</h1>
-        <button className="btn primario" onClick={abrirNuevo}>
-          <Plus size={16} /> Nuevo producto
-        </button>
+        <div style={{ display: "flex", gap: ".6rem" }}>
+          <button className="btn secundario" onClick={() => setModalCategorias(true)}>
+            <FolderCog size={16} /> Categorías
+          </button>
+          <button className="btn primario" onClick={abrirNuevo}>
+            <Plus size={16} /> Nuevo producto
+          </button>
+        </div>
       </div>
 
       <div className="contenido">
@@ -173,7 +207,7 @@ export function ProductsPage() {
             <h2>
               Productos{" "}
               <span style={{ color: "var(--gris)", fontWeight: 500 }}>
-                ({productos.length})
+                ({total})
               </span>
             </h2>
           </div>
@@ -368,8 +402,62 @@ export function ProductsPage() {
               })}
             </div>
           )}
+
+          {!cargando && total > 0 && (
+            <div className="paginacion-bar">
+              <span className="paginacion-info">
+                Mostrando <strong>{desde}–{hasta}</strong> de <strong>{total}</strong>{" "}
+                {total === 1 ? "producto" : "productos"}
+              </span>
+
+              <div className="paginacion-controles">
+                <label className="paginacion-tamano">
+                  Por página
+                  <select
+                    value={porPagina}
+                    onChange={(e) => setPorPagina(Number(e.target.value))}
+                  >
+                    {TAMANOS_PAGINA.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="paginacion-botones">
+                  <button
+                    type="button"
+                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                    disabled={pagina <= 1}
+                    aria-label="Página anterior"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="paginacion-actual">
+                    {pagina} / {totalPaginas}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                    disabled={pagina >= totalPaginas}
+                    aria-label="Página siguiente"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {modalCategorias && (
+        <CategoriesManagerModal
+          onCerrar={() => setModalCategorias(false)}
+          onCambio={cargarCategorias}
+        />
+      )}
 
       {modalAbierto && (
         <ProductFormModal

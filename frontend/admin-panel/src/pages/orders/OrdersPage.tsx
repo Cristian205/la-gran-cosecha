@@ -349,6 +349,8 @@ export function OrdersPage() {
     setImprimiendoId(id);
     try {
       await descargarPdfPedido(id);
+    } catch (err) {
+      alertaError(extraerMensajeError(err, "No se pudo generar la factura del pedido."));
     } finally {
       setImprimiendoId(null);
     }
@@ -360,6 +362,8 @@ export function OrdersPage() {
     try {
       await descargarPdfPedidosLote([...seleccion]);
       cargarResumen();
+    } catch (err) {
+      alertaError(extraerMensajeError(err, "No se pudieron generar las facturas seleccionadas."));
     } finally {
       setImprimiendoLote(false);
     }

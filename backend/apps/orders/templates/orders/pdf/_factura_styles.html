@@ -113,7 +113,7 @@
     .contact-card {
         background: linear-gradient(145deg, #ffffff, #f8fafc);
         padding: 12px 18px;
-        width: 180px;
+        width: 205px;
         box-sizing: border-box;
         border-radius: 12px;
         border: 1px solid #e2e8f0;
@@ -226,7 +226,8 @@
     .category-header {
         background: linear-gradient(135deg, #065f46 0%, #047857 100%);
         color: white;
-        font-size: 6.8pt;
+        font-size: calc(var(--fs-item, 6.8pt) * 0.95);
+        line-height: 1.3;
         font-weight: 700;
         padding: 4px 10px;
         text-transform: uppercase;
@@ -234,11 +235,15 @@
         justify-content: center;
         text-align: center;
     }
+    /* Dos columnas exactas al 50% (debe coincidir con COLUMNAS_ESPECIALES en
+       factura_layout, que cuenta con ellas para estimar el alto). */
     .column-split-container {
-        column-count: 3;
-        column-gap: 14px;
+        column-count: 2;
+        column-gap: 16px;
+        column-fill: balance;
         width: 100%;
         padding: 6px 5px;
+        box-sizing: border-box;
     }
 
     .item-row-wrapper {
@@ -248,10 +253,35 @@
         margin-bottom: 2px;
     }
 
-    table { width: 100%; border-collapse: collapse; }
+    /* En "Otros Productos" cada renglón ocupa exactamente dos líneas: el
+       artículo y, debajo, su categoría. Se mantiene el nowrap para que sean
+       siempre dos y el alto siga siendo predecible. */
+    .item-row-wrapper td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-row-wrapper small { display: block; }
 
+    /* `table-layout: fixed` es lo que permite recortar con puntos suspensivos
+       los nombres largos: sin anchos fijos la celda se ensancharía y el
+       artículo pasaría a dos líneas, rompiendo el cálculo de altura que hace
+       `factura_layout` para que todo quepa en una hoja. */
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+
+    /* `box-sizing: border-box` es imprescindible aquí: con table-layout fijo,
+       los porcentajes de ancho se aplican al contenido, así que sin esto los
+       6px de padding de cada celda se suman al 100% y la última columna —la
+       del precio— se sale de la tarjeta y aparece recortada. */
+    th, td { box-sizing: border-box; }
+
+    th:nth-child(1), td:nth-child(1) { width: 50%; }
+    th:nth-child(2), td:nth-child(2) { width: 19%; }
+    th:nth-child(3), td:nth-child(3) { width: 31%; }
+
+    /* Los `line-height` van explícitos y las celdas no llevan nada que crezca
+       en vertical: así el alto de cada fila es el mismo tenga la columna el
+       ancho que tenga, que es lo que permite a `factura_layout` predecir
+       cuánto ocupa la factura antes de renderizarla. */
     th {
-        font-size: 6pt;
+        font-size: calc(var(--fs-item, 6.8pt) * 0.85);
+        line-height: 1.3;
         color: #64748b;
         font-weight: 700;
         text-transform: uppercase;
@@ -263,24 +293,38 @@
     }
 
     td {
-        font-size: 6.8pt;
-        padding: 2px 6px;
+        font-size: var(--fs-item, 6.8pt);
+        line-height: 1.35;
+        padding: var(--pad-v, 2px) 6px;
         border-bottom: 1px solid #f1f5f9;
         text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     tbody tr:nth-child(even) td { background-color: #fafbfc; }
 
+    /* Renglones en blanco al final de cada categoría, para anotar a mano
+       lo que el cliente pida sobre la marcha. */
+    .fila-vacia td {
+        border-bottom: 1px dashed #cbd5e1;
+        background-color: #ffffff !important;
+    }
+
     .text-bold { font-weight: 700; color: #0f172a; }
 
     .unit-pill {
-        font-size: 6.5pt;
+        font-size: calc(var(--fs-item, 6.8pt) * 0.85);
         font-weight: 600;
         background: #f1f5f9;
         color: #475569;
-        padding: 2px 7px;
+        /* Sin padding vertical: el de antes estiraba la fila de forma
+           distinta según el ancho de la columna. */
+        padding: 0 5px;
+        line-height: inherit;
         border-radius: 999px;
-        margin-left: 5px;
+        margin-left: 4px;
         text-transform: uppercase;
     }
 

@@ -2,20 +2,22 @@ import { PackagePlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { obtenerUnidades } from "../api/catalog";
 import { useCart } from "../store/cart";
-import type { UnidadMedida } from "../types";
+import type { Categoria, UnidadMedida } from "../types";
 
 interface Props {
-  categoriaId: number;
-  categoriaNombre: string;
+  categorias: Categoria[];
+  /** Categoría filtrada en la tienda; si no hay, el cliente la elige aquí. */
+  categoriaFija?: Categoria | null;
 }
 
-export function CustomProductForm({ categoriaId, categoriaNombre }: Props) {
+export function CustomProductForm({ categorias, categoriaFija }: Props) {
   const agregarPersonalizado = useCart((s) => s.agregarPersonalizado);
   const [abierto, setAbierto] = useState(false);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [nombre, setNombre] = useState("");
   const [cantidad, setCantidad] = useState(1);
   const [unidadId, setUnidadId] = useState<number | "">("");
+  const [categoriaId, setCategoriaId] = useState<number | "">("");
   const [confirmado, setConfirmado] = useState(false);
 
   useEffect(() => {
@@ -26,9 +28,15 @@ export function CustomProductForm({ categoriaId, categoriaNombre }: Props) {
     }
   }, [abierto, unidades.length]);
 
+  // La categoría del filtro manda; si el cliente cambia de filtro, se refleja.
+  useEffect(() => {
+    if (categoriaFija) setCategoriaId(categoriaFija.id);
+  }, [categoriaFija]);
+
   function handleAgregar(e: React.FormEvent) {
     e.preventDefault();
-    if (!nombre.trim() || cantidad <= 0) return;
+    const categoria = categoriaFija ?? categorias.find((c) => c.id === categoriaId);
+    if (!nombre.trim() || cantidad <= 0 || !categoria) return;
 
     const unidad = unidades.find((u) => u.id === unidadId);
     agregarPersonalizado({
@@ -37,8 +45,8 @@ export function CustomProductForm({ categoriaId, categoriaNombre }: Props) {
       cantidad,
       unidadId: unidad ? unidad.id : null,
       unidadNombre: unidad ? unidad.nombre_unidad : "",
-      categoriaId,
-      categoriaNombre,
+      categoriaId: categoria.id,
+      categoriaNombre: categoria.nombre_categoria,
     });
 
     setNombre("");
@@ -67,8 +75,9 @@ export function CustomProductForm({ categoriaId, categoriaNombre }: Props) {
         <PackagePlus size={16} /> Producto que no está en el catálogo
       </h4>
       <p className="custom-prod-hint">
-        Descríbelo y quedará en tu pedido dentro de {categoriaNombre}; confirmamos
-        el precio cuando lo recibamos.
+        Descríbelo y quedará en tu pedido
+        {categoriaFija ? ` dentro de ${categoriaFija.nombre_categoria}` : ""};
+        confirmamos el precio cuando lo recibamos.
       </p>
 
       <div className="custom-prod-campos">
@@ -102,6 +111,25 @@ export function CustomProductForm({ categoriaId, categoriaNombre }: Props) {
           ))}
         </select>
       </div>
+
+      {!categoriaFija && (
+        <select
+          className="custom-prod-categoria"
+          value={categoriaId}
+          onChange={(e) =>
+            setCategoriaId(e.target.value === "" ? "" : Number(e.target.value))
+          }
+          aria-label="Categoría"
+          required
+        >
+          <option value="">¿En qué categoría va?</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre_categoria}
+            </option>
+          ))}
+        </select>
+      )}
 
       <div className="custom-prod-acciones">
         <button type="button" className="btn btn-outline" onClick={() => setAbierto(false)}>

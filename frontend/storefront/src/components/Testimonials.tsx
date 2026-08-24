@@ -25,7 +25,10 @@ export function Testimonials() {
   return (
     <section className="testimonios">
       <div className="seccion-titulo">
-        <h2>Lo que dicen nuestros clientes</h2>
+        <div>
+          <span className="seccion-kicker">Clientes</span>
+          <h2>Lo que dicen nuestros clientes</h2>
+        </div>
       </div>
       <div className="testi-grid">
         {testimonios.map((t) => (

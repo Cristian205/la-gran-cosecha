@@ -36,6 +36,7 @@ export interface Categoria {
   abreviatura: string;
   orden: number;
   estado_categoria: boolean;
+  imagen_url: string | null;
 }
 
 export interface UnidadMedida {
@@ -184,6 +185,16 @@ export interface SiteConfig {
   logo_url: string | null;
   nombre_empresa: string;
   color_primario: string;
+  color_primario_texto: string;
+  color_secundario: string;
+  color_secundario_texto: string;
+  color_fondo: string;
+  color_superficie: string;
+  color_texto: string;
+  fuente: string;
+  radio_boton: string;
+  ancho_buscador: number;
+  espaciado_navbar: number;
   whatsapp_numero: string;
   whatsapp_mensaje_pedido: string;
   instagram_url: string;
@@ -196,6 +207,16 @@ export interface SiteConfig {
   horario: string;
   historia: string;
   mision: string;
+  paso1_titulo: string;
+  paso1_texto: string;
+  paso2_titulo: string;
+  paso2_texto: string;
+  paso3_titulo: string;
+  paso3_texto: string;
+  cotizacion_titulo: string;
+  cotizacion_texto: string;
+  cta_final_titulo: string;
+  cta_final_texto: string;
   factura_eslogan: string;
   factura_nit: string;
   factura_proveedor: string;
@@ -227,11 +248,40 @@ export interface Testimonio {
 
 export interface TrustBadge {
   id: number;
+  tipo: "insignia" | "estadistica";
   icono: "leaf" | "truck" | "shield" | "users";
   valor: string;
   etiqueta: string;
   orden: number;
   activo: boolean;
+}
+
+export interface BeneficioComercial {
+  id: number;
+  icono: "truck" | "clock" | "package" | "wallet" | "headset" | "check" | "shield" | "users" | "leaf" | "sprout" | "droplet" | "shopping-bag" | "apple" | "badge-check" | "handshake" | "headphones" | "user-check";
+  titulo: string;
+  texto: string;
+  orden: number;
+  activo: boolean;
+}
+
+export interface OfertaProducto {
+  id: number;
+  presentacion: number;
+  presentacion_detalle: Presentacion;
+  producto_id: number;
+  producto_nombre: string;
+  producto_imagen_url: string | null;
+  producto_categoria: number;
+  producto_categoria_nombre: string;
+  producto_permite_fraccion: boolean;
+  producto_tipo_cantidad: string;
+  precio_normal: string;
+  precio_oferta: string;
+  porcentaje_ahorro: number;
+  fecha_fin: string | null;
+  activo: boolean;
+  fecha_creacion: string;
 }
 
 export interface Estadisticas {

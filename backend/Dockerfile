@@ -5,7 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 # Dependencias de sistema necesarias para psycopg2 y weasyprint
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y libglib2.0-0 \
         build-essential \
         libpq-dev \
         libpango-1.0-0 \

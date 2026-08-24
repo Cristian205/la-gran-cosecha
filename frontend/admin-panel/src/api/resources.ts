@@ -46,6 +46,37 @@ export async function obtenerCategorias(): Promise<Categoria[]> {
   return unwrap(data);
 }
 
+export async function crearCategoria(
+  payload: Omit<Categoria, "id" | "imagen_url">,
+  imagen?: File | null
+): Promise<Categoria> {
+  const form = new FormData();
+  Object.entries(payload).forEach(([key, value]) => form.append(key, String(value)));
+  if (imagen) form.append("imagen", imagen);
+  const { data } = await api.post<Categoria>("/catalog/categories/", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function actualizarCategoria(
+  id: number,
+  payload: Omit<Categoria, "id" | "imagen_url">,
+  imagen?: File | null
+): Promise<Categoria> {
+  const form = new FormData();
+  Object.entries(payload).forEach(([key, value]) => form.append(key, String(value)));
+  if (imagen) form.append("imagen", imagen);
+  const { data } = await api.patch<Categoria>(`/catalog/categories/${id}/`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function eliminarCategoria(id: number): Promise<void> {
+  await api.delete(`/catalog/categories/${id}/`);
+}
+
 export async function obtenerUnidades(): Promise<UnidadMedida[]> {
   const { data } = await api.get<Paginated<UnidadMedida> | UnidadMedida[]>(
     "/catalog/units/"
@@ -54,15 +85,42 @@ export async function obtenerUnidades(): Promise<UnidadMedida[]> {
 }
 
 // ---------- Productos ----------
+/** Catálogo completo, para los selectores de producto que lo cargan de una vez. */
 export async function obtenerProductos(params?: {
   search?: string;
   categoria?: number;
   estado?: string;
 }): Promise<Producto[]> {
   const { data } = await api.get<Paginated<Producto>>("/catalog/products/", {
-    params: { ...params, estado: params?.estado ?? "todos", page_size: 200 },
+    params: { ...params, estado: params?.estado ?? "todos", page_size: 500 },
   });
   return unwrap(data);
+}
+
+export interface PaginaProductos {
+  resultados: Producto[];
+  total: number;
+}
+
+/**
+ * Una página del catálogo. Devuelve además `total` (el `count` de la API) para
+ * que la vista pueda mostrar cuántos productos hay en total, no solo los de la
+ * página que está viendo.
+ */
+export async function obtenerPaginaProductos(params: {
+  search?: string;
+  categoria?: number;
+  estado?: string;
+  page: number;
+  page_size: number;
+}): Promise<PaginaProductos> {
+  const { data } = await api.get<Paginated<Producto> | Producto[]>(
+    "/catalog/products/",
+    { params: { ...params, estado: params.estado ?? "todos" } }
+  );
+  return Array.isArray(data)
+    ? { resultados: data, total: data.length }
+    : { resultados: data.results, total: data.count };
 }
 
 export interface ProductoPayload {
@@ -303,22 +361,65 @@ export async function actualizarPermisosUsuario(
 }
 
 // ---------- Facturas PDF ----------
-function abrirPdfBlob(blob: Blob) {
+
+/**
+ * Los navegadores solo dejan abrir una pestaña si el `window.open` sale del
+ * clic del usuario. Como el PDF tarda en llegar, la pestaña se abre vacía
+ * antes de pedirlo y se rellena al terminar; si aun así el bloqueador la
+ * impide, el PDF se ofrece como descarga en lugar de perderse en silencio.
+ */
+function abrirPdfBlob(blob: Blob, ventana: Window | null, nombre: string) {
   const url = URL.createObjectURL(blob);
-  window.open(url, "_blank");
+  if (ventana && !ventana.closed) {
+    ventana.location.href = url;
+  } else {
+    const enlace = document.createElement("a");
+    enlace.href = url;
+    enlace.download = nombre;
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+  }
   // Libera el objeto URL luego de que el navegador tuvo tiempo de abrirlo.
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+/** Cuando el error viene de una petición `blob`, el mensaje del backend
+ *  llega como Blob y hay que leerlo para poder mostrarlo. */
+async function normalizarErrorPdf(err: unknown): Promise<never> {
+  const respuesta = (err as { response?: { data?: unknown } })?.response;
+  if (respuesta?.data instanceof Blob) {
+    try {
+      const texto = await respuesta.data.text();
+      respuesta.data = texto.trim().startsWith("{") ? JSON.parse(texto) : texto;
+    } catch {
+      /* se deja el Blob tal cual y el llamador usará su mensaje por defecto */
+    }
+  }
+  throw err;
+}
+
 export async function descargarPdfPedido(id: number): Promise<void> {
-  const { data } = await api.get(`/orders/${id}/pdf/`, { responseType: "blob" });
-  abrirPdfBlob(data);
+  const ventana = window.open("", "_blank");
+  try {
+    const { data } = await api.get(`/orders/${id}/pdf/`, { responseType: "blob" });
+    abrirPdfBlob(data, ventana, `Pedido_${id}.pdf`);
+  } catch (err) {
+    ventana?.close();
+    return normalizarErrorPdf(err);
+  }
 }
 
 export async function descargarPdfPedidosLote(ids: number[]): Promise<void> {
-  const { data } = await api.get(`/orders/pdf-lote/`, {
-    params: { ids: ids.join(",") },
-    responseType: "blob",
-  });
-  abrirPdfBlob(data);
+  const ventana = window.open("", "_blank");
+  try {
+    const { data } = await api.get(`/orders/pdf-lote/`, {
+      params: { ids: ids.join(",") },
+      responseType: "blob",
+    });
+    abrirPdfBlob(data, ventana, `Pedidos_${ids.join("-")}.pdf`);
+  } catch (err) {
+    ventana?.close();
+    return normalizarErrorPdf(err);
+  }
 }

@@ -1,6 +1,8 @@
 import { Clock, Mail, MapPin, Phone, Send } from "lucide-react";
 import { useState } from "react";
 import { enviarMensajeContacto } from "../api/contact";
+import aguacate from "../assets/aguacate.webp";
+import camion from "../assets/camion.webp";
 import { WhatsAppIcon } from "../components/icons/WhatsAppIcon";
 import { useSiteConfig } from "../context/SiteConfigContext";
 import { useResaltarAlLlegar } from "../hooks/useResaltarAlLlegar";
@@ -16,6 +18,15 @@ export function ContactPage() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+
+  // WhatsApp es la vía directa; si no hay número configurado, el CTA baja al
+  // formulario de esta misma página en vez de apuntar a ningún sitio.
+  const hrefHablar = config.whatsapp_numero
+    ? whatsappHref(
+        config.whatsapp_numero,
+        "Hola, tengo una consulta sobre sus productos."
+      )
+    : "#contacto-form";
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -48,15 +59,42 @@ export function ContactPage() {
 
   return (
     <div>
-      <section className="pagina-hero">
-        <span className="etiqueta glass-dark">
-          <Mail size={16} /> Estamos para ayudarte
-        </span>
-        <h1>Contáctanos</h1>
-        <p>
-          ¿Tienes preguntas sobre nuestros productos o quieres hacer un pedido
-          especial? Escríbenos, con gusto te atendemos.
-        </p>
+      <section className="hero-contacto">
+        {/* Hojas de fondo: marca de agua, no ilustración. Van en SVG para no
+            sumar un archivo más por un adorno de cuatro trazos. */}
+        <svg className="hero-contacto-deco" viewBox="0 0 1200 300" aria-hidden="true">
+          <g fill="none" stroke="currentColor" strokeWidth="7">
+            <path d="M120 60c70-30 150-10 170 60-70 30-150 10-170-60Zm0 0c60 40 90 90 90 140" />
+            <path d="M1040 40c-70-20-140 10-150 80 70 20 140-10 150-80Zm0 0c-55 45-80 100-75 155" />
+            <ellipse cx="330" cy="205" rx="46" ry="30" transform="rotate(-25 330 205)" />
+            <ellipse cx="900" cy="230" rx="40" ry="26" transform="rotate(18 900 230)" />
+          </g>
+        </svg>
+
+        <img className="hero-contacto-aguacate" src={aguacate} alt="" aria-hidden="true" decoding="async" />
+
+        <div className="hero-contacto-cuerpo">
+          <span className="etiqueta glass-dark">
+            <Mail size={15} /> Estamos para ayudarte
+          </span>
+          <h1>Contáctanos</h1>
+          <p>
+            ¿Tienes preguntas sobre nuestros productos o quieres hacer un pedido
+            especial? Escríbenos, con gusto te atendemos.
+          </p>
+          <a
+            className="hero-contacto-cta"
+            href={hrefHablar}
+            {...(config.whatsapp_numero
+              ? { target: "_blank", rel: "noopener noreferrer" }
+              : {})}
+          >
+            {config.whatsapp_numero && <WhatsAppIcon size={18} />}
+            Habla con nosotros
+          </a>
+        </div>
+
+        <img className="hero-contacto-camion" src={camion} alt="" aria-hidden="true" decoding="async" />
       </section>
 
       <div className="contenedor">

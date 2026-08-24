@@ -56,13 +56,13 @@
     </div>
 </div>
 
-<div class="columns-wrapper">
+<div class="columns-wrapper" style="{{ plan.variables_css }}">
     <div class="main-columns-container">
-        {% for columna in columnas_normales %}
+        {% for columna in plan.columnas %}
         <div class="column">
-            {% for cat, items in columna %}
+            {% for seccion in columna %}
             <div class="category-section">
-                <div class="category-header">{{ cat.nombre_categoria }}</div>
+                <div class="category-header">{{ seccion.nombre }}</div>
                 <table>
                     <thead>
                         <tr>
@@ -72,9 +72,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in items %}
+                        {% for item in seccion.items %}
                         <tr>
-                            <td class="text-bold">
+                            <td class="text-bold celda-articulo">
                                 {{ item.articulo }}
                                 <span style="font-weight:400; color:#64748b;">{{ item.pres }}</span>
                             </td>
@@ -84,6 +84,13 @@
                             <td style="text-align: right;" class="text-bold">
                                 $ {{ item.subtotal|floatformat:0|intcomma }}
                             </td>
+                        </tr>
+                        {% endfor %}
+                        {% for _ in seccion.rango_vacias %}
+                        <tr class="fila-vacia">
+                            <td>&nbsp;</td>
+                            <td></td>
+                            <td></td>
                         </tr>
                         {% endfor %}
                     </tbody>

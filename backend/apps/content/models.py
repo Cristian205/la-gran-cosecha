@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -8,11 +9,45 @@ class SiteConfig(models.Model):
     el patrón get_solo().
     """
 
+    FUENTES = [
+        ("poppins", "Poppins"),
+        ("inter", "Inter"),
+        ("nunito", "Nunito"),
+        ("work-sans", "Work Sans"),
+        ("jakarta", "Plus Jakarta Sans"),
+        ("quicksand", "Quicksand"),
+    ]
+    RADIOS_BOTON = [
+        ("redondeado", "Redondeado (píldora)"),
+        ("suave", "Suave"),
+        ("cuadrado", "Cuadrado"),
+    ]
+
     logo = models.ImageField(upload_to="site/", blank=True, null=True)
     nombre_empresa = models.CharField(max_length=150, blank=True)
 
-    # Apariencia
+    # Apariencia — colores
     color_primario = models.CharField(max_length=7, blank=True, default="#16a34a")
+    color_primario_texto = models.CharField(max_length=7, blank=True, default="#ffffff")
+    color_secundario = models.CharField(max_length=7, blank=True, default="#f59e0b")
+    color_secundario_texto = models.CharField(max_length=7, blank=True, default="#0b1f17")
+    color_fondo = models.CharField(max_length=7, blank=True, default="#f6faf7")
+    color_superficie = models.CharField(max_length=7, blank=True, default="#ffffff")
+    color_texto = models.CharField(max_length=7, blank=True, default="#0f172a")
+
+    # Apariencia — tipografía y forma
+    fuente = models.CharField(max_length=20, choices=FUENTES, default="poppins")
+    radio_boton = models.CharField(max_length=20, choices=RADIOS_BOTON, default="redondeado")
+
+    # Apariencia — layout del navbar y buscador
+    ancho_buscador = models.PositiveIntegerField(
+        default=420, validators=[MinValueValidator(240), MaxValueValidator(640)]
+    )
+    espaciado_navbar = models.PositiveIntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(64)],
+        help_text="Espacio extra (px) entre el logo y las opciones del navbar.",
+    )
 
     # Contacto / redes
     whatsapp_numero = models.CharField(
@@ -35,6 +70,42 @@ class SiteConfig(models.Model):
     # Textos de "Sobre nosotros"
     historia = models.TextField(blank=True)
     mision = models.TextField(blank=True)
+
+    # Home — "Cómo funciona" (siempre 3 pasos fijos, por eso son campos
+    # directos y no una lista administrable como Testimonios/TrustBadges).
+    paso1_titulo = models.CharField(max_length=80, blank=True, default="Explora el catálogo")
+    paso1_texto = models.CharField(
+        max_length=200, blank=True,
+        default="Filtra por categoría o busca directo lo que necesitas para tu negocio.",
+    )
+    paso2_titulo = models.CharField(max_length=80, blank=True, default="Arma tu pedido")
+    paso2_texto = models.CharField(
+        max_length=200, blank=True,
+        default="Elige presentación, unidad y cantidad — hasta fraccionada si el producto lo permite.",
+    )
+    paso3_titulo = models.CharField(max_length=80, blank=True, default="Recibe tu entrega")
+    paso3_texto = models.CharField(
+        max_length=200, blank=True,
+        default="Confirmamos contigo por WhatsApp y despachamos directo a tu negocio.",
+    )
+
+    # Home — Cotización rápida
+    cotizacion_titulo = models.CharField(
+        max_length=100, blank=True, default="¿Pedido grande o fuera de catálogo?"
+    )
+    cotizacion_texto = models.CharField(
+        max_length=220, blank=True,
+        default="Cuéntanos qué necesitas y te confirmamos precio y disponibilidad en minutos.",
+    )
+
+    # Home — CTA final
+    cta_final_titulo = models.CharField(
+        max_length=100, blank=True, default="Tu próximo pedido puede estar en camino hoy mismo"
+    )
+    cta_final_texto = models.CharField(
+        max_length=220, blank=True,
+        default="Explora el catálogo completo y arma tu pedido en minutos.",
+    )
 
     # Datos del emisor para la factura en PDF
     factura_eslogan = models.CharField(
@@ -115,7 +186,12 @@ class TrustBadge(models.Model):
         ("shield", "Escudo"),
         ("users", "Usuarios"),
     ]
+    TIPOS = [
+        ("insignia", "Insignia (barra de confianza, ej: 'Entrega 24-48h')"),
+        ("estadistica", "Estadística (número grande, ej: '+350 productos')"),
+    ]
 
+    tipo = models.CharField(max_length=20, choices=TIPOS, default="insignia")
     icono = models.CharField(max_length=20, choices=ICONOS, default="leaf")
     valor = models.CharField(max_length=40)
     etiqueta = models.CharField(max_length=150)
@@ -131,3 +207,64 @@ class TrustBadge(models.Model):
 
     def __str__(self):
         return f"{self.valor} - {self.etiqueta}"
+
+
+class BeneficioComercial(models.Model):
+    """Bloque de Home '¿Por qué comprar con nosotros?'."""
+
+    ICONOS = [
+        ("truck", "Camión"),
+        ("clock", "Reloj"),
+        ("package", "Paquete"),
+        ("wallet", "Billetera"),
+        ("headset", "Auriculares (atención)"),
+        ("check", "Check"),
+        ("shield", "Escudo"),
+        ("users", "Usuarios"),
+    ]
+
+    icono = models.CharField(max_length=20, choices=ICONOS, default="check")
+    titulo = models.CharField(max_length=100)
+    texto = models.CharField(max_length=200, blank=True)
+
+    orden = models.PositiveIntegerField(default=0)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "content_beneficiocomercial"
+        ordering = ["orden", "id"]
+        verbose_name = "Beneficio comercial"
+        verbose_name_plural = "Beneficios comerciales"
+
+    def __str__(self):
+        return self.titulo
+
+
+class OfertaProducto(models.Model):
+    """
+    Oferta de tiempo limitado sobre una presentación puntual del catálogo,
+    para el bloque de Home "Ofertas de la semana". El precio normal se lee
+    siempre de `presentacion.precio_unitario` (nunca se duplica aquí), así
+    que si el precio de catálogo cambia, el % de ahorro se recalcula solo.
+    """
+
+    presentacion = models.ForeignKey(
+        "catalog.PresentacionProducto", on_delete=models.CASCADE, related_name="ofertas"
+    )
+    precio_oferta = models.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
+    )
+    fecha_fin = models.DateTimeField(
+        blank=True, null=True, help_text="Opcional: si se define, el Home muestra un contador."
+    )
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "content_ofertaproducto"
+        ordering = ["-fecha_creacion"]
+        verbose_name = "Oferta de producto"
+        verbose_name_plural = "Ofertas de la semana"
+
+    def __str__(self):
+        return f"Oferta: {self.presentacion} → ${self.precio_oferta}"

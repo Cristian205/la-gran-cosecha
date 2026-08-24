@@ -15,7 +15,7 @@ export function TrustBadges() {
 
   useEffect(() => {
     obtenerTrustBadges()
-      .then(setBadges)
+      .then((data) => setBadges(data.filter((b) => b.tipo === "insignia")))
       .catch(() => setBadges([]));
   }, []);
 

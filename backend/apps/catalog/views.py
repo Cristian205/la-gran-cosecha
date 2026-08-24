@@ -1,4 +1,4 @@
-from django.db.models import Prefetch
+from django.db.models import Min, Prefetch, Q
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -40,6 +40,9 @@ class UnidadMedidaViewSet(viewsets.ModelViewSet):
     serializer_class = UnidadMedidaSerializer
     permission_classes = [SoloLecturaPublicaOStaff]
     queryset = UnidadMedida.objects.all()
+    # Catálogo cerrado y pequeño que los <select> del panel consumen entero:
+    # paginarlo solo hacía desaparecer las unidades a partir de la número 20.
+    pagination_class = None
 
 
 class ProductoViewSet(viewsets.ModelViewSet):
@@ -50,7 +53,16 @@ class ProductoViewSet(viewsets.ModelViewSet):
 
     filterset_class = ProductoFilter
     search_fields = ["nombre_producto", "categoria__nombre_categoria"]
-    ordering_fields = ["orden", "nombre_producto", "fecha_creacion", "id"]
+    # `precio_desde` es la anotación de get_queryset: el precio del producto vive
+    # en sus presentaciones (1:N), así que sin ella la tienda no podría ordenar
+    # por precio sobre el catálogo completo, solo sobre la página ya cargada.
+    ordering_fields = [
+        "orden",
+        "nombre_producto",
+        "fecha_creacion",
+        "id",
+        "precio_desde",
+    ]
 
     def get_permissions(self):
         if self.action in ("update", "partial_update", "subir_imagen"):
@@ -66,6 +78,12 @@ class ProductoViewSet(viewsets.ModelViewSet):
                 Prefetch(
                     "presentaciones",
                     queryset=PresentacionProducto.objects.select_related("unidad_venta"),
+                )
+            )
+            .annotate(
+                precio_desde=Min(
+                    "presentaciones__precio_unitario",
+                    filter=Q(presentaciones__estado_presentacion=True),
                 )
             )
             .order_by("orden", "nombre_producto")

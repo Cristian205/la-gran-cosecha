@@ -64,7 +64,7 @@ export function PromoCarousel() {
       <span className="blob b1" />
       <span className="blob b2" />
 
-      <div className="slide-track">
+      <div className="slide-track contenedor">
         <div className="slide-contenido">
           {slide.etiqueta && <span className="slide-tag glass-dark">{slide.etiqueta}</span>}
           <h1>{slide.titulo}</h1>

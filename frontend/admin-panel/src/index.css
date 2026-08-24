@@ -384,8 +384,18 @@ input, select, textarea { font-family: inherit; }
 .exportar-columna input { width: auto; }
 .exportar-nota { font-size: .82rem; color: var(--gris); margin-top: 1rem; }
 
-.permisos-lista { display: flex; flex-direction: column; gap: 1.1rem; margin-top: 1rem; }
-.permisos-modulo h3 { margin: 0 0 .5rem; font-size: .88rem; color: var(--dark); }
+.permisos-lista { display: flex; flex-direction: column; gap: 1.4rem; margin-top: 1rem; }
+.permisos-modulo h3 {
+  margin: 0 0 .7rem; font-size: .92rem; color: var(--dark); padding-bottom: .4rem;
+  border-bottom: 1px solid var(--borde);
+}
+.permisos-subgrupo { margin-bottom: .8rem; }
+.permisos-subgrupo:last-child { margin-bottom: 0; }
+.permisos-subgrupo-titulo {
+  display: flex; align-items: center; gap: .4rem; font-size: .72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em; color: var(--gris); margin-bottom: .5rem;
+}
+.permisos-subgrupo-titulo svg { color: var(--verde-texto); }
 
 /* Chips de permisos: más fáciles de escanear que una lista plana de checkboxes */
 .permisos-grid {
@@ -654,9 +664,9 @@ td .input:focus, td select:focus {
 
 /* ---------- Tarjeta de línea repetible (presentaciones, agregar producto…) ---------- */
 .pres-row {
-  display: flex; gap: .6rem; align-items: flex-end; margin-bottom: .7rem;
+  display: flex; flex-direction: column; gap: .55rem; margin-bottom: .7rem;
   background: var(--superficie-2); border: 1px solid var(--borde); border-radius: var(--radio-sm);
-  padding: .8rem .8rem .7rem; position: relative;
+  padding: .9rem .9rem .8rem; position: relative;
   transition: box-shadow .15s ease, border-color .15s ease;
 }
 .pres-row:hover { box-shadow: 0 4px 14px rgba(15,23,42,.06); }
@@ -665,6 +675,9 @@ td .input:focus, td select:focus {
   background: var(--verde); color: white; font-size: .68rem; font-weight: 800;
   display: grid; place-items: center; box-shadow: 0 0 0 2px var(--superficie-2);
 }
+.pres-row-linea { display: flex; gap: .6rem; }
+.pres-row-linea-principal { align-items: flex-end; }
+.pres-row-linea-precios { align-items: flex-start; }
 .pres-row-campo { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 0; }
 .pres-row-campo span {
   font-size: .66rem; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .3px;
@@ -674,6 +687,79 @@ td .input:focus, td select:focus {
   background: var(--superficie); color: var(--dark); width: 100%;
 }
 .pres-row .btn-icon { margin-bottom: .05rem; }
+.pres-row-quitar { margin-bottom: .05rem; }
+.pres-row-preview {
+  font-size: .74rem; color: var(--verde-texto); font-weight: 600; margin-top: -.05rem;
+}
+.pres-row-incompleta { border-color: var(--ambar-600); }
+.pres-row-alerta {
+  display: flex; align-items: center; gap: .4rem; font-size: .78rem; font-weight: 600;
+  color: var(--ambar-texto); background: var(--ambar-claro); padding: .4rem .6rem; border-radius: 8px;
+}
+.input-precio {
+  display: flex; align-items: center; gap: .3rem; padding: 0 .1rem 0 .6rem;
+  border: 1px solid var(--borde); border-radius: 8px; background: var(--superficie);
+}
+.input-precio span { color: var(--gris); font-weight: 700; font-size: .85rem; }
+.input-precio input {
+  border: none !important; padding: .5rem .5rem .5rem 0 !important; background: transparent !important;
+}
+.input-precio:focus-within {
+  outline: none; border-color: var(--verde); box-shadow: 0 0 0 3px rgba(22, 163, 74, .15);
+}
+
+/* ---------- Formulario de producto: encabezado con imagen, ayudas y notas ---------- */
+.producto-hero { margin-bottom: 1.2rem; }
+.form-nota { font-size: .8rem; color: var(--gris); margin: -.3rem 0 1.1rem; }
+.campo-ayuda { margin: .35rem 0 0; font-size: .78rem; color: var(--gris); }
+.campo-invalido { border-color: var(--rojo) !important; }
+
+.precio-vista-previa {
+  margin-left: auto; font-size: .78rem; font-weight: 700; color: var(--verde-texto);
+  background: var(--verde-claro); padding: .2rem .55rem; border-radius: 999px;
+}
+
+/* ---------- Selector "modo de venta" (tarjetas de opción) ---------- */
+.opciones-venta { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; margin-bottom: 1.3rem; }
+.opcion-venta {
+  position: relative; text-align: left; display: flex; flex-direction: column; gap: .2rem;
+  padding: .8rem .8rem .7rem; border: 1.5px solid var(--borde); border-radius: var(--radio-sm);
+  background: var(--superficie); color: var(--dark); transition: border-color .15s ease, background .15s ease;
+}
+.opcion-venta:hover { border-color: var(--verde-400); }
+.opcion-venta.activa { border-color: var(--verde); background: var(--verde-claro); }
+.opcion-venta-check {
+  position: absolute; top: .6rem; right: .6rem; width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid var(--borde); display: grid; place-items: center; color: white;
+}
+.opcion-venta.activa .opcion-venta-check { background: var(--verde); border-color: var(--verde); }
+.opcion-venta-titulo { font-weight: 700; font-size: .85rem; padding-right: 1.2rem; }
+.opcion-venta-ejemplo { font-size: .8rem; font-weight: 600; color: var(--verde-texto); }
+.opcion-venta-desc { font-size: .74rem; color: var(--gris); line-height: 1.25; }
+
+/* ---------- Interruptor (switch) para campos booleanos de formulario ---------- */
+.campo-switch { display: flex; align-items: center; gap: .8rem; margin-bottom: 1.3rem; }
+.campo-switch-titulo { font-weight: 700; font-size: .87rem; }
+.campo-switch-desc { font-size: .78rem; color: var(--gris); margin-top: .1rem; }
+.switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch-riel {
+  position: absolute; inset: 0; background: var(--borde); border-radius: 999px; cursor: pointer;
+  transition: background .15s ease;
+}
+.switch-riel::before {
+  content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
+  background: white; border-radius: 50%; transition: transform .15s ease; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.switch input:checked + .switch-riel { background: var(--verde); }
+.switch input:checked + .switch-riel::before { transform: translateX(18px); }
+.switch input:focus-visible + .switch-riel { box-shadow: 0 0 0 3px rgba(22, 163, 74, .25); }
+
+:root[data-tema="oscuro"] .input-precio { background: rgba(255,255,255,.06); border-color: var(--borde); }
+:root[data-tema="oscuro"] .opcion-venta { background: rgba(255,255,255,.04); }
+.modal.lateral .input-precio { background: rgba(255, 255, 255, .75); border-color: rgba(255, 255, 255, .8); }
+.modal.lateral .opcion-venta { background: rgba(255, 255, 255, .55); border-color: rgba(255,255,255,.7); }
+.modal.lateral .opcion-venta.activa { background: rgba(220, 252, 231, .85); }
 
 .total-linea {
   display: flex; justify-content: space-between; align-items: center;
@@ -695,7 +781,57 @@ td .input:focus, td select:focus {
   display: flex; justify-content: space-between; padding: .6rem .8rem;
   border: 1px solid var(--borde); border-radius: 10px; font-size: .88rem;
 }
+
+.categoria-fila {
+  display: flex; align-items: center; gap: .8rem; padding: .6rem .8rem;
+  border: 1px solid var(--borde); border-radius: 10px;
+}
+.categoria-fila-miniatura {
+  width: 42px; height: 42px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+  background: var(--gris-claro); display: grid; place-items: center; color: var(--gris);
+}
+.categoria-fila-miniatura img { width: 100%; height: 100%; object-fit: cover; }
+.categoria-fila-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+.categoria-fila-info .nombre { font-weight: 700; font-size: .9rem; }
+.categoria-fila-info .meta { font-size: .78rem; color: var(--gris); }
+.categoria-fila-info .inactivo-texto { color: var(--rojo); }
 .dos-col { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+
+/* ---------- Grid de paneles en Contenido → General ---------- */
+.config-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; align-items: start; margin-bottom: 1.2rem;
+}
+.config-grid > .panel { margin-bottom: 0; }
+.config-grid > .panel-ancho { grid-column: 1 / -1; }
+@media (max-width: 900px) {
+  .config-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- Vista previa del tema de la tienda pública (Contenido → Apariencia) ---------- */
+.tema-preview {
+  border: 1px solid var(--borde); border-radius: var(--radio);
+  padding: 1.4rem; display: flex; flex-direction: column; gap: 1rem;
+  overflow: hidden;
+}
+.tema-preview-navbar {
+  display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
+}
+.tema-preview-logo { font-weight: 800; white-space: nowrap; }
+.tema-preview-buscador {
+  background: rgba(127, 127, 127, .14); border: 1px solid rgba(127, 127, 127, .25);
+  border-radius: 999px; padding: .5rem .9rem; font-size: .85rem; opacity: .8;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: width .15s ease;
+}
+.tema-preview-botones { display: flex; gap: .7rem; flex-wrap: wrap; }
+.tema-preview-btn {
+  display: inline-flex; align-items: center; padding: .6rem 1.2rem;
+  font-weight: 700; font-size: .88rem; transition: background .15s ease, border-radius .15s ease;
+}
+.tema-preview-card {
+  border-radius: var(--radio-sm); padding: 1rem; font-size: .85rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+}
 
 /* ---------- Perfil ---------- */
 .cabecera-perfil {
@@ -783,6 +919,34 @@ td .input:focus, td select:focus {
   color: var(--gris); font-size: .82rem; font-weight: 600; padding: .5rem .3rem;
 }
 .btn-limpiar:hover { color: var(--rojo); }
+
+/* ---------- Barra de paginación ---------- */
+.paginacion-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: .9rem; flex-wrap: wrap;
+  padding: .9rem 1.2rem; border-top: 1px solid var(--borde);
+}
+.paginacion-info { font-size: .85rem; color: var(--gris); }
+.paginacion-info strong { color: var(--dark); font-weight: 700; }
+.paginacion-controles { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.paginacion-tamano {
+  display: inline-flex; align-items: center; gap: .5rem;
+  font-size: .82rem; font-weight: 600; color: var(--gris);
+}
+.paginacion-tamano select {
+  padding: .42rem .6rem; border: 1px solid var(--borde); border-radius: 10px;
+  font-size: .85rem; font-weight: 700; color: var(--dark); background: var(--superficie);
+}
+.paginacion-botones { display: flex; align-items: center; gap: .35rem; }
+.paginacion-botones button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border: 1px solid var(--borde); border-radius: 10px;
+  background: var(--superficie); color: var(--dark);
+}
+.paginacion-botones button:hover:not(:disabled) { background: var(--gris-claro); }
+.paginacion-botones button:disabled { opacity: .4; cursor: not-allowed; }
+.paginacion-actual {
+  min-width: 62px; text-align: center; font-size: .85rem; font-weight: 700; color: var(--dark);
+}
 
 /* ---------- Grid de tarjetas de catálogo ---------- */
 .catalogo-grid {

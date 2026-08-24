@@ -298,6 +298,8 @@ export function OrderDetailModal({
     setImprimiendo(true);
     try {
       await descargarPdfPedido(pedidoId);
+    } catch (err) {
+      setError(extraerMensajeError(err, "No se pudo generar la factura del pedido."));
     } finally {
       setImprimiendo(false);
     }

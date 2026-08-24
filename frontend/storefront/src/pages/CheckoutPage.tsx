@@ -2,6 +2,7 @@ import { CheckCircle2, ClipboardList } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { crearPedido } from "../api/orders";
+import { AvisoPrecios } from "../components/AvisoPrecios";
 import { WhatsAppIcon } from "../components/icons/WhatsAppIcon";
 import { useSiteConfig } from "../context/SiteConfigContext";
 import { useCart } from "../store/cart";
@@ -9,7 +10,7 @@ import { useUltimoPedido } from "../store/ultimoPedido";
 import { formatoCantidad, formatoPrecio, whatsappHref } from "../utils";
 
 export function CheckoutPage() {
-  const { items, personalizados, vaciar } = useCart();
+  const { items, personalizados, vaciar, totalPrecio } = useCart();
   const navigate = useNavigate();
   const { config } = useSiteConfig();
 
@@ -111,6 +112,7 @@ export function CheckoutPage() {
                     {formatoCantidad(i.cantidad, i.permiteFraccion)} × {i.productoNombre} (
                     {i.presentacionNombre})
                   </span>
+                  <span>{formatoPrecio(i.precioUnitario * i.cantidad)}</span>
                 </div>
               ))}
               {personalizados.map((p) => (
@@ -118,12 +120,14 @@ export function CheckoutPage() {
                   <span>
                     {p.cantidad} {p.unidadNombre || "unid."} × {p.nombre} (fuera de catálogo)
                   </span>
+                  <span>Por confirmar</span>
                 </div>
               ))}
               <div className="r" style={{ fontWeight: 800, fontSize: "1.05rem" }}>
-                <span>Total de productos</span>
-                <span>{items.length + personalizados.length}</span>
+                <span>Total estimado</span>
+                <span>{formatoPrecio(totalPrecio())}</span>
               </div>
+              <AvisoPrecios compacto />
             </div>
 
             <div className="campo">

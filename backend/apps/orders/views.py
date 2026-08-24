@@ -5,8 +5,10 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.catalog.serializers import ProductoWriteSerializer
+from apps.catalog.models import Producto
+from apps.catalog.serializers import ProductoSerializer, ProductoWriteSerializer
 from apps.common.permissions import EsStaff, requiere_permiso
 
 from .models import Cliente, DetallePedido, HistorialDetallePedido, LotePedidos, Pedido
@@ -21,6 +23,50 @@ from .serializers import (
     PedidoListSerializer,
     ProductoPendienteSerializer,
 )
+
+MINIMO_MAS_VENDIDOS = 8
+
+
+class ProductosMasVendidosView(APIView):
+    """
+    Home público: ranking real por unidades vendidas en pedidos ya
+    entregados. Si el negocio es nuevo y aún no hay suficiente historial,
+    completa el resto con productos activos por orden de catálogo, para que
+    el bloque nunca se vea vacío.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        ids_vendidos = list(
+            DetallePedido.objects.filter(
+                pedido__estado="ENTREGADO", presentacion__isnull=False
+            )
+            .values("presentacion__producto_id")
+            .annotate(total_cantidad=Sum("cantidad"))
+            .order_by("-total_cantidad")
+            .values_list("presentacion__producto_id", flat=True)
+        )[:MINIMO_MAS_VENDIDOS]
+
+        productos_por_id = Producto.objects.filter(
+            id__in=ids_vendidos, estado_producto=True
+        ).select_related("categoria").prefetch_related("presentaciones__unidad_venta")
+        productos_por_id = {p.id: p for p in productos_por_id}
+        resultado = [productos_por_id[i] for i in ids_vendidos if i in productos_por_id]
+
+        if len(resultado) < MINIMO_MAS_VENDIDOS:
+            faltan = MINIMO_MAS_VENDIDOS - len(resultado)
+            relleno = (
+                Producto.objects.filter(estado_producto=True)
+                .exclude(id__in=[p.id for p in resultado])
+                .select_related("categoria")
+                .prefetch_related("presentaciones__unidad_venta")
+                .order_by("orden", "nombre_producto")[:faltan]
+            )
+            resultado += list(relleno)
+
+        data = ProductoSerializer(resultado, many=True, context={"request": request}).data
+        return Response(data)
 
 
 class PedidoViewSet(viewsets.ModelViewSet):
