@@ -8,11 +8,13 @@ const ICONOS: TrustBadge["icono"][] = ["leaf", "truck", "shield", "users"];
 
 interface Props {
   badge: TrustBadge | null;
+  tipoInicial: TrustBadge["tipo"];
   onCerrar: () => void;
   onGuardado: () => void;
 }
 
-export function TrustBadgeFormModal({ badge, onCerrar, onGuardado }: Props) {
+export function TrustBadgeFormModal({ badge, tipoInicial, onCerrar, onGuardado }: Props) {
+  const [tipo, setTipo] = useState<TrustBadge["tipo"]>(badge?.tipo ?? tipoInicial);
   const [icono, setIcono] = useState<TrustBadge["icono"]>(badge?.icono ?? "leaf");
   const [valor, setValor] = useState(badge?.valor ?? "");
   const [etiqueta, setEtiqueta] = useState(badge?.etiqueta ?? "");
@@ -31,7 +33,7 @@ export function TrustBadgeFormModal({ badge, onCerrar, onGuardado }: Props) {
       return;
     }
 
-    const payload = { icono, valor, etiqueta, orden, activo };
+    const payload = { tipo, icono, valor, etiqueta, orden, activo };
 
     setGuardando(true);
     try {
@@ -68,15 +70,42 @@ export function TrustBadgeFormModal({ badge, onCerrar, onGuardado }: Props) {
         {error && <div className="error-box">{error}</div>}
 
         <div className="campo">
-          <label>Ícono</label>
-          <select value={icono} onChange={(e) => setIcono(e.target.value as TrustBadge["icono"])}>
-            {ICONOS.map((i) => (
-              <option key={i} value={i}>
-                {i}
-              </option>
-            ))}
-          </select>
+          <label>Tipo</label>
+          <div className="segmentado">
+            <button
+              type="button"
+              className={tipo === "insignia" ? "activo" : ""}
+              onClick={() => setTipo("insignia")}
+            >
+              Insignia
+            </button>
+            <button
+              type="button"
+              className={tipo === "estadistica" ? "activo" : ""}
+              onClick={() => setTipo("estadistica")}
+            >
+              Estadística
+            </button>
+          </div>
+          <p style={{ color: "var(--gris)", fontSize: ".82rem", marginTop: ".4rem" }}>
+            {tipo === "insignia"
+              ? "Se muestra en la barra de confianza (ej: ícono + \"24-48h\")."
+              : "Se muestra como número grande en la sección de estadísticas (ej: \"+350\")."}
+          </p>
         </div>
+
+        {tipo === "insignia" && (
+          <div className="campo">
+            <label>Ícono</label>
+            <select value={icono} onChange={(e) => setIcono(e.target.value as TrustBadge["icono"])}>
+              {ICONOS.map((i) => (
+                <option key={i} value={i}>
+                  {i}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="fila">
           <div className="campo">
             <label>Valor (ej: 100%, 24-48h) *</label>

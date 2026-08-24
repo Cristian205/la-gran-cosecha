@@ -1,5 +1,18 @@
-import { Heart, Leaf, Sprout, Truck, Users, type LucideIcon } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  Heart,
+  Leaf,
+  ShieldCheck,
+  Sprout,
+  Store,
+  Truck,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { Link } from "react-router-dom";
+import heroNosotros from "../assets/hero-nosotros.webp";
+import lineaProcesos from "../assets/linea-procesos.webp";
 import { useSiteConfig } from "../context/SiteConfigContext";
 import { useResaltarAlLlegar } from "../hooks/useResaltarAlLlegar";
 
@@ -26,6 +39,17 @@ const VALORES = [
   },
 ];
 
+/**
+ * Los mismos tres pasos que ilustra `linea-procesos.webp`. En móvil la
+ * ilustración baja de ~620 a ~356 px y sus etiquetas quedan ilegibles, así que
+ * ahí se muestra esta versión en texto, que se lee a cualquier ancho.
+ */
+const RUTA = [
+  { icono: Sprout, texto: "Campo" },
+  { icono: Truck, texto: "Logística" },
+  { icono: Store, texto: "Tu negocio" },
+];
+
 const ICONOS: Record<(typeof VALORES)[number]["icono"], LucideIcon> = {
   leaf: Leaf,
   truck: Truck,
@@ -37,17 +61,59 @@ export function AboutPage() {
   const { config } = useSiteConfig();
   useResaltarAlLlegar(config);
 
+  // La sección de historia solo existe si hay contenido cargado desde el panel;
+  // si no, el CTA lleva a la sección que siempre está presente.
+  const anclaHistoria = config.historia || config.mision ? "historia-mision" : "valores";
+
   return (
     <div>
-      <section className="pagina-hero">
-        <span className="etiqueta glass-dark">
-          <Sprout size={16} /> Nuestra historia
-        </span>
-        <h1>Sobre La Gran Cosecha</h1>
-        <p>
-          Somos el puente entre el campo colombiano y los negocios que alimentan
-          la ciudad todos los días.
-        </p>
+      <section className="hero-nosotros">
+        <img
+          className="hero-nosotros-fondo"
+          src={heroNosotros}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+        />
+
+        {/* Tarjeta de vidrio: separa el mensaje del paisaje sin taparlo. */}
+        <div className="hero-nosotros-panel">
+          <span className="etiqueta glass-dark">
+            <ShieldCheck size={15} /> Garantía de frescura
+          </span>
+          <h1>
+            Del campo colombiano <em>a tu negocio</em>
+          </h1>
+          <p>
+            Conectamos productos frescos con los negocios que alimentan nuestra
+            ciudad todos los días.
+          </p>
+          <a href={`#${anclaHistoria}`} className="hero-cta-suave">
+            Conoce nuestra historia
+            <ArrowDown size={16} />
+          </a>
+        </div>
+
+        {/* Campo → Logística → Tu negocio: el papel de la marca en un vistazo. */}
+        <img
+          className="hero-nosotros-linea"
+          src={lineaProcesos}
+          alt="Del campo, pasando por nuestra logística, hasta tu negocio"
+          decoding="async"
+        />
+        <ol className="hero-ruta" aria-label="Cómo llega el producto a tu negocio">
+          {RUTA.map(({ icono: Icono, texto }, i) => (
+            <li key={texto}>
+              <span className="hero-ruta-paso">
+                <Icono size={15} strokeWidth={1.9} />
+                {texto}
+              </span>
+              {i < RUTA.length - 1 && (
+                <ArrowRight size={13} className="hero-ruta-flecha" aria-hidden="true" />
+              )}
+            </li>
+          ))}
+        </ol>
       </section>
 
       <div className="contenedor">

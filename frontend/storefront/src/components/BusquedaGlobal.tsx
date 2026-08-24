@@ -113,8 +113,9 @@ export function BusquedaGlobal({ busqueda, onBuscar, onNavegar, atajoTeclado, au
       return;
     }
     const id = setTimeout(() => {
-      obtenerProductos({ search: q })
-        .then((data) => setProductos(data.results.slice(0, 5)))
+      // El dropdown solo muestra 5: que el backend recorte, no el cliente.
+      obtenerProductos({ search: q, pageSize: 5 })
+        .then((data) => setProductos(data.results))
         .catch(() => setProductos([]));
     }, 250);
     return () => clearTimeout(id);
@@ -177,9 +178,16 @@ export function BusquedaGlobal({ busqueda, onBuscar, onNavegar, atajoTeclado, au
   const hayResultados =
     productos.length > 0 || categoriasCoincidentes.length > 0 || paginasCoincidentes.length > 0;
 
-  function ir(ruta: string, resaltar?: string) {
-    const destino = resaltar ? `${ruta}?resaltar=${encodeURIComponent(resaltar)}` : ruta;
-    onBuscar("");
+  /**
+   * `busquedaDestino` deja el término aplicado en la tienda en vez de limpiarlo.
+   * Es lo que hace que "resaltar un producto" siga funcionando ahora que el
+   * catálogo se pagina: filtrado por su nombre, el producto cae en la primera
+   * tanda y el hook de resaltado lo encuentra en pantalla.
+   */
+  function ir(ruta: string, params?: Record<string, string>, busquedaDestino?: string) {
+    const query = new URLSearchParams(params).toString();
+    const destino = query ? `${ruta}?${query}` : ruta;
+    onBuscar(busquedaDestino ?? "");
     setAbierto(false);
     onNavegar?.();
     if (location.pathname === ruta) {
@@ -222,7 +230,13 @@ export function BusquedaGlobal({ busqueda, onBuscar, onNavegar, atajoTeclado, au
                       key={`p-${p.id}`}
                       type="button"
                       className="buscador-item"
-                      onClick={() => ir("/tienda", `producto-${p.id}`)}
+                      onClick={() =>
+                        ir(
+                          "/tienda",
+                          { resaltar: `producto-${p.id}` },
+                          p.nombre_producto
+                        )
+                      }
                     >
                       <span className="buscador-item-nombre">{p.nombre_producto}</span>
                       <span className="buscador-item-meta">{p.categoria_nombre}</span>
@@ -239,7 +253,7 @@ export function BusquedaGlobal({ busqueda, onBuscar, onNavegar, atajoTeclado, au
                       key={`c-${c.id}`}
                       type="button"
                       className="buscador-item"
-                      onClick={() => ir("/tienda", `categoria-${c.id}`)}
+                      onClick={() => ir("/tienda", { categoria: String(c.id) })}
                     >
                       <span className="buscador-item-nombre">{c.nombre_categoria}</span>
                     </button>
@@ -255,7 +269,9 @@ export function BusquedaGlobal({ busqueda, onBuscar, onNavegar, atajoTeclado, au
                       key={`pg-${p.ruta}-${p.resaltar ?? ""}`}
                       type="button"
                       className="buscador-item"
-                      onClick={() => ir(p.ruta, p.resaltar)}
+                      onClick={() =>
+                        ir(p.ruta, p.resaltar ? { resaltar: p.resaltar } : undefined)
+                      }
                     >
                       <span className="buscador-item-nombre">{p.titulo}</span>
                     </button>

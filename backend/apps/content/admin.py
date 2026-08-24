@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import PromoBanner, SiteConfig, Testimonio, TrustBadge
+from .models import BeneficioComercial, OfertaProducto, PromoBanner, SiteConfig, Testimonio, TrustBadge
 
 
 @admin.register(SiteConfig)
@@ -28,5 +28,18 @@ class TestimonioAdmin(admin.ModelAdmin):
 
 @admin.register(TrustBadge)
 class TrustBadgeAdmin(admin.ModelAdmin):
-    list_display = ("etiqueta", "valor", "icono", "orden", "activo")
+    list_display = ("etiqueta", "valor", "tipo", "icono", "orden", "activo")
     list_editable = ("orden", "activo")
+    list_filter = ("tipo",)
+
+
+@admin.register(BeneficioComercial)
+class BeneficioComercialAdmin(admin.ModelAdmin):
+    list_display = ("titulo", "icono", "orden", "activo")
+    list_editable = ("orden", "activo")
+
+
+@admin.register(OfertaProducto)
+class OfertaProductoAdmin(admin.ModelAdmin):
+    list_display = ("presentacion", "precio_oferta", "fecha_fin", "activo")
+    list_editable = ("activo",)

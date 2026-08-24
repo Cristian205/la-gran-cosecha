@@ -1,7 +1,8 @@
-import { Menu, Search, ShoppingCart, X } from "lucide-react";
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Search, ShoppingCart, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { useSiteConfig } from "../context/SiteConfigContext";
+import { ENLACES } from "../navegacion";
 import { useCart } from "../store/cart";
 import { BusquedaGlobal } from "./BusquedaGlobal";
 
@@ -11,37 +12,31 @@ interface Props {
   onAbrirCarrito: () => void;
 }
 
-const ENLACES = [
-  { to: "/", label: "Inicio", fin: true },
-  { to: "/tienda", label: "Tienda", fin: false },
-  { to: "/nosotros", label: "Nosotros", fin: false },
-  { to: "/contacto", label: "Contáctanos", fin: false },
-];
-
 export function Navbar({ busqueda, onBuscar, onAbrirCarrito }: Props) {
-  const totalItems = useCart((s) => s.totalItems());
+  const totalLineas = useCart((s) => s.totalLineas());
   const { config } = useSiteConfig();
-  const [menuAbierto, setMenuAbierto] = useState(false);
+  const location = useLocation();
   const [buscadorMovilAbierto, setBuscadorMovilAbierto] = useState(false);
+  const [conScroll, setConScroll] = useState(false);
 
-  function cerrarMenu() {
-    setMenuAbierto(false);
-  }
+  useEffect(() => {
+    function onScroll() {
+      setConScroll(window.scrollY > 8);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
-  function alternarBuscadorMovil() {
-    setMenuAbierto(false);
-    setBuscadorMovilAbierto((v) => !v);
-  }
-
-  function alternarMenu() {
+  // Cambiar de sección desde la barra inferior debe cerrar el buscador móvil.
+  useEffect(() => {
     setBuscadorMovilAbierto(false);
-    setMenuAbierto((v) => !v);
-  }
+  }, [location.pathname]);
 
   return (
-    <nav className="navbar">
-      <NavLink to="/" className="marca" onClick={cerrarMenu}>
-        <span className="logo-circ">
+    <nav className={`navbar ${conScroll ? "con-scroll" : ""}`}>
+      <NavLink to="/" className="marca">
+        <span className={`logo-circ ${config.logo_url ? "sin-fondo" : ""}`}>
           {config.logo_url ? (
             <img
               src={config.logo_url}
@@ -55,6 +50,7 @@ export function Navbar({ busqueda, onBuscar, onAbrirCarrito }: Props) {
         <span className="marca-txt">La Gran Cosecha</span>
       </NavLink>
 
+      {/* En móvil los enlaces viven en la barra inferior (BottomNav). */}
       <div className="nav-links">
         {ENLACES.map((e) => (
           <NavLink
@@ -72,7 +68,7 @@ export function Navbar({ busqueda, onBuscar, onAbrirCarrito }: Props) {
 
       <button
         className="btn-buscar-movil"
-        onClick={alternarBuscadorMovil}
+        onClick={() => setBuscadorMovilAbierto((v) => !v)}
         aria-label={buscadorMovilAbierto ? "Cerrar búsqueda" : "Buscar"}
         aria-expanded={buscadorMovilAbierto}
       >
@@ -82,16 +78,7 @@ export function Navbar({ busqueda, onBuscar, onAbrirCarrito }: Props) {
       <button className="btn-carrito" onClick={onAbrirCarrito}>
         <ShoppingCart size={18} />
         <span className="btn-carrito-txt">Carrito</span>
-        {totalItems > 0 && <span className="badge">{totalItems}</span>}
-      </button>
-
-      <button
-        className="btn-menu-movil"
-        onClick={alternarMenu}
-        aria-label={menuAbierto ? "Cerrar menú" : "Abrir menú"}
-        aria-expanded={menuAbierto}
-      >
-        {menuAbierto ? <X size={22} /> : <Menu size={22} />}
+        {totalLineas > 0 && <span className="badge">{totalLineas}</span>}
       </button>
 
       {buscadorMovilAbierto && (
@@ -103,27 +90,6 @@ export function Navbar({ busqueda, onBuscar, onAbrirCarrito }: Props) {
             autoFocus
           />
         </div>
-      )}
-
-      {menuAbierto && (
-        <>
-          <div className="menu-movil-overlay" onClick={cerrarMenu} />
-          <div className="menu-movil">
-            <div className="nav-links-movil">
-              {ENLACES.map((e) => (
-                <NavLink
-                  key={e.to}
-                  to={e.to}
-                  end={e.fin}
-                  onClick={cerrarMenu}
-                  className={({ isActive }) => (isActive ? "activo" : "")}
-                >
-                  {e.label}
-                </NavLink>
-              ))}
-            </div>
-          </div>
-        </>
       )}
     </nav>
   );

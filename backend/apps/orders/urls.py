@@ -3,7 +3,13 @@ from rest_framework.routers import DefaultRouter
 
 from .pdf import GenerarPdfPedidoView, GenerarPdfPedidosLoteView
 from .stats import ReporteVentasView, ResumenEstadisticasView
-from .views import ClienteViewSet, LoteViewSet, PedidoViewSet, ProductoPendienteViewSet
+from .views import (
+    ClienteViewSet,
+    LoteViewSet,
+    PedidoViewSet,
+    ProductoPendienteViewSet,
+    ProductosMasVendidosView,
+)
 
 router = DefaultRouter()
 router.register(r"orders", PedidoViewSet, basename="pedidos")
@@ -19,6 +25,11 @@ urlpatterns = [
         "admin/stats/reporte/",
         ReporteVentasView.as_view(),
         name="admin-stats-reporte",
+    ),
+    path(
+        "orders/productos-mas-vendidos/",
+        ProductosMasVendidosView.as_view(),
+        name="productos-mas-vendidos",
     ),
     path("orders/pdf-lote/", GenerarPdfPedidosLoteView.as_view(), name="pedidos-pdf-lote"),
     path("orders/<int:pk>/pdf/", GenerarPdfPedidoView.as_view(), name="pedido-pdf"),

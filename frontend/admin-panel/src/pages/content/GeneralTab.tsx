@@ -4,10 +4,75 @@ import { MediaField } from "../../components/MediaField";
 import type { SiteConfig } from "../../types";
 import { extraerMensajeError } from "../../utils";
 
+const FUENTES: { valor: string; etiqueta: string; pila: string }[] = [
+  { valor: "poppins", etiqueta: "Poppins", pila: '"Poppins", sans-serif' },
+  { valor: "inter", etiqueta: "Inter", pila: '"Inter", sans-serif' },
+  { valor: "nunito", etiqueta: "Nunito", pila: '"Nunito", sans-serif' },
+  { valor: "work-sans", etiqueta: "Work Sans", pila: '"Work Sans", sans-serif' },
+  { valor: "jakarta", etiqueta: "Plus Jakarta Sans", pila: '"Plus Jakarta Sans", sans-serif' },
+  { valor: "quicksand", etiqueta: "Quicksand", pila: '"Quicksand", sans-serif' },
+];
+
+const RADIOS_BOTON: { valor: string; etiqueta: string; px: number }[] = [
+  { valor: "redondeado", etiqueta: "Redondeado", px: 999 },
+  { valor: "suave", etiqueta: "Suave", px: 14 },
+  { valor: "cuadrado", etiqueta: "Cuadrado", px: 6 },
+];
+
+function pilaFuente(valor: string): string {
+  return FUENTES.find((f) => f.valor === valor)?.pila ?? FUENTES[0].pila;
+}
+
+function radioPx(valor: string): number {
+  return RADIOS_BOTON.find((r) => r.valor === valor)?.px ?? 999;
+}
+
+interface CampoColorProps {
+  etiqueta: string;
+  valor: string;
+  onCambiar: (valor: string) => void;
+  ayuda?: string;
+}
+
+function CampoColor({ etiqueta, valor, onCambiar, ayuda }: CampoColorProps) {
+  return (
+    <div className="campo">
+      <label>{etiqueta}</label>
+      <div style={{ display: "flex", gap: ".6rem", alignItems: "center" }}>
+        <input
+          type="color"
+          value={valor || "#000000"}
+          onChange={(e) => onCambiar(e.target.value)}
+          style={{ width: 46, height: 38, padding: 2, flexShrink: 0 }}
+        />
+        <input
+          value={valor}
+          onChange={(e) => onCambiar(e.target.value)}
+          placeholder="#000000"
+          style={{ maxWidth: 140 }}
+        />
+      </div>
+      {ayuda && (
+        <p style={{ color: "var(--gris)", fontSize: ".82rem", marginTop: ".4rem" }}>{ayuda}</p>
+      )}
+    </div>
+  );
+}
+
 const VACIO: SiteConfig = {
   logo_url: null,
   nombre_empresa: "",
   color_primario: "#16a34a",
+  color_primario_texto: "#ffffff",
+  color_secundario: "#f59e0b",
+  color_secundario_texto: "#0b1f17",
+  color_fondo: "#f6faf7",
+  color_superficie: "#ffffff",
+  color_texto: "#0f172a",
+  fuente: "poppins",
+  radio_boton: "redondeado",
+  ancho_buscador: 420,
+  espaciado_navbar: 0,
   whatsapp_numero: "",
   whatsapp_mensaje_pedido: "",
   instagram_url: "",
@@ -20,6 +85,16 @@ const VACIO: SiteConfig = {
   horario: "",
   historia: "",
   mision: "",
+  paso1_titulo: "",
+  paso1_texto: "",
+  paso2_titulo: "",
+  paso2_texto: "",
+  paso3_titulo: "",
+  paso3_texto: "",
+  cotizacion_titulo: "",
+  cotizacion_texto: "",
+  cta_final_titulo: "",
+  cta_final_texto: "",
   factura_eslogan: "",
   factura_nit: "",
   factura_proveedor: "",
@@ -72,6 +147,7 @@ export function GeneralTab() {
       {error && <div className="error-box">{error}</div>}
       {ok && <div className="ok-box">Configuración guardada correctamente.</div>}
 
+      <div className="config-grid">
       <div className="panel">
         <div className="cabecera">
           <h2>Logo del sitio</h2>
@@ -89,28 +165,202 @@ export function GeneralTab() {
 
       <div className="panel">
         <div className="cabecera">
-          <h2>Apariencia</h2>
+          <h2>Redes sociales</h2>
         </div>
         <div style={{ padding: "1.2rem" }}>
           <div className="campo">
-            <label>Color primario del sitio</label>
-            <div style={{ display: "flex", gap: ".6rem", alignItems: "center" }}>
-              <input
-                type="color"
-                value={config.color_primario || "#16a34a"}
-                onChange={(e) => campo("color_primario", e.target.value)}
-                style={{ width: 46, height: 38, padding: 2, flexShrink: 0 }}
-              />
-              <input
-                value={config.color_primario}
-                onChange={(e) => campo("color_primario", e.target.value)}
-                placeholder="#16a34a"
-                style={{ maxWidth: 140 }}
-              />
+            <label>Instagram</label>
+            <input
+              value={config.instagram_url}
+              onChange={(e) => campo("instagram_url", e.target.value)}
+              placeholder="https://instagram.com/tu_negocio"
+            />
+          </div>
+          <div className="campo">
+            <label>Facebook</label>
+            <input
+              value={config.facebook_url}
+              onChange={(e) => campo("facebook_url", e.target.value)}
+              placeholder="https://facebook.com/tu_negocio"
+            />
+          </div>
+          <div className="campo">
+            <label>TikTok</label>
+            <input
+              value={config.tiktok_url}
+              onChange={(e) => campo("tiktok_url", e.target.value)}
+              placeholder="https://tiktok.com/@tu_negocio"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="panel panel-ancho">
+        <div className="cabecera">
+          <h2>Apariencia de la tienda pública</h2>
+        </div>
+        <div style={{ padding: "1.2rem" }}>
+          <p style={{ color: "var(--gris)", fontSize: ".85rem", marginTop: 0 }}>
+            Estos cambios se aplican en vivo en la tienda (storefront) que ven tus
+            clientes. La vista previa de abajo se actualiza mientras editas.
+          </p>
+
+          <div className="modal-seccion">
+            <span>Colores</span>
+          </div>
+          <div className="fila">
+            <CampoColor
+              etiqueta="Botón primario — fondo"
+              valor={config.color_primario}
+              onCambiar={(v) => campo("color_primario", v)}
+              ayuda="Botones principales, acentos y degradados de marca."
+            />
+            <CampoColor
+              etiqueta="Botón primario — texto"
+              valor={config.color_primario_texto}
+              onCambiar={(v) => campo("color_primario_texto", v)}
+            />
+          </div>
+          <div className="fila">
+            <CampoColor
+              etiqueta="Botón secundario — fondo"
+              valor={config.color_secundario}
+              onCambiar={(v) => campo("color_secundario", v)}
+              ayuda="Botones de énfasis (ej: promociones) e insignias."
+            />
+            <CampoColor
+              etiqueta="Botón secundario — texto"
+              valor={config.color_secundario_texto}
+              onCambiar={(v) => campo("color_secundario_texto", v)}
+            />
+          </div>
+          <div className="fila">
+            <CampoColor
+              etiqueta="Fondo general"
+              valor={config.color_fondo}
+              onCambiar={(v) => campo("color_fondo", v)}
+            />
+            <CampoColor
+              etiqueta="Fondo de tarjetas/paneles"
+              valor={config.color_superficie}
+              onCambiar={(v) => campo("color_superficie", v)}
+            />
+          </div>
+          <CampoColor
+            etiqueta="Texto general"
+            valor={config.color_texto}
+            onCambiar={(v) => campo("color_texto", v)}
+            ayuda="Color de títulos y texto principal en toda la tienda."
+          />
+
+          <div className="modal-seccion">
+            <span>Tipografía y botones</span>
+          </div>
+          <div className="campo">
+            <label>Fuente del sitio</label>
+            <select value={config.fuente} onChange={(e) => campo("fuente", e.target.value)}>
+              {FUENTES.map((f) => (
+                <option key={f.valor} value={f.valor} style={{ fontFamily: f.pila }}>
+                  {f.etiqueta}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="campo">
+            <label>Forma de los botones</label>
+            <div className="segmentado" style={{ maxWidth: 360 }}>
+              {RADIOS_BOTON.map((r) => (
+                <button
+                  key={r.valor}
+                  type="button"
+                  className={config.radio_boton === r.valor ? "activo" : ""}
+                  onClick={() => campo("radio_boton", r.valor)}
+                >
+                  {r.etiqueta}
+                </button>
+              ))}
             </div>
-            <p style={{ color: "var(--gris)", fontSize: ".82rem", marginTop: ".4rem" }}>
-              Se usa para botones, acentos y degradados en toda la tienda pública.
-            </p>
+          </div>
+
+          <div className="modal-seccion">
+            <span>Layout del navbar</span>
+          </div>
+          <div className="campo">
+            <label>Ancho del buscador ({config.ancho_buscador}px)</label>
+            <input
+              type="range"
+              min={240}
+              max={640}
+              step={10}
+              value={config.ancho_buscador}
+              onChange={(e) => setConfig((prev) => ({ ...prev, ancho_buscador: Number(e.target.value) }))}
+            />
+          </div>
+          <div className="campo">
+            <label>Espacio entre el logo y las opciones ({config.espaciado_navbar}px)</label>
+            <input
+              type="range"
+              min={0}
+              max={64}
+              step={4}
+              value={config.espaciado_navbar}
+              onChange={(e) => setConfig((prev) => ({ ...prev, espaciado_navbar: Number(e.target.value) }))}
+            />
+          </div>
+
+          <div className="modal-seccion">
+            <span>Vista previa</span>
+          </div>
+          <div
+            className="tema-preview"
+            style={{
+              fontFamily: pilaFuente(config.fuente),
+              background: config.color_fondo || "#f6faf7",
+              color: config.color_texto || "#0f172a",
+            }}
+          >
+            <div className="tema-preview-navbar">
+              <span
+                className="tema-preview-logo"
+                style={{ marginRight: `${Math.min(config.espaciado_navbar, 32)}px` }}
+              >
+                🌾 Tu tienda
+              </span>
+              <span
+                className="tema-preview-buscador"
+                style={{ width: `${Math.min(config.ancho_buscador, 260)}px` }}
+              >
+                Buscar productos…
+              </span>
+            </div>
+            <div className="tema-preview-botones">
+              <span
+                className="tema-preview-btn"
+                style={{
+                  background: config.color_primario || "#16a34a",
+                  color: config.color_primario_texto || "#fff",
+                  borderRadius: radioPx(config.radio_boton),
+                }}
+              >
+                Agregar al pedido
+              </span>
+              <span
+                className="tema-preview-btn"
+                style={{
+                  background: config.color_secundario || "#f59e0b",
+                  color: config.color_secundario_texto || "#0b1f17",
+                  borderRadius: radioPx(config.radio_boton),
+                }}
+              >
+                Ver promoción
+              </span>
+            </div>
+            <div
+              className="tema-preview-card"
+              style={{ background: config.color_superficie || "#ffffff" }}
+            >
+              Así se ve una tarjeta de producto sobre el fondo elegido.
+            </div>
           </div>
         </div>
       </div>
@@ -168,38 +418,6 @@ export function GeneralTab() {
 
       <div className="panel">
         <div className="cabecera">
-          <h2>Redes sociales</h2>
-        </div>
-        <div style={{ padding: "1.2rem" }}>
-          <div className="campo">
-            <label>Instagram</label>
-            <input
-              value={config.instagram_url}
-              onChange={(e) => campo("instagram_url", e.target.value)}
-              placeholder="https://instagram.com/tu_negocio"
-            />
-          </div>
-          <div className="campo">
-            <label>Facebook</label>
-            <input
-              value={config.facebook_url}
-              onChange={(e) => campo("facebook_url", e.target.value)}
-              placeholder="https://facebook.com/tu_negocio"
-            />
-          </div>
-          <div className="campo">
-            <label>TikTok</label>
-            <input
-              value={config.tiktok_url}
-              onChange={(e) => campo("tiktok_url", e.target.value)}
-              placeholder="https://tiktok.com/@tu_negocio"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="cabecera">
           <h2>Sobre nosotros</h2>
         </div>
         <div style={{ padding: "1.2rem" }}>
@@ -222,7 +440,92 @@ export function GeneralTab() {
         </div>
       </div>
 
-      <div className="panel">
+      <div className="panel panel-ancho">
+        <div className="cabecera">
+          <h2>Textos del Home</h2>
+        </div>
+        <div style={{ padding: "1.2rem" }}>
+          <div className="modal-seccion">
+            <span>Cómo funciona (3 pasos)</span>
+          </div>
+          <div className="fila">
+            <div className="campo">
+              <label>Paso 1 — Título</label>
+              <input value={config.paso1_titulo} onChange={(e) => campo("paso1_titulo", e.target.value)} />
+            </div>
+            <div className="campo">
+              <label>Paso 1 — Texto</label>
+              <input value={config.paso1_texto} onChange={(e) => campo("paso1_texto", e.target.value)} />
+            </div>
+          </div>
+          <div className="fila">
+            <div className="campo">
+              <label>Paso 2 — Título</label>
+              <input value={config.paso2_titulo} onChange={(e) => campo("paso2_titulo", e.target.value)} />
+            </div>
+            <div className="campo">
+              <label>Paso 2 — Texto</label>
+              <input value={config.paso2_texto} onChange={(e) => campo("paso2_texto", e.target.value)} />
+            </div>
+          </div>
+          <div className="fila">
+            <div className="campo">
+              <label>Paso 3 — Título</label>
+              <input value={config.paso3_titulo} onChange={(e) => campo("paso3_titulo", e.target.value)} />
+            </div>
+            <div className="campo">
+              <label>Paso 3 — Texto</label>
+              <input value={config.paso3_texto} onChange={(e) => campo("paso3_texto", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="modal-seccion">
+            <span>Cotización rápida</span>
+          </div>
+          <div className="fila">
+            <div className="campo">
+              <label>Título</label>
+              <input
+                value={config.cotizacion_titulo}
+                onChange={(e) => campo("cotizacion_titulo", e.target.value)}
+              />
+            </div>
+            <div className="campo">
+              <label>Texto</label>
+              <input
+                value={config.cotizacion_texto}
+                onChange={(e) => campo("cotizacion_texto", e.target.value)}
+              />
+            </div>
+          </div>
+          <p style={{ color: "var(--gris)", fontSize: ".82rem", marginTop: "-.4rem" }}>
+            Los botones usan el WhatsApp configurado arriba en "Contacto" y el formulario de
+            "Contáctanos" — no hace falta repetirlos aquí.
+          </p>
+
+          <div className="modal-seccion">
+            <span>CTA final</span>
+          </div>
+          <div className="fila">
+            <div className="campo">
+              <label>Título</label>
+              <input
+                value={config.cta_final_titulo}
+                onChange={(e) => campo("cta_final_titulo", e.target.value)}
+              />
+            </div>
+            <div className="campo">
+              <label>Texto</label>
+              <input
+                value={config.cta_final_texto}
+                onChange={(e) => campo("cta_final_texto", e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel panel-ancho">
         <div className="cabecera">
           <h2>Datos de factura (PDF de pedidos)</h2>
         </div>
@@ -280,6 +583,7 @@ export function GeneralTab() {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       <button className="btn primario" disabled={guardando}>

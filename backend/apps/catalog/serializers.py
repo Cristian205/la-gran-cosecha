@@ -7,6 +7,8 @@ from .models import Categoria, HistorialPrecio, PresentacionProducto, Producto, 
 
 
 class CategoriaSerializer(serializers.ModelSerializer):
+    imagen_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Categoria
         fields = [
@@ -15,7 +17,16 @@ class CategoriaSerializer(serializers.ModelSerializer):
             "abreviatura",
             "orden",
             "estado_categoria",
+            "imagen",
+            "imagen_url",
         ]
+        extra_kwargs = {"imagen": {"write_only": True, "required": False}}
+
+    def get_imagen_url(self, obj):
+        if not obj.imagen:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(obj.imagen.url) if request else obj.imagen.url
 
 
 class UnidadMedidaSerializer(serializers.ModelSerializer):
@@ -53,6 +64,7 @@ class ProductoSerializer(serializers.ModelSerializer):
     )
     imagen_url = serializers.SerializerMethodField()
     presentaciones = serializers.SerializerMethodField()
+    precio_desde = serializers.SerializerMethodField()
 
     class Meta:
         model = Producto
@@ -69,6 +81,7 @@ class ProductoSerializer(serializers.ModelSerializer):
             "estado_producto",
             "imagen_url",
             "orden",
+            "precio_desde",
             "presentaciones",
         ]
 
@@ -83,6 +96,21 @@ class ProductoSerializer(serializers.ModelSerializer):
         # Solo presentaciones activas; el prefetch se resuelve en la vista.
         activas = [p for p in obj.presentaciones.all() if p.estado_presentacion]
         return PresentacionProductoSerializer(activas, many=True).data
+
+    def get_precio_desde(self, obj):
+        """
+        Precio más bajo entre las presentaciones activas ("Desde $X" en la
+        tienda). Usa la anotación de ProductoViewSet cuando está disponible y,
+        si el serializer se llama desde otro sitio (p.ej. más-vendidos), lo
+        calcula sobre el prefetch para no disparar consultas extra.
+        """
+        anotado = getattr(obj, "precio_desde", None)
+        if anotado is not None:
+            return str(anotado)
+        precios = [
+            p.precio_unitario for p in obj.presentaciones.all() if p.estado_presentacion
+        ]
+        return str(min(precios)) if precios else None
 
 
 class PresentacionWriteSerializer(serializers.Serializer):

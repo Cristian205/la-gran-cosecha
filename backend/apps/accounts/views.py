@@ -1,3 +1,4 @@
+import logging
 import random
 import secrets
 import string
@@ -31,6 +32,7 @@ from .serializers import (
 )
 
 Usuario = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def _generar_password_seguro(longitud=12):
@@ -89,10 +91,19 @@ class LoginView(APIView):
         try:
             enviar_codigo_otp(user, otp_code)
         except Exception:  # noqa: BLE001
+            # Sin esto el fallo real de SMTP (credenciales, remitente rechazado,
+            # timeout) queda invisible detrás del 500 genérico de abajo.
+            logger.exception("Fallo al enviar el código OTP a %s", user.email_usuario)
             return Response(
                 {"success": False, "message": "Error enviando el código OTP."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+        if settings.DEBUG:
+            # Con el backend de consola el correo son miles de líneas (el logo va
+            # adjunto en base64), así que dejamos el código a la vista. Nunca en
+            # producción: DEBUG es False allí.
+            logger.info("Código OTP para %s: %s", user.email_usuario, otp_code)
 
         # Ticket firmado con el uid del usuario (válido durante la vida del OTP)
         otp_ticket = signing.dumps(

@@ -1,4 +1,12 @@
-import type { Paginated, PromoBanner, SiteConfig, Testimonio, TrustBadge } from "../types";
+import type {
+  BeneficioComercial,
+  OfertaProducto,
+  Paginated,
+  PromoBanner,
+  SiteConfig,
+  Testimonio,
+  TrustBadge,
+} from "../types";
 import { api } from "./client";
 
 function unwrap<T>(data: Paginated<T> | T[]): T[] {
@@ -114,4 +122,61 @@ export async function actualizarTrustBadge(
 
 export async function eliminarTrustBadge(id: number): Promise<void> {
   await api.delete(`/content/trust-badges/${id}/`);
+}
+
+// ---------- Beneficios comerciales ("¿Por qué comprar con nosotros?") ----------
+export async function obtenerBeneficios(): Promise<BeneficioComercial[]> {
+  const { data } = await api.get<Paginated<BeneficioComercial>>("/content/beneficios/", {
+    params: { page_size: 100 },
+  });
+  return unwrap(data);
+}
+
+export async function crearBeneficio(
+  payload: Omit<BeneficioComercial, "id">
+): Promise<BeneficioComercial> {
+  const { data } = await api.post<BeneficioComercial>("/content/beneficios/", payload);
+  return data;
+}
+
+export async function actualizarBeneficio(
+  id: number,
+  payload: Omit<BeneficioComercial, "id">
+): Promise<BeneficioComercial> {
+  const { data } = await api.patch<BeneficioComercial>(`/content/beneficios/${id}/`, payload);
+  return data;
+}
+
+export async function eliminarBeneficio(id: number): Promise<void> {
+  await api.delete(`/content/beneficios/${id}/`);
+}
+
+// ---------- Ofertas de la semana ----------
+export async function obtenerOfertas(): Promise<OfertaProducto[]> {
+  const { data } = await api.get<Paginated<OfertaProducto>>("/content/ofertas/", {
+    params: { page_size: 100 },
+  });
+  return unwrap(data);
+}
+
+export async function crearOferta(payload: {
+  presentacion: number;
+  precio_oferta: string;
+  fecha_fin: string | null;
+  activo: boolean;
+}): Promise<OfertaProducto> {
+  const { data } = await api.post<OfertaProducto>("/content/ofertas/", payload);
+  return data;
+}
+
+export async function actualizarOferta(
+  id: number,
+  payload: { presentacion: number; precio_oferta: string; fecha_fin: string | null; activo: boolean }
+): Promise<OfertaProducto> {
+  const { data } = await api.patch<OfertaProducto>(`/content/ofertas/${id}/`, payload);
+  return data;
+}
+
+export async function eliminarOferta(id: number): Promise<void> {
+  await api.delete(`/content/ofertas/${id}/`);
 }

@@ -22,33 +22,10 @@ from weasyprint import HTML
 from apps.common.permissions import requiere_permiso
 from apps.content.models import SiteConfig
 
+from .factura_layout import planificar
 from .models import LotePedidos, Pedido
 
-CATEGORIAS_ESPECIALES = ["DESECHABLES", "SALSAMENTARIA"]
-COLUMNAS_CATEGORIAS_NORMALES = 3
-
-
-def _dividir_en_columnas(pares, n_columnas):
-    """
-    Reparte una lista de (categoria, items) en `n_columnas` columnas
-    contiguas, sin alterar el orden original de las categorías, buscando que
-    la cantidad total de artículos por columna quede lo más pareja posible
-    (para que una factura con muchos productos siga cabiendo en 1 página).
-    """
-    total_items = sum(len(items) for _, items in pares)
-    columnas = [[] for _ in range(n_columnas)]
-    if total_items == 0:
-        return columnas
-
-    columna_actual = 0
-    acumulado = 0
-    for cat, items in pares:
-        columnas[columna_actual].append((cat, items))
-        acumulado += len(items)
-        objetivo = total_items * (columna_actual + 1) / n_columnas
-        if acumulado >= objetivo and columna_actual < n_columnas - 1:
-            columna_actual += 1
-    return columnas
+CATEGORIAS_ESPECIALES = ["DESECHABLES", "SALSAMENTARIA", "DULCERIA"]
 
 # Mismo verde del h1/marca de la factura (#065f46).
 COLOR_LOGO_FACTURA = (6, 95, 70)
@@ -143,14 +120,14 @@ def _obtener_datos_factura(pedido):
             {"articulo": articulo, "pres": pres, "unidad": unidad, "cant": d.cantidad, "subtotal": subtotal}
         )
 
-    columnas_normales = _dividir_en_columnas(
-        list(categorias_normales.items()), COLUMNAS_CATEGORIAS_NORMALES
-    )
+    # El número de columnas y el tamaño de letra no son fijos: se calculan
+    # para este pedido en concreto, de forma que cuadre en una sola hoja tanto
+    # con 5 artículos como con 100. Ver `factura_layout`.
+    plan = planificar(categorias_normales, categorias_especiales)
 
     return {
         "pedido": pedido,
-        "categorias_normales": categorias_normales,
-        "columnas_normales": columnas_normales,
+        "plan": plan,
         "categorias_especiales": categorias_especiales,
         "fecha_entrega": fecha_entrega,
     }

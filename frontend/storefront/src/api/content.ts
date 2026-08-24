@@ -1,5 +1,13 @@
 import { api } from "./client";
-import type { Paginated, PromoBanner, SiteConfig, Testimonio, TrustBadge } from "../types";
+import type {
+  BeneficioComercial,
+  OfertaProducto,
+  Paginated,
+  PromoBanner,
+  SiteConfig,
+  Testimonio,
+  TrustBadge,
+} from "../types";
 
 function unwrap<T>(data: Paginated<T> | T[]): T[] {
   return Array.isArray(data) ? data : data.results;
@@ -22,5 +30,17 @@ export async function obtenerTestimonios(): Promise<Testimonio[]> {
 
 export async function obtenerTrustBadges(): Promise<TrustBadge[]> {
   const { data } = await api.get<Paginated<TrustBadge> | TrustBadge[]>("/content/trust-badges/");
+  return unwrap(data);
+}
+
+export async function obtenerBeneficios(): Promise<BeneficioComercial[]> {
+  const { data } = await api.get<Paginated<BeneficioComercial> | BeneficioComercial[]>(
+    "/content/beneficios/"
+  );
+  return unwrap(data);
+}
+
+export async function obtenerOfertas(): Promise<OfertaProducto[]> {
+  const { data } = await api.get<Paginated<OfertaProducto> | OfertaProducto[]>("/content/ofertas/");
   return unwrap(data);
 }

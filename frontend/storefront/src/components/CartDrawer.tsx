@@ -1,10 +1,11 @@
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../store/cart";
-import { ajustarCantidad, formatoCantidad, pasoCantidad } from "../utils";
+import { AvisoPrecios } from "./AvisoPrecios";
+import { ajustarCantidad, formatoCantidad, formatoPrecio, pasoCantidad } from "../utils";
 
 export function CartDrawer({ onCerrar }: { onCerrar: () => void }) {
-  const { items, personalizados, cambiarCantidad, quitar, quitarPersonalizado, totalItems } =
+  const { items, personalizados, cambiarCantidad, quitar, quitarPersonalizado, totalLineas, totalPrecio } =
     useCart();
   const navigate = useNavigate();
 
@@ -38,6 +39,10 @@ export function CartDrawer({ onCerrar }: { onCerrar: () => void }) {
                   <div className="info">
                     <div className="n">{i.productoNombre}</div>
                     <div className="p">{i.presentacionNombre}</div>
+                    <div className="precio">
+                      {formatoPrecio(i.precioUnitario)} c/u ·{" "}
+                      <b>{formatoPrecio(i.precioUnitario * i.cantidad)}</b>
+                    </div>
                   </div>
                   <div className="stepper stepper-sm">
                     <button
@@ -117,10 +122,15 @@ export function CartDrawer({ onCerrar }: { onCerrar: () => void }) {
         </div>
 
         <footer>
-          <div className="total-linea">
-            <span>Total de productos</span>
-            <span>{totalItems()}</span>
+          <div className="total-linea sub">
+            <span>Productos</span>
+            <span>{totalLineas()}</span>
           </div>
+          <div className="total-linea">
+            <span>Total estimado</span>
+            <span>{formatoPrecio(totalPrecio())}</span>
+          </div>
+          <AvisoPrecios compacto />
           <button
             className="btn btn-verde btn-block"
             disabled={items.length === 0 && personalizados.length === 0}

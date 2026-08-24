@@ -1,3 +1,18 @@
+import {
+  Apple,
+  Beef,
+  Candy,
+  Carrot,
+  Egg,
+  Leaf,
+  Milk,
+  Package,
+  Salad,
+  Sprout,
+  Wheat,
+  type LucideIcon,
+} from "lucide-react";
+
 const formatterCOP = new Intl.NumberFormat("es-CO", {
   style: "currency",
   currency: "COP",
@@ -46,6 +61,31 @@ const PALETA_CATEGORIA = [
 
 export function colorCategoria(id: number): string {
   return PALETA_CATEGORIA[id % PALETA_CATEGORIA.length];
+}
+
+// Icono por palabra clave en el nombre de la categoría, para que cada tile en
+// Inicio se distinga a simple vista en vez de repetir el mismo ícono genérico.
+// El orden importa: gana la primera regla que coincida. Tubérculos va antes
+// que verduras para que no compartan icono cuando se muestran juntas.
+const REGLAS_ICONO_CATEGORIA: [RegExp, LucideIcon][] = [
+  [/frut/, Apple],
+  [/tuberculo|papa|yuca|raiz/, Carrot],
+  [/verdur|hortaliz|vegetal|ensalada/, Salad],
+  [/grano|cereal|legumbre|arroz/, Wheat],
+  [/lacte|leche|queso|salsamentaria/, Milk],
+  [/carne|res|pollo|cerdo|embutido/, Beef],
+  [/huevo/, Egg],
+  [/hierba|aromatic|condiment|especia/, Leaf],
+  [/dulc|confite|golosina/, Candy],
+  [/desechable|empaque|aseo/, Package],
+];
+
+export function iconoCategoria(nombre: string): LucideIcon {
+  const texto = normalizarTexto(nombre);
+  for (const [patron, Icono] of REGLAS_ICONO_CATEGORIA) {
+    if (patron.test(texto)) return Icono;
+  }
+  return Sprout;
 }
 
 /** Incremento mínimo permitido para la cantidad de un producto. */
