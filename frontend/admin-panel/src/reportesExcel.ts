@@ -1,4 +1,7 @@
-import ExcelJS from "exceljs";
+// exceljs pesa ~940 kB. Se carga con import() dinamico dentro de
+// descargarInforme() para que no entre en el bundle inicial del panel:
+// solo se descarga la primera vez que alguien exporta un informe.
+import type ExcelJSNamespace from "exceljs";
 
 export type TipoColumnaInforme = "texto" | "numero" | "moneda" | "porcentaje";
 
@@ -51,6 +54,7 @@ export async function descargarInforme({
   filas,
   totales = false,
 }: InformeOpciones): Promise<void> {
+  const ExcelJS: typeof ExcelJSNamespace = (await import("exceljs")).default;
   const libro = new ExcelJS.Workbook();
   libro.creator = "La Gran Cosecha";
   libro.created = new Date();

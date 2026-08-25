@@ -11,4 +11,17 @@ export default defineConfig({
       "/media": "http://localhost:8000",
     },
   },
+  build: {
+    // exceljs, recharts y sweetalert2 son pesados y cambian poco: en chunks
+    // aparte se cachean entre despliegues en vez de reenviarse enteros.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          charts: ["recharts"],
+          alerts: ["sweetalert2"],
+        },
+      },
+    },
+  },
 });

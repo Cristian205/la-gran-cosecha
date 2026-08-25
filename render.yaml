@@ -1,0 +1,68 @@
+# Blueprint de Render para el backend Django de La Gran Cosecha.
+#
+# Uso: en Render, New > Blueprint, y apuntar a este repositorio. Render lee este
+# archivo y crea el servicio. Las variables marcadas con sync:false NO se guardan
+# aqui: Render las pide al crear el servicio y quedan solo en su panel.
+#
+# La base de datos es Supabase (externa), por eso no se declara ningun servicio
+# de tipo `database`.
+
+services:
+  - type: web
+    name: lgc-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    region: oregon
+    healthCheckPath: /healthz
+
+    # Disco persistente para los archivos subidos (MEDIA_ROOT=/app/media).
+    # Sin esto, cada despliegue borra las imagenes de productos: el sistema de
+    # archivos de un contenedor de Render es efimero.
+    disk:
+      name: media
+      mountPath: /app/media
+      sizeGB: 1
+
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+
+      # Generar con:
+      #   python -c "import secrets,string; a=string.ascii_letters+string.digits+'-_=+.,:;/?@^~'; print(''.join(secrets.choice(a) for _ in range(64)))"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+
+      # Dominio propio si lo hay. El dominio *.onrender.com se anade solo en
+      # prod.py leyendo RENDER_EXTERNAL_HOSTNAME, asi que puede quedar vacio.
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+
+      # Cadena de conexion de Supabase. Usar SIEMPRE el pooler
+      # (aws-0-<region>.pooler.supabase.com:5432), nunca db.<ref>.supabase.co,
+      # que solo resuelve por IPv6.
+      - key: DATABASE_URL
+        sync: false
+
+      # Dominios de los dos frontends en Vercel, separados por coma y con https://
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+
+      - key: MEDIA_ROOT
+        value: /app/media
+
+      # Correo OTP (Gmail con contrasena de aplicacion)
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+
+      # Numero de workers de gunicorn. 2 en el plan starter (512 MB): cada worker
+      # carga Django + WeasyPrint y subirlo mucho provoca OOM.
+      - key: WEB_CONCURRENCY
+        value: "2"
