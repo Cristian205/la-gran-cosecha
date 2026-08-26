@@ -39,8 +39,14 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
-# En produccion el correo OTP se envia por SMTP real
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# Correo del OTP. Render bloquea las conexiones salientes por los puertos de
+# SMTP en las instancias free ("Network is unreachable" al abrir el socket),
+# asi que con clave de Brevo se envia por su API HTTPS. Sin clave se cae a
+# SMTP, que sirve en cualquier otro hosting que si permita la salida.
+if BREVO_API_KEY:  # noqa: F405
+    EMAIL_BACKEND = "apps.common.email_backends.BrevoAPIBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 # CORS estricto: solo los origenes declarados por variable de entorno
 CORS_ALLOW_ALL_ORIGINS = False

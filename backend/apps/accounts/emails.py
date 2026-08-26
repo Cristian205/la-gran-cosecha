@@ -5,8 +5,6 @@ Toma el nombre de empresa, color y logo desde `apps.content.models.SiteConfig`
 tener la marca fija en el código, para que cada instalación del sistema vea
 su propia identidad en el correo.
 """
-from email.mime.image import MIMEImage
-
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
@@ -26,20 +24,27 @@ def enviar_codigo_otp(user, otp_code):
         f"Este código expirará en {settings.OTP_EXPIRY_MINUTES} minutos."
     )
 
-    logo_bytes = None
+    # El logo se referencia por su URL publica en vez de incrustarlo como
+    # adjunto con cid:. Motivos: la API de Brevo (ver
+    # apps.common.email_backends) no admite imagenes en linea, y una URL
+    # publica pesa menos y la muestran todos los clientes de correo.
+    #
+    # Solo sirve si la URL es absoluta, que es lo que devuelve el storage de
+    # Cloudflare R2. Con almacenamiento local es relativa ("/media/...") y no
+    # se puede resolver desde el correo, asi que se cae al placeholder.
+    logo_url = ""
     if config.logo:
-        # Se lee por la API de storage, no por .path: con el backend de
-        # Cloudflare R2 los objetos no tienen ruta en disco y .path lanza
-        # NotImplementedError, que hasattr() no captura (solo captura
-        # AttributeError). Asi funciona igual en local y en R2.
         try:
-            with config.logo.open("rb") as archivo:
-                logo_bytes = archivo.read()
+            url = config.logo.url
+            if url.startswith("http"):
+                logo_url = url
         except Exception:  # noqa: BLE001 - cada storage falla distinto
-            logo_bytes = None
+            logo_url = ""
 
-    if logo_bytes:
-        marca_html = '<img src="cid:logo_otp" alt="" style="height:60px;border-radius:14px;" />'
+    if logo_url:
+        marca_html = (
+            f'<img src="{logo_url}" alt="" style="height:60px;border-radius:14px;" />'
+        )
     else:
         marca_html = (
             '<div style="width:90px;height:90px;margin:auto;border-radius:50%;'
@@ -94,11 +99,4 @@ def enviar_codigo_otp(user, otp_code):
         to=[user.email_usuario],
     )
     email.attach_alternative(html, "text/html")
-
-    if logo_bytes:
-        imagen = MIMEImage(logo_bytes)
-        imagen.add_header("Content-ID", "<logo_otp>")
-        imagen.add_header("Content-Disposition", "inline", filename="logo.png")
-        email.attach(imagen)
-
     email.send(fail_silently=False)
