@@ -39,10 +39,15 @@ def _obtener_logo_base64():
     ver el dibujo/colores originales por debajo en vez de taparlo del todo.
     """
     config = SiteConfig.get_solo()
-    if not (config.logo and hasattr(config.logo, "path")):
+    if not config.logo:
         return ""
+    # Igual que en accounts/emails.py: se lee por la API de storage porque con
+    # R2 no existe .path. Los bytes van a BytesIO para que Pillow tenga un
+    # archivo seekable, que el objeto que devuelve el storage remoto no garantiza.
     try:
-        with Image.open(config.logo.path) as logo:
+        with config.logo.open("rb") as archivo:
+            datos_logo = archivo.read()
+        with Image.open(io.BytesIO(datos_logo)) as logo:
             base = logo.convert("RGBA")
             alpha_tinte = base.getchannel("A").point(lambda a: min(a, INTENSIDAD_TINTE))
             tinte = Image.new("RGBA", base.size, (*COLOR_LOGO_FACTURA, 0))
@@ -51,7 +56,7 @@ def _obtener_logo_base64():
             buffer = io.BytesIO()
             resultado.save(buffer, format="PNG")
             return base64.b64encode(buffer.getvalue()).decode("utf-8")
-    except OSError:
+    except Exception:  # noqa: BLE001 - cada storage falla distinto
         return ""
 
 

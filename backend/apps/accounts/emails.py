@@ -27,11 +27,15 @@ def enviar_codigo_otp(user, otp_code):
     )
 
     logo_bytes = None
-    if config.logo and hasattr(config.logo, "path"):
+    if config.logo:
+        # Se lee por la API de storage, no por .path: con el backend de
+        # Cloudflare R2 los objetos no tienen ruta en disco y .path lanza
+        # NotImplementedError, que hasattr() no captura (solo captura
+        # AttributeError). Asi funciona igual en local y en R2.
         try:
-            with open(config.logo.path, "rb") as archivo:
+            with config.logo.open("rb") as archivo:
                 logo_bytes = archivo.read()
-        except OSError:
+        except Exception:  # noqa: BLE001 - cada storage falla distinto
             logo_bytes = None
 
     if logo_bytes:
