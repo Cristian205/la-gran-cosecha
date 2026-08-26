@@ -41,3 +41,21 @@ services:
 
       - key: WEB_CONCURRENCY
         value: "1"
+
+      # --- Cloudflare R2: almacenamiento de los archivos subidos ---
+      # Con estas cuatro puestas, media deja de depender del disco del
+      # contenedor (que en el plan free es efimero y se borra en cada deploy).
+      # Si falta alguna, Django vuelve a guardar en disco local.
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      # Subdominio r2.dev del bucket, o dominio propio conectado a el.
+      - key: R2_PUBLIC_URL
+        sync: false
+      - key: R2_LOCATION
+        value: media

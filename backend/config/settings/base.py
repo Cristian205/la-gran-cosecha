@@ -152,6 +152,62 @@ STORAGES = {
     },
 }
 
+# --------------------------------------------------------------------------
+# Cloudflare R2 para los archivos subidos (media)
+# --------------------------------------------------------------------------
+# R2 habla el protocolo de S3, asi que se usa el backend S3 de django-storages.
+# Solo se activa si estan las cuatro credenciales: sin ellas todo sigue
+# guardandose en disco local, que es lo que se quiere en desarrollo.
+R2_ACCOUNT_ID = env("R2_ACCOUNT_ID", default="")
+R2_ACCESS_KEY_ID = env("R2_ACCESS_KEY_ID", default="")
+R2_SECRET_ACCESS_KEY = env("R2_SECRET_ACCESS_KEY", default="")
+R2_BUCKET_NAME = env("R2_BUCKET_NAME", default="")
+# Dominio publico del bucket: el subdominio r2.dev que activa Cloudflare, o un
+# dominio propio conectado al bucket. Sin el hay que firmar cada URL.
+R2_PUBLIC_URL = env("R2_PUBLIC_URL", default="")
+# Prefijo dentro del bucket. Mantiene las claves como media/categorias/foo.jpg,
+# igual que las rutas que ya hay guardadas en la base de datos.
+R2_LOCATION = env("R2_LOCATION", default="media")
+
+USE_R2 = all([R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME])
+
+if USE_R2:
+    from botocore.config import Config as _BotoConfig
+
+    _r2_dominio = R2_PUBLIC_URL.replace("https://", "").replace("http://", "").rstrip("/")
+
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": R2_BUCKET_NAME,
+            "access_key": R2_ACCESS_KEY_ID,
+            "secret_key": R2_SECRET_ACCESS_KEY,
+            "endpoint_url": f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+            # R2 no tiene regiones al estilo AWS, pero boto3 exige uno.
+            "region_name": "auto",
+            "location": R2_LOCATION,
+            # R2 no implementa las ACL de S3: mandar una da error. El acceso
+            # publico se concede en el panel de Cloudflare, no por objeto.
+            "default_acl": None,
+            "querystring_auth": not bool(_r2_dominio),
+            "custom_domain": _r2_dominio or None,
+            # Sin esto un archivo con nombre repetido pisaria al anterior.
+            "file_overwrite": False,
+            "client_config": _BotoConfig(
+                signature_version="s3v4",
+                # boto3 >= 1.36 anade checksums CRC32 que R2 rechaza con
+                # "not implemented". Se calculan solo cuando el API los exige.
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+            ),
+        },
+    }
+
+    # Con dominio publico las URLs las construye el propio storage; MEDIA_URL
+    # se deja coherente para el codigo que aun lo consulte.
+    if _r2_dominio:
+        MEDIA_URL = f"https://{_r2_dominio}/{R2_LOCATION}/"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ==========================================================================

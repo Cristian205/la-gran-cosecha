@@ -44,6 +44,7 @@ marcados como `sync: false`.
 | `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | Cuenta de Gmail y contraseña **de aplicación** |
 | `DEFAULT_FROM_EMAIL` | La misma dirección que `EMAIL_HOST_USER`, o Gmail rechaza el envío |
 | `WEB_CONCURRENCY` | `2` |
+| `R2_*` | Credenciales de Cloudflare R2, ver [CLOUDFLARE-R2.md](CLOUDFLARE-R2.md) |
 
 No hace falta poner el dominio `*.onrender.com` en `DJANGO_ALLOWED_HOSTS`:
 `prod.py` lo añade solo leyendo `RENDER_EXTERNAL_HOSTNAME`.
@@ -54,29 +55,19 @@ solo resuelve por IPv6 y da un timeout de conexión desde Render.
 
 ---
 
-## Los archivos subidos necesitan un disco persistente
+## Los archivos subidos van a Cloudflare R2
 
-El sistema de archivos de un contenedor de Render es **efímero**: en cada
-despliegue se borra. Sin un disco persistente, las imágenes de productos y
-categorías desaparecen al primer redeploy.
+El sistema de archivos de un contenedor de Render es **efímero**: se borra en
+cada despliegue, y el plan free no admite discos persistentes. Por eso las
+imágenes de productos y categorías se guardan en un bucket de **Cloudflare R2**,
+no en el servidor.
 
-El blueprint declara un disco de 1 GB montado en `/app/media`, que es donde
-apunta `MEDIA_ROOT`. Dos consecuencias que conviene saber de antemano:
+El código ya está preparado; solo hay que crear el bucket y pegar las
+credenciales. El procedimiento completo está en **[CLOUDFLARE-R2.md](CLOUDFLARE-R2.md)**,
+incluido el comando `subir_media_a_r2` para subir las imágenes que ya tienes.
 
-1. Los discos requieren un plan **de pago** (Starter o superior). No hay discos
-   en el plan gratuito.
-2. Un servicio con disco **no puede escalar a varias instancias** ni hacer
-   despliegues sin corte: Render para el contenedor viejo antes de arrancar el
-   nuevo, así que hay unos segundos de caída en cada deploy.
-
-Si eso molesta, la alternativa es mover `media/` a un almacenamiento externo
-(Supabase Storage o S3) con `django-storages`, quitar el disco del blueprint y
-recuperar el escalado horizontal.
-
-**Las imágenes que ya tienes son locales.** El disco arranca vacío y
-[`.dockerignore`](.dockerignore) excluye `media/` a propósito. Hay que subir a
-mano el contenido de `backend/media/` una vez creado el servicio, con
-`rsync`/`scp` por SSH de Render, o volviéndolas a cargar desde el panel de admin.
+Mientras falte alguna de las variables `R2_*`, Django guarda en disco local y
+las imágenes se perderán en el siguiente despliegue.
 
 ---
 
@@ -128,6 +119,8 @@ estará en la lista de CORS. O añades cada una, o usas
 
 El plan gratuito de Render **duerme el servicio tras 15 minutos sin tráfico**, y
 despertarlo tarda entre 30 y 60 segundos. La primera visita a la tienda después
-de un rato de inactividad se sentirá rota. Además no admite discos, así que las
-imágenes no sobrevivirían a los despliegues. Para algo de cara al público, el
+de un rato de inactividad se sentirá rota. Para algo de cara al público, el
 plan Starter es el mínimo razonable.
+
+Lo que ya no es un problema en el plan free son las imágenes: al estar en
+Cloudflare R2 no dependen del disco del contenedor.

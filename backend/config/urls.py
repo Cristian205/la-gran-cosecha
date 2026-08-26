@@ -20,7 +20,11 @@ urlpatterns = [
     path("api/media/", include("apps.media.urls")),
 ]
 
-if settings.DEBUG:
+if getattr(settings, "USE_R2", False):
+    # Los archivos viven en Cloudflare R2 y se sirven desde su dominio publico:
+    # Django no interviene, asi que no hay ninguna ruta /media/ que montar.
+    pass
+elif settings.DEBUG:
     # Servir archivos multimedia en desarrollo
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 else:
@@ -29,9 +33,9 @@ else:
     # produccion, porque el helper static() de arriba devuelve [] con DEBUG=False.
     #
     # serve_static no es eficiente para trafico alto, pero para el volumen de
-    # este catalogo es suficiente. La solucion definitiva es mover media a un
-    # almacenamiento externo (Supabase Storage / S3) con django-storages, que
-    # ademas elimina la dependencia del disco persistente de Render.
+    # este catalogo es suficiente. Es solo el camino de respaldo: en cuanto se
+    # configuren las credenciales de Cloudflare R2 (ver USE_R2 en base.py) los
+    # archivos se sirven desde el dominio del bucket y esta rama no se usa.
     urlpatterns += [
         re_path(
             r"^media/(?P<path>.*)$",
