@@ -277,7 +277,11 @@ DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
     default="Seguridad La Gran Cosecha <no-reply@lagrancosecha.local>",
 )
-EMAIL_TIMEOUT = 10
+EMAIL_TIMEOUT = 15
+
+# Clave de la API de Brevo. Si esta puesta, produccion envia por HTTPS en vez
+# de SMTP (ver prod.py): Render bloquea los puertos SMTP salientes.
+BREVO_API_KEY = env("BREVO_API_KEY", default="")
 
 # ==========================================================================
 # PARÁMETROS DE NEGOCIO / OTP

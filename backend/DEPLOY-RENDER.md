@@ -45,6 +45,7 @@ marcados como `sync: false`.
 | `DEFAULT_FROM_EMAIL` | La misma dirección que `EMAIL_HOST_USER`, o Gmail rechaza el envío |
 | `WEB_CONCURRENCY` | `2` |
 | `R2_*` | Credenciales de Cloudflare R2, ver [CLOUDFLARE-R2.md](CLOUDFLARE-R2.md) |
+| `BREVO_API_KEY` | Clave de API de Brevo. **Sin ella el correo OTP no sale**, ver abajo |
 
 No hace falta poner el dominio `*.onrender.com` en `DJANGO_ALLOWED_HOSTS`:
 `prod.py` lo añade solo leyendo `RENDER_EXTERNAL_HOSTNAME`.
@@ -111,9 +112,20 @@ estará en la lista de CORS. O añades cada una, o usas
 - **Usuarios**: ya hay 3 en la base de datos migrada. Si necesitas otro
   superusuario, usa la shell de Render:
   `python manage.py createsuperuser`.
-- **Correo OTP**: el login del panel manda un código por correo. Si
-  `EMAIL_HOST_PASSWORD` está mal, el login queda bloqueado sin mensaje claro —
-  los errores de SMTP aparecen en los logs de Render.
+- **Correo OTP**: el login del panel manda un código por correo.
+
+  **Render bloquea las conexiones salientes por los puertos de SMTP** (25, 465,
+  587) en las instancias free. El backend SMTP de Django falla ahí con
+  `OSError: [Errno 101] Network is unreachable` al abrir el socket, antes
+  siquiera de autenticarse — así que unas credenciales de Gmail correctas no
+  arreglan nada.
+
+  Por eso, con `BREVO_API_KEY` puesta, `prod.py` envía por la API HTTPS de
+  Brevo (puerto 443). Hay que verificar la dirección de `EMAIL_HOST_USER` como
+  remitente en **Brevo > Senders**, o Brevo rechaza el envío.
+
+  Sin esa clave el login del panel queda bloqueado: no hay forma de recibir el
+  código.
 
 ## Plan gratuito
 

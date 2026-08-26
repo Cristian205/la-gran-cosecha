@@ -38,6 +38,10 @@ services:
 
       - key: DEFAULT_FROM_EMAIL
         sync: false
+      # Sin esta clave el correo NO sale: Render bloquea los puertos SMTP
+      # salientes en las instancias free.
+      - key: BREVO_API_KEY
+        sync: false
 
       - key: WEB_CONCURRENCY
         value: "1"
