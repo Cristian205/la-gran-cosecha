@@ -19,6 +19,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.common.permissions import EsAdministrador, es_owner, es_owner_de, requiere_permiso
 
 from apps.tenancy.models import Membership
+from apps.tenancy.viewsets import ExigeNegocioMixin
 
 from .emails import enviar_codigo_otp
 from .permisos import CATALOGO_PERMISOS
@@ -47,9 +48,45 @@ def _generar_password_seguro(longitud=12):
     return "".join(secrets.choice(caracteres) for _ in range(longitud))
 
 
-def _tokens_para_usuario(user):
+def _tokens_para_usuario(user, tenant=None):
+    """
+    Emite el par de tokens, con el negocio activo dentro si lo hay.
+
+    El claim va en el REFRESH y no solo en el access: SimpleJWT construye cada
+    nuevo access a partir de la carga del refresh, así que ponerlo solo en el
+    access lo perdería en la primera renovación y el panel se quedaría sin
+    negocio a los treinta minutos.
+
+    El claim solo ELIGE el negocio; no concede nada. Que la persona siga
+    perteneciendo a él se comprueba en cada petición (`ExigePertenencia`), así
+    que retirar a alguien de un negocio surte efecto de inmediato aunque su
+    token siga vivo.
+    """
     refresh = RefreshToken.for_user(user)
+    if tenant is not None:
+        refresh["tenant_id"] = str(tenant.uuid)
     return {"access": str(refresh.access_token), "refresh": str(refresh)}
+
+
+def _negocios_de(user):
+    """Los negocios operativos en los que trabaja esta persona."""
+    return [
+        m.tenant
+        for m in user.memberships.filter(activo=True).select_related("tenant")
+        if m.tenant.esta_operativo
+    ]
+
+
+def _negocio_por_defecto(user, negocios=None):
+    """
+    Con cuál entra al iniciar sesión.
+
+    Si trabaja en varios, entra en el primero por orden alfabético y el panel le
+    ofrece cambiar. Elegir por él es mejor que pedirle que elija antes de ver
+    nada: la inmensa mayoría solo tiene uno.
+    """
+    negocios = negocios if negocios is not None else _negocios_de(user)
+    return negocios[0] if negocios else None
 
 
 class LoginView(APIView):
@@ -95,7 +132,9 @@ class LoginView(APIView):
         user.save(update_fields=["token_verificacion", "token_expiracion"])
 
         try:
-            enviar_codigo_otp(user, otp_code)
+            # La marca del correo es la del negocio por el que entrará. Con
+            # varios, la del primero: es el que el panel abrirá por defecto.
+            enviar_codigo_otp(user, otp_code, _negocio_por_defecto(user))
         except Exception:  # noqa: BLE001
             # Sin esto el fallo real de SMTP (credenciales, remitente rechazado,
             # timeout) queda invisible detrás del 500 genérico de abajo.
@@ -203,11 +242,28 @@ class VerifyOtpView(APIView):
             ]
         )
 
+        negocios = _negocios_de(user)
+        if not negocios and not user.is_superuser:
+            # Una cuenta sin pertenencia no puede administrar nada: desde la
+            # fase 3 el acceso lo concede el negocio, no `is_staff`.
+            return Response(
+                {
+                    "success": False,
+                    "message": "Tu cuenta no está dada de alta en ningún negocio.",
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        activo = _negocio_por_defecto(user, negocios)
+        request.tenant = activo  # para que el serializer calcule rol y permisos
+
         return Response(
             {
                 "success": True,
-                **_tokens_para_usuario(user),
-                "user": UsuarioSerializer(user).data,
+                **_tokens_para_usuario(user, activo),
+                "user": UsuarioSerializer(
+                    user, context={"request": request, "incluir_negocios": True}
+                ).data,
             }
         )
 
@@ -216,7 +272,11 @@ class MeView(APIView):
     """Devuelve o actualiza preferencias propias del usuario autenticado actual."""
 
     def get(self, request):
-        return Response(UsuarioSerializer(request.user).data)
+        return Response(
+            UsuarioSerializer(
+                request.user, context={"request": request, "incluir_negocios": True}
+            ).data
+        )
 
     def patch(self, request):
         serializer = PreferenciasSerializer(data=request.data, partial=True)
@@ -226,7 +286,51 @@ class MeView(APIView):
             setattr(request.user, campo, valor)
         if campos:
             request.user.save(update_fields=campos)
-        return Response(UsuarioSerializer(request.user).data)
+        return Response(
+            UsuarioSerializer(
+                request.user, context={"request": request, "incluir_negocios": True}
+            ).data
+        )
+
+
+class CambiarNegocioView(APIView):
+    """
+    Emite un par de tokens nuevo apuntando a otro de los negocios del usuario.
+
+    Es la contrapartida del selector del panel. No basta con que el frontend
+    cambie una cabecera: el negocio activo viaja firmado dentro del token, y la
+    pertenencia se vuelve a comprobar aquí antes de emitirlo.
+    """
+
+    def post(self, request):
+        slug = str(request.data.get("negocio", "")).strip().lower()
+        if not slug:
+            return Response(
+                {"success": False, "message": "Indica a qué negocio quieres entrar."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        destino = next(
+            (t for t in _negocios_de(request.user) if t.slug == slug), None
+        )
+        if destino is None:
+            # 404 y no 403: si no trabaja ahí, ese negocio no existe para él.
+            return Response(
+                {"success": False, "message": "No trabajas en ese negocio."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        request.tenant = destino
+        return Response(
+            {
+                "success": True,
+                **_tokens_para_usuario(request.user, destino),
+                "user": UsuarioSerializer(
+                    request.user,
+                    context={"request": request, "incluir_negocios": True},
+                ).data,
+            }
+        )
 
 
 class CambiarPasswordView(APIView):
@@ -261,7 +365,7 @@ class PermisosDisponiblesView(APIView):
         return Response(CATALOGO_PERMISOS)
 
 
-class UsuarioViewSet(viewsets.ViewSet):
+class UsuarioViewSet(ExigeNegocioMixin, viewsets.ViewSet):
     """
     Gestión de usuarios administrativos.
 
@@ -393,6 +497,14 @@ class UsuarioViewSet(viewsets.ViewSet):
             setattr(usuario, campo, valor)
         if datos:
             usuario.save(update_fields=list(datos.keys()))
+
+        # `rol_usuario` es la etiqueta que muestra el panel; quien decide el
+        # acceso desde la fase 3 es la pertenencia. Sin esta sincronización,
+        # cambiar el rol en la interfaz no cambiaría nada de verdad.
+        if "rol_usuario" in datos:
+            Membership.objects.filter(usuario=usuario, tenant=request.tenant).update(
+                rol=ROL_A_PERTENENCIA.get(datos["rol_usuario"], "STAFF")
+            )
 
         return Response(UsuarioSerializer(usuario, context={"request": request}).data)
 

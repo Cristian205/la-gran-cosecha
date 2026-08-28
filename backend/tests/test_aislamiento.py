@@ -327,6 +327,119 @@ def test_la_biblioteca_no_lista_archivos_ajenos(api_tenant_a, tenant_b):
 
 
 # ==========================================================================
+# 6 bis. LAS VISTAS QUE NO SON ModelViewSet
+# ==========================================================================
+# La mitad de las vistas que tocan datos de negocio no tienen queryset que
+# acotar —estadísticas, facturas, productos pendientes, el equipo— y quedaban
+# fuera del mixin completo. Estos tests cubren esa mitad.
+
+RUTAS_SIN_QUERYSET = [
+    "/api/admin/stats/",
+    "/api/orders/productos-mas-vendidos/",
+    "/api/orders-productos-pendientes/",
+    "/api/auth/users/",
+    "/api/content/site-config/",
+]
+
+
+@pytest.mark.parametrize("ruta", RUTAS_SIN_QUERYSET)
+def test_sin_negocio_resuelto_no_responden(api_tenant_a, ruta):
+    """
+    Usuario con sesión válida, pero por una dirección que no es de ningún
+    negocio: 404. Sin esto devolverían un 500 con el `SinTenantEnContexto` del
+    manager asomando, o —peor— datos.
+    """
+    # Se retira la cabecera X-Tenant que el fixture deja fijada: aquí se quiere
+    # comprobar justo el caso en que nada resuelve el negocio.
+    api_tenant_a.credentials()
+
+    respuesta = api_tenant_a.get(ruta, HTTP_HOST="host-inventado.test")
+    assert respuesta.status_code == 404
+
+
+def test_las_estadisticas_solo_cuentan_el_negocio_propio(
+    api_tenant_a, tenant_a, recursos_del_tenant_b
+):
+    """
+    Las ventas del vecino no pueden aparecer en el panel de nadie más — ni
+    siquiera agregadas, que es la forma en que una fuga pasa desapercibida.
+    """
+    respuesta = api_tenant_a.get("/api/admin/stats/")
+    assert respuesta.status_code == 200
+
+    from apps.orders.models import Pedido
+
+    del_a = Pedido.all_tenants.filter(tenant=tenant_a).count()
+    assert respuesta.json().get("total_pedidos", del_a) == del_a
+
+
+def test_la_factura_de_otro_negocio_no_se_puede_descargar(
+    api_tenant_a, recursos_del_tenant_b
+):
+    """La factura lleva los datos del cliente: es de lo más sensible que hay."""
+    ajeno = recursos_del_tenant_b["pedido"]
+    assert api_tenant_a.get(f"/api/orders/{ajeno.id}/pdf/").status_code == 404
+
+
+def test_la_factura_no_se_emite_sin_negocio_resuelto(
+    api_tenant_a, tenant_a, recursos_del_tenant_b
+):
+    """
+    Distinto del anterior: aquí el pedido SÍ es suyo, pero la dirección no
+    corresponde a ningún negocio. Sin la comprobación, la vista llegaría a
+    consultar y reventaría con un 500 en vez de responder 404.
+    """
+    from apps.orders.models import Pedido
+
+    propio = Pedido.all_tenants.create(tenant=tenant_a, estado="PENDIENTE")
+    api_tenant_a.credentials()  # sin la cabecera X-Tenant del fixture
+
+    respuesta = api_tenant_a.get(
+        f"/api/orders/{propio.id}/pdf/", HTTP_HOST="host-inventado.test"
+    )
+    assert respuesta.status_code == 404
+
+
+def test_los_productos_pendientes_son_los_del_negocio(
+    api_tenant_a, tenant_b, recursos_del_tenant_b
+):
+    """
+    Los productos que un cliente escribe a mano y el admin aprueba. Aprobar uno
+    del vecino lo metería en el catálogo equivocado.
+    """
+    from apps.orders.models import DetallePedido
+
+    ajeno = DetallePedido.all_tenants.create(
+        tenant=tenant_b,
+        pedido=recursos_del_tenant_b["pedido"],
+        nombre_personalizado="Esencia de jazmín",
+        cantidad=1,
+        es_catalogo=False,
+    )
+
+    pendientes = respuesta_json_de(api_tenant_a.get("/api/orders-productos-pendientes/"))
+    assert ajeno.id not in {p["id"] for p in pendientes}
+
+
+def test_no_se_puede_aprobar_un_producto_pendiente_ajeno(
+    api_tenant_a, tenant_b, recursos_del_tenant_b
+):
+    from apps.orders.models import DetallePedido
+
+    ajeno = DetallePedido.all_tenants.create(
+        tenant=tenant_b,
+        pedido=recursos_del_tenant_b["pedido"],
+        nombre_personalizado="Esencia de jazmín",
+        cantidad=1,
+        es_catalogo=False,
+    )
+    respuesta = api_tenant_a.post(
+        f"/api/orders-productos-pendientes/{ajeno.id}/aprobar/", {}, format="json"
+    )
+    assert respuesta.status_code == 404
+
+
+# ==========================================================================
 # 7. LA CAPA QUE IMPORTA: la base de datos misma
 # ==========================================================================
 @pytest.mark.postgres

@@ -17,6 +17,8 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from PIL import Image
 from rest_framework.views import APIView
+
+from apps.tenancy.viewsets import ExigeNegocioMixin
 from weasyprint import HTML
 
 from apps.common.permissions import requiere_permiso
@@ -138,7 +140,7 @@ def _obtener_datos_factura(pedido):
     }
 
 
-class GenerarPdfPedidoView(APIView):
+class GenerarPdfPedidoView(ExigeNegocioMixin, APIView):
     """GET /api/orders/<id>/pdf/ — factura en PDF de un solo pedido."""
 
     permission_classes = [requiere_permiso("orders.view_pedido")]
@@ -162,7 +164,7 @@ class GenerarPdfPedidoView(APIView):
         return response
 
 
-class GenerarPdfPedidosLoteView(APIView):
+class GenerarPdfPedidosLoteView(ExigeNegocioMixin, APIView):
     """GET /api/orders/pdf-lote/?ids=1,2,3 — una factura por pedido, un solo PDF."""
 
     permission_classes = [requiere_permiso("orders.view_pedido")]

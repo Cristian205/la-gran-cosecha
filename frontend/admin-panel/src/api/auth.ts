@@ -38,6 +38,21 @@ export async function verificarOtp(
   return data;
 }
 
+/**
+ * Entra en otro de los negocios de la persona.
+ *
+ * El negocio activo viaja firmado dentro del token, así que no basta con
+ * cambiar algo en el cliente: hay que pedir un par de tokens nuevo. El backend
+ * vuelve a comprobar la pertenencia antes de emitirlo.
+ */
+export async function cambiarNegocio(slug: string): Promise<Usuario> {
+  const { data } = await api.post<VerifyResp>("/auth/cambiar-negocio/", {
+    negocio: slug,
+  });
+  tokenStore.set(data.access, data.refresh);
+  return data.user;
+}
+
 export async function obtenerPerfil(): Promise<Usuario> {
   const { data } = await api.get<Usuario>("/auth/me/");
   return data;

@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { SelectorNegocio } from "./SelectorNegocio";
 import { obtenerEstadisticas } from "../api/resources";
 import { obtenerResumenNotificaciones } from "../api/notifications";
 import { useTheme } from "../theme/ThemeContext";
@@ -172,6 +173,8 @@ export function Layout() {
           </span>
           <span className="marca-texto">{marca?.nombreEmpresa || "La Gran Cosecha"}</span>
         </div>
+
+        <SelectorNegocio colapsado={colapsado} />
 
         <nav>
           {estructuraNav.map((nodo) =>

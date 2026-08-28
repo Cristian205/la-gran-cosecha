@@ -15,6 +15,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
     es_administrador = serializers.SerializerMethodField()
     permisos = serializers.SerializerMethodField()
+    rol_en_negocio = serializers.SerializerMethodField()
+    negocios = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
@@ -34,6 +36,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "fecha_creacion",
             "sidebar_layout",
             "notificaciones_silenciadas",
+            "rol_en_negocio",
+            "negocios",
         ]
         read_only_fields = fields
 
@@ -50,6 +54,42 @@ class UsuarioSerializer(serializers.ModelSerializer):
         if es_owner_de(obj, tenant):
             return sorted(TODOS_LOS_CODENAMES)
         return sorted(permisos_de(obj, tenant))
+
+    def get_rol_en_negocio(self, obj):
+        """
+        El rol que manda desde la fase 3. `rol_usuario` se sigue exponiendo por
+        compatibilidad con el panel, pero quien decide el acceso es este.
+        """
+        tenant = self._tenant()
+        if tenant is None:
+            return None
+        pertenencia = obj.memberships.filter(tenant=tenant, activo=True).first()
+        return pertenencia.rol if pertenencia else None
+
+    def get_negocios(self, obj):
+        """
+        Los negocios en los que trabaja esta persona, para el selector del panel.
+
+        Solo se calcula donde hace falta —el perfil propio, el login y el cambio
+        de negocio— y quien lo pide lo declara con `incluir_negocios`. En un
+        listado del equipo sería una consulta por fila para un dato que esa
+        pantalla no usa.
+        """
+        if not self.context.get("incluir_negocios"):
+            return None
+        peticion = self.context.get("request")
+        activo = getattr(peticion, "tenant", None) if peticion else None
+        return [
+            {
+                "uuid": str(m.tenant.uuid),
+                "slug": m.tenant.slug,
+                "nombre": m.tenant.nombre,
+                "rol": m.rol,
+                "activo": m.tenant_id == getattr(activo, "id", None),
+            }
+            for m in obj.memberships.filter(activo=True).select_related("tenant")
+            if m.tenant.esta_operativo
+        ]
 
 
 class EditarUsuarioSerializer(serializers.Serializer):

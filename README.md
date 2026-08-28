@@ -175,12 +175,31 @@ necesitan un `with usar_tenant(...)`.
 > tercera capa está declarada pero inerte. Lo comprueba
 > `test_el_rol_de_la_aplicacion_no_puede_saltarse_rls`.
 
+### La sesión y el negocio activo
+
+El negocio activo viaja **firmado dentro del JWT** (claim `tenant_id`), en el
+refresh además del access: si fuera solo en el access, el panel se quedaría sin
+negocio en la primera renovación.
+
+El claim solo **elige**; no concede. La pertenencia se comprueba en cada
+petición, así que dar de baja a alguien surte efecto de inmediato aunque su
+token siga vivo — sin listas negras ni tokens de vida corta.
+
+Quien trabaja en varios negocios entra en el primero y cambia desde el selector
+de la barra lateral, que llama a `POST /api/auth/cambiar-negocio/` y recibe un
+par de tokens nuevo. El panel recarga al cambiar: casi toda la pantalla
+pertenece al negocio anterior, y vaciar cada caché a mano dejaría antes o
+después algún dato del negocio equivocado a la vista.
+
 ### Permisos
 
 El acceso lo concede la `Membership` de la persona en el negocio, no
 `is_staff` ni el `user_permissions` de Django —que es global y no puede
 expresar «edita productos aquí pero no allá»—. Los roles `OWNER` y `ADMIN`
 tienen acceso total; el resto, los codenames de `Membership.permisos`.
+
+`Usuario.rol_usuario` se conserva como etiqueta para la interfaz y se mantiene
+sincronizado con `Membership.rol` al editarlo, pero **no decide nada**.
 
 ## Notas de migración
 

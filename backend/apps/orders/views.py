@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from apps.catalog.models import Producto
 from apps.catalog.serializers import ProductoSerializer, ProductoWriteSerializer
 from apps.common.permissions import EsStaff, requiere_permiso
-from apps.tenancy.viewsets import TenantScopedMixin
+from apps.tenancy.viewsets import ExigeNegocioMixin, TenantScopedMixin
 
 from .models import Cliente, DetallePedido, HistorialDetallePedido, LotePedidos, Pedido
 from .serializers import (
@@ -28,7 +28,7 @@ from .serializers import (
 MINIMO_MAS_VENDIDOS = 8
 
 
-class ProductosMasVendidosView(APIView):
+class ProductosMasVendidosView(ExigeNegocioMixin, APIView):
     """
     Home público: ranking real por unidades vendidas en pedidos ya
     entregados. Si el negocio es nuevo y aún no hay suficiente historial,
@@ -175,7 +175,7 @@ class PedidoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         return Response(HistorialDetallePedidoSerializer(historial, many=True).data)
 
 
-class ProductoPendienteViewSet(viewsets.ViewSet):
+class ProductoPendienteViewSet(ExigeNegocioMixin, viewsets.ViewSet):
     """
     Productos personalizados (`DetallePedido.es_catalogo=False`) escritos por
     clientes en el storefront, a la espera de que el admin los acepte

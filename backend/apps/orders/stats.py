@@ -19,6 +19,8 @@ from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.tenancy.viewsets import ExigeNegocioMixin
+
 from apps.catalog.models import Categoria, Producto
 
 from apps.common.permissions import EsStaff
@@ -32,7 +34,7 @@ META_ANUAL = 100_000_000
 DIAS_MAX_REPORTE = 366
 
 
-class ResumenEstadisticasView(APIView):
+class ResumenEstadisticasView(ExigeNegocioMixin, APIView):
     permission_classes = [EsStaff]
 
     def get(self, request):
@@ -155,7 +157,7 @@ class ResumenEstadisticasView(APIView):
         )
 
 
-class ReporteVentasView(APIView):
+class ReporteVentasView(ExigeNegocioMixin, APIView):
     """
     Reporte de ventas para un rango de fechas personalizado.
     Alimenta los gráficos del dashboard y sirve como fuente para la
