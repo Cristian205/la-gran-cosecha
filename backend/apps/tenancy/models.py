@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from .context import SinTenantEnContexto
 from .managers import ManagerSinAmbito, TenantManager
 
 
@@ -241,12 +242,10 @@ class CampoTenantMixin(models.Model):
         1. Del padre declarado en `tenant_heredado_de`. Es el más fiable:
            una línea de pedido es del negocio de su pedido, siempre.
         2. Del contexto de la petición, que resuelve el middleware.
-        3. Del puente de la fase 2: el único negocio dado de alta.
-
-        Existe para que esta fase sea invisible a la aplicación actual. Ningún
-        `Cliente.objects.create(...)` del código existente pasa un tenant, y sin
-        este relleno todos fallarían contra la columna obligatoria. Las vistas
-        de la fase 3 lo asignan explícitamente y el paso 3 deja de intervenir.
+        No hay un tercer intento. El puente de la fase 2 —«si solo hay un
+        negocio, asígnalo a ese»— se retira aquí: adivinar es precisamente el
+        fallo abierto contra el que se diseñó todo esto, y mantenerlo
+        convertiría la suite de aislamiento en una promesa falsa.
         """
         if self.tenant_id is not None:
             return
@@ -257,10 +256,16 @@ class CampoTenantMixin(models.Model):
                 self.tenant_id = padre.tenant_id
                 return
 
-        from .context import hay_ambito_declarado, obtener_tenant_actual, tenant_por_defecto  # noqa: PLC0415
+        from .context import hay_ambito_declarado, obtener_tenant_actual  # noqa: PLC0415
 
         tenant = obtener_tenant_actual() if hay_ambito_declarado() else None
-        self.tenant = tenant or tenant_por_defecto()
+        if tenant is None:
+            raise SinTenantEnContexto(
+                f"Se intentó guardar un {type(self).__name__} sin saber de qué "
+                f"negocio es. Declara el ámbito con `with usar_tenant(t):` o "
+                f"asigna `tenant=` explícitamente."
+            )
+        self.tenant = tenant
 
     def save(self, *args, **kwargs):
         self.asegurar_tenant()

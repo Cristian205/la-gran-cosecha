@@ -15,6 +15,12 @@ import pytest
 pytestmark = [pytest.mark.django_db, pytest.mark.tenancy]
 
 
+def respuesta_json_de(respuesta):
+    """Devuelve la lista de resultados, esté paginada o no."""
+    cuerpo = respuesta.json()
+    return cuerpo["results"] if isinstance(cuerpo, dict) else cuerpo
+
+
 # Cada recurso con ámbito de tenant y la clave del fixture que lo crea en B.
 RECURSOS = [
     ("/api/catalog/products/", "producto"),
@@ -87,7 +93,7 @@ def test_no_se_puede_forzar_el_tenant_desde_el_cuerpo(
     if respuesta.status_code == 201:
         from apps.catalog.models import Categoria
 
-        creada = Categoria.objects.get(id=respuesta.json()["id"])
+        creada = Categoria.all_tenants.get(id=respuesta.json()["id"])
         assert creada.tenant_id == tenant_a.id, "El cuerpo pudo elegir el tenant"
 
 
@@ -118,22 +124,16 @@ def test_un_pedido_no_puede_referenciar_una_presentacion_ajena(
 # 3. RESOLUCIÓN POR DOMINIO — la tienda pública, sin usuario autenticado
 # ==========================================================================
 def test_la_tienda_publica_solo_muestra_el_catalogo_de_su_dominio(
-    api, tenancy, tenant_a, tenant_b, recursos_del_tenant_b, presentacion
+    api, tenant_a, tenant_b, recursos_del_tenant_b, producto_de_a
 ):
-    tenancy.models.Domain.objects.create(
-        tenant=tenant_a, hostname="la-gran-cosecha.plataforma.test", es_primario=True
-    )
-    tenancy.models.Domain.objects.create(
-        tenant=tenant_b, hostname="perfumeria.plataforma.test", es_primario=True
-    )
-
+    """Los dominios de cada negocio ya los registran los fixtures."""
     respuesta = api.get(
         "/api/catalog/products/", HTTP_HOST="la-gran-cosecha.plataforma.test"
     )
     nombres = {p["nombre_producto"] for p in respuesta.json()["results"]}
 
     assert "Perfume floral" not in nombres
-    assert "Producto de prueba" in nombres
+    assert "Mango de La Gran Cosecha" in nombres
 
 
 def test_un_host_desconocido_no_expone_ningun_catalogo(api, presentacion):
@@ -145,23 +145,24 @@ def test_un_host_desconocido_no_expone_ningun_catalogo(api, presentacion):
     assert respuesta.status_code in (400, 404)
 
 
-def test_cada_tenant_tiene_su_propia_configuracion_de_tienda(
-    api, tenancy, tenant_a, tenant_b
-):
-    """El fin del singleton `SiteConfig.get_solo()` con pk=1 forzado."""
-    tenancy.models.Domain.objects.create(
-        tenant=tenant_a, hostname="a.plataforma.test", es_primario=True
-    )
-    tenancy.models.Domain.objects.create(
-        tenant=tenant_b, hostname="b.plataforma.test", es_primario=True
-    )
+def test_cada_tenant_tiene_su_propia_configuracion_de_tienda(api, tenant_a, tenant_b):
+    """
+    El fin del singleton `SiteConfig` forzado a pk=1.
+
+    Cada negocio tiene su identidad visual, y la tienda sirve la que
+    corresponde al dominio por el que entra el visitante.
+    """
     tenant_a.settings.color_primario = "#16a34a"
     tenant_a.settings.save()
     tenant_b.settings.color_primario = "#9333ea"
     tenant_b.settings.save()
 
-    color_a = api.get("/api/content/site-config/", HTTP_HOST="a.plataforma.test")
-    color_b = api.get("/api/content/site-config/", HTTP_HOST="b.plataforma.test")
+    color_a = api.get(
+        "/api/content/site-config/", HTTP_HOST="la-gran-cosecha.plataforma.test"
+    )
+    color_b = api.get(
+        "/api/content/site-config/", HTTP_HOST="perfumeria.plataforma.test"
+    )
 
     assert color_a.json()["color_primario"] == "#16a34a"
     assert color_b.json()["color_primario"] == "#9333ea"
@@ -191,27 +192,29 @@ def test_dos_tenants_pueden_repetir_el_mismo_nombre(
     ruta, nombre_clase = modelo_ruta.rsplit(".", 1)
     modelo = getattr(importlib.import_module(ruta), nombre_clase)
 
-    modelo.objects.create(tenant=tenant_a, **campos)
-    modelo.objects.create(tenant=tenant_b, **campos)  # no debe reventar
+    # `all_tenants` porque este test construye a propósito datos de dos
+    # negocios a la vez, que es justo el caso para el que existe la escotilla.
+    modelo.all_tenants.create(tenant=tenant_a, **campos)
+    modelo.all_tenants.create(tenant=tenant_b, **campos)  # no debe reventar
 
-    assert modelo.objects.filter(**campos).count() == 2
+    assert modelo.all_tenants.filter(**campos).count() == 2
 
 
 def test_el_codigo_de_producto_es_por_tenant(tenant_a, tenant_b):
     """La secuencia de `Producto.save()` deja de ser un barrido global."""
     from apps.catalog.models import Categoria, Producto
 
-    cat_a = Categoria.objects.create(
+    cat_a = Categoria.all_tenants.create(
         tenant=tenant_a, nombre_categoria="Frutas", abreviatura="FRU"
     )
-    cat_b = Categoria.objects.create(
+    cat_b = Categoria.all_tenants.create(
         tenant=tenant_b, nombre_categoria="Fragancias", abreviatura="FRU"
     )
 
-    primero_a = Producto.objects.create(
+    primero_a = Producto.all_tenants.create(
         tenant=tenant_a, nombre_producto="Mango", categoria=cat_a
     )
-    primero_b = Producto.objects.create(
+    primero_b = Producto.all_tenants.create(
         tenant=tenant_b, nombre_producto="Perfume", categoria=cat_b
     )
 
@@ -232,8 +235,8 @@ def test_un_usuario_sin_pertenencia_no_entra(api_tenant_a, tenant_b, tenancy):
 def test_los_usuarios_listados_son_solo_los_del_tenant(
     api_tenant_a, api_tenant_b, tenant_b
 ):
-    respuesta = api_tenant_a.get("/api/auth/users/")
-    correos = {u["email_usuario"] for u in respuesta.json()["results"]}
+    cuerpo = respuesta_json_de(api_tenant_a.get("/api/auth/users/"))
+    correos = {u["email_usuario"] for u in cuerpo}
     assert "staff-b@ejemplo.test" not in correos
 
 
@@ -271,7 +274,7 @@ def test_las_notificaciones_no_se_mezclan(api_tenant_a, tenant_b):
     """Hoy `Notificacion` es global por diseño explícito en su docstring."""
     from apps.notifications.models import Notificacion
 
-    Notificacion.objects.create(
+    Notificacion.all_tenants.create(
         tenant=tenant_b, tipo="PEDIDO_NUEVO", titulo="Pedido de la perfumería"
     )
 
@@ -279,8 +282,16 @@ def test_las_notificaciones_no_se_mezclan(api_tenant_a, tenant_b):
     assert "Pedido de la perfumería" not in titulos
 
 
+@pytest.mark.media_por_tenant
 def test_los_archivos_subidos_llevan_el_prefijo_de_su_tenant(api_tenant_a, tenant_a):
-    """Sección 11: la clave en R2 se construye con el UUID, no con el slug."""
+    """
+    Sección 11: la clave en R2 se construye con el UUID, no con el slug.
+
+    ESTE ES DE LA FASE 6, no de la 3. El aislamiento de la biblioteca ya está
+    —un negocio no ve ni lista los archivos de otro—; lo que falta es que las
+    rutas dentro del bucket también estén separadas, para que un negocio no
+    pueda sobrescribir el fichero de otro conociendo su nombre.
+    """
     from django.core.files.uploadedfile import SimpleUploadedFile
 
     png = SimpleUploadedFile(
@@ -295,14 +306,14 @@ def test_los_archivos_subidos_llevan_el_prefijo_de_su_tenant(api_tenant_a, tenan
 
     from apps.media.models import Archivo
 
-    archivo = Archivo.objects.get(id=respuesta.json()["id"])
+    archivo = Archivo.all_tenants.get(id=respuesta.json()["id"])
     assert archivo.archivo.name.startswith(f"tenants/{tenant_a.uuid}/")
 
 
 def test_la_biblioteca_no_lista_archivos_ajenos(api_tenant_a, tenant_b):
     from apps.media.models import Archivo
 
-    ajeno = Archivo.objects.create(
+    ajeno = Archivo.all_tenants.create(
         tenant=tenant_b,
         archivo="tenants/otro/biblioteca/secreto.png",
         nombre_original="secreto.png",

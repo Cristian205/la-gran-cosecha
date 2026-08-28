@@ -4,11 +4,13 @@ from rest_framework.response import Response
 
 from apps.common.permissions import EsStaff
 
+from apps.tenancy.viewsets import TenantScopedMixin
+
 from .models import Notificacion
 from .serializers import NotificacionSerializer
 
 
-class NotificacionViewSet(viewsets.ReadOnlyModelViewSet):
+class NotificacionViewSet(TenantScopedMixin, viewsets.ReadOnlyModelViewSet):
     """
     Bandeja de notificaciones del panel: solo lectura + acciones puntuales
     para marcar como leída (una o todas). Se crean desde señales (nuevo
@@ -16,7 +18,7 @@ class NotificacionViewSet(viewsets.ReadOnlyModelViewSet):
     """
 
     serializer_class = NotificacionSerializer
-    queryset = Notificacion.objects.all()
+    modelo = Notificacion
     permission_classes = [EsStaff]
 
     def get_queryset(self):

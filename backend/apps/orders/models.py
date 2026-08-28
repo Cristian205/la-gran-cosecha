@@ -5,13 +5,13 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Sum
 
-from apps.tenancy.models import CampoTenantMixin
+from apps.tenancy.models import ModeloConTenant
 
 
 # ==========================================================================
 # 1. CLIENTE
 # ==========================================================================
-class Cliente(CampoTenantMixin):
+class Cliente(ModeloConTenant):
     # La unicidad pasa a ser (tenant, nombre): "Juan Pérez" puede ser cliente
     # de dos negocios distintos sin que uno vea al del otro.
     nombre_cliente = models.CharField(max_length=200)
@@ -36,7 +36,7 @@ class Cliente(CampoTenantMixin):
 # ==========================================================================
 # 2. PEDIDO
 # ==========================================================================
-class Pedido(CampoTenantMixin):
+class Pedido(ModeloConTenant):
     ESTADOS = [
         ("PENDIENTE", "Pendiente"),
         ("EDITADO", "Editado"),
@@ -93,7 +93,7 @@ class Pedido(CampoTenantMixin):
 # ==========================================================================
 # 3. DETALLE PEDIDO
 # ==========================================================================
-class DetallePedido(CampoTenantMixin):
+class DetallePedido(ModeloConTenant):
     tenant_heredado_de = "pedido"
 
     pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name="detalles")
@@ -186,7 +186,7 @@ class DetallePedido(CampoTenantMixin):
 # ==========================================================================
 # 4. HISTORIAL DETALLE PEDIDO
 # ==========================================================================
-class HistorialDetallePedido(CampoTenantMixin):
+class HistorialDetallePedido(ModeloConTenant):
     tenant_heredado_de = "detalle"
 
     detalle = models.ForeignKey(
@@ -206,7 +206,7 @@ class HistorialDetallePedido(CampoTenantMixin):
 # ==========================================================================
 # 5. DETALLE PEDIDO MANUAL
 # ==========================================================================
-class DetallePedidoManual(CampoTenantMixin):
+class DetallePedidoManual(ModeloConTenant):
     tenant_heredado_de = "pedido"
 
     pedido = models.ForeignKey(
@@ -244,7 +244,7 @@ class DetallePedidoManual(CampoTenantMixin):
 # ==========================================================================
 # 6. LOTE DE PEDIDOS
 # ==========================================================================
-class LotePedidos(CampoTenantMixin):
+class LotePedidos(ModeloConTenant):
     """
     Agrupación persistente de pedidos procesados juntos (impresión masiva o
     entrega masiva), para poder consultar después qué se procesó, quién y

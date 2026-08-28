@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from apps.catalog.models import Producto
 from apps.catalog.serializers import ProductoSerializer, ProductoWriteSerializer
 from apps.common.permissions import EsStaff, requiere_permiso
+from apps.tenancy.viewsets import TenantScopedMixin
 
 from .models import Cliente, DetallePedido, HistorialDetallePedido, LotePedidos, Pedido
 from .serializers import (
@@ -69,7 +70,7 @@ class ProductosMasVendidosView(APIView):
         return Response(data)
 
 
-class PedidoViewSet(viewsets.ModelViewSet):
+class PedidoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     """
     Pedidos.
     - create: público (el cliente genera su pedido desde el storefront).
@@ -254,11 +255,14 @@ class ProductoPendienteViewSet(viewsets.ViewSet):
         return Response({"success": True})
 
 
-class LoteViewSet(viewsets.ReadOnlyModelViewSet):
+class LoteViewSet(TenantScopedMixin, viewsets.ReadOnlyModelViewSet):
     """Lotes de pedidos generados al imprimir o entregar en masa (solo lectura)."""
 
     permission_classes = [EsStaff]
-    queryset = LotePedidos.objects.select_related("usuario").prefetch_related("pedidos")
+    modelo = LotePedidos
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("usuario").prefetch_related("pedidos")
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -266,7 +270,7 @@ class LoteViewSet(viewsets.ReadOnlyModelViewSet):
         return LoteSerializer
 
 
-class ClienteViewSet(viewsets.ModelViewSet):
+class ClienteViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     """Clientes (solo staff)."""
 
     serializer_class = ClienteSerializer

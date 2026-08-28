@@ -1,9 +1,9 @@
 from django.db import models
 
-from apps.tenancy.models import CampoTenantMixin
+from apps.tenancy.models import ModeloConTenant
 
 
-class Notificacion(CampoTenantMixin):
+class Notificacion(ModeloConTenant):
     """
     Centro de notificaciones interno del panel administrativo.
 

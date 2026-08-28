@@ -106,13 +106,23 @@ def test_un_negocio_suspendido_no_esta_operativo(negocios):
 # ==========================================================================
 # PERTENENCIA Y PERMISOS
 # ==========================================================================
-def test_una_persona_puede_pertenecer_a_dos_negocios(negocios, usuario_owner):
+def test_una_persona_puede_pertenecer_a_dos_negocios(negocios):
     """Decisión B: `Usuario` es identidad de plataforma, no de un negocio."""
-    cosecha, perfumeria = negocios
-    Membership.objects.create(usuario=usuario_owner, tenant=cosecha, rol="OWNER")
-    Membership.objects.create(usuario=usuario_owner, tenant=perfumeria, rol="STAFF")
+    from django.contrib.auth import get_user_model
 
-    assert usuario_owner.memberships.count() == 2
+    cosecha, perfumeria = negocios
+    # Usuario propio del test: los fixtures compartidos ya vienen dados de alta
+    # en su negocio, y aquí interesa contar desde cero.
+    contadora = get_user_model().objects.create_user(
+        email_usuario="contadora@ejemplo.test",
+        nombre_usuario="Contadora externa",
+        password="clave-de-prueba-123",
+        is_staff=True,
+    )
+    Membership.objects.create(usuario=contadora, tenant=cosecha, rol="OWNER")
+    Membership.objects.create(usuario=contadora, tenant=perfumeria, rol="STAFF")
+
+    assert contadora.memberships.count() == 2
 
 
 def test_no_puede_haber_dos_pertenencias_al_mismo_negocio(negocios, usuario_owner):

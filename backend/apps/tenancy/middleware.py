@@ -12,18 +12,20 @@ Tres fuentes, en orden de prioridad:
    activo (desarrollo y tests). En producción va apagada: sin la comprobación
    de pertenencia que trae la fase 4, sería un cambio de negocio a voluntad.
 
-Lo que este middleware NO hace todavía, a propósito: rechazar la petición
-cuando no hay tenant. En la fase 1 ningún modelo tiene ámbito, así que negar
-peticiones sin tenant dejaría la aplicación actual sin servicio. La fase 3
-invierte ese comportamiento, y `test_un_host_desconocido_no_expone_ningun_
-catalogo` está en rojo esperando exactamente eso.
+Cuando NO resuelve ningún negocio, el middleware deja el contexto SIN DECLARAR
+en vez de declararlo vacío. La diferencia es la que separa el fallo cerrado del
+abierto: un contexto vacío significa «ámbito de plataforma, sin filtro», que es
+justo lo que no debe pasar por accidente en una petición de la API. Sin ámbito
+declarado, cualquier consulta a un modelo de negocio lanza, y las vistas lo
+convierten en 404 antes de llegar ahí.
 """
 import logging
 
 from django.conf import settings
 from django.core.cache import cache
 
-from .context import establecer_tenant, restablecer
+from .context import establecer_tenant, limpiar_ambito, restablecer
+from .db import declarar_tenant_en_la_base
 from .models import Domain, Tenant
 
 logger = logging.getLogger(__name__)
@@ -47,9 +49,16 @@ class TenantMiddleware:
 
     def __call__(self, request):
         tenant = self._resolver(request)
-
         request.tenant = tenant
-        token = establecer_tenant(tenant)
+
+        # Se fija SIEMPRE, incluso para dejarlo sin declarar: un ámbito heredado
+        # de más arriba en la pila seguiría vigente dentro de la petición, y una
+        # petición que no resolvió negocio devolvería datos en vez de fallar.
+        token = limpiar_ambito() if tenant is None else establecer_tenant(tenant)
+
+        # La misma decisión, dicha también a PostgreSQL: es lo que alimenta la
+        # política de RLS, la capa que sigue en pie cuando el ORM falla.
+        declarar_tenant_en_la_base(tenant)
         try:
             return self.get_response(request)
         finally:
@@ -128,6 +137,11 @@ class TenantMiddleware:
         slug = request.META.get("HTTP_X_TENANT", "").strip().lower()
         if not slug:
             return None
+
+        # Aquí solo se resuelve el candidato. Que quien llama tenga derecho a
+        # ese negocio lo comprueba `ExigePertenencia` en la vista: a esta
+        # altura `request.user` todavía es anónimo con JWT, porque DRF
+        # autentica dentro de la vista, no en el middleware.
         return Tenant.objects.filter(slug=slug).first()
 
 

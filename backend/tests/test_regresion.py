@@ -166,17 +166,17 @@ def test_el_analista_sin_permisos_no_ve_clientes(api_staff, cliente_negocio):
     assert api_staff.get("/api/clients/").status_code == 403
 
 
-def test_el_analista_con_permiso_si_ve_clientes(api_staff, usuario_staff, cliente_negocio):
-    from django.contrib.auth.models import Permission
+def test_el_analista_con_permiso_si_ve_clientes(api_staff, usuario_staff, negocio):
+    """
+    Cambió el sitio donde vive el permiso, no la regla.
 
-    usuario_staff.user_permissions.add(
-        Permission.objects.get(
-            codename="view_cliente", content_type__app_label="orders"
-        )
-    )
-    # El caché de permisos vive en la instancia; hay que refrescarla.
-    usuario_staff.refresh_from_db()
-    api_staff.force_authenticate(user=usuario_staff)
+    Antes se concedía en el `user_permissions` de Django, que es global: darle
+    "ver clientes" a alguien se lo daba en todos los negocios donde trabajara.
+    Ahora se concede en su pertenencia a ESTE negocio.
+    """
+    pertenencia = usuario_staff.memberships.get(tenant=negocio)
+    pertenencia.permisos = ["orders.view_cliente"]
+    pertenencia.save(update_fields=["permisos"])
 
     assert api_staff.get("/api/clients/").status_code == 200
 

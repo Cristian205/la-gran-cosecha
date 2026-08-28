@@ -90,7 +90,7 @@ cd backend
 pip install -r requirements-dev.txt
 
 pytest -m "not tenancy"    # regresión — debe estar SIEMPRE en verde
-pytest -m tenancy          # aislamiento multi-tenant — rojo hasta la fase 3
+pytest -m tenancy          # aislamiento multi-tenant — en verde desde la fase 3
 ```
 
 Dos suites con propósitos opuestos:
@@ -99,10 +99,12 @@ Dos suites con propósitos opuestos:
   creación de pedidos, permisos, OTP, configuración del sitio). Si se pone en
   rojo durante el refactor multi-tenant, es que se rompió algo que el negocio
   ya usaba.
-- **`tests/test_aislamiento.py`** describe el comportamiento multi-tenant que
-  todavía no existe, y **falla a propósito**. Es la definición ejecutable de
-  "ningún tenant accede a datos de otro". Ningún segundo negocio real se da de
-  alta hasta que esta suite pase entera.
+- **`tests/test_aislamiento.py`** es la definición ejecutable de "ningún negocio
+  accede a datos de otro": listados, detalle, escritura, borrado, resolución por
+  dominio, unicidad, pertenencia y archivos. Nació en rojo y describe lo que las
+  fases 1 a 3 construyeron. **Verde desde la fase 3**, salvo dos pruebas de RLS
+  que se saltan sin PostgreSQL y una marcada `media_por_tenant`, que es de la
+  fase 6 (prefijos de R2).
 
 `config/settings/test.py` **fuerza la base de datos local** (SQLite en memoria
 por defecto). Es deliberado: `backend/.env` apunta a la Supabase de producción,
@@ -112,6 +114,73 @@ pruebas de Row-Level Security, que necesitan PostgreSQL real:
 ```bash
 TEST_DATABASE_URL=postgres://usuario:clave@localhost:5432/lgc_test pytest -m tenancy
 ```
+
+## Multiempresa
+
+La plataforma sirve a varios negocios (*tenants*) desde un mismo núcleo. La Gran
+Cosecha es el primero, no un caso especial: no hay ninguna rama de código que la
+distinga de una perfumería.
+
+### El negocio se resuelve por dominio
+
+Cada petición resuelve su negocio en `apps/tenancy/middleware.py`, por el claim
+`tenant_id` del JWT, por el `Host` contra la tabla `Domain`, o por la cabecera
+`X-Tenant` (solo en desarrollo y tests). **Si no resuelve ninguno, la respuesta
+es 404**: sin negocio no hay datos que servir.
+
+Por eso los hostnames tienen que estar dados de alta:
+
+```bash
+python manage.py dominios                                  # ver los registrados
+python manage.py dominios --negocio la-gran-cosecha \n    --añadir tienda.ejemplo.com --primario
+```
+
+La migración `tenancy.0004` registra automáticamente los de `ALLOWED_HOSTS` al
+desplegar, mientras solo haya un negocio.
+
+### Trabajar con el ORM
+
+Los modelos de negocio fallan **cerrado**: sin ámbito declarado, consultarlos
+lanza `SinTenantEnContexto` en vez de devolver las filas de todos los negocios.
+Dentro de una petición el middleware ya lo declara. Fuera —shell, comandos,
+tareas— hay que declararlo:
+
+```python
+from apps.tenancy.context import usar_tenant, ambito_de_plataforma
+
+with usar_tenant(tenant):
+    Producto.objects.count()        # solo los suyos
+
+with ambito_de_plataforma():
+    Producto.objects.count()        # todos, declarado a propósito
+
+Producto.all_tenants.count()        # escotilla explícita, sin contexto
+```
+
+Esto incluye las relaciones inversas: `producto.presentaciones` y
+`pedido.detalles` usan el manager con ámbito, así que en el shell también
+necesitan un `with usar_tenant(...)`.
+
+### Tres capas de aislamiento
+
+1. **Manager** (`apps/tenancy/managers.py`) — filtra por defecto y falla cerrado.
+2. **Vista** (`apps/tenancy/viewsets.py`) — vuelve a filtrar, exige pertenencia
+   al negocio y asigna el tenant al crear, nunca desde el cuerpo.
+3. **Row-Level Security** (`tenancy.0003`) — la política de PostgreSQL, que
+   sigue en pie aunque el ORM falle.
+
+> **RLS y Supabase.** La política no se aplica a roles con `SUPERUSER` ni
+> `BYPASSRLS`, y el rol `postgres` de Supabase tiene ambos. Hace falta un rol
+> dedicado para la aplicación y apuntar `DATABASE_URL` a él; hasta entonces la
+> tercera capa está declarada pero inerte. Lo comprueba
+> `test_el_rol_de_la_aplicacion_no_puede_saltarse_rls`.
+
+### Permisos
+
+El acceso lo concede la `Membership` de la persona en el negocio, no
+`is_staff` ni el `user_permissions` de Django —que es global y no puede
+expresar «edita productos aquí pero no allá»—. Los roles `OWNER` y `ADMIN`
+tienen acceso total; el resto, los codenames de `Membership.permisos`.
 
 ## Notas de migración
 

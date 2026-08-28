@@ -4,6 +4,10 @@ Notificaciones automáticas del panel.
 Cada notificación hereda el tenant del objeto que la dispara, y no el del
 contexto de la petición: una señal puede ejecutarse dentro de un comando, de
 una tarea de fondo o de una migración, donde no hay petición de la que heredar.
+
+Por eso se escribe con `all_tenants` y un `tenant=` explícito: el negocio ya
+está determinado por el objeto de origen, así que exigir además un contexto
+declarado solo haría fallar la señal en esos casos.
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -17,7 +21,7 @@ from .models import Cliente, DetallePedido, Pedido
 def notificar_cliente_nuevo(sender, instance, created, **kwargs):
     if not created:
         return
-    Notificacion.objects.create(
+    Notificacion.all_tenants.create(
         tenant=instance.tenant,
         tipo="CLIENTE_NUEVO",
         titulo=f"Nuevo cliente: {instance.nombre_cliente}",
@@ -30,7 +34,7 @@ def notificar_pedido_nuevo(sender, instance, created, **kwargs):
     if not created:
         return
     nombre = instance.cliente.nombre_cliente if instance.cliente else "cliente sin registrar"
-    Notificacion.objects.create(
+    Notificacion.all_tenants.create(
         tenant=instance.tenant,
         tipo="PEDIDO_NUEVO",
         titulo=f"Nuevo pedido de {nombre}",
@@ -48,7 +52,7 @@ def notificar_producto_personalizado(sender, instance, created, **kwargs):
         if instance.categoria_manual
         else "sin categoría"
     )
-    Notificacion.objects.create(
+    Notificacion.all_tenants.create(
         tenant=instance.tenant,
         tipo="PRODUCTO_PERSONALIZADO",
         titulo=f"Producto nuevo sugerido: {instance.nombre_personalizado}",
