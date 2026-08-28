@@ -51,17 +51,15 @@ class ExigePertenencia(BasePermission):
         ).exists()
 
 
-class TenantScopedMixin:
+class ExigeNegocioMixin:
     """
-    Para mezclar con cualquier `ViewSet` de DRF que exponga datos de negocio.
+    Exige un negocio resuelto y que quien llama pertenezca a él.
 
-    Basta con anteponerlo en la lista de bases. Declarar `modelo = X` sustituye
-    al atributo `queryset` de clase que DRF espera: ese se evalúa al importar el
-    módulo, fuera de toda petición, y con el manager acotado eso sería un
-    `SinTenantEnContexto` durante el arranque de Django.
+    Se separa de `TenantScopedMixin` porque la mitad de las vistas que tocan
+    datos de negocio no son `ModelViewSet` y no tienen queryset que acotar: las
+    estadísticas, la factura en PDF, los productos pendientes, el equipo. Esas
+    quedaban fuera del mixin completo y sin comprobación de pertenencia.
     """
-
-    modelo = None
 
     def initial(self, request, *args, **kwargs):
         """
@@ -73,9 +71,14 @@ class TenantScopedMixin:
         petición, antes de despachar, y ninguna vista lo pisa. El resultado es
         un 404 uniforme cuando la dirección no corresponde a ningún negocio, en
         vez de un 500 con el `SinTenantEnContexto` del manager asomando.
+
+        Se resuelve ANTES que `super()`, que es quien comprueba los permisos:
+        si no, una ruta con `requiere_permiso` responde 403 —«no tienes
+        permiso»— a una dirección que sencillamente no es de ningún negocio, y
+        eso confunde a quien depura tanto como a quien usa la API.
         """
-        super().initial(request, *args, **kwargs)
         self.obtener_tenant()
+        super().initial(request, *args, **kwargs)
 
     def check_permissions(self, request):
         """
@@ -102,6 +105,19 @@ class TenantScopedMixin:
         if tenant is None:
             raise NotFound("No hay ningún negocio asociado a esta dirección.")
         return tenant
+
+
+class TenantScopedMixin(ExigeNegocioMixin):
+    """
+    Lo anterior, más el queryset acotado y la asignación al crear.
+
+    Para cualquier `ModelViewSet` que exponga datos de negocio. Declarar
+    `modelo = X` sustituye al atributo `queryset` de clase que DRF espera: ese
+    se evalúa al importar el módulo, fuera de toda petición, y con el manager
+    acotado eso sería un `SinTenantEnContexto` durante el arranque de Django.
+    """
+
+    modelo = None
 
     def get_queryset(self):
         """

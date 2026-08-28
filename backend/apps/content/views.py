@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.permissions import EsStaff
-from apps.tenancy.viewsets import TenantScopedMixin
+from apps.tenancy.viewsets import ExigeNegocioMixin, TenantScopedMixin
 
 from .models import BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
 from .serializers import (
@@ -21,7 +21,7 @@ from .serializers import (
 )
 
 
-class SiteConfigView(APIView):
+class SiteConfigView(ExigeNegocioMixin, APIView):
     """
     Configuración de la tienda del negocio de esta petición. Lectura pública
     (la storefront la consume sin autenticación); escritura solo staff.

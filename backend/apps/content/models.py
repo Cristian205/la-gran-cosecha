@@ -144,27 +144,21 @@ class StoreSettings(models.Model):
         return f"Configuración de {self.tenant or 'sin negocio'}"
 
     @classmethod
-    def get_para(cls, tenant=None):
+    def get_para(cls, tenant):
         """
         La configuración de un negocio, creándola si aún no existe.
 
-        El `tenant=None` es un puente de la fase 2, no un diseño: mientras solo
-        haya un negocio dado de alta, una petición cuyo host todavía no está
-        registrado como `Domain` sigue recibiendo la configuración de ese único
-        negocio, y la aplicación actual no se entera del cambio. En cuanto hay
-        más de uno deja de adivinar y devuelve None, porque servir la identidad
-        del negocio equivocado es peor que no servir ninguna.
+        Sin negocio devuelve None y quien llama decide: la API responde 404, y
+        la factura y el correo del OTP caen a los valores por defecto del
+        modelo. Nunca adivina: hasta la fase 3 hubo un puente que, con un solo
+        negocio dado de alta, asumía que era ese. Se retiró porque adivinar es
+        el fallo abierto contra el que se diseñó todo el aislamiento.
 
-        La fase 3 elimina la rama del puente: sin tenant resuelto, 404.
+        Normalmente `Tenant` ya nace con la suya (ver tenancy/signals.py); el
+        `get_or_create` cubre los negocios creados antes de esa señal.
         """
         if tenant is None:
-            from apps.tenancy.models import Tenant  # noqa: PLC0415
-
-            candidatos = Tenant.objects.all()[:2]
-            if len(candidatos) != 1:
-                return None
-            tenant = candidatos[0]
-
+            return None
         obj, _ = cls.objects.get_or_create(tenant=tenant)
         return obj
 

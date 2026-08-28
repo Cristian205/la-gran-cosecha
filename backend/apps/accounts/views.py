@@ -19,6 +19,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.common.permissions import EsAdministrador, es_owner, es_owner_de, requiere_permiso
 
 from apps.tenancy.models import Membership
+from apps.tenancy.viewsets import ExigeNegocioMixin
 
 from .emails import enviar_codigo_otp
 from .permisos import CATALOGO_PERMISOS
@@ -131,7 +132,9 @@ class LoginView(APIView):
         user.save(update_fields=["token_verificacion", "token_expiracion"])
 
         try:
-            enviar_codigo_otp(user, otp_code)
+            # La marca del correo es la del negocio por el que entrará. Con
+            # varios, la del primero: es el que el panel abrirá por defecto.
+            enviar_codigo_otp(user, otp_code, _negocio_por_defecto(user))
         except Exception:  # noqa: BLE001
             # Sin esto el fallo real de SMTP (credenciales, remitente rechazado,
             # timeout) queda invisible detrás del 500 genérico de abajo.
@@ -362,7 +365,7 @@ class PermisosDisponiblesView(APIView):
         return Response(CATALOGO_PERMISOS)
 
 
-class UsuarioViewSet(viewsets.ViewSet):
+class UsuarioViewSet(ExigeNegocioMixin, viewsets.ViewSet):
     """
     Gestión de usuarios administrativos.
 

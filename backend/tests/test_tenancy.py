@@ -354,20 +354,21 @@ def test_sin_ningun_negocio_dado_de_alta_no_hay_tienda(api):
     assert api.get("/api/content/site-config/").status_code == 404
 
 
-def test_con_un_solo_negocio_la_tienda_sirve_aunque_el_host_no_resuelva(api, negocios):
+@pytest.mark.parametrize("cuantos_negocios", [1, 2])
+def test_un_host_sin_registrar_nunca_sirve_una_tienda(api, negocios, cuantos_negocios):
     """
-    El puente de la fase 2. Los hostnames de producción todavía no están dados
-    de alta como `Domain`, así que sin este comportamiento el despliegue de
-    esta fase dejaría la tienda sin identidad. Deja de aplicar en cuanto hay
-    un segundo negocio, que es justo cuando adivinar sería peligroso.
+    Ni siquiera con un solo negocio dado de alta.
+
+    La fase 2 tuvo un puente que en ese caso asumía «será ese». La fase 3 lo
+    retiró: adivinar es el fallo abierto contra el que se diseñó todo el
+    aislamiento, y un puente que solo funciona mientras haya un cliente es una
+    trampa esperando al segundo. Por eso los hostnames se registran como
+    `Domain` (ver la migración tenancy.0004 y `manage.py dominios`).
     """
-    Tenant.objects.filter(slug="perfumeria-xyz").delete()  # queda uno solo
+    if cuantos_negocios == 1:
+        Tenant.objects.filter(slug="perfumeria-xyz").delete()
 
-    respuesta = api.get("/api/content/site-config/", HTTP_HOST="host-no-dado-de-alta.test")
-    assert respuesta.status_code == 200
-
-
-def test_con_dos_negocios_deja_de_adivinar(api, negocios):
-    """Servir la identidad del negocio equivocado es peor que no servir ninguna."""
-    respuesta = api.get("/api/content/site-config/", HTTP_HOST="host-no-dado-de-alta.test")
+    respuesta = api.get(
+        "/api/content/site-config/", HTTP_HOST="host-no-dado-de-alta.test"
+    )
     assert respuesta.status_code == 404
