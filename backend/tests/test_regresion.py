@@ -184,14 +184,14 @@ def test_el_analista_con_permiso_si_ve_clientes(api_staff, usuario_staff, client
 # ==========================================================================
 # CONFIGURACIÓN DEL SITIO — el singleton que la fase 2 desmonta
 # ==========================================================================
-def test_la_configuracion_del_sitio_se_lee_sin_autenticacion(api):
+def test_la_configuracion_del_sitio_se_lee_sin_autenticacion(api, negocio):
     respuesta = api.get("/api/content/site-config/")
     assert respuesta.status_code == 200
     # El tema por defecto que consume theming.ts en el storefront.
     assert respuesta.json()["color_primario"] == "#16a34a"
 
 
-def test_el_visitante_no_puede_cambiar_la_configuracion(api):
+def test_el_visitante_no_puede_cambiar_la_configuracion(api, negocio):
     respuesta = api.patch(
         "/api/content/site-config/", {"nombre_empresa": "Intruso"}, format="json"
     )

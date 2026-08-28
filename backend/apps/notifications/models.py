@@ -1,12 +1,15 @@
 from django.db import models
 
+from apps.tenancy.models import CampoTenantMixin
 
-class Notificacion(models.Model):
+
+class Notificacion(CampoTenantMixin):
     """
-    Centro de notificaciones interno del panel administrativo. Por ahora es
-    global (visible para todo el staff) en vez de por usuario: el equipo que
-    usa el panel es pequeño y comparte la misma bandeja, igual que ya ocurre
-    con SiteConfig como configuración única.
+    Centro de notificaciones interno del panel administrativo.
+
+    Compartido por todo el staff de un mismo negocio, pero ya no global: hasta
+    la fase 2 lo era por diseño, y con dos negocios eso significaba que un
+    pedido de la perfumería aparecía en la bandeja de La Gran Cosecha.
     """
 
     TIPOS = [

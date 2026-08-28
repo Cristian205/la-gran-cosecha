@@ -1,13 +1,49 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
+from django.utils.text import slugify
+
+from apps.tenancy.models import CampoTenantMixin
+
+
+# ==========================================================================
+# SLUGS
+# ==========================================================================
+def generar_slug_unico(modelo, texto, tenant_id, excluir_pk=None, maximo=50):
+    """
+    Slug único dentro del negocio, derivado del nombre.
+
+    Los slugs son por tenant, no globales: dos negocios pueden vender ambos un
+    "mango" y cada uno merece /productos/mango. El sufijo numérico solo aparece
+    cuando hay choque real dentro del mismo negocio.
+
+    `slugify` puede devolver cadena vacía si el nombre es todo signos o está en
+    un alfabeto que no translitera; en ese caso se cae a un identificador
+    genérico antes que dejar el campo en blanco y romper la URL.
+    """
+    base = slugify(texto)[:maximo] or "sin-nombre"
+    candidato = base
+
+    hermanos = modelo.objects.filter(tenant=tenant_id)
+    if excluir_pk:
+        hermanos = hermanos.exclude(pk=excluir_pk)
+
+    sufijo = 2
+    while hermanos.filter(slug=candidato).exists():
+        candidato = f"{base}-{sufijo}"
+        sufijo += 1
+
+    return candidato
 
 
 # ==========================================================================
 # 1. CATEGORÍA
 # ==========================================================================
-class Categoria(models.Model):
-    nombre_categoria = models.CharField(max_length=150, unique=True)
+class Categoria(CampoTenantMixin):
+    # La unicidad pasa a ser (tenant, nombre): dos negocios tienen que poder
+    # llamar "Ofertas" a una categoría cada uno. Ver Meta.constraints.
+    nombre_categoria = models.CharField(max_length=150)
+    slug = models.SlugField(max_length=160, blank=True)
     estado_categoria = models.BooleanField(default=True)
     abreviatura = models.CharField(max_length=50)
     orden = models.PositiveIntegerField(default=0)
@@ -21,19 +57,33 @@ class Categoria(models.Model):
         verbose_name_plural = "Categorías"
         ordering = ["orden", "nombre_categoria"]
         indexes = [
-            models.Index(fields=["nombre_categoria"]),
-            models.Index(fields=["orden"]),
+            models.Index(fields=["tenant", "nombre_categoria"], name="ui_categori_tenant_nombre_idx"),
+            models.Index(fields=["tenant", "orden"], name="ui_categori_tenant_orden_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "nombre_categoria"], name="catalog_categoria_unica_por_negocio"
+            ),
+            models.UniqueConstraint(
+                fields=["tenant", "slug"], name="catalog_categoria_slug_unico_por_negocio"
+            ),
         ]
 
     def __str__(self):
         return self.nombre_categoria
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = generar_slug_unico(Categoria, self.nombre_categoria, self.tenant_id)
+        super().save(*args, **kwargs)
+
 
 # ==========================================================================
 # 2. UNIDAD DE MEDIDA
 # ==========================================================================
-class UnidadMedida(models.Model):
-    nombre_unidad = models.CharField(max_length=100, unique=True)
+class UnidadMedida(CampoTenantMixin):
+    # Sin esto, dos negocios no podrían tener ambos un "Kilogramo".
+    nombre_unidad = models.CharField(max_length=100)
     abreviatura_unidad = models.CharField(max_length=10)
     estado_unidad = models.BooleanField(default=True)
 
@@ -41,6 +91,11 @@ class UnidadMedida(models.Model):
         db_table = "ui_unidadmedida"
         verbose_name_plural = "Unidades de Medida"
         ordering = ["nombre_unidad"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "nombre_unidad"], name="catalog_unidad_unica_por_negocio"
+            )
+        ]
 
     def __str__(self):
         return f"{self.nombre_unidad} ({self.abreviatura_unidad})"
@@ -49,9 +104,12 @@ class UnidadMedida(models.Model):
 # ==========================================================================
 # 3. PRODUCTO
 # ==========================================================================
-class Producto(models.Model):
-    codigo_producto = models.CharField(max_length=50, unique=True, editable=False)
+class Producto(CampoTenantMixin):
+    # El código deja de ser único globalmente: cada negocio lleva su propia
+    # numeración, así que "FRU-001" existe una vez por negocio.
+    codigo_producto = models.CharField(max_length=50, editable=False)
     nombre_producto = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, blank=True)
 
     estado_producto = models.BooleanField(default=True)
     permite_fraccion = models.BooleanField(default=False)
@@ -85,32 +143,66 @@ class Producto(models.Model):
         db_table = "ui_producto"
         ordering = ["orden", "nombre_producto"]
         indexes = [
-            models.Index(fields=["nombre_producto"]),
-            models.Index(fields=["codigo_producto"]),
-            models.Index(fields=["orden"]),
+            models.Index(fields=["tenant", "nombre_producto"], name="ui_producto_tenant_nombre_idx"),
+            models.Index(fields=["tenant", "codigo_producto"], name="ui_producto_tenant_codigo_idx"),
+            models.Index(fields=["tenant", "orden"], name="ui_producto_tenant_orden_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "codigo_producto"], name="catalog_producto_codigo_unico_por_negocio"
+            ),
+            models.UniqueConstraint(
+                fields=["tenant", "slug"], name="catalog_producto_slug_unico_por_negocio"
+            ),
         ]
 
     def __str__(self):
         return f"{self.codigo_producto}-{self.nombre_producto}"
 
     def save(self, *args, **kwargs):
-        # Generación automática de orden y código (lógica original preservada).
+        """
+        Genera `orden`, `codigo_producto` y `slug` por negocio.
+
+        Cambia respecto al original en dos cosas. La primera es el ámbito: la
+        numeración era un barrido global de la tabla, así que el segundo
+        negocio habría continuado la cuenta del primero. Ahora cada uno empieza
+        en 001.
+
+        La segunda es la carrera. El código original leía el máximo y escribía
+        sin bloqueo: dos altas simultáneas en la misma categoría calculaban el
+        mismo consecutivo y una de las dos moría contra el índice único. Se
+        bloquea la fila de la categoría, que es la granularidad natural del
+        contador y no serializa el catálogo entero.
+        """
+        # Antes que nada: sin tenant no se puede numerar por negocio.
+        self.asegurar_tenant()
+
         with transaction.atomic():
             if not self.pk:
-                ultimo = Producto.objects.all().order_by("-orden").first()
+                del_negocio = Producto.objects.filter(tenant=self.tenant_id)
+
+                # Bloquea el contador de esta categoría hasta el commit.
+                categoria = Categoria.objects.select_for_update().get(
+                    pk=self.categoria_id
+                )
+
+                ultimo = del_negocio.order_by("-orden").first()
                 self.orden = (ultimo.orden + 1) if ultimo else 1
 
-                abrev = self.categoria.abreviatura.upper()
-                consecutivo = (
-                    Producto.objects.filter(categoria=self.categoria).count() + 1
-                )
+                abrev = categoria.abreviatura.upper()
+                consecutivo = del_negocio.filter(categoria=categoria).count() + 1
                 nuevo_codigo = f"{abrev}-{consecutivo:03d}"
 
-                while Producto.objects.filter(codigo_producto=nuevo_codigo).exists():
+                while del_negocio.filter(codigo_producto=nuevo_codigo).exists():
                     consecutivo += 1
                     nuevo_codigo = f"{abrev}-{consecutivo:03d}"
 
                 self.codigo_producto = nuevo_codigo
+
+            if not self.slug:
+                self.slug = generar_slug_unico(
+                    Producto, self.nombre_producto, self.tenant_id, excluir_pk=self.pk
+                )
 
             super().save(*args, **kwargs)
 
@@ -118,7 +210,9 @@ class Producto(models.Model):
 # ==========================================================================
 # 4. PRESENTACIÓN PRODUCTO
 # ==========================================================================
-class PresentacionProducto(models.Model):
+class PresentacionProducto(CampoTenantMixin):
+    tenant_heredado_de = "producto"
+
     producto = models.ForeignKey(
         Producto, on_delete=models.CASCADE, related_name="presentaciones"
     )
@@ -156,7 +250,9 @@ class PresentacionProducto(models.Model):
 # ==========================================================================
 # 5. HISTORIAL DE PRECIOS
 # ==========================================================================
-class HistorialPrecio(models.Model):
+class HistorialPrecio(CampoTenantMixin):
+    tenant_heredado_de = "presentacion"
+
     presentacion = models.ForeignKey(
         PresentacionProducto,
         on_delete=models.CASCADE,

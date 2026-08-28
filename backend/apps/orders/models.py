@@ -5,12 +5,16 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Sum
 
+from apps.tenancy.models import CampoTenantMixin
+
 
 # ==========================================================================
 # 1. CLIENTE
 # ==========================================================================
-class Cliente(models.Model):
-    nombre_cliente = models.CharField(max_length=200, unique=True)
+class Cliente(CampoTenantMixin):
+    # La unicidad pasa a ser (tenant, nombre): "Juan Pérez" puede ser cliente
+    # de dos negocios distintos sin que uno vea al del otro.
+    nombre_cliente = models.CharField(max_length=200)
     telefono_cliente = models.CharField(max_length=25, blank=True)
     direccion_cliente = models.TextField(blank=True)
 
@@ -19,6 +23,11 @@ class Cliente(models.Model):
     class Meta:
         db_table = "ui_cliente"
         ordering = ["nombre_cliente"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "nombre_cliente"], name="orders_cliente_unico_por_negocio"
+            )
+        ]
 
     def __str__(self):
         return self.nombre_cliente
@@ -27,7 +36,7 @@ class Cliente(models.Model):
 # ==========================================================================
 # 2. PEDIDO
 # ==========================================================================
-class Pedido(models.Model):
+class Pedido(CampoTenantMixin):
     ESTADOS = [
         ("PENDIENTE", "Pendiente"),
         ("EDITADO", "Editado"),
@@ -69,6 +78,7 @@ class Pedido(models.Model):
     class Meta:
         db_table = "ui_pedido"
         ordering = ["fecha_pedido"]
+        indexes = [models.Index(fields=["tenant", "estado"], name="ui_pedido_tenant_estado_idx")]
 
     def actualizar_total(self):
         total = self.detalles.aggregate(total=Sum("subtotal"))["total"] or Decimal("0.00")
@@ -83,7 +93,9 @@ class Pedido(models.Model):
 # ==========================================================================
 # 3. DETALLE PEDIDO
 # ==========================================================================
-class DetallePedido(models.Model):
+class DetallePedido(CampoTenantMixin):
+    tenant_heredado_de = "pedido"
+
     pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name="detalles")
 
     presentacion = models.ForeignKey(
@@ -137,7 +149,10 @@ class DetallePedido(models.Model):
         db_table = "ui_detallepedido"
         verbose_name = "Detalle de Pedido"
         verbose_name_plural = "Detalles de Pedidos"
-        indexes = [models.Index(fields=["pedido"])]
+        indexes = [
+            models.Index(fields=["pedido"]),
+            models.Index(fields=["tenant"], name="ui_detallep_tenant_idx"),
+        ]
 
     def clean(self):
         super().clean()
@@ -171,7 +186,9 @@ class DetallePedido(models.Model):
 # ==========================================================================
 # 4. HISTORIAL DETALLE PEDIDO
 # ==========================================================================
-class HistorialDetallePedido(models.Model):
+class HistorialDetallePedido(CampoTenantMixin):
+    tenant_heredado_de = "detalle"
+
     detalle = models.ForeignKey(
         DetallePedido, on_delete=models.CASCADE, related_name="historial"
     )
@@ -189,7 +206,9 @@ class HistorialDetallePedido(models.Model):
 # ==========================================================================
 # 5. DETALLE PEDIDO MANUAL
 # ==========================================================================
-class DetallePedidoManual(models.Model):
+class DetallePedidoManual(CampoTenantMixin):
+    tenant_heredado_de = "pedido"
+
     pedido = models.ForeignKey(
         Pedido, on_delete=models.CASCADE, related_name="detalle_manual"
     )
@@ -225,7 +244,7 @@ class DetallePedidoManual(models.Model):
 # ==========================================================================
 # 6. LOTE DE PEDIDOS
 # ==========================================================================
-class LotePedidos(models.Model):
+class LotePedidos(CampoTenantMixin):
     """
     Agrupación persistente de pedidos procesados juntos (impresión masiva o
     entrega masiva), para poder consultar después qué se procesó, quién y

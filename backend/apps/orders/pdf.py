@@ -4,7 +4,7 @@ Generación de facturas en PDF para pedidos, con WeasyPrint.
 Portado de la versión original del proyecto (`apps/ui/views.py`), conservando
 la misma lógica de agrupación por categoría. La diferencia principal es que el
 logo y los datos del emisor (NIT, proveedor, teléfono, dirección) ya no están
-fijos en el código: se leen de `apps.content.models.SiteConfig`, editable
+fijos en el código: se leen de `apps.content.models.StoreSettings`, editable
 desde el admin-panel.
 """
 import base64
@@ -20,7 +20,7 @@ from rest_framework.views import APIView
 from weasyprint import HTML
 
 from apps.common.permissions import requiere_permiso
-from apps.content.models import SiteConfig
+from apps.content.models import StoreSettings
 
 from .factura_layout import planificar
 from .models import LotePedidos, Pedido
@@ -32,14 +32,14 @@ COLOR_LOGO_FACTURA = (6, 95, 70)
 INTENSIDAD_TINTE = 110  # de 255 (~43%): deja ver el dibujo original debajo
 
 
-def _obtener_logo_base64():
+def _obtener_logo_base64(tenant=None):
     """
-    Lee el logo configurado en SiteConfig y lo devuelve en base64, con un tinte
+    Lee el logo configurado en StoreSettings y lo devuelve en base64, con un tinte
     verde parcial (mismo verde del h1) superpuesto sobre su silueta, dejando
     ver el dibujo/colores originales por debajo en vez de taparlo del todo.
     """
-    config = SiteConfig.get_solo()
-    if not config.logo:
+    config = StoreSettings.get_para(tenant)
+    if config is None or not config.logo:
         return ""
     # Igual que en accounts/emails.py: se lee por la API de storage porque con
     # R2 no existe .path. Los bytes van a BytesIO para que Pillow tenga un
@@ -60,8 +60,8 @@ def _obtener_logo_base64():
         return ""
 
 
-def _datos_emisor():
-    config = SiteConfig.get_solo()
+def _datos_emisor(tenant=None):
+    config = StoreSettings.get_para(tenant) or StoreSettings()
     return {
         "nombre_empresa": config.nombre_empresa or "Mi Empresa",
         "factura_eslogan": config.factura_eslogan,
@@ -150,9 +150,9 @@ class GenerarPdfPedidoView(APIView):
             return HttpResponse("El pedido solicitado no existe.", status=404)
 
         context = _obtener_datos_factura(pedido)
-        context["logo_data"] = _obtener_logo_base64()
+        context["logo_data"] = _obtener_logo_base64(pedido.tenant)
         context["fecha_impresion"] = pedido.fecha_pedido
-        context.update(_datos_emisor())
+        context.update(_datos_emisor(pedido.tenant))
 
         html_string = render_to_string("orders/pdf/factura.html", context)
 
@@ -191,10 +191,13 @@ class GenerarPdfPedidosLoteView(APIView):
             )
             lote.pedidos.set(pedidos_ordenados)
 
+        # Todos los pedidos del lote son del mismo negocio (la vista ya está
+        # acotada), así que basta el del primero para la marca del emisor.
+        tenant = pedidos_ordenados[0].tenant
         context = {
             "pedidos_data": [_obtener_datos_factura(p) for p in pedidos_ordenados],
-            "logo_data": _obtener_logo_base64(),
-            **_datos_emisor(),
+            "logo_data": _obtener_logo_base64(tenant),
+            **_datos_emisor(tenant),
         }
 
         html_string = render_to_string("orders/pdf/factura_lote.html", context)

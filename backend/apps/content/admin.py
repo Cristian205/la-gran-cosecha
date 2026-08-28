@@ -1,14 +1,14 @@
 from django.contrib import admin
 
-from .models import BeneficioComercial, OfertaProducto, PromoBanner, SiteConfig, Testimonio, TrustBadge
+from .models import BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
 
 
-@admin.register(SiteConfig)
-class SiteConfigAdmin(admin.ModelAdmin):
+@admin.register(StoreSettings)
+class StoreSettingsAdmin(admin.ModelAdmin):
     list_display = ("__str__", "telefono", "whatsapp_numero", "fecha_actualizacion")
 
     def has_add_permission(self, request):
-        return not SiteConfig.objects.exists()
+        return not StoreSettings.objects.exists()
 
     def has_delete_permission(self, request, obj=None):
         return False

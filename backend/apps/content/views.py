@@ -2,13 +2,14 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.permissions import EsStaff
 
-from .models import BeneficioComercial, OfertaProducto, PromoBanner, SiteConfig, Testimonio, TrustBadge
+from .models import BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
 from .serializers import (
     BeneficioComercialSerializer,
     OfertaProductoSerializer,
@@ -21,8 +22,11 @@ from .serializers import (
 
 class SiteConfigView(APIView):
     """
-    Configuración única del sitio. Lectura pública (la storefront la consume
-    sin autenticación); escritura solo staff (admin-panel).
+    Configuración de la tienda del negocio de esta petición. Lectura pública
+    (la storefront la consume sin autenticación); escritura solo staff.
+
+    La ruta sigue llamándose `site-config` para no tocar el storefront, aunque
+    el modelo detrás ya sea `StoreSettings` y haya una fila por negocio.
     """
 
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -32,12 +36,18 @@ class SiteConfigView(APIView):
             return [AllowAny()]
         return [EsStaff()]
 
+    def _config(self, request):
+        config = StoreSettings.get_para(getattr(request, "tenant", None))
+        if config is None:
+            raise NotFound("No hay ningún negocio asociado a esta dirección.")
+        return config
+
     def get(self, request):
-        config = SiteConfig.get_solo()
+        config = self._config(request)
         return Response(SiteConfigSerializer(config, context={"request": request}).data)
 
     def patch(self, request):
-        config = SiteConfig.get_solo()
+        config = self._config(request)
         serializer = SiteConfigSerializer(
             config, data=request.data, partial=True, context={"request": request}
         )
