@@ -26,6 +26,24 @@ FALTA_TENANCY = (
 
 
 # ==========================================================================
+# EL NEGOCIO DE LOS TESTS DE REGRESIÓN
+# ==========================================================================
+@pytest.fixture
+def negocio(db):
+    """
+    El único negocio dado de alta, que es como se comporta la instalación real
+    tras la fase 2. Con uno solo, el puente `tenant_por_defecto()` asigna
+    automáticamente las filas que el código existente crea sin declararlo, así
+    que los tests de regresión siguen escribiéndose sin mencionar el tenant.
+    """
+    from apps.tenancy.models import Tenant
+
+    return Tenant.objects.create(
+        slug="negocio-de-pruebas", nombre="Negocio de pruebas", estado="ACTIVO"
+    )
+
+
+# ==========================================================================
 # CLIENTES HTTP
 # ==========================================================================
 @pytest.fixture
@@ -54,7 +72,7 @@ def api_staff(usuario_staff):
 # USUARIOS
 # ==========================================================================
 @pytest.fixture
-def usuario_owner(db):
+def usuario_owner(negocio):
     return Usuario.objects.create_user(
         email_usuario="duena@ejemplo.test",
         nombre_usuario="Dueña de la cuenta",
@@ -65,7 +83,7 @@ def usuario_owner(db):
 
 
 @pytest.fixture
-def usuario_staff(db):
+def usuario_staff(negocio):
     return Usuario.objects.create_user(
         email_usuario="analista@ejemplo.test",
         nombre_usuario="Analista",
@@ -79,14 +97,14 @@ def usuario_staff(db):
 # CATÁLOGO
 # ==========================================================================
 @pytest.fixture
-def unidad(db):
+def unidad(negocio):
     return UnidadMedida.objects.create(
         nombre_unidad="Kilogramo", abreviatura_unidad="kg"
     )
 
 
 @pytest.fixture
-def categoria(db):
+def categoria(negocio):
     return Categoria.objects.create(
         nombre_categoria="Categoría de prueba", abreviatura="CAT", orden=1
     )
@@ -111,7 +129,7 @@ def presentacion(producto, unidad):
 
 
 @pytest.fixture
-def cliente_negocio(db):
+def cliente_negocio(negocio):
     return Cliente.objects.create(
         nombre_cliente="Tienda del barrio", telefono_cliente="3001234567"
     )

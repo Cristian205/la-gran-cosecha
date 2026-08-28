@@ -331,10 +331,33 @@ def test_el_contexto_no_sobrevive_a_la_peticion(api, negocios):
     assert hay_ambito_declarado() is False
 
 
-def test_la_aplicacion_actual_sigue_sirviendo_sin_ningun_negocio(api):
+def test_sin_ningun_negocio_dado_de_alta_no_hay_tienda(api):
     """
-    La fase 1 es inerte a propósito: ningún modelo tiene ámbito todavía, así
-    que una petición sin tenant resuelto tiene que seguir funcionando. La fase
-    3 invierte esto y hace que falle cerrado.
+    Cambió respecto a la fase 1, y a propósito.
+
+    Entonces esta ruta devolvía 200 sin negocio porque `SiteConfig` era un
+    singleton que existía siempre. Ahora la configuración pertenece a un
+    negocio, así que sin ninguno dado de alta no hay tienda que servir y la
+    respuesta correcta es 404. Producción nunca ve este caso: la migración de
+    datos crea La Gran Cosecha antes de que la aplicación arranque.
     """
-    assert api.get("/api/content/site-config/").status_code == 200
+    assert api.get("/api/content/site-config/").status_code == 404
+
+
+def test_con_un_solo_negocio_la_tienda_sirve_aunque_el_host_no_resuelva(api, negocios):
+    """
+    El puente de la fase 2. Los hostnames de producción todavía no están dados
+    de alta como `Domain`, así que sin este comportamiento el despliegue de
+    esta fase dejaría la tienda sin identidad. Deja de aplicar en cuanto hay
+    un segundo negocio, que es justo cuando adivinar sería peligroso.
+    """
+    Tenant.objects.filter(slug="perfumeria-xyz").delete()  # queda uno solo
+
+    respuesta = api.get("/api/content/site-config/", HTTP_HOST="host-no-dado-de-alta.test")
+    assert respuesta.status_code == 200
+
+
+def test_con_dos_negocios_deja_de_adivinar(api, negocios):
+    """Servir la identidad del negocio equivocado es peor que no servir ninguna."""
+    respuesta = api.get("/api/content/site-config/", HTTP_HOST="host-no-dado-de-alta.test")
+    assert respuesta.status_code == 404

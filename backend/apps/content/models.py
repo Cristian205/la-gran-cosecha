@@ -1,13 +1,30 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.tenancy.models import CampoTenantMixin
 
-class SiteConfig(models.Model):
+
+class StoreSettings(models.Model):
     """
-    Configuración única del sitio (logo, contacto, textos institucionales y
-    datos del emisor de factura). Se fuerza a un solo registro (pk=1) con
-    el patrón get_solo().
+    La identidad y la apariencia de una tienda: logo, colores, tipografía,
+    contacto, textos institucionales y datos del emisor de la factura.
+
+    Hasta la fase 2 era `SiteConfig`, un singleton forzado a pk=1. Ese singleton
+    era el bloqueo conceptual más profundo del proyecto: toda la identidad del
+    negocio vivía en una única fila, así que no había forma de que un segundo
+    negocio tuviera la suya. Ahora es una fila por tenant.
+
+    Se conserva `db_table = "content_siteconfig"` y la ruta `/api/content/
+    site-config/` a propósito: renombrarlas obligaría a una migración de datos
+    y a tocar el storefront sin ganar nada.
     """
+
+    tenant = models.OneToOneField(
+        "tenancy.Tenant",
+        on_delete=models.CASCADE,
+        related_name="settings",
+        editable=False,
+    )
 
     FUENTES = [
         ("poppins", "Poppins"),
@@ -120,26 +137,39 @@ class SiteConfig(models.Model):
 
     class Meta:
         db_table = "content_siteconfig"
-        verbose_name = "Configuración del sitio"
-        verbose_name_plural = "Configuración del sitio"
+        verbose_name = "Configuración de la tienda"
+        verbose_name_plural = "Configuración de la tienda"
 
     def __str__(self):
-        return "Configuración del sitio"
-
-    def save(self, *args, **kwargs):
-        self.pk = 1
-        super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        pass  # El singleton no se borra
+        return f"Configuración de {self.tenant or 'sin negocio'}"
 
     @classmethod
-    def get_solo(cls):
-        obj, _ = cls.objects.get_or_create(pk=1)
+    def get_para(cls, tenant=None):
+        """
+        La configuración de un negocio, creándola si aún no existe.
+
+        El `tenant=None` es un puente de la fase 2, no un diseño: mientras solo
+        haya un negocio dado de alta, una petición cuyo host todavía no está
+        registrado como `Domain` sigue recibiendo la configuración de ese único
+        negocio, y la aplicación actual no se entera del cambio. En cuanto hay
+        más de uno deja de adivinar y devuelve None, porque servir la identidad
+        del negocio equivocado es peor que no servir ninguna.
+
+        La fase 3 elimina la rama del puente: sin tenant resuelto, 404.
+        """
+        if tenant is None:
+            from apps.tenancy.models import Tenant  # noqa: PLC0415
+
+            candidatos = Tenant.objects.all()[:2]
+            if len(candidatos) != 1:
+                return None
+            tenant = candidatos[0]
+
+        obj, _ = cls.objects.get_or_create(tenant=tenant)
         return obj
 
 
-class PromoBanner(models.Model):
+class PromoBanner(CampoTenantMixin):
     imagen = models.ImageField(upload_to="banners/", blank=True, null=True)
     etiqueta = models.CharField(max_length=100, blank=True)
     titulo = models.CharField(max_length=200)
@@ -161,7 +191,7 @@ class PromoBanner(models.Model):
         return self.titulo
 
 
-class Testimonio(models.Model):
+class Testimonio(CampoTenantMixin):
     nombre = models.CharField(max_length=150)
     rol = models.CharField(max_length=150, blank=True)
     texto = models.TextField()
@@ -179,7 +209,7 @@ class Testimonio(models.Model):
         return f"{self.nombre} ({self.rol})"
 
 
-class TrustBadge(models.Model):
+class TrustBadge(CampoTenantMixin):
     ICONOS = [
         ("leaf", "Hoja"),
         ("truck", "Camión"),
@@ -209,7 +239,7 @@ class TrustBadge(models.Model):
         return f"{self.valor} - {self.etiqueta}"
 
 
-class BeneficioComercial(models.Model):
+class BeneficioComercial(CampoTenantMixin):
     """Bloque de Home '¿Por qué comprar con nosotros?'."""
 
     ICONOS = [
@@ -240,13 +270,15 @@ class BeneficioComercial(models.Model):
         return self.titulo
 
 
-class OfertaProducto(models.Model):
+class OfertaProducto(CampoTenantMixin):
     """
     Oferta de tiempo limitado sobre una presentación puntual del catálogo,
     para el bloque de Home "Ofertas de la semana". El precio normal se lee
     siempre de `presentacion.precio_unitario` (nunca se duplica aquí), así
     que si el precio de catálogo cambia, el % de ahorro se recalcula solo.
     """
+
+    tenant_heredado_de = "presentacion"
 
     presentacion = models.ForeignKey(
         "catalog.PresentacionProducto", on_delete=models.CASCADE, related_name="ofertas"

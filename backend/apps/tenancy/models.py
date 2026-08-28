@@ -198,12 +198,78 @@ class Membership(models.Model):
 
 
 # ==========================================================================
-# BASE ABSTRACTA PARA LOS MODELOS DE NEGOCIO
+# BASES ABSTRACTAS PARA LOS MODELOS DE NEGOCIO
 # ==========================================================================
-class ModeloConTenant(models.Model):
+class CampoTenantMixin(models.Model):
     """
-    De aquí heredarán en la fase 2 Producto, Categoria, Cliente, Pedido y todos
-    los demás. Trae la columna, los dos managers y el índice.
+    Solo la columna y su índice. Nada más.
+
+    Es lo que heredan los modelos de negocio en la fase 2. Deliberadamente NO
+    cambia el manager por defecto: hacerlo en la misma fase que la migración de
+    datos dejaría la aplicación sin servicio, porque los managers relacionados
+    de Django (`pedido.detalles.all()`) se derivan del manager por defecto del
+    modelo y empezarían a exigir un contexto que casi ningún camino de código
+    declara todavía. Ese cambio es la fase 3, y consiste en pasar de heredar
+    esta clase a heredar `ModeloConTenant`.
+
+    La columna se guarda incluso donde es derivable por join —`DetallePedido`
+    podría sacarla de su pedido— porque la RLS de PostgreSQL evalúa su política
+    sobre la fila que está leyendo, sin recorrer la jerarquía, y porque un
+    índice compuesto `(tenant_id, …)` responde mejor que subir por ella.
+    """
+
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name="%(app_label)s_%(class)s",
+        editable=False,  # nunca se elige desde un formulario ni un serializer
+    )
+
+    class Meta:
+        abstract = True
+
+    # Nombre del FK del que esta fila hereda su negocio cuando es hija de otra
+    # (una línea hereda de su pedido, una presentación de su producto). Es la
+    # vía preferente: no depende del contexto de la petición, así que acierta
+    # también dentro de una señal, un comando o una tarea de fondo.
+    tenant_heredado_de = None
+
+    def asegurar_tenant(self):
+        """
+        Rellena `tenant` si nadie lo puso, en tres intentos y por ese orden.
+
+        1. Del padre declarado en `tenant_heredado_de`. Es el más fiable:
+           una línea de pedido es del negocio de su pedido, siempre.
+        2. Del contexto de la petición, que resuelve el middleware.
+        3. Del puente de la fase 2: el único negocio dado de alta.
+
+        Existe para que esta fase sea invisible a la aplicación actual. Ningún
+        `Cliente.objects.create(...)` del código existente pasa un tenant, y sin
+        este relleno todos fallarían contra la columna obligatoria. Las vistas
+        de la fase 3 lo asignan explícitamente y el paso 3 deja de intervenir.
+        """
+        if self.tenant_id is not None:
+            return
+
+        if self.tenant_heredado_de:
+            padre = getattr(self, self.tenant_heredado_de, None)
+            if padre is not None and padre.tenant_id is not None:
+                self.tenant_id = padre.tenant_id
+                return
+
+        from .context import hay_ambito_declarado, obtener_tenant_actual, tenant_por_defecto  # noqa: PLC0415
+
+        tenant = obtener_tenant_actual() if hay_ambito_declarado() else None
+        self.tenant = tenant or tenant_por_defecto()
+
+    def save(self, *args, **kwargs):
+        self.asegurar_tenant()
+        super().save(*args, **kwargs)
+
+
+class ModeloConTenant(CampoTenantMixin):
+    """
+    La columna más el ámbito automático. Es el destino de la fase 3.
 
     La combinación de managers es deliberada y frágil de reproducir a mano:
 
@@ -214,13 +280,6 @@ class ModeloConTenant(models.Model):
       y para los borrados en cascada; si dependiera del contexto de la
       petición, `pedido.cliente` reventaría dentro de una tarea de fondo.
     """
-
-    tenant = models.ForeignKey(
-        Tenant,
-        on_delete=models.CASCADE,
-        related_name="%(app_label)s_%(class)s",
-        editable=False,  # nunca se elige desde un formulario ni un serializer
-    )
 
     objects = TenantManager()
     all_tenants = ManagerSinAmbito()

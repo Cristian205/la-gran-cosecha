@@ -1,7 +1,9 @@
 from django.db import models
 
+from apps.tenancy.models import CampoTenantMixin
 
-class MensajeContacto(models.Model):
+
+class MensajeContacto(CampoTenantMixin):
     nombre = models.CharField(max_length=200)
     email = models.EmailField()
     telefono = models.CharField(max_length=25, blank=True)

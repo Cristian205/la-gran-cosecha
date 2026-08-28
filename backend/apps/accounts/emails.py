@@ -1,6 +1,6 @@
 """Envío del correo con el código OTP administrativo.
 
-Toma el nombre de empresa, color y logo desde `apps.content.models.SiteConfig`
+Toma el nombre de empresa, color y logo desde `apps.content.models.StoreSettings`
 (mismo patrón que ya usa `apps/orders/pdf.py` para las facturas) en vez de
 tener la marca fija en el código, para que cada instalación del sistema vea
 su propia identidad en el correo.
@@ -9,11 +9,16 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 
-from apps.content.models import SiteConfig
+from apps.content.models import StoreSettings
 
 
-def enviar_codigo_otp(user, otp_code):
-    config = SiteConfig.get_solo()
+def enviar_codigo_otp(user, otp_code, tenant=None):
+    # El correo lleva la marca del negocio desde el que se inicia sesión. Sin
+    # tenant (login antes de que la fase 4 lo resuelva) cae al puente de
+    # get_para, que acierta mientras solo haya un negocio dado de alta.
+    config = StoreSettings.get_para(tenant)
+    if config is None:
+        config = StoreSettings()  # valores por defecto del modelo
     nombre_empresa = config.nombre_empresa or "Panel Administrativo"
     color = config.color_primario or "#16a34a"
 

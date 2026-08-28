@@ -2,14 +2,14 @@ from rest_framework import serializers
 
 from apps.catalog.serializers import PresentacionProductoSerializer
 
-from .models import BeneficioComercial, OfertaProducto, PromoBanner, SiteConfig, Testimonio, TrustBadge
+from .models import BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
 
 
 class SiteConfigSerializer(serializers.ModelSerializer):
     logo_url = serializers.SerializerMethodField()
 
     class Meta:
-        model = SiteConfig
+        model = StoreSettings
         fields = [
             "logo",
             "logo_url",
