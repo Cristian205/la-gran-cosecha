@@ -47,6 +47,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.common",
+    "apps.tenancy",
     "apps.accounts",
     "apps.catalog",
     "apps.orders",
@@ -69,6 +70,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.tenancy.middleware.TenantMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.accounts.middleware.ForzarCambioPasswordMiddleware",
@@ -207,6 +209,14 @@ if USE_R2:
     # se deja coherente para el codigo que aun lo consulte.
     if _r2_dominio:
         MEDIA_URL = f"https://{_r2_dominio}/{R2_LOCATION}/"
+
+# ==========================================================================
+# MULTIEMPRESA (TENANCY)
+# ==========================================================================
+# Permite elegir el negocio con la cabecera X-Tenant. Solo para desarrollo y
+# tests: sin la comprobacion de pertenencia que trae la fase 4, en produccion
+# seria un cambio de negocio a voluntad. Ver apps/tenancy/middleware.py.
+TENANCY_ACEPTA_CABECERA = env.bool("TENANCY_ACEPTA_CABECERA", default=False)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

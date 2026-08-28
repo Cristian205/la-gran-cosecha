@@ -6,6 +6,9 @@ DEBUG = env.bool("DJANGO_DEBUG", default=True)
 
 ALLOWED_HOSTS = ["*"]
 
+# La suite y el desarrollo local eligen el negocio por cabecera.
+TENANCY_ACEPTA_CABECERA = True
+
 # En desarrollo permitimos cualquier origen local para agilizar el trabajo
 CORS_ALLOW_ALL_ORIGINS = True
 

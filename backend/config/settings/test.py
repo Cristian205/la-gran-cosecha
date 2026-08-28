@@ -63,6 +63,13 @@ STORAGES = {
 # tests no existe; el de arriba lo evita.
 
 ALLOWED_HOSTS = ["*"]
+
+# La suite y el desarrollo local eligen el negocio por cabecera.
+TENANCY_ACEPTA_CABECERA = True
+
+# App de soporte con un modelo que hereda de ModeloConTenant, para poder probar
+# el manager con ambito antes de que ningun modelo de negocio lo use (fase 2).
+INSTALLED_APPS = INSTALLED_APPS + ["tests.soporte"]  # noqa: F405
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Los tests de aislamiento crean muchos objetos y comprueban listados enteros;
