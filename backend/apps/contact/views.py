@@ -3,11 +3,13 @@ from rest_framework.permissions import AllowAny
 
 from apps.common.permissions import EsStaff
 
+from apps.tenancy.viewsets import TenantScopedMixin
+
 from .models import MensajeContacto
 from .serializers import MensajeContactoSerializer
 
 
-class MensajeContactoViewSet(viewsets.ModelViewSet):
+class MensajeContactoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     """
     Mensajes del formulario de contacto público.
     - create: público (cualquiera puede enviar un mensaje).
@@ -15,7 +17,7 @@ class MensajeContactoViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = MensajeContactoSerializer
-    queryset = MensajeContacto.objects.all()
+    modelo = MensajeContacto
     http_method_names = ["get", "post", "head", "options"]
 
     def get_permissions(self):

@@ -1,66 +1,140 @@
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+"""
+Permisos de la API, ya acotados al negocio.
+
+Hasta la fase 3 esto se apoyaba en el `user_permissions` nativo de Django. Era
+elegante para un solo negocio y un agujero con dos: ese `user_permissions` es
+global, no puede expresar «edita productos en La Gran Cosecha pero no en la
+perfumería», y `is_staff` bastaba para pasar cualquier verificación de
+cualquier negocio. Ahora todo se resuelve contra la `Membership` del usuario en
+el negocio de la petición.
+
+`is_superuser` sigue saltándose las comprobaciones de permiso, pero NO el
+ámbito de datos: un superusuario dentro de un negocio ve ese negocio y nada
+más. Atravesar negocios exige `ambito_de_plataforma()`, que es explícito y vive
+en el panel de plataforma.
+"""
+from rest_framework.permissions import SAFE_METHODS, BasePermission
+
+
+def pertenencia_actual(request):
+    """
+    La `Membership` del usuario en el negocio de esta petición, o None.
+
+    Devuelve None también cuando no hay negocio resuelto: sin saber en qué
+    negocio estamos no se puede conceder nada.
+    """
+    usuario = getattr(request, "user", None)
+    tenant = getattr(request, "tenant", None)
+    if not (usuario and usuario.is_authenticated) or tenant is None:
+        return None
+
+    from apps.tenancy.models import Membership  # noqa: PLC0415
+
+    return Membership.objects.filter(
+        usuario=usuario, tenant=tenant, activo=True
+    ).first()
+
+
+def es_owner(request) -> bool:
+    """
+    El dueño de la cuenta tiene acceso total dentro de su negocio.
+
+    Los permisos granulares existen para delegar en terceros, no para
+    restringir a quien paga la cuenta — misma semántica que antes, ahora
+    limitada a un negocio.
+    """
+    usuario = getattr(request, "user", None)
+    if usuario is not None and usuario.is_superuser:
+        return True
+    pertenencia = pertenencia_actual(request)
+    return bool(pertenencia and pertenencia.tiene_acceso_total)
+
+
+def es_owner_de(usuario, tenant) -> bool:
+    """
+    ¿Este usuario concreto es dueño de este negocio concreto?
+
+    Variante de `es_owner()` para cuando se pregunta por alguien que no es
+    quien hace la petición — al listar el equipo, o al impedir que un delegado
+    edite al dueño.
+    """
+    if usuario is None or not usuario.is_authenticated:
+        return False
+    if usuario.is_superuser:
+        return True
+    if tenant is None:
+        return False
+
+    from apps.tenancy.models import Membership  # noqa: PLC0415
+
+    pertenencia = Membership.objects.filter(
+        usuario=usuario, tenant=tenant, activo=True
+    ).first()
+    return bool(pertenencia and pertenencia.tiene_acceso_total)
+
+
+def permisos_de(usuario, tenant):
+    """Los codenames que este usuario tiene concedidos en este negocio."""
+    from apps.tenancy.models import Membership  # noqa: PLC0415
+
+    if tenant is None:
+        return []
+    pertenencia = Membership.objects.filter(
+        usuario=usuario, tenant=tenant, activo=True
+    ).first()
+    return list(pertenencia.permisos or []) if pertenencia else []
 
 
 class EsStaff(BasePermission):
-    """Permite el acceso solo a usuarios autenticados con is_staff=True."""
+    """Usuario del panel que además trabaja en este negocio."""
 
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_staff)
+        usuario = request.user
+        if not (usuario and usuario.is_authenticated and usuario.is_staff):
+            return False
+        return usuario.is_superuser or pertenencia_actual(request) is not None
 
 
 class EsAdministrador(BasePermission):
-    """
-    Equivale a la función `es_administrador` del proyecto original:
-    solo GERENTE o superusuario.
-    """
+    """Dueño o administrador del negocio de la petición."""
 
     def has_permission(self, request, view):
-        user = request.user
-        return bool(
-            user
-            and user.is_authenticated
-            and (getattr(user, "rol_usuario", None) == "GERENTE" or user.is_superuser)
-        )
+        return es_owner(request)
 
 
 class SoloLecturaPublicaOStaff(BasePermission):
     """
-    Lectura (GET/HEAD/OPTIONS) pública para el storefront;
-    escritura solo para staff autenticado.
+    Lectura pública para la tienda; escritura solo para quien trabaja en el
+    negocio.
     """
 
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
-        return bool(request.user and request.user.is_staff)
-
-
-def es_owner(user) -> bool:
-    """
-    El 'dueño' (GERENTE o superusuario) siempre tiene acceso total: los permisos
-    granulares por usuario existen para delegar en terceros, no para restringir
-    al dueño de la cuenta.
-    """
-    return bool(user and (user.is_superuser or getattr(user, "rol_usuario", None) == "GERENTE"))
+        return EsStaff().has_permission(request, view)
 
 
 def requiere_permiso(codename: str):
     """
-    Fábrica de permiso DRF: exige estar autenticado y ser staff, y además
-    (salvo que sea el dueño) tener el permiso Django puntual indicado
-    (formato 'app_label.codename', ej. 'catalog.delete_producto').
+    Fábrica de permiso DRF: exige trabajar en este negocio y tener el permiso.
 
-    Permite construir permisos por acción/por usuario sin inventar un modelo
-    nuevo: se apoya en el `user_permissions` que Django ya trae de fábrica.
+    El codename mantiene el formato de siempre ('catalog.change_producto') y el
+    catálogo curado de `accounts/permisos.py` sigue sirviendo tal cual. Lo que
+    cambia es dónde se busca: en `Membership.permisos`, que está atado al
+    negocio, en vez de en el `user_permissions` del usuario, que no lo está.
     """
 
     class _RequierePermiso(BasePermission):
         def has_permission(self, request, view):
-            user = request.user
-            if not (user and user.is_authenticated and user.is_staff):
+            usuario = request.user
+            if not (usuario and usuario.is_authenticated and usuario.is_staff):
                 return False
-            if es_owner(user):
+            if usuario.is_superuser:
                 return True
-            return user.has_perm(codename)
+
+            pertenencia = pertenencia_actual(request)
+            if pertenencia is None:
+                return False
+            return pertenencia.tiene_permiso(codename)
 
     return _RequierePermiso

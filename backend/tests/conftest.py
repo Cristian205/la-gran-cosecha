@@ -31,16 +31,24 @@ FALTA_TENANCY = (
 @pytest.fixture
 def negocio(db):
     """
-    El único negocio dado de alta, que es como se comporta la instalación real
-    tras la fase 2. Con uno solo, el puente `tenant_por_defecto()` asigna
-    automáticamente las filas que el código existente crea sin declararlo, así
-    que los tests de regresión siguen escribiéndose sin mencionar el tenant.
-    """
-    from apps.tenancy.models import Tenant
+    El negocio de los tests de regresión, con su ámbito activo y su dominio.
 
-    return Tenant.objects.create(
+    Deja declarado el contexto durante todo el test: desde la fase 3 los
+    managers fallan cerrado, así que un `Categoria.objects.create(...)` suelto
+    en un fixture lanzaría. Y registra un `Domain` porque las peticiones de la
+    API resuelven el negocio por el host, que en el cliente de pruebas de
+    Django es `testserver`.
+    """
+    from apps.tenancy.context import usar_tenant
+    from apps.tenancy.models import Domain, Tenant
+
+    tenant = Tenant.objects.create(
         slug="negocio-de-pruebas", nombre="Negocio de pruebas", estado="ACTIVO"
     )
+    Domain.objects.create(tenant=tenant, hostname="testserver", es_primario=True)
+
+    with usar_tenant(tenant):
+        yield tenant
 
 
 # ==========================================================================
@@ -73,23 +81,41 @@ def api_staff(usuario_staff):
 # ==========================================================================
 @pytest.fixture
 def usuario_owner(negocio):
-    return Usuario.objects.create_user(
+    """Dueña de la cuenta: acceso total dentro de su negocio, sin permisos sueltos."""
+    usuario = Usuario.objects.create_user(
         email_usuario="duena@ejemplo.test",
         nombre_usuario="Dueña de la cuenta",
         password="clave-de-prueba-123",
         rol_usuario="GERENTE",
         is_staff=True,
     )
+    _dar_de_alta(usuario, negocio, "OWNER")
+    return usuario
 
 
 @pytest.fixture
 def usuario_staff(negocio):
-    return Usuario.objects.create_user(
+    """Analista dada de alta en el negocio, pero sin ningún permiso concedido."""
+    usuario = Usuario.objects.create_user(
         email_usuario="analista@ejemplo.test",
         nombre_usuario="Analista",
         password="clave-de-prueba-123",
         rol_usuario="ANALISTA",
         is_staff=True,
+    )
+    _dar_de_alta(usuario, negocio, "STAFF")
+    return usuario
+
+
+def _dar_de_alta(usuario, tenant, rol, permisos=None):
+    """
+    Desde la fase 3 el acceso lo concede la pertenencia, no `is_staff`.
+    Un usuario sin `Membership` no entra a ningún negocio.
+    """
+    from apps.tenancy.models import Membership
+
+    return Membership.objects.create(
+        usuario=usuario, tenant=tenant, rol=rol, permisos=permisos or []
     )
 
 
@@ -150,16 +176,24 @@ def tenancy():
 
 @pytest.fixture
 def tenant_a(tenancy, db):
-    return tenancy.models.Tenant.objects.create(
-        slug="la-gran-cosecha", nombre="La Gran Cosecha"
+    tenant = tenancy.models.Tenant.objects.create(
+        slug="la-gran-cosecha", nombre="La Gran Cosecha", estado="ACTIVO"
     )
+    tenancy.models.Domain.objects.create(
+        tenant=tenant, hostname="la-gran-cosecha.plataforma.test", es_primario=True
+    )
+    return tenant
 
 
 @pytest.fixture
 def tenant_b(tenancy, db):
-    return tenancy.models.Tenant.objects.create(
-        slug="perfumeria-xyz", nombre="Perfumería XYZ"
+    tenant = tenancy.models.Tenant.objects.create(
+        slug="perfumeria-xyz", nombre="Perfumería XYZ", estado="ACTIVO"
     )
+    tenancy.models.Domain.objects.create(
+        tenant=tenant, hostname="perfumeria.plataforma.test", es_primario=True
+    )
+    return tenant
 
 
 @pytest.fixture
@@ -192,19 +226,32 @@ def _cliente_de_tenant(tenancy, tenant, email):
 
 
 @pytest.fixture
+def producto_de_a(tenant_a):
+    """Un producto del tenant A, para contrastar con los del B."""
+    categoria = Categoria.all_tenants.create(
+        tenant=tenant_a, nombre_categoria="Frutas", abreviatura="FRU", orden=1
+    )
+    return Producto.all_tenants.create(
+        tenant=tenant_a, nombre_producto="Mango de La Gran Cosecha", categoria=categoria
+    )
+
+
+@pytest.fixture
 def recursos_del_tenant_b(tenant_b, tenancy):
     """
     Un objeto de cada tipo perteneciente al tenant B. Es lo que el tenant A
     nunca debe poder ver, listar, leer ni modificar.
     """
-    con_tenant = lambda modelo, **kw: modelo.objects.create(tenant=tenant_b, **kw)  # noqa: E731
+    # `all_tenants` porque este fixture construye datos de un negocio que NO es
+    # el del contexto: es justamente lo que el tenant A no debe poder ver.
+    con_tenant = lambda modelo, **kw: modelo.all_tenants.create(tenant=tenant_b, **kw)  # noqa: E731
 
     categoria = con_tenant(Categoria, nombre_categoria="Perfumes", abreviatura="PER", orden=1)
     producto = con_tenant(Producto, nombre_producto="Perfume floral", categoria=categoria)
     unidad = con_tenant(UnidadMedida, nombre_unidad="Frasco", abreviatura_unidad="fr")
-    presentacion = PresentacionProducto.objects.create(
+    presentacion = PresentacionProducto.all_tenants.create(
         producto=producto, nombre_presentacion="100 ml", unidad_venta=unidad,
-        factor_conversion=1, precio_unitario=85000,
+        factor_conversion=1, precio_unitario=85000, tenant=tenant_b,
     )
     cliente = con_tenant(Cliente, nombre_cliente="Clienta de la perfumería")
 

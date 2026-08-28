@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils.text import slugify
 
-from apps.tenancy.models import CampoTenantMixin
+from apps.tenancy.models import ModeloConTenant
 
 
 # ==========================================================================
@@ -24,7 +24,10 @@ def generar_slug_unico(modelo, texto, tenant_id, excluir_pk=None, maximo=50):
     base = slugify(texto)[:maximo] or "sin-nombre"
     candidato = base
 
-    hermanos = modelo.objects.filter(tenant=tenant_id)
+    # `all_tenants` y no `objects`: aquí el negocio ya viene dado por
+    # parámetro, así que filtrar es explícito y no debe depender de que haya un
+    # contexto declarado — este código corre también desde una migración.
+    hermanos = modelo.all_tenants.filter(tenant=tenant_id)
     if excluir_pk:
         hermanos = hermanos.exclude(pk=excluir_pk)
 
@@ -39,7 +42,7 @@ def generar_slug_unico(modelo, texto, tenant_id, excluir_pk=None, maximo=50):
 # ==========================================================================
 # 1. CATEGORÍA
 # ==========================================================================
-class Categoria(CampoTenantMixin):
+class Categoria(ModeloConTenant):
     # La unicidad pasa a ser (tenant, nombre): dos negocios tienen que poder
     # llamar "Ofertas" a una categoría cada uno. Ver Meta.constraints.
     nombre_categoria = models.CharField(max_length=150)
@@ -81,7 +84,7 @@ class Categoria(CampoTenantMixin):
 # ==========================================================================
 # 2. UNIDAD DE MEDIDA
 # ==========================================================================
-class UnidadMedida(CampoTenantMixin):
+class UnidadMedida(ModeloConTenant):
     # Sin esto, dos negocios no podrían tener ambos un "Kilogramo".
     nombre_unidad = models.CharField(max_length=100)
     abreviatura_unidad = models.CharField(max_length=10)
@@ -104,7 +107,7 @@ class UnidadMedida(CampoTenantMixin):
 # ==========================================================================
 # 3. PRODUCTO
 # ==========================================================================
-class Producto(CampoTenantMixin):
+class Producto(ModeloConTenant):
     # El código deja de ser único globalmente: cada negocio lleva su propia
     # numeración, así que "FRU-001" existe una vez por negocio.
     codigo_producto = models.CharField(max_length=50, editable=False)
@@ -179,10 +182,12 @@ class Producto(CampoTenantMixin):
 
         with transaction.atomic():
             if not self.pk:
-                del_negocio = Producto.objects.filter(tenant=self.tenant_id)
+                # `all_tenants` con filtro explícito: la numeración es del
+                # negocio de este producto, se declare o no un contexto.
+                del_negocio = Producto.all_tenants.filter(tenant=self.tenant_id)
 
                 # Bloquea el contador de esta categoría hasta el commit.
-                categoria = Categoria.objects.select_for_update().get(
+                categoria = Categoria.all_tenants.select_for_update().get(
                     pk=self.categoria_id
                 )
 
@@ -210,7 +215,7 @@ class Producto(CampoTenantMixin):
 # ==========================================================================
 # 4. PRESENTACIÓN PRODUCTO
 # ==========================================================================
-class PresentacionProducto(CampoTenantMixin):
+class PresentacionProducto(ModeloConTenant):
     tenant_heredado_de = "producto"
 
     producto = models.ForeignKey(
@@ -250,7 +255,7 @@ class PresentacionProducto(CampoTenantMixin):
 # ==========================================================================
 # 5. HISTORIAL DE PRECIOS
 # ==========================================================================
-class HistorialPrecio(CampoTenantMixin):
+class HistorialPrecio(ModeloConTenant):
     tenant_heredado_de = "presentacion"
 
     presentacion = models.ForeignKey(

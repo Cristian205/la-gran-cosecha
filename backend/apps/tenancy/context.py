@@ -70,6 +70,20 @@ def restablecer(token) -> None:
     _tenant_actual.reset(token)
 
 
+def limpiar_ambito():
+    """
+    Deja el ámbito SIN DECLARAR y devuelve el token para restaurarlo.
+
+    Hace falta porque un `ContextVar` no se puede «desactivar»: solo se le puede
+    dar otro valor. Sin esto, un ámbito declarado más arriba en la misma pila
+    —una tarea, un test que envuelve su preparación en `usar_tenant`— seguiría
+    vigente dentro de una petición que no resolvió ningún negocio, y las
+    consultas devolverían datos en vez de fallar. Que es justo la fuga que todo
+    esto quiere evitar.
+    """
+    return _tenant_actual.set(SIN_DEFINIR)
+
+
 @contextmanager
 def usar_tenant(tenant):
     """
@@ -99,22 +113,3 @@ def ambito_de_plataforma():
         yield None
     finally:
         _tenant_actual.reset(token)
-
-
-def tenant_por_defecto():
-    """
-    Puente de la fase 2, no un diseño permanente.
-
-    Mientras solo haya un negocio dado de alta, cualquier camino de código que
-    cree una fila sin haber declarado ámbito —el alta de pedido del storefront,
-    un comando, el shell— la asigna a ese único negocio, y la aplicación actual
-    no se entera de que ahora hay una columna más.
-
-    En cuanto existe un segundo negocio deja de adivinar y devuelve None, de
-    modo que la ambigüedad se convierte en un error visible en vez de en una
-    fila asignada al negocio equivocado. La fase 3 lo retira del todo.
-    """
-    from .models import Tenant  # noqa: PLC0415 — evita el import circular
-
-    candidatos = list(Tenant.objects.all()[:2])
-    return candidatos[0] if len(candidatos) == 1 else None

@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
 
+from apps.tenancy.fields import ClaveDelNegocio
+
 from .models import Categoria, HistorialPrecio, PresentacionProducto, Producto, UnidadMedida
 
 
@@ -118,7 +120,7 @@ class PresentacionWriteSerializer(serializers.Serializer):
 
     id = serializers.IntegerField(required=False, allow_null=True)
     nombre_presentacion = serializers.CharField(max_length=200)
-    unidad_venta = serializers.PrimaryKeyRelatedField(queryset=UnidadMedida.objects.all())
+    unidad_venta = ClaveDelNegocio(UnidadMedida)
     factor_conversion = serializers.DecimalField(
         max_digits=10, decimal_places=3, default=Decimal("1")
     )

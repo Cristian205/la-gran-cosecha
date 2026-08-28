@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from apps.common.permissions import es_owner
+from apps.common.permissions import es_owner_de, permisos_de
 from apps.common.utils import convertir_texto_a_decimal  # noqa: F401 (reservado)
 
 from .permisos import TODOS_LOS_CODENAMES
@@ -37,16 +37,19 @@ class UsuarioSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    def _tenant(self):
+        """El negocio de la petición: los permisos son suyos, no del usuario."""
+        contexto = self.context
+        return contexto.get("tenant") or getattr(contexto.get("request"), "tenant", None)
+
     def get_es_administrador(self, obj):
-        return es_owner(obj)
+        return es_owner_de(obj, self._tenant())
 
     def get_permisos(self, obj):
-        if es_owner(obj):
+        tenant = self._tenant()
+        if es_owner_de(obj, tenant):
             return sorted(TODOS_LOS_CODENAMES)
-        return sorted(
-            f"{p.content_type.app_label}.{p.codename}"
-            for p in obj.user_permissions.select_related("content_type")
-        )
+        return sorted(permisos_de(obj, tenant))
 
 
 class EditarUsuarioSerializer(serializers.Serializer):

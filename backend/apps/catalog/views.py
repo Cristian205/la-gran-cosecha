@@ -5,6 +5,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from apps.common.permissions import EsStaff, SoloLecturaPublicaOStaff, requiere_permiso
+from apps.tenancy.viewsets import TenantScopedMixin
 
 from .filters import ProductoFilter
 from .models import Categoria, HistorialPrecio, PresentacionProducto, Producto, UnidadMedida
@@ -21,31 +22,31 @@ TIPOS_IMAGEN_VALIDOS = ("image/jpeg", "image/png", "image/webp")
 LIMITE_IMAGEN_MB = 5
 
 
-class CategoriaViewSet(viewsets.ModelViewSet):
+class CategoriaViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     """Categorías: lectura pública, escritura solo staff."""
 
     serializer_class = CategoriaSerializer
     permission_classes = [SoloLecturaPublicaOStaff]
 
     def get_queryset(self):
-        qs = Categoria.objects.all()
+        qs = Categoria.objects.all()  # ya acotado por el manager
         if not (self.request.user and self.request.user.is_staff):
             qs = qs.filter(estado_categoria=True)
         return qs
 
 
-class UnidadMedidaViewSet(viewsets.ModelViewSet):
+class UnidadMedidaViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     """Unidades de medida (catálogo interno)."""
 
     serializer_class = UnidadMedidaSerializer
     permission_classes = [SoloLecturaPublicaOStaff]
-    queryset = UnidadMedida.objects.all()
+    modelo = UnidadMedida
     # Catálogo cerrado y pequeño que los <select> del panel consumen entero:
     # paginarlo solo hacía desaparecer las unidades a partir de la número 20.
     pagination_class = None
 
 
-class ProductoViewSet(viewsets.ModelViewSet):
+class ProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     """
     Productos: lectura pública (solo activos para anónimos), escritura staff.
     El borrado es lógico (estado_producto=False), como en el original.
@@ -159,12 +160,15 @@ class ProductoViewSet(viewsets.ModelViewSet):
         )
 
 
-class PresentacionProductoViewSet(viewsets.ModelViewSet):
+class PresentacionProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     """Presentaciones (staff). El borrado es lógico."""
 
     serializer_class = PresentacionProductoSerializer
     permission_classes = [EsStaff]
-    queryset = PresentacionProducto.objects.select_related("unidad_venta", "producto")
+    modelo = PresentacionProducto
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("unidad_venta", "producto")
 
     def destroy(self, request, *args, **kwargs):
         presentacion = self.get_object()

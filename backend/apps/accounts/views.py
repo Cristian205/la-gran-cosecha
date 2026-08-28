@@ -16,7 +16,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.common.permissions import EsAdministrador, es_owner, requiere_permiso
+from apps.common.permissions import EsAdministrador, es_owner, es_owner_de, requiere_permiso
+
+from apps.tenancy.models import Membership
 
 from .emails import enviar_codigo_otp
 from .permisos import CATALOGO_PERMISOS
@@ -32,6 +34,10 @@ from .serializers import (
 )
 
 Usuario = get_user_model()
+
+# El rol del panel se traduce a rol de pertenencia. GERENTE era el dueño de la
+# cuenta según la semántica anterior a la fase 3, y lo sigue siendo.
+ROL_A_PERTENENCIA = {"GERENTE": "OWNER", "ADMIN": "ADMIN", "ANALISTA": "STAFF"}
 logger = logging.getLogger(__name__)
 
 
@@ -278,28 +284,49 @@ class UsuarioViewSet(viewsets.ViewSet):
         # de lo contrario un delegado con "change_usuario" podría auto-otorgarse más acceso.
         return [EsAdministrador()]
 
+    def _equipo(self, request):
+        """
+        Los usuarios del negocio de esta petición.
+
+        `Usuario` es identidad de plataforma y no lleva columna de negocio: una
+        persona puede trabajar en varios. El ámbito lo da la pertenencia.
+        """
+        if request.tenant is None:
+            return Usuario.objects.none()
+        return Usuario.objects.filter(
+            memberships__tenant=request.tenant, memberships__activo=True
+        ).distinct()
+
     def list(self, request):
-        usuarios = Usuario.objects.all()
-        return Response(UsuarioSerializer(usuarios, many=True).data)
+        usuarios = self._equipo(request)
+        return Response(
+            UsuarioSerializer(usuarios, many=True, context={"request": request}).data
+        )
 
     def retrieve(self, request, pk=None):
         try:
-            usuario = Usuario.objects.get(pk=pk)
+            usuario = self._equipo(request).get(pk=pk)
         except Usuario.DoesNotExist:
             return Response(
                 {"message": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
             )
-        return Response(UsuarioSerializer(usuario).data)
+        return Response(UsuarioSerializer(usuario, context={"request": request}).data)
 
     def create(self, request):
         serializer = CrearUsuarioSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        if data["rol"] == "GERENTE" and not es_owner(request.user):
+        if data["rol"] == "GERENTE" and not es_owner(request):
             return Response(
                 {"success": False, "message": "Solo un Gerente puede crear otra cuenta de Gerente."},
                 status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if request.tenant is None:
+            return Response(
+                {"success": False, "message": "No hay ningún negocio en esta dirección."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         password_temp = _generar_password_seguro()
@@ -312,12 +339,21 @@ class UsuarioViewSet(viewsets.ViewSet):
             debe_cambiar_password=True,
         )
 
+        # Sin pertenencia el usuario existiría pero no podría entrar a ningún
+        # negocio: crear la cuenta y darla de alta en el negocio es una sola
+        # operación desde el punto de vista de quien usa el panel.
+        Membership.objects.create(
+            usuario=nuevo,
+            tenant=request.tenant,
+            rol=ROL_A_PERTENENCIA.get(data["rol"], "STAFF"),
+        )
+
         return Response(
             {
                 "success": True,
                 "message": f"Usuario creado. Clave temporal asignada: {password_temp}",
                 "password_temporal": password_temp,
-                "usuario": UsuarioSerializer(nuevo).data,
+                "usuario": UsuarioSerializer(nuevo, context={"request": request}).data,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -327,13 +363,13 @@ class UsuarioViewSet(viewsets.ViewSet):
 
     def partial_update(self, request, pk=None):
         try:
-            usuario = Usuario.objects.get(pk=pk)
+            usuario = self._equipo(request).get(pk=pk)
         except Usuario.DoesNotExist:
             return Response(
                 {"message": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        if es_owner(usuario) and not es_owner(request.user):
+        if es_owner_de(usuario, request.tenant) and not es_owner(request):
             return Response(
                 {"success": False, "message": "No puedes modificar una cuenta de Gerente."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -344,7 +380,7 @@ class UsuarioViewSet(viewsets.ViewSet):
         datos = dict(serializer.validated_data)
 
         # Solo el dueño puede reasignar el rol (evita que un delegado se autopromueva).
-        if "rol_usuario" in datos and not es_owner(request.user):
+        if "rol_usuario" in datos and not es_owner(request):
             datos.pop("rol_usuario")
 
         if usuario.id == request.user.id and datos.get("is_active") is False:
@@ -358,11 +394,11 @@ class UsuarioViewSet(viewsets.ViewSet):
         if datos:
             usuario.save(update_fields=list(datos.keys()))
 
-        return Response(UsuarioSerializer(usuario).data)
+        return Response(UsuarioSerializer(usuario, context={"request": request}).data)
 
     def destroy(self, request, pk=None):
         try:
-            usuario = Usuario.objects.get(pk=pk)
+            usuario = self._equipo(request).get(pk=pk)
         except Usuario.DoesNotExist:
             return Response(
                 {"success": False, "message": "Usuario no encontrado"},
@@ -375,7 +411,7 @@ class UsuarioViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if es_owner(usuario) and not es_owner(request.user):
+        if es_owner_de(usuario, request.tenant) and not es_owner(request):
             return Response(
                 {"success": False, "message": "No puedes eliminar una cuenta de Gerente."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -388,16 +424,16 @@ class UsuarioViewSet(viewsets.ViewSet):
     def permisos(self, request, pk=None):
         """Consulta o asigna los permisos granulares de un usuario delegado."""
         try:
-            usuario = Usuario.objects.get(pk=pk)
+            usuario = self._equipo(request).get(pk=pk)
         except Usuario.DoesNotExist:
             return Response(
                 {"message": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND
             )
 
         if request.method == "GET":
-            return Response({"permisos": UsuarioSerializer(usuario).data["permisos"]})
+            return Response({"permisos": UsuarioSerializer(usuario, context={"request": request}).data["permisos"]})
 
-        if es_owner(usuario):
+        if es_owner_de(usuario, request.tenant):
             return Response(
                 {"success": False, "message": "Las cuentas de Gerente ya tienen acceso total."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -407,15 +443,19 @@ class UsuarioViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         codenames = serializer.validated_data["permisos"]
 
-        permisos_obj = []
-        for codename_completo in codenames:
-            app_label, codename = codename_completo.split(".", 1)
-            try:
-                permisos_obj.append(
-                    Permission.objects.get(content_type__app_label=app_label, codename=codename)
-                )
-            except Permission.DoesNotExist:
-                continue
+        # Los permisos se guardan en la pertenencia, no en `user_permissions`.
+        # Ese es global: concedérselos allí daría el mismo acceso en todos los
+        # negocios donde la persona trabaje, que es justo lo que la fase 3
+        # viene a impedir.
+        pertenencia = Membership.objects.filter(
+            usuario=usuario, tenant=request.tenant, activo=True
+        ).first()
+        if pertenencia is None:
+            return Response(
+                {"success": False, "message": "El usuario no trabaja en este negocio."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-        usuario.user_permissions.set(permisos_obj)
-        return Response({"success": True, "permisos": codenames})
+        pertenencia.permisos = sorted(codenames)
+        pertenencia.save(update_fields=["permisos"])
+        return Response({"success": True, "permisos": pertenencia.permisos})

@@ -1,10 +1,10 @@
 from django.conf import settings
 from django.db import models
 
-from apps.tenancy.models import CampoTenantMixin
+from apps.tenancy.models import ModeloConTenant
 
 
-class Archivo(CampoTenantMixin):
+class Archivo(ModeloConTenant):
     """
     Biblioteca de medios (banco de archivos) al estilo WordPress/Shopify:
     repositorio central de imágenes/video/PDF reutilizable desde cualquier

@@ -4,6 +4,8 @@ from django.db import transaction
 from django.db.models import Count
 from rest_framework import serializers
 
+from apps.tenancy.fields import ClaveDelNegocio
+
 from apps.catalog.models import Categoria, PresentacionProducto, UnidadMedida
 
 from .models import Cliente, DetallePedido, HistorialDetallePedido, LotePedidos, Pedido
@@ -146,9 +148,7 @@ class ClienteInputSerializer(serializers.Serializer):
 
 
 class ItemCatalogoSerializer(serializers.Serializer):
-    presentacion_id = serializers.PrimaryKeyRelatedField(
-        queryset=PresentacionProducto.objects.all(), source="presentacion"
-    )
+    presentacion_id = ClaveDelNegocio(PresentacionProducto, source="presentacion")
     cantidad = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
 
 
@@ -158,17 +158,11 @@ class ItemPersonalizadoSerializer(serializers.Serializer):
     precio_unitario = serializers.DecimalField(
         max_digits=12, decimal_places=2, required=False, default=Decimal("0")
     )
-    unidad_id = serializers.PrimaryKeyRelatedField(
-        queryset=UnidadMedida.objects.all(),
-        source="unidad",
-        required=False,
-        allow_null=True,
+    unidad_id = ClaveDelNegocio(
+        UnidadMedida, source="unidad", required=False, allow_null=True
     )
-    categoria_id = serializers.PrimaryKeyRelatedField(
-        queryset=Categoria.objects.all(),
-        source="categoria",
-        required=False,
-        allow_null=True,
+    categoria_id = ClaveDelNegocio(
+        Categoria, source="categoria", required=False, allow_null=True
     )
 
 
@@ -287,26 +281,17 @@ class ProductoPendienteSerializer(serializers.Serializer):
 # ==========================================================================
 class EditarDetalleSerializer(serializers.Serializer):
     detalle_id = serializers.IntegerField(required=False, allow_null=True, default=None)
-    presentacion_id = serializers.PrimaryKeyRelatedField(
-        queryset=PresentacionProducto.objects.all(),
-        source="presentacion",
-        required=False,
-        allow_null=True,
+    presentacion_id = ClaveDelNegocio(
+        PresentacionProducto, source="presentacion", required=False, allow_null=True
     )
     cantidad = serializers.DecimalField(max_digits=10, decimal_places=2)
     precio_unitario = serializers.DecimalField(max_digits=12, decimal_places=2)
     nombre_producto = serializers.CharField(required=False, allow_blank=True)
-    unidad_id = serializers.PrimaryKeyRelatedField(
-        queryset=UnidadMedida.objects.all(),
-        source="unidad_personalizada",
-        required=False,
-        allow_null=True,
+    unidad_id = ClaveDelNegocio(
+        UnidadMedida, source="unidad_personalizada", required=False, allow_null=True
     )
-    categoria_id = serializers.PrimaryKeyRelatedField(
-        queryset=Categoria.objects.all(),
-        source="categoria_manual",
-        required=False,
-        allow_null=True,
+    categoria_id = ClaveDelNegocio(
+        Categoria, source="categoria_manual", required=False, allow_null=True
     )
 
 

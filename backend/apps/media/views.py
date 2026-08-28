@@ -3,12 +3,13 @@ from rest_framework.parsers import FormParser, MultiPartParser
 
 from apps.common.pagination import DefaultPagination
 from apps.common.permissions import requiere_permiso
+from apps.tenancy.viewsets import TenantScopedMixin
 
 from .models import Archivo
 from .serializers import ArchivoSerializer
 
 
-class ArchivoViewSet(viewsets.ModelViewSet):
+class ArchivoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     """
     Biblioteca de medios del panel (herramienta de administración, sin
     lectura pública). Los bytes de un archivo son inmutables una vez
@@ -20,7 +21,10 @@ class ArchivoViewSet(viewsets.ModelViewSet):
     permission_classes = [requiere_permiso("content.view_promobanner")]
     parser_classes = [MultiPartParser, FormParser]
     pagination_class = DefaultPagination
-    queryset = Archivo.objects.select_related("subido_por")
+    modelo = Archivo
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("subido_por")
     filterset_fields = ["tipo"]
     search_fields = ["nombre_original"]
     ordering = ["-fecha_creacion"]

@@ -1,7 +1,7 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from apps.tenancy.models import CampoTenantMixin
+from apps.tenancy.models import ModeloConTenant
 
 
 class StoreSettings(models.Model):
@@ -169,7 +169,7 @@ class StoreSettings(models.Model):
         return obj
 
 
-class PromoBanner(CampoTenantMixin):
+class PromoBanner(ModeloConTenant):
     imagen = models.ImageField(upload_to="banners/", blank=True, null=True)
     etiqueta = models.CharField(max_length=100, blank=True)
     titulo = models.CharField(max_length=200)
@@ -191,7 +191,7 @@ class PromoBanner(CampoTenantMixin):
         return self.titulo
 
 
-class Testimonio(CampoTenantMixin):
+class Testimonio(ModeloConTenant):
     nombre = models.CharField(max_length=150)
     rol = models.CharField(max_length=150, blank=True)
     texto = models.TextField()
@@ -209,7 +209,7 @@ class Testimonio(CampoTenantMixin):
         return f"{self.nombre} ({self.rol})"
 
 
-class TrustBadge(CampoTenantMixin):
+class TrustBadge(ModeloConTenant):
     ICONOS = [
         ("leaf", "Hoja"),
         ("truck", "Camión"),
@@ -239,7 +239,7 @@ class TrustBadge(CampoTenantMixin):
         return f"{self.valor} - {self.etiqueta}"
 
 
-class BeneficioComercial(CampoTenantMixin):
+class BeneficioComercial(ModeloConTenant):
     """Bloque de Home '¿Por qué comprar con nosotros?'."""
 
     ICONOS = [
@@ -270,7 +270,7 @@ class BeneficioComercial(CampoTenantMixin):
         return self.titulo
 
 
-class OfertaProducto(CampoTenantMixin):
+class OfertaProducto(ModeloConTenant):
     """
     Oferta de tiempo limitado sobre una presentación puntual del catálogo,
     para el bloque de Home "Ofertas de la semana". El precio normal se lee
