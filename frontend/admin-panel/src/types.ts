@@ -18,6 +18,20 @@ export interface Usuario {
   fecha_creacion: string;
   sidebar_layout: NodoSidebar[] | null;
   notificaciones_silenciadas: string[];
+  /** Rol dentro del negocio activo. Es el que decide el acceso; `rol_usuario`
+   *  se conserva como etiqueta para la interfaz. */
+  rol_en_negocio: string | null;
+  /** Los negocios en los que trabaja esta persona. Solo viene en `/auth/me/`
+   *  y en el login: en un listado del equipo llega como null. */
+  negocios: Negocio[] | null;
+}
+
+export interface Negocio {
+  uuid: string;
+  slug: string;
+  nombre: string;
+  rol: string;
+  activo: boolean;
 }
 
 export interface PermisoItem {
