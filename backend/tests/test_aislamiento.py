@@ -254,7 +254,13 @@ def test_una_persona_puede_pertenecer_a_dos_negocios(tenancy, tenant_a, tenant_b
 
 
 def test_el_admin_de_plataforma_no_es_un_rol_de_tenant(api_tenant_a):
-    """La separación del punto 9: el panel de plataforma vive aparte."""
+    """
+    La separación del punto 9: el panel de plataforma vive aparte.
+
+    OJO — hoy pasa por el motivo equivocado: la ruta todavía no existe y
+    devuelve 404. No es cobertura real hasta la fase 10, cuando el panel de
+    plataforma exista y el 404 pase a significar "existe pero no es tuyo".
+    """
     assert api_tenant_a.get("/api/platform/tenants/").status_code in (403, 404)
 
 
