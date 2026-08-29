@@ -1,6 +1,7 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.tenancy.almacenamiento import ruta_banner, ruta_identidad
 from apps.tenancy.models import ModeloConTenant
 
 
@@ -40,7 +41,7 @@ class StoreSettings(models.Model):
         ("cuadrado", "Cuadrado"),
     ]
 
-    logo = models.ImageField(upload_to="site/", blank=True, null=True)
+    logo = models.ImageField(upload_to=ruta_identidad, blank=True, null=True)
     nombre_empresa = models.CharField(max_length=150, blank=True)
 
     # Apariencia — colores
@@ -164,7 +165,7 @@ class StoreSettings(models.Model):
 
 
 class PromoBanner(ModeloConTenant):
-    imagen = models.ImageField(upload_to="banners/", blank=True, null=True)
+    imagen = models.ImageField(upload_to=ruta_banner, blank=True, null=True)
     etiqueta = models.CharField(max_length=100, blank=True)
     titulo = models.CharField(max_length=200)
     texto = models.TextField(blank=True)

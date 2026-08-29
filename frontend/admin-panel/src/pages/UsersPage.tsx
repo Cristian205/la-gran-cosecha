@@ -72,7 +72,7 @@ const EXTRACTORES_USUARIOS: ExtractoresOrden<Usuario> = {
 };
 
 export function UsersPage() {
-  const { usuario: actual } = useAuth();
+  const { usuario: actual, negocioActivo } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
@@ -222,7 +222,10 @@ export function UsersPage() {
 
         <div className="panel">
           <div className="cabecera">
-            <h2>Usuarios del sistema ({usuariosVista.length})</h2>
+            <h2>
+              Equipo de {negocioActivo?.nombre ?? "tu negocio"} (
+              {usuariosVista.length})
+            </h2>
           </div>
 
           <div className="filtros-bar">
