@@ -62,13 +62,17 @@ export function Footer() {
     obtenerCategorias().then(setCategorias).catch(() => undefined);
   }, []);
 
+  // El nombre del negocio, con un respaldo neutro: este componente lo comparten
+  // todas las tiendas y no puede llevar el de ninguna dentro.
+  const nombre = config.nombre_empresa || "la tienda";
+
   const hayRedes = Boolean(
     config.instagram_url || config.facebook_url || config.tiktok_url
   );
   const hrefWhatsapp = config.whatsapp_numero
     ? whatsappHref(
         config.whatsapp_numero,
-        "Hola, quiero hacer un pedido con La Gran Cosecha."
+        `Hola, quiero hacer un pedido con ${nombre}.`
       )
     : null;
 
@@ -106,18 +110,18 @@ export function Footer() {
               {config.logo_url ? (
                 <img
                   src={config.logo_url}
-                  alt="La Gran Cosecha"
+                  alt={nombre}
                   style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "inherit" }}
                 />
               ) : (
-                "🌾"
+                nombre.slice(0, 1).toUpperCase()
               )}
             </span>
-            La Gran Cosecha
+            {nombre}
           </div>
           <p className="footer-lema">
-            Del campo a tu negocio. Productos frescos para que nunca falte lo
-            esencial.
+            {config.mision ||
+              "Haz tu pedido en línea y recíbelo donde lo necesites."}
           </p>
           <Link href="/tienda" className="footer-btn-tienda">
             Explorar tienda <ArrowRight size={15} />
@@ -204,8 +208,7 @@ export function Footer() {
       </div>
 
       <div className="footer-bottom">
-        © {new Date().getFullYear()} La Gran Cosecha · Todos los derechos
-        reservados
+        © {new Date().getFullYear()} {nombre} · Todos los derechos reservados
       </div>
     </footer>
   );

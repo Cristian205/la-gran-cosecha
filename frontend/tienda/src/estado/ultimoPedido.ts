@@ -16,6 +16,6 @@ export const useUltimoPedido = create<UltimoPedidoState>()(
       fecha: null,
       guardar: (items) => set({ items, fecha: new Date().toISOString() }),
     }),
-    { name: "lgc-ultimo-pedido" }
+    { name: "crynex-ultimo-pedido" }
   )
 );

@@ -55,6 +55,16 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     is_active = models.BooleanField("Cuenta Activa", default=True)
     is_staff = models.BooleanField("Acceso al Staff", default=False)
+
+    # Quien administra Crynex, no un negocio. Es lo que separa el panel de la
+    # plataforma —planes, permisos, altas— del panel de cada empresa. Se
+    # distingue de `is_superuser` a propósito: ese es un permiso de Django que
+    # hoy tienen cuatro de las cinco cuentas por herencia, y no debería bastar
+    # para tocar los planes de todos los clientes.
+    es_staff_plataforma = models.BooleanField(
+        "Administra Crynex", default=False,
+        help_text="Acceso al panel de la plataforma: planes, permisos y negocios.",
+    )
     debe_cambiar_password = models.BooleanField("Debe cambiar contraseña", default=False)
 
     # Robustez y seguridad

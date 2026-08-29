@@ -36,3 +36,14 @@ Thumbs.db
 # Next.js
 .next/
 next-env.d.ts
+
+# ==== Herramientas y espacio de trabajo ====
+# Llegaron aqui al unificar las carpetas del proyecto en crynex/.
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
+
+# Respaldos de la base: contienen datos reales de clientes y pedidos.
+# Nunca deben acabar en el repositorio.
+_backups/

@@ -2,8 +2,8 @@ import axios from "axios";
 
 const baseURL = import.meta.env.VITE_API_URL ?? "/api";
 
-const ACCESS_KEY = "lgc_admin_access";
-const REFRESH_KEY = "lgc_admin_refresh";
+const ACCESS_KEY = "crynex_admin_access";
+const REFRESH_KEY = "crynex_admin_refresh";
 
 export const tokenStore = {
   getAccess: () => localStorage.getItem(ACCESS_KEY),

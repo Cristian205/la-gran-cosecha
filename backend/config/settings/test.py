@@ -12,7 +12,7 @@ utilizable desde el primer día. Para las pruebas que necesitan PostgreSQL de
 verdad — la de Row-Level Security de la fase 3, que es la que verifica que la
 base de datos aísla aunque el ORM falle — se define TEST_DATABASE_URL:
 
-    TEST_DATABASE_URL=postgres://usuario:clave@localhost:5432/lgc_test pytest
+    TEST_DATABASE_URL=postgres://usuario:clave@localhost:5432/crynex_test pytest
 """
 from .base import *  # noqa: F401,F403
 from .base import env

@@ -18,6 +18,10 @@ urlpatterns = [
     path("api/content/", include("apps.content.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/media/", include("apps.media.urls")),
+
+    # El panel de Crynex: planes, permisos y negocios. Va bajo su propio
+    # prefijo para que la separacion del punto 9 se lea en la URL.
+    path("api/platform/", include("apps.billing.urls")),
 ]
 
 if getattr(settings, "USE_R2", False):

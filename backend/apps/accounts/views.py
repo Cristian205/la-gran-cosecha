@@ -356,13 +356,43 @@ class CambiarPasswordView(APIView):
         return Response({"success": True, "message": "Contraseña actualizada correctamente."})
 
 
-class PermisosDisponiblesView(APIView):
-    """Catálogo de permisos asignables (agrupado por módulo), para armar la UI."""
+class PermisosDisponiblesView(ExigeNegocioMixin, APIView):
+    """
+    Los permisos que ESTE negocio puede repartir entre su gente.
+
+    Antes devolvía una constante idéntica para todos. Ahora es la intersección
+    de dos cosas que decide Crynex: lo que incluye el plan contratado y lo que
+    la plataforma tiene activo en su catálogo. Si Crynex retira un módulo,
+    desaparece de todos los negocios sin tocar ningún plan.
+
+    La forma de la respuesta —lista de módulos con sus permisos— no cambia, así
+    que `UserPermissionsModal` sigue funcionando sin tocarlo.
+    """
 
     permission_classes = [EsAdministrador]
 
     def get(self, request):
-        return Response(CATALOGO_PERMISOS)
+        from apps.billing.models import PermisoDisponible  # noqa: PLC0415
+
+        suscripcion = getattr(request.tenant, "suscripcion", None)
+        if suscripcion is None:
+            # Sin suscripción no se concede nada: es preferible un panel vacío
+            # a repartir permisos que el negocio no ha contratado.
+            return Response([])
+
+        concedidos = set(suscripcion.permisos_disponibles())
+        catalogo = PermisoDisponible.objects.filter(
+            activo=True, codename__in=concedidos
+        )
+
+        modulos: dict[str, list] = {}
+        for permiso in catalogo:
+            modulos.setdefault(permiso.modulo, []).append(
+                {"codename": permiso.codename, "etiqueta": permiso.etiqueta}
+            )
+        return Response(
+            [{"modulo": nombre, "permisos": p} for nombre, p in modulos.items()]
+        )
 
 
 class UsuarioViewSet(ExigeNegocioMixin, viewsets.ViewSet):

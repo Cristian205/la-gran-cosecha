@@ -1,0 +1,538 @@
+/*
+ * Panel de Crynex.
+ *
+ * Deliberadamente distinto del panel de negocio: quien administra la
+ * plataforma también tiene cuenta en alguna empresa, y confundir las dos
+ * pantallas es cambiar un plan creyendo que editas tu tienda. Aquí el fondo es
+ * oscuro y el acento índigo; allí es claro y verde.
+ */
+
+:root {
+  --fondo: #0f1117;
+  --panel: #171a23;
+  --panel-alto: #1e222d;
+  --linea: #272c3a;
+  --texto: #e7e9ee;
+  --texto-tenue: #98a0b3;
+  --acento: #6366f1;
+  --acento-suave: #312e81;
+  --ok: #34d399;
+  --aviso: #fbbf24;
+  --malo: #f87171;
+  --radio: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--texto-tenue);
+}
+
+.marca {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-size: 17px;
+  color: var(--texto);
+}
+
+.marca::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background: var(--acento);
+  vertical-align: 3px;
+}
+
+/* ---------------------------------------------------------------- marco */
+.marco {
+  display: grid;
+  grid-template-columns: 224px 1fr;
+  min-height: 100vh;
+}
+
+.lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 16px;
+  background: var(--panel);
+  border-right: 1px solid var(--linea);
+}
+
+.lateral nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.lateral a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--texto-tenue);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.lateral a:hover {
+  background: var(--panel-alto);
+  color: var(--texto);
+}
+
+.lateral a.active {
+  background: var(--acento-suave);
+  color: #fff;
+}
+
+.lateral a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.salir {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--texto-tenue);
+  font: inherit;
+  cursor: pointer;
+}
+
+.salir:hover {
+  background: var(--panel-alto);
+  color: var(--texto);
+}
+
+.contenido {
+  padding: 28px 32px 56px;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------- cabecera */
+.cabecera-pagina {
+  margin-bottom: 22px;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--texto-tenue);
+  font-weight: 600;
+}
+
+.ayuda {
+  margin: 0;
+  color: var(--texto-tenue);
+  font-size: 13px;
+  max-width: 68ch;
+}
+
+.error {
+  margin: 12px 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+  font-size: 13px;
+}
+
+.cargando {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 40px;
+  color: var(--texto-tenue);
+}
+
+.girando {
+  animation: girar 1s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .girando {
+    animation: none;
+  }
+}
+
+/* -------------------------------------------------------------- tarjetas */
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+}
+
+.tarjeta .icono {
+  color: var(--acento);
+  margin-bottom: 4px;
+}
+
+.tarjeta strong {
+  font-size: 26px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tarjeta span:last-child {
+  color: var(--texto-tenue);
+  font-size: 12.5px;
+}
+
+.dos-columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.bloque {
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+}
+
+.lista-datos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lista-datos li {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.lista-datos li:last-child {
+  border-bottom: 0;
+}
+
+.lista-datos strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------- tablas */
+.scroll-tabla {
+  overflow-x: auto;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--panel);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 640px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--linea);
+  vertical-align: middle;
+}
+
+thead th {
+  background: var(--panel-alto);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--texto-tenue);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------- matriz */
+.matriz .col-permiso {
+  min-width: 240px;
+}
+
+.matriz .col-plan,
+.matriz .col-estado {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.matriz thead .col-plan {
+  display: table-cell;
+}
+
+.plan-nombre {
+  display: block;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--texto);
+}
+
+.plan-meta {
+  display: block;
+  font-size: 10.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.fila-modulo td {
+  padding: 7px 14px;
+  background: var(--panel-alto);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--acento);
+  font-weight: 600;
+}
+
+.permiso-etiqueta {
+  display: block;
+}
+
+.permiso-inactivo {
+  opacity: 0.45;
+}
+
+.celda {
+  text-align: center;
+}
+
+.casilla {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--linea);
+  background: transparent;
+  color: var(--texto-tenue);
+  cursor: pointer;
+}
+
+.casilla.si {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #fff;
+}
+
+.casilla:hover:not(:disabled) {
+  border-color: var(--acento);
+}
+
+.casilla:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--linea);
+  background: transparent;
+  color: var(--texto-tenue);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.interruptor.on {
+  color: var(--ok);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+.interruptor.off {
+  color: var(--malo);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.pie-tabla {
+  margin-top: 12px;
+}
+
+/* ------------------------------------------------------------- negocios */
+.negocio-nombre {
+  display: block;
+  font-weight: 500;
+}
+
+.dominios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.pastilla {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  border: 1px solid var(--linea);
+}
+
+.pastilla.ok {
+  color: var(--ok);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+.pastilla.aviso {
+  color: var(--aviso);
+  border-color: rgba(251, 191, 36, 0.4);
+}
+.pastilla.malo {
+  color: var(--malo);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+.pastilla.neutro {
+  color: var(--texto-tenue);
+}
+
+select {
+  padding: 5px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--linea);
+  background: var(--panel-alto);
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+}
+
+/* --------------------------------------------------------------- acceso */
+.acceso {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.acceso-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 340px;
+  padding: 28px;
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+}
+
+.acceso-tarjeta h1 {
+  font-size: 16px;
+  margin: 0;
+  color: var(--texto-tenue);
+  font-weight: 500;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--texto-tenue);
+}
+
+input {
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--linea);
+  background: var(--panel-alto);
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+}
+
+.btn-primario {
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--acento);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primario:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@media (max-width: 720px) {
+  .marco {
+    grid-template-columns: 1fr;
+  }
+  .lateral {
+    flex-direction: row;
+    align-items: center;
+    border-right: 0;
+    border-bottom: 1px solid var(--linea);
+    overflow-x: auto;
+  }
+  .lateral nav {
+    flex-direction: row;
+  }
+  .contenido {
+    padding: 20px 16px 48px;
+  }
+}

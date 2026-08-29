@@ -76,6 +76,6 @@ export const useCart = create<CartState>()(
       totalPrecio: () =>
         get().items.reduce((acc, i) => acc + i.precioUnitario * i.cantidad, 0),
     }),
-    { name: "lgc-carrito" }
+    { name: "crynex-carrito" }
   )
 );

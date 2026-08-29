@@ -1,24 +1,20 @@
 {
-  "name": "crynex-admin-panel",
+  "name": "crynex-panel-plataforma",
   "private": true,
   "version": "1.0.0",
+  "description": "Panel de Crynex: planes, permisos y empresas. Es la matriz que decide que ve cada negocio.",
   "type": "module",
-  "description": "Panel de negocio de Crynex — catálogo, pedidos, clientes y usuarios de cada empresa.",
   "scripts": {
-    "dev": "vite --port 5174",
+    "dev": "vite --port 5176",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --port 5174",
+    "preview": "vite preview --port 5176",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "axios": "^1.7.7",
-    "exceljs": "^4.4.0",
     "lucide-react": "^0.454.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
-    "recharts": "^3.10.0",
-    "sweetalert2": "^11.26.25"
+    "react-router-dom": "^6.26.2"
   },
   "devDependencies": {
     "@types/react": "^18.3.11",

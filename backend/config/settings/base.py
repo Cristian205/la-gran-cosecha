@@ -48,6 +48,7 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     "apps.common",
     "apps.tenancy",
+    "apps.billing",
     "apps.accounts",
     "apps.catalog",
     "apps.orders",
@@ -292,7 +293,7 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
-    default="Seguridad La Gran Cosecha <no-reply@lagrancosecha.local>",
+    default="Seguridad Crynex <no-reply@crynex.local>",
 )
 EMAIL_TIMEOUT = 15
 

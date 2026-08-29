@@ -1,5 +1,5 @@
 {
-  "name": "lgc-tienda",
+  "name": "crynex-tienda",
   "private": true,
   "version": "1.0.0",
   "description": "Tienda pública multiempresa (Next.js). Resuelve el negocio por dominio y renderiza en el servidor para que cada tienda se posicione por separado.",

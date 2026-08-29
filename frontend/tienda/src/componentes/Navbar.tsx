@@ -16,6 +16,8 @@ export function Navbar() {
   const { busqueda, buscar, abrirCarrito } = useEnvoltorio();
   const totalLineas = useCart((s) => s.totalLineas());
   const { config } = useSiteConfig();
+  // Igual que en el pie: el nombre es del negocio, no de la plataforma.
+  const nombre = config.nombre_empresa || "la tienda";
   const pathname = usePathname();
   const [buscadorMovilAbierto, setBuscadorMovilAbierto] = useState(false);
   const [conScroll, setConScroll] = useState(false);
@@ -41,14 +43,14 @@ export function Navbar() {
           {config.logo_url ? (
             <img
               src={config.logo_url}
-              alt="La Gran Cosecha"
+              alt={nombre}
               style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "inherit" }}
             />
           ) : (
-            "🌾"
+            nombre.slice(0, 1).toUpperCase()
           )}
         </span>
-        <span className="marca-txt">La Gran Cosecha</span>
+        <span className="marca-txt">{nombre}</span>
       </Link>
 
       {/* En móvil los enlaces viven en la barra inferior (BottomNav). */}
