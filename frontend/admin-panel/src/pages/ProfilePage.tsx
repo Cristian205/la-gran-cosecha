@@ -1,6 +1,16 @@
-import { Mail, ShieldCheck, Clock, CalendarPlus } from "lucide-react";
+import { Building2, CalendarPlus, Clock, Mail, ShieldCheck } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { formatoFecha } from "../utils";
+
+/** El rol de la pertenencia es el que decide el acceso; `rol_usuario` solo es
+ *  la etiqueta heredada del panel de un solo negocio. */
+const ETIQUETAS_ROL: Record<string, string> = {
+  OWNER: "Dueño",
+  ADMIN: "Administrador",
+  MANAGER: "Gerente",
+  SALES: "Ventas",
+  STAFF: "Personal",
+};
 
 function iniciales(nombre?: string): string {
   if (!nombre) return "?";
@@ -13,7 +23,7 @@ function iniciales(nombre?: string): string {
 }
 
 export function ProfilePage() {
-  const { usuario } = useAuth();
+  const { usuario, negocios, negocioActivo } = useAuth();
 
   return (
     <>
@@ -46,11 +56,32 @@ export function ProfilePage() {
 
             <div className="perfil-dato">
               <span className="icono">
+                <Building2 size={18} />
+              </span>
+              <div>
+                <div className="label">Negocio</div>
+                <div className="valor">
+                  {negocioActivo?.nombre ?? "—"}
+                  {negocios.length > 1 && (
+                    <small className="perfil-nota">
+                      {" "}· también trabajas en {negocios.length - 1}{" "}
+                      {negocios.length === 2 ? "negocio más" : "negocios más"}
+                    </small>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="perfil-dato">
+              <span className="icono">
                 <ShieldCheck size={18} />
               </span>
               <div>
-                <div className="label">Rol</div>
-                <div className="valor">{usuario?.rol_usuario}</div>
+                <div className="label">Rol en este negocio</div>
+                <div className="valor">
+                  {ETIQUETAS_ROL[usuario?.rol_en_negocio ?? ""] ??
+                    usuario?.rol_usuario}
+                </div>
               </div>
             </div>
 

@@ -3,6 +3,7 @@ from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils.text import slugify
 
+from apps.tenancy.almacenamiento import ruta_categoria, ruta_producto
 from apps.tenancy.models import ModeloConTenant
 
 
@@ -50,7 +51,7 @@ class Categoria(ModeloConTenant):
     estado_categoria = models.BooleanField(default=True)
     abreviatura = models.CharField(max_length=50)
     orden = models.PositiveIntegerField(default=0)
-    imagen = models.ImageField(upload_to="categorias/", blank=True, null=True)
+    imagen = models.ImageField(upload_to=ruta_categoria, blank=True, null=True)
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
@@ -117,7 +118,7 @@ class Producto(ModeloConTenant):
     estado_producto = models.BooleanField(default=True)
     permite_fraccion = models.BooleanField(default=False)
 
-    imagen = models.ImageField(upload_to="productos/", blank=True, null=True)
+    imagen = models.ImageField(upload_to=ruta_producto, blank=True, null=True)
 
     categoria = models.ForeignKey(
         Categoria, on_delete=models.PROTECT, related_name="productos"

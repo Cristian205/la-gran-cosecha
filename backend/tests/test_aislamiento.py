@@ -282,16 +282,8 @@ def test_las_notificaciones_no_se_mezclan(api_tenant_a, tenant_b):
     assert "Pedido de la perfumería" not in titulos
 
 
-@pytest.mark.media_por_tenant
 def test_los_archivos_subidos_llevan_el_prefijo_de_su_tenant(api_tenant_a, tenant_a):
-    """
-    Sección 11: la clave en R2 se construye con el UUID, no con el slug.
-
-    ESTE ES DE LA FASE 6, no de la 3. El aislamiento de la biblioteca ya está
-    —un negocio no ve ni lista los archivos de otro—; lo que falta es que las
-    rutas dentro del bucket también estén separadas, para que un negocio no
-    pueda sobrescribir el fichero de otro conociendo su nombre.
-    """
+    """Sección 11: la clave en R2 se construye con el UUID, no con el slug."""
     from django.core.files.uploadedfile import SimpleUploadedFile
 
     png = SimpleUploadedFile(

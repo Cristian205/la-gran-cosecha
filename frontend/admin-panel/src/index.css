@@ -1412,3 +1412,11 @@ td .input:focus, td select:focus {
   gap: 0.4rem;
   margin-top: 0.75rem;
 }
+
+
+/* Aviso discreto junto al negocio en el perfil, para quien trabaja en varios. */
+.perfil-nota {
+  font-weight: 400;
+  opacity: 0.7;
+  font-size: 0.85em;
+}

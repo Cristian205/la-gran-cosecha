@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 
+from apps.tenancy.almacenamiento import ruta_biblioteca
 from apps.tenancy.models import ModeloConTenant
 
 
@@ -18,7 +19,7 @@ class Archivo(ModeloConTenant):
         ("DOCUMENTO", "Documento"),
     ]
 
-    archivo = models.FileField(upload_to="biblioteca/%Y/%m/")
+    archivo = models.FileField(upload_to=ruta_biblioteca)
     nombre_original = models.CharField(max_length=255)
     tipo = models.CharField(max_length=20, choices=TIPOS)
     content_type = models.CharField(max_length=100)

@@ -132,7 +132,8 @@ Por eso los hostnames tienen que estar dados de alta:
 
 ```bash
 python manage.py dominios                                  # ver los registrados
-python manage.py dominios --negocio la-gran-cosecha \n    --añadir tienda.ejemplo.com --primario
+python manage.py dominios --negocio la-gran-cosecha \
+    --añadir tienda.ejemplo.com --primario
 ```
 
 La migración `tenancy.0004` registra automáticamente los de `ALLOWED_HOSTS` al
@@ -200,6 +201,45 @@ tienen acceso total; el resto, los codenames de `Membership.permisos`.
 
 `Usuario.rol_usuario` se conserva como etiqueta para la interfaz y se mantiene
 sincronizado con `Membership.rol` al editarlo, pero **no decide nada**.
+
+## Archivos en Cloudflare R2
+
+Cada negocio vive bajo su propio prefijo:
+
+```
+tenants/<uuid-del-negocio>/categorias/<uuid>-mango.webp
+tenants/<uuid-del-negocio>/productos/…
+tenants/<uuid-del-negocio>/identidad/…      logo y favicon
+tenants/<uuid-del-negocio>/banners/…
+tenants/<uuid-del-negocio>/biblioteca/2026/08/…
+```
+
+Tres decisiones, cada una por su motivo (ver `apps/tenancy/almacenamiento.py`):
+
+- **El UUID del negocio, no su slug.** Los slugs se renombran; el UUID no
+  cambia nunca, así que renombrar un negocio no deja sus archivos huérfanos.
+- **Un UUID antepuesto al nombre.** Evita que dos negocios que suben `logo.png`
+  choquen, y que conociendo el prefijo de uno se puedan adivinar sus archivos.
+- **La ruta la construye el servidor.** El nombre lo envía quien sube: usarlo
+  tal cual sería *path traversal*. Solo se conserva la extensión, y filtrada
+  contra una lista.
+
+Para reubicar los archivos de una instalación anterior a la fase 6:
+
+```bash
+python manage.py mover_media_a_negocios --dry-run   # ver qué haría
+python manage.py mover_media_a_negocios             # mover
+python manage.py mover_media_a_negocios --borrar-origen   # limpiar, ya comprobado
+```
+
+Es un comando y no una migración porque mover objetos en un bucket no participa
+de la transacción de la base de datos: una migración que fallara a mitad dejaría
+filas apuntando a claves inexistentes. Es idempotente, y una fila cuyo archivo
+no esté en el almacenamiento se deja como estaba.
+
+> Pendiente para más adelante: separar un bucket privado para documentos. Hoy
+> las facturas se generan al vuelo con WeasyPrint y no se persisten, así que no
+> hay nada que proteger con URLs firmadas.
 
 ## Notas de migración
 
