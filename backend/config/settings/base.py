@@ -218,6 +218,13 @@ if USE_R2:
 # seria un cambio de negocio a voluntad. Ver apps/tenancy/middleware.py.
 TENANCY_ACEPTA_CABECERA = env.bool("TENANCY_ACEPTA_CABECERA", default=False)
 
+# Clave compartida con el servidor de la tienda (Next.js). Ese servidor
+# renderiza la pagina del visitante y pide el catalogo del negocio que toca,
+# pero llama desde su propio host, asi que el Host no lo identifica. La clave
+# distingue esa llamada de servidor a servidor de cualquiera hecha desde un
+# navegador. Vacia = desactivada. NUNCA debe llegar al cliente.
+TENANCY_CLAVE_SERVIDOR = env("TENANCY_CLAVE_SERVIDOR", default="")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ==========================================================================
