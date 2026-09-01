@@ -8,9 +8,15 @@ Tres fuentes, en orden de prioridad:
    La fase 4 es la que lo emite; aquí ya se lee para no tener que volver.
 2. El `Host` de la petición contra `Domain` — la tienda pública, donde el
    visitante es anónimo y el dominio es la única señal disponible.
-3. La cabecera `X-Tenant` con el slug — solo si `TENANCY_ACEPTA_CABECERA` está
-   activo (desarrollo y tests). En producción va apagada: sin la comprobación
-   de pertenencia que trae la fase 4, sería un cambio de negocio a voluntad.
+3. La cabecera `X-Tenant` acompañada de `X-Tenant-Key` — la tienda en Next.js.
+   Su servidor renderiza la página del visitante y necesita pedirle a Django el
+   catálogo de ESE negocio, pero llama desde su propio host, así que el `Host`
+   no sirve para identificarlo. La clave compartida es lo que distingue esa
+   llamada de servidor a servidor de cualquiera hecha desde un navegador; nunca
+   sale al cliente.
+4. La cabecera `X-Tenant` a secas — solo si `TENANCY_ACEPTA_CABECERA` está
+   activo (desarrollo y tests). En producción va apagada: sin clave ni
+   comprobación de pertenencia, sería un cambio de negocio a voluntad.
 
 Cuando NO resuelve ningún negocio, el middleware deja el contexto SIN DECLARAR
 en vez de declararlo vacío. La diferencia es la que separa el fallo cerrado del
@@ -20,6 +26,7 @@ declarado, cualquier consulta a un modelo de negocio lanza, y las vistas lo
 convierten en 404 antes de llegar ahí.
 """
 import logging
+import secrets
 
 from django.conf import settings
 from django.core.cache import cache
@@ -68,7 +75,20 @@ class TenantMiddleware:
 
     # ------------------------------------------------------------------
     def _resolver(self, request):
-        for fuente in (self._tenant_del_jwt, self._tenant_del_host, self._tenant_de_cabecera):
+        # Un servidor nuestro que se acredita con la clave es AUTORITATIVO: si
+        # declara un negocio que no existe, la respuesta es "ninguno", no se
+        # sigue probando. Sin esto, la tienda pedía el catálogo de un
+        # subdominio inventado, Django no lo encontraba, caía al `Host` —que
+        # es el de Django, no el del visitante— y devolvía el catálogo del
+        # negocio equivocado con un 200. Fallo abierto de manual.
+        if self._declara_un_negocio(request):
+            return self._operativo(self._tenant_de_servidor_confiable(request))
+
+        for fuente in (
+            self._tenant_del_jwt,
+            self._tenant_del_host,
+            self._tenant_de_cabecera,
+        ):
             tenant = fuente(request)
             if tenant is not None:
                 # Un negocio suspendido resuelve a "sin tenant", no a sus datos.
@@ -130,6 +150,64 @@ class TenantMiddleware:
         if not id_tenant:
             return None
         return Tenant.objects.filter(pk=id_tenant).first()
+
+    def _declara_un_negocio(self, request) -> bool:
+        """¿Viene de un servidor nuestro, con clave válida y un negocio dicho?"""
+        esperada = getattr(settings, "TENANCY_CLAVE_SERVIDOR", "")
+        if not esperada:
+            return False
+        clave = request.META.get("HTTP_X_TENANT_KEY", "")
+        if not clave or not secrets.compare_digest(clave, esperada):
+            return False
+        return bool(
+            request.META.get("HTTP_X_TENANT", "").strip()
+            or request.META.get("HTTP_X_TENANT_HOST", "").strip()
+        )
+
+    def _operativo(self, tenant):
+        """Un negocio suspendido o archivado resuelve a «ninguno»."""
+        if tenant is None:
+            return None
+        if not tenant.esta_operativo:
+            logger.warning("Petición a %s, que está %s", tenant.slug, tenant.estado)
+            return None
+        return tenant
+
+    def _tenant_de_servidor_confiable(self, request):
+        """
+        El negocio que declara otro servidor nuestro, con la clave compartida.
+
+        Se compara en tiempo constante: un `==` normal sale antes cuanto antes
+        difieran las cadenas, y eso deja medir la clave carácter a carácter.
+        """
+        clave_esperada = getattr(settings, "TENANCY_CLAVE_SERVIDOR", "")
+        if not clave_esperada:
+            return None
+
+        clave = request.META.get("HTTP_X_TENANT_KEY", "")
+        if not clave or not secrets.compare_digest(clave, clave_esperada):
+            return None
+
+        # Dos formas de declararlo, ambas ya acreditadas por la clave:
+        #  - por slug, cuando el visitante entró por un subdominio;
+        #  - por hostname, cuando entró por el dominio propio del negocio y no
+        #    hay slug que enviar. Se resuelve contra `Domain`, igual que un
+        #    `Host` normal, pero sin tener que activar `USE_X_FORWARDED_HOST`
+        #    en todo Django, que aflojaría su manejo de hosts para cualquiera.
+        slug = request.META.get("HTTP_X_TENANT", "").strip().lower()
+        if slug:
+            return Tenant.objects.filter(slug=slug).first()
+
+        hostname = request.META.get("HTTP_X_TENANT_HOST", "").strip().lower()
+        if hostname:
+            dominio = (
+                Domain.objects.filter(hostname=hostname, verificado=True)
+                .select_related("tenant")
+                .first()
+            )
+            return dominio.tenant if dominio else None
+
+        return None
 
     def _tenant_de_cabecera(self, request):
         if not getattr(settings, "TENANCY_ACEPTA_CABECERA", False):

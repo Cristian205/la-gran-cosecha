@@ -1,9 +1,9 @@
 {
-  "name": "lgc-admin-panel",
+  "name": "crynex-admin-panel",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Panel administrativo de La Gran Cosecha — gestión de productos, pedidos, clientes y usuarios.",
+  "description": "Panel de negocio de Crynex — catálogo, pedidos, clientes y usuarios de cada empresa.",
   "scripts": {
     "dev": "vite --port 5174",
     "build": "tsc --noEmit && vite build",

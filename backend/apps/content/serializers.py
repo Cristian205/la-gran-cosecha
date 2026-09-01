@@ -7,12 +7,27 @@ from .models import BeneficioComercial, OfertaProducto, PromoBanner, StoreSettin
 
 class SiteConfigSerializer(serializers.ModelSerializer):
     logo_url = serializers.SerializerMethodField()
+    variables_tema = serializers.SerializerMethodField()
+
+    def get_variables_tema(self, obj):
+        """
+        Las variables CSS ya resueltas: catálogo, tema y negocio, en ese orden.
+
+        Se resuelven aquí y no en la tienda porque la mezcla de tres capas es
+        una regla del producto, no una decisión de presentación: si la repitiera
+        el frontend, las dos versiones acabarían separándose.
+        """
+        from apps.storefront.tema import variables_css  # noqa: PLC0415
+
+        return variables_css(obj)
 
     class Meta:
         model = StoreSettings
         fields = [
             "logo",
             "logo_url",
+            "tokens",
+            "variables_tema",
             "nombre_empresa",
             "color_primario",
             "color_primario_texto",

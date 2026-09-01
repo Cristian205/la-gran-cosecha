@@ -474,3 +474,117 @@ def test_el_rol_de_la_aplicacion_no_puede_saltarse_rls(settings):
 
     assert not es_superusuario, "El rol de la app es superusuario: RLS no aplica"
     assert not salta_rls, "El rol de la app tiene BYPASSRLS: RLS no aplica"
+
+
+# ==========================================================================
+# 8. LA TIENDA EN NEXT.JS — llamada de servidor a servidor
+# ==========================================================================
+CLAVE = "clave-compartida-de-prueba"
+
+
+def test_el_servidor_de_la_tienda_declara_el_negocio_con_su_clave(
+    api, settings, tenant_a, producto_de_a, recursos_del_tenant_b
+):
+    """
+    El servidor de Next renderiza la página del visitante y pide el catálogo
+    del negocio que toca. Llama desde su propio host, así que el `Host` no lo
+    identifica: la clave compartida es lo que distingue esa llamada de una
+    hecha desde un navegador.
+    """
+    settings.TENANCY_CLAVE_SERVIDOR = CLAVE
+
+    respuesta = api.get(
+        "/api/catalog/products/",
+        HTTP_HOST="tienda-en-next.interno",
+        HTTP_X_TENANT="la-gran-cosecha",
+        HTTP_X_TENANT_KEY=CLAVE,
+    )
+    nombres = {p["nombre_producto"] for p in respuesta.json()["results"]}
+
+    assert "Mango de La Gran Cosecha" in nombres
+    assert "Perfume floral" not in nombres
+
+
+def test_sin_la_clave_la_cabecera_no_vale_nada(api, settings, tenant_a, presentacion):
+    """Si bastara la cabecera, cualquiera elegiría negocio desde el navegador."""
+    settings.TENANCY_CLAVE_SERVIDOR = CLAVE
+    settings.TENANCY_ACEPTA_CABECERA = False
+
+    respuesta = api.get(
+        "/api/catalog/products/",
+        HTTP_HOST="host-inventado.test",
+        HTTP_X_TENANT="la-gran-cosecha",
+    )
+    assert respuesta.status_code == 404
+
+
+def test_una_clave_equivocada_tampoco(api, settings, tenant_a, presentacion):
+    settings.TENANCY_CLAVE_SERVIDOR = CLAVE
+    settings.TENANCY_ACEPTA_CABECERA = False
+
+    respuesta = api.get(
+        "/api/catalog/products/",
+        HTTP_HOST="host-inventado.test",
+        HTTP_X_TENANT="la-gran-cosecha",
+        HTTP_X_TENANT_KEY="me-la-invento",
+    )
+    assert respuesta.status_code == 404
+
+
+def test_sin_clave_configurada_la_via_esta_cerrada(api, settings, tenant_a, presentacion):
+    """Vacía = desactivada: una instalación que no use Next no abre esa puerta."""
+    settings.TENANCY_CLAVE_SERVIDOR = ""
+    settings.TENANCY_ACEPTA_CABECERA = False
+
+    respuesta = api.get(
+        "/api/catalog/products/",
+        HTTP_HOST="host-inventado.test",
+        HTTP_X_TENANT="la-gran-cosecha",
+        HTTP_X_TENANT_KEY="",
+    )
+    assert respuesta.status_code == 404
+
+
+def test_el_servidor_de_la_tienda_puede_declarar_un_dominio_propio(
+    api, settings, tenant_a, producto_de_a
+):
+    """
+    Con dominio propio no hay slug que enviar: el negocio se declara por su
+    hostname y el backend lo resuelve contra `Domain`. Va por la misma vía
+    acreditada, para no tener que activar `USE_X_FORWARDED_HOST` en todo
+    Django, que aflojaría su manejo de hosts para cualquiera.
+    """
+    settings.TENANCY_CLAVE_SERVIDOR = CLAVE
+
+    respuesta = api.get(
+        "/api/catalog/products/",
+        HTTP_HOST="tienda-en-next.interno",
+        HTTP_X_TENANT_HOST="la-gran-cosecha.plataforma.test",
+        HTTP_X_TENANT_KEY=CLAVE,
+    )
+    nombres = {p["nombre_producto"] for p in respuesta.json()["results"]}
+    assert "Mango de La Gran Cosecha" in nombres
+
+
+def test_un_negocio_inventado_por_el_servidor_no_cae_al_host(
+    api, settings, tenant_a, producto_de_a
+):
+    """
+    Regresión de un fallo abierto real, encontrado probando la tienda en Next.
+
+    La tienda pedía el catálogo de un subdominio inventado; Django no
+    encontraba ese negocio, caía a resolver por `Host` —que es el suyo propio,
+    no el del visitante— y devolvía el catálogo del negocio equivocado con un
+    200. Un servidor que se acredita con la clave es autoritativo: si declara
+    un negocio que no existe, la respuesta es "ninguno".
+    """
+    settings.TENANCY_CLAVE_SERVIDOR = CLAVE
+    settings.TENANCY_ACEPTA_CABECERA = False
+
+    respuesta = api.get(
+        "/api/catalog/products/",
+        HTTP_HOST="la-gran-cosecha.plataforma.test",  # un host que SÍ resuelve
+        HTTP_X_TENANT="negocio-que-no-existe",
+        HTTP_X_TENANT_KEY=CLAVE,
+    )
+    assert respuesta.status_code == 404

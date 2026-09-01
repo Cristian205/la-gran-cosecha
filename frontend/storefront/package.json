@@ -1,9 +1,9 @@
 {
-  "name": "lgc-storefront",
+  "name": "crynex-storefront-legacy",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Tienda en línea (ecommerce) de La Gran Cosecha — módulo cliente.",
+  "description": "Tienda en Vite — reemplazada por frontend/tienda (Next.js). Se conserva hasta comprobar paridad.",
   "scripts": {
     "dev": "vite --port 5173",
     "build": "tsc --noEmit && vite build",

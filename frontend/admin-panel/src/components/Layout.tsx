@@ -64,7 +64,7 @@ export function Layout() {
   const navigate = useNavigate();
 
   const [colapsado, setColapsado] = useState(
-    () => localStorage.getItem("lgc-sidebar-colapsado") === "1"
+    () => localStorage.getItem("crynex-sidebar-colapsado") === "1"
   );
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [paletaAbierta, setPaletaAbierta] = useState(false);
@@ -92,7 +92,7 @@ export function Layout() {
   }
 
   useEffect(() => {
-    localStorage.setItem("lgc-sidebar-colapsado", colapsado ? "1" : "0");
+    localStorage.setItem("crynex-sidebar-colapsado", colapsado ? "1" : "0");
   }, [colapsado]);
 
   useEffect(() => {

@@ -165,6 +165,10 @@ export function ProductsPage() {
           tipo_cantidad: p.tipo_cantidad,
           permite_fraccion: p.permite_fraccion,
           estado_producto: true,
+          // Se reenvian tal cual: esto es un PUT, y omitirlos devolveria el
+          // producto a «sin control de existencias» sin que nadie lo pidiera.
+          controla_stock: p.controla_stock,
+          codigo_barras: p.codigo_barras,
           presentaciones: p.presentaciones.map((x) => ({
             id: x.id,
             nombre_presentacion: x.nombre_presentacion,

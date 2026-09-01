@@ -28,7 +28,7 @@ function estadoInicial(guardado: string | null, columnasDefault: string[]): Esta
 
 /** Recuerda, por tabla, qué columnas están visibles y en qué orden (localStorage, por navegador). */
 export function useColumnas(tableKey: string, columnasDefault: string[]) {
-  const storageKey = `lgc-columnas-${tableKey}`;
+  const storageKey = `crynex-columnas-${tableKey}`;
 
   const [estado, setEstado] = useState<EstadoColumna[]>(() =>
     estadoInicial(localStorage.getItem(storageKey), columnasDefault)

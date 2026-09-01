@@ -93,6 +93,11 @@ export interface Producto {
   tipo_cantidad: string;
   permite_fraccion: boolean;
   estado_producto: boolean;
+  /** El producto lleva cuenta de sus existencias. */
+  controla_stock: boolean;
+  codigo_barras: string;
+  /** Anotado por el servidor: `cantidad - reservada`, sumando ubicaciones. */
+  disponible: string;
   imagen_url: string | null;
   orden: number;
   presentaciones: Presentacion[];

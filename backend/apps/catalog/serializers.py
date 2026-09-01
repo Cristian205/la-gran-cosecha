@@ -52,6 +52,10 @@ class PresentacionProductoSerializer(serializers.ModelSerializer):
             "factor_conversion",
             "precio_unitario",
             "estado_presentacion",
+            # En qué se diferencia esta presentación de sus hermanas: talla,
+            # color, empaque. Viaja tal cual porque quien sabe qué ejes tiene
+            # este negocio es su perfil, no este serializer.
+            "atributos",
         ]
 
 
@@ -67,6 +71,12 @@ class ProductoSerializer(serializers.ModelSerializer):
     imagen_url = serializers.SerializerMethodField()
     presentaciones = serializers.SerializerMethodField()
     precio_desde = serializers.SerializerMethodField()
+    # Lo pone la anotacion de la vista. Sale como cadena decimal y no como
+    # booleano "hay/no hay" porque la tienda quiere poder decir "quedan 3",
+    # que es lo que mueve a comprar, y el panel quiere el numero exacto.
+    disponible = serializers.DecimalField(
+        max_digits=14, decimal_places=3, read_only=True, required=False
+    )
 
     class Meta:
         model = Producto
@@ -85,6 +95,9 @@ class ProductoSerializer(serializers.ModelSerializer):
             "orden",
             "precio_desde",
             "presentaciones",
+            "controla_stock",
+            "codigo_barras",
+            "disponible",
         ]
 
     def get_imagen_url(self, obj):
@@ -148,6 +161,8 @@ class ProductoWriteSerializer(serializers.ModelSerializer):
             "tipo_cantidad",
             "permite_fraccion",
             "estado_producto",
+            "controla_stock",
+            "codigo_barras",
             "presentaciones",
         ]
 

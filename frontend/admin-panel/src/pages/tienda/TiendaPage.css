@@ -1,0 +1,531 @@
+/*
+ * El constructor de la tienda.
+ *
+ * Ocupa la ventana entera y no el hueco de contenido del panel: la vista previa
+ * tiene que ser la pantalla para poder juzgar como queda una tienda, y con la
+ * barra superior y los márgenes del panel encima se quedaba en un tercio.
+ *
+ * Una columna de ajustes a la izquierda y la tienda a la derecha. Es la
+ * disposicion de Shopify y de WordPress, y no por parecerse: con tres columnas
+ * fijas la previa nunca es lo bastante grande.
+ */
+
+.editor {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--fondo, #f6faf7);
+}
+
+.editor-cargando {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}
+
+/* --------------------------------------------------------------- la barra */
+.editor-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+
+.editor-barra-izq,
+.editor-barra-der {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.editor-barra-izq select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--superficie);
+  color: var(--dark);
+  font-size: 0.88rem;
+}
+
+.editor-barra .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Los tres anchos van al centro y no con las acciones: cambiar de pantalla es
+   mirar, no editar, y mezclarlo con Guardar y Publicar invita a confundirlos. */
+.editor-pantallas {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  background: var(--gris-claro);
+  border-radius: 10px;
+}
+
+.editor-pantallas .btn-icon {
+  width: 30px;
+  height: 30px;
+  border-color: transparent;
+  background: none;
+}
+
+.editor-pantallas .btn-icon.activo {
+  background: var(--superficie);
+  border-color: var(--borde);
+  color: var(--verde-texto);
+}
+
+.editor-estado {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gris);
+}
+
+.editor-estado.pendiente {
+  color: var(--ambar-texto, #92400e);
+}
+
+/* --------------------------------------------------------------- el cuerpo */
+.editor-cuerpo {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.editor-panel {
+  padding: 0.9rem;
+  background: var(--superficie);
+  border-right: 1px solid var(--borde);
+  overflow-y: auto;
+}
+
+.editor-previa {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--gris-claro);
+  overflow: auto;
+}
+
+.editor-sin-url {
+  align-self: center;
+  max-width: 42ch;
+  text-align: center;
+}
+
+.editor-marco {
+  height: 100%;
+  /* La transicion es del ancho: cambiar de escritorio a movil se lee como un
+     cambio de tamano y no como una pagina distinta. */
+  transition: width 0.2s ease;
+  max-width: 100%;
+}
+
+.editor-marco iframe {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--sombra);
+}
+
+/* -------------------------------------------------------- panel izquierdo */
+.constructor-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gris);
+}
+
+.constructor-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: var(--dark);
+  cursor: pointer;
+}
+
+.constructor-volver:hover {
+  color: var(--verde-texto);
+}
+
+.constructor-grupo + .constructor-grupo {
+  margin-top: 0.9rem;
+}
+
+.constructor-categoria {
+  margin: 0 0 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gris);
+  opacity: 0.7;
+}
+
+.constructor-disponible {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--dark);
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.constructor-disponible:hover:not(:disabled) {
+  background: var(--verde-claro);
+  color: var(--verde-texto);
+}
+
+.constructor-disponible:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.constructor-anadir {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: 0.7rem;
+  padding: 0.6rem;
+  border: 1px dashed var(--borde);
+  border-radius: 10px;
+  background: none;
+  color: var(--gris);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.constructor-anadir:hover {
+  border-color: var(--verde);
+  color: var(--verde-texto);
+  background: var(--verde-claro);
+}
+
+/* ---------------------------------------------------------- la composicion */
+.constructor-pila {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.constructor-pieza {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.constructor-pieza:hover {
+  background: var(--gris-claro);
+}
+
+/* Se atenua lo que se arrastra, no lo que hay debajo: asi se ve donde va a
+   caer sin perder de vista lo que estas moviendo. */
+.constructor-pieza.arrastrando {
+  opacity: 0.4;
+}
+
+.constructor-asa {
+  color: var(--gris);
+  cursor: grab;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.constructor-pieza:hover .constructor-asa {
+  opacity: 1;
+}
+
+.constructor-pieza-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.87rem;
+}
+
+.constructor-roto {
+  color: var(--rojo);
+  font-weight: 600;
+}
+
+/* Las acciones solo aparecen al pasar por encima: con doce secciones, cuatro
+   botones por fila convierten la lista en una rejilla de iconos. */
+.constructor-pieza-acciones {
+  display: flex;
+  gap: 0.1rem;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.constructor-pieza:hover .constructor-pieza-acciones,
+.constructor-pieza:focus-within .constructor-pieza-acciones {
+  opacity: 1;
+}
+
+.constructor-pieza-acciones .btn-icon {
+  width: 26px;
+  height: 26px;
+  border-color: transparent;
+  background: none;
+}
+
+.constructor-pieza-acciones .btn-icon:hover:not(:disabled) {
+  background: var(--superficie);
+  border-color: var(--borde);
+}
+
+.constructor-pieza-acciones .btn-icon:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ ajustes */
+.constructor-dispositivos {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.constructor-dispositivo {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1;
+  padding: 0.4rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--superficie);
+  color: var(--gris);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.constructor-dispositivo.activo {
+  border-color: var(--verde);
+  background: var(--verde-claro);
+  color: var(--verde-texto);
+}
+
+.constructor-separador {
+  margin: 1rem 0;
+  border: 0;
+  border-top: 1px solid var(--borde);
+}
+
+.constructor-quitar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.constructor-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.constructor-switch input {
+  width: auto;
+  accent-color: var(--verde);
+}
+
+.constructor-lista-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.btn-pequeno {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+.constructor-lista {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.constructor-lista li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--gris-claro);
+}
+
+.constructor-lista-numero {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--verde);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.constructor-lista-campos {
+  flex: 1;
+  min-width: 0;
+}
+
+.constructor-lista-campos .campo {
+  margin-bottom: 0.5rem;
+}
+
+.constructor-lista-campos .campo:last-child {
+  margin-bottom: 0;
+}
+
+/* --------------------------------------------------------------- historial */
+.editor-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.editor-historial {
+  width: 100%;
+  max-width: 680px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--superficie);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+
+.editor-historial header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.editor-historial h3 {
+  margin: 0;
+}
+
+.editor-historial ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.editor-historial li {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.8rem 1.2rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.editor-historial li:last-child {
+  border-bottom: 0;
+}
+
+.editor-historial li > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 180px;
+}
+
+.editor-historial li > span:nth-child(2) {
+  flex: 1;
+}
+
+.editor-historial .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.badge.BORRADOR {
+  background: var(--ambar-claro);
+  color: var(--ambar-texto);
+}
+.badge.PUBLICADA {
+  background: var(--verde-claro);
+  color: var(--verde-texto);
+}
+.badge.ARCHIVADA {
+  background: var(--gris-claro);
+  color: var(--gris);
+}
+
+@media (max-width: 900px) {
+  /* En pantalla estrecha no caben las dos: manda el panel, porque componer sin
+     poder tocar los ajustes no es posible, y mirar la tienda sí tiene otra
+     puerta — el enlace de la barra. */
+  .editor-cuerpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .editor-previa {
+    display: none;
+  }
+}

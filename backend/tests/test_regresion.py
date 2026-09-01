@@ -20,6 +20,26 @@ pytestmark = pytest.mark.django_db
 # ==========================================================================
 # CATÁLOGO PÚBLICO — lo que ve el visitante de la tienda
 # ==========================================================================
+def test_el_contenido_de_la_tienda_se_lee_sin_autenticacion(api, negocio):
+    """
+    Banderolas, insignias, beneficios, testimonios y ofertas son publicos.
+
+    Estaban devolviendo 401 a todo visitante: `get_permissions` colaba el
+    `IsAuthenticated` por defecto de DRF junto al `AllowAny`, y DRF exige que
+    pasen todos. Las tiendas se servian sin nada de eso y sin avisar, porque
+    cada bloque devuelve null cuando su lista viene vacia.
+    """
+    for ruta in ("banners", "trust-badges", "beneficios", "testimonials", "ofertas"):
+        respuesta = api.get(f"/api/content/{ruta}/")
+        assert respuesta.status_code == 200, f"{ruta} respondio {respuesta.status_code}"
+
+
+def test_el_contenido_de_la_tienda_no_se_escribe_sin_permiso(api, negocio):
+    """Publica de lectura no significa publica de escritura."""
+    respuesta = api.post("/api/content/banners/", {"titulo": "Colado"}, format="json")
+    assert respuesta.status_code in (401, 403)
+
+
 def test_el_catalogo_publico_se_lee_sin_autenticacion(api, presentacion):
     respuesta = api.get("/api/catalog/products/")
     assert respuesta.status_code == 200

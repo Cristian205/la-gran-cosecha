@@ -1,283 +1,662 @@
-.login-page {
-  color: var(--dark);
-}
+/*
+ * Pantalla de acceso al panel administrativo.
+ *
+ * Dos mitades con trabajos distintos: la izquierda dice de quién es este panel
+ * —logo, nombre y una foto del propio negocio— y la derecha solo pide dos
+ * datos. Separarlas evita el problema de las pantallas de acceso con marca:
+ * que el formulario compita con la identidad y ninguno de los dos se lea.
+ *
+ * `--marca` la inyecta el componente con el color que la empresa tenga
+ * configurado. Todo lo verde de aquí abajo sale de esa variable, así que el
+ * panel de una perfumería llega morado sin tocar una línea de este archivo.
+ */
 
-.login-page .split-screen {
-  display: flex;
+.acceso {
+  --marca: #16a34a;
+  --tinta: #0a0f14;
+  --tinta-alta: #111820;
+  --linea: rgba(255, 255, 255, 0.08);
+  --texto: #eef2f6;
+  --texto-medio: #9aa6b2;
+  --texto-tenue: #6b7681;
+
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
   min-height: 100vh;
+  background: var(--tinta);
+  color: var(--texto);
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
 }
 
-/* --- Panel izquierdo: branding (mismo tratamiento que el hero de la tienda) --- */
-.login-page .left-panel {
-  flex: 1.2;
+/* ====================================================== panel de la marca */
+
+.acceso__marca {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 32px;
+  padding: 56px 64px;
   overflow: hidden;
-  color: white;
-  background:
-    radial-gradient(1100px 480px at 15% 0%, rgba(34, 197, 94, 0.32), transparent 60%),
-    radial-gradient(850px 480px at 90% 100%, rgba(245, 158, 11, 0.24), transparent 55%),
-    linear-gradient(135deg, #071a10, var(--verde-osc) 60%, var(--verde));
-  padding: 60px;
-  display: flex;
-  align-items: center;
+  isolation: isolate;
 }
 
-.login-page .blob {
+/*
+ * La foto sale del primer banner del negocio. Va desenfocada y al 45%: los
+ * banners llevan texto encima ("VERDURAS FRESCAS Y LOCALES") y sin el
+ * desenfoque competiría con el título. Así queda como textura.
+ */
+.acceso__foto {
   position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center bottom;
+  filter: blur(3px) saturate(1.15);
+  opacity: 0.45;
+  transform: scale(1.06); /* tapa el borde claro que deja el desenfoque */
+}
+
+.acceso__velo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(
+      70% 60% at 18% 34%,
+      color-mix(in srgb, var(--marca) 55%, transparent),
+      transparent 72%
+    ),
+    linear-gradient(
+      118deg,
+      color-mix(in srgb, var(--marca) 42%, #04140c) 0%,
+      rgba(6, 20, 14, 0.94) 52%,
+      var(--tinta) 100%
+    );
+}
+
+/* La curva que separa las dos mitades: un círculo enorme desbordado, que da
+   un arco de radio grande sin depender de un SVG. */
+.acceso__curva {
+  position: absolute;
+  top: 50%;
+  right: -62%;
+  z-index: -1;
+  width: 128%;
+  aspect-ratio: 1;
+  transform: translateY(-50%);
   border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.5;
-  pointer-events: none;
-  animation: lp-flotar 9s ease-in-out infinite;
-  z-index: 0;
-}
-.login-page .blob.b1 { width: 320px; height: 320px; background: var(--verde-400); top: -80px; left: -60px; }
-.login-page .blob.b2 { width: 260px; height: 260px; background: var(--amber); bottom: -70px; right: 5%; animation-delay: 2s; }
-@keyframes lp-flotar {
-  0%, 100% { transform: translateY(0) translateX(0); }
-  50% { transform: translateY(-18px) translateX(12px); }
+  border: 1px solid color-mix(in srgb, var(--marca) 45%, transparent);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--marca) 9%, transparent),
+    transparent 58%
+  );
 }
 
-.login-page .content-wrapper {
+/* Rejillas de puntos: `radial-gradient` repetido, no una imagen. */
+.acceso__puntos {
+  position: absolute;
+  z-index: -1;
+  width: 130px;
+  height: 90px;
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--marca) 70%, transparent) 1.4px,
+    transparent 1.4px
+  );
+  background-size: 15px 15px;
+  opacity: 0.55;
+}
+
+.acceso__puntos--alto {
+  top: 62px;
+  right: 12%;
+}
+
+.acceso__puntos--bajo {
+  bottom: 84px;
+  right: 18%;
+  opacity: 0.35;
+}
+
+.acceso__marca-cuerpo {
   position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 100%;
-  width: 100%;
+  max-width: 460px;
+  padding-left: 24px;
 }
 
-.login-page .brand-identity {
-  border-left: 2px solid rgba(255, 255, 255, 0.2);
-  padding-left: 30px;
-  display: flex;
-  flex-direction: column;
+/* El hilo vertical con el punto: marca el inicio del bloque sin una caja. */
+.acceso__hilo {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 38%;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--marca) 75%, transparent) 30%,
+    transparent
+  );
 }
 
-.login-page .logo-box {
-  margin-bottom: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 15px;
-  border-radius: var(--radio-sm);
-  display: inline-block;
-  width: fit-content;
+.acceso__hilo::after {
+  content: "";
+  position: absolute;
+  left: -2.5px;
+  bottom: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--marca);
+  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--marca) 60%, transparent);
 }
 
-.login-page .logo-box img {
-  max-width: 160px;
-  height: auto;
+.acceso__logo-caja {
+  display: grid;
+  place-items: center;
+  width: 296px;
+  height: 250px;
+  margin-bottom: 34px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(6px);
+}
+
+.acceso__logo-caja img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Cuando el negocio no tiene logo cargado: su nombre hace de marca en vez de
+   dejar un hueco o, peor, el logo de otro cliente. */
+.acceso__negocio {
+  margin: 0 0 26px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.acceso__titulo {
+  margin: 0;
+  font-size: clamp(26px, 2.6vw, 37px);
+  font-weight: 400;
+  line-height: 1.16;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.acceso__titulo span {
   display: block;
+  font-weight: 800;
+  color: #f5a524;
 }
 
-.login-page .divider {
-  width: 42px;
+.acceso__regla {
+  width: 100%;
+  max-width: 405px;
+  margin: 26px 0;
+  border: 0;
+  border-top: 1px solid var(--linea);
+}
+
+.acceso__lema {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 0;
+  max-width: 400px;
+  font-size: 15px;
+  line-height: 1.62;
+  color: #d3dbe2;
+}
+
+.acceso__lema svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--marca);
+}
+
+.acceso__pie {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: auto;
+  padding-top: 32px;
+  font-size: 13.5px;
+  color: var(--texto-medio);
+}
+
+.acceso__pie strong {
+  display: block;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.acceso__sello {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(245, 165, 36, 0.12);
+  border: 1px solid rgba(245, 165, 36, 0.3);
+  color: #f5a524;
+}
+
+/* ============================================================ formulario */
+
+.acceso__panel {
+  display: grid;
+  place-items: center;
+  padding: 48px 40px;
+  background:
+    radial-gradient(80% 55% at 60% 0%, rgba(22, 163, 74, 0.06), transparent 70%),
+    var(--tinta);
+}
+
+.acceso__tarjeta {
+  width: 100%;
+  max-width: 452px;
+  padding: 40px 44px 34px;
+  border: 1px solid var(--linea);
+  border-radius: 18px;
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.035),
+      rgba(255, 255, 255, 0) 40%
+    ),
+    var(--tinta-alta);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.acceso__escudo {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--marca) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--marca) 32%, transparent);
+  color: var(--marca);
+}
+
+.acceso__tarjeta h2 {
+  margin: 0;
+  font-size: 29px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.acceso__subrayado {
+  display: block;
+  width: 62px;
   height: 3px;
-  border-radius: 3px;
-  background: var(--amber);
-  margin: 6px 0 14px;
+  margin: 14px auto 18px;
+  border-radius: 2px;
+  background: var(--marca);
 }
 
-.login-page .system-name {
-  color: white;
-  font-size: 1.1rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  opacity: 0.85;
+.acceso__intro {
+  margin: 0 0 26px;
+  font-size: 14.5px;
+  color: var(--texto-medio);
 }
 
-.login-page .system-name span {
-  color: var(--amber);
-  font-weight: 700;
+.acceso__error {
+  margin: 0 0 18px;
+  padding: 10px 13px;
+  border-radius: 9px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #fecaca;
+  font-size: 13.5px;
+  text-align: left;
 }
 
-.login-page .legal-notice {
-  position: relative;
-  z-index: 1;
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 0.75rem;
-  max-width: 320px;
-}
-
-/* --- Panel derecho: formulario --- */
-.login-page .right-panel {
-  flex: 0.8;
-  background-color: var(--fondo);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.login-page .login-container {
-  width: 100%;
-  max-width: 440px;
-  padding: 40px;
-}
-
-.login-page .form-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 0 0 10px;
-  color: var(--dark);
-}
-
-.login-page .form-header p {
-  color: var(--gris);
-  font-size: 0.95rem;
-  margin: 0 0 40px;
-}
-
-.login-page .fade-in {
-  animation: lp-fade-in 0.4s ease-in-out;
-}
-
-@keyframes lp-fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* --- Inputs --- */
-.login-page .input-container {
-  margin-bottom: 25px;
-  position: relative;
-}
-
-.login-page .input-container label {
+/* ----------------------------------------------------------------- campos */
+.acceso__campo {
   display: block;
-  font-size: 0.7rem;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+/*
+ * El rótulo lleva clase propia y no se selecciona como `.acceso__campo > span`.
+ * Ese selector también capturaba `.acceso__entrada` —que es otro span hijo del
+ * mismo label— y con mayor especificidad, así que le imponía `display: block`
+ * y tumbaba su `align-items: center`: los iconos se iban arriba y el ojo caía
+ * debajo del campo, en su posición estática de flujo de bloque.
+ */
+.acceso__rotulo,
+.acceso__campo legend {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 11.5px;
   font-weight: 600;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--gris);
-  margin-bottom: 8px;
+  color: var(--texto-medio);
 }
 
-.login-page .input-container input {
-  width: 100%;
-  padding: 14px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-sm);
-  background: var(--superficie);
-  color: var(--dark);
-  font-size: 1rem;
-  font-family: inherit;
-  transition: all 0.2s;
+.acceso__campo--otp {
+  border: 0;
+  padding: 0;
+  margin-inline: 0;
 }
 
-.login-page .input-container input:focus {
-  outline: none;
-  border-color: var(--verde);
-  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.14);
-}
-
-/* --- OTP --- */
-.login-page .otp-wrapper {
-  margin-top: 10px;
-}
-
-.login-page .otp-inputs {
+.acceso__entrada {
+  position: relative;
   display: flex;
-  gap: 8px;
-  justify-content: space-between;
-  margin-top: 15px;
-}
-
-.login-page .otp-field {
-  width: 100%;
-  max-width: 50px;
-  height: 60px;
-  text-align: center;
-  font-size: 1.6rem;
-  font-weight: 700;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-sm);
-  background: var(--superficie);
-  color: var(--dark);
-  transition: all 0.2s;
-}
-
-.login-page .otp-field:focus {
-  border-color: var(--verde);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.14);
-  transform: translateY(-2px);
-}
-
-.login-page .resend-text {
-  text-align: center;
-  font-size: 0.85rem;
-  margin-top: 25px;
-  color: var(--gris);
-}
-
-.login-page .resend-text a {
-  color: var(--verde-osc);
-  font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-/* --- Botón --- */
-.login-page .btn-submit {
-  width: 100%;
-  padding: 16px;
-  background-color: var(--verde);
-  color: white;
-  border: none;
-  border-radius: var(--radio-sm);
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  justify-content: center;
   align-items: center;
+}
+
+/* Centrado explícito y no heredado del `align-items` del contenedor: la
+   posición estática de un hijo absoluto depende del tipo de caja del padre, y
+   eso es justo lo que se rompió antes. Anclarlo al 50% no depende de nada. */
+.acceso__entrada > svg {
+  position: absolute;
+  left: 17px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--marca);
+  pointer-events: none;
+}
+
+.acceso__entrada input {
+  width: 100%;
+  height: 56px;
+  padding: 0 50px;
+  border: 1px solid var(--linea);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--texto);
+  font: inherit;
+  font-size: 15px;
+}
+
+.acceso__entrada input::placeholder {
+  color: var(--texto-tenue);
+}
+
+.acceso__entrada input:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--marca) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--marca) 18%, transparent);
+}
+
+.acceso__ojo {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--texto-tenue);
+  cursor: pointer;
+}
+
+.acceso__ojo:hover {
+  color: var(--texto);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Seis casillas y no un campo: el código llega por correo y se copia entero,
+   así que `onPaste` lo reparte y envía solo. Escribirlo a mano tampoco pide
+   tabular, porque el foco avanza con cada dígito. */
+.acceso__otp {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 9px;
+}
+
+.acceso__otp input {
+  height: 58px;
+  border: 1px solid var(--linea);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--texto);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.acceso__otp input:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--marca) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--marca) 18%, transparent);
+}
+
+/* ------------------------------------------------------------- accesorios */
+.acceso__opciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 22px;
+  font-size: 13.5px;
+}
+
+.acceso__recordar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--texto);
+  cursor: pointer;
+}
+
+.acceso__recordar input {
+  appearance: none;
+  width: 19px;
+  height: 19px;
+  margin: 0;
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.acceso__recordar input:checked {
+  background: var(--marca);
+  border-color: var(--marca);
+}
+
+.acceso__recordar input:checked::after {
+  content: "";
+  width: 5px;
+  height: 9px;
+  margin-top: -2px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.acceso__olvido {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--marca);
+  cursor: pointer;
+}
+
+.acceso__olvido:hover {
+  text-decoration: underline;
+}
+
+.acceso__nota {
+  margin: -8px 0 20px;
+  padding: 10px 13px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--marca) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--marca) 24%, transparent);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--texto-medio);
+  text-align: left;
+}
+
+.acceso__enviar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 10px;
+  width: 100%;
+  height: 58px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--marca) 86%, #ffffff),
+    var(--marca)
+  );
+  color: #fff;
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--marca) 32%, transparent);
+  transition: filter 120ms ease, transform 120ms ease;
 }
 
-.login-page .btn-submit:hover:not(:disabled) {
-  background-color: var(--verde-osc);
-  box-shadow: 0 4px 12px rgba(15, 81, 50, 0.25);
+.acceso__enviar:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 
-.login-page .btn-submit:active:not(:disabled) {
-  transform: scale(0.98);
+.acceso__enviar:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
-.login-page .btn-submit:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
+.acceso__enviar:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
-/* --- Mensajes --- */
-.login-page .error-box {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: var(--rojo);
-  padding: 0.7rem 1rem;
-  border-radius: var(--radio-sm);
-  margin-bottom: 25px;
-  font-size: 0.88rem;
+.acceso__volver {
+  display: block;
+  margin: 16px auto 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--texto-tenue);
+  cursor: pointer;
 }
 
-.login-page .ok-box {
-  background: var(--verde-claro);
-  border: 1px solid #a7f3d0;
-  color: var(--verde-osc);
-  padding: 0.7rem 1rem;
-  border-radius: var(--radio-sm);
-  margin-bottom: 25px;
-  font-size: 0.88rem;
+.acceso__volver:hover {
+  color: var(--texto);
 }
 
-/* --- Responsive --- */
-@media (max-width: 1024px) {
-  .login-page .left-panel { display: none; }
-  .login-page .right-panel { flex: 1; }
-  .login-page .login-container { max-width: 480px; }
+/* La "o" entre reglas: los pseudo-elementos se estiran solos, así que no hay
+   que calcular anchos cuando cambia el idioma o el tamaño de la tarjeta. */
+.acceso__separador {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 26px 0 22px;
+  font-size: 13px;
+  color: var(--texto-tenue);
 }
 
-@media (max-width: 480px) {
-  .login-page .otp-inputs { gap: 4px; }
-  .login-page .otp-field { height: 50px; font-size: 1.2rem; }
+.acceso__separador::before,
+.acceso__separador::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--linea);
+}
+
+.acceso__ayuda {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--texto-medio);
+  text-align: left;
+}
+
+.acceso__ayuda svg {
+  flex: none;
+  color: #f5a524;
+}
+
+.acceso__ayuda strong {
+  display: block;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+/* ============================================================ responsive */
+
+@media (max-width: 1080px) {
+  .acceso {
+    grid-template-columns: 1fr;
+  }
+
+  /* En una columna el formulario va primero: es a lo que se viene. La marca
+     queda debajo, como pie, en vez de empujar el login fuera de la pantalla. */
+  .acceso__marca {
+    order: 2;
+    justify-content: flex-start;
+    gap: 24px;
+    padding: 40px 28px;
+  }
+
+  .acceso__panel {
+    order: 1;
+    padding: 40px 24px;
+  }
+
+  .acceso__curva,
+  .acceso__puntos {
+    display: none;
+  }
+
+  .acceso__logo-caja {
+    width: 200px;
+    height: 168px;
+    margin-bottom: 24px;
+  }
+}
+
+@media (max-width: 560px) {
+  .acceso__tarjeta {
+    padding: 30px 22px 26px;
+  }
+
+  .acceso__otp {
+    gap: 6px;
+  }
+
+  .acceso__otp input {
+    height: 50px;
+    font-size: 18px;
+  }
+
+  .acceso__opciones {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
 }

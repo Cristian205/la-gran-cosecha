@@ -93,6 +93,8 @@ export function ProductFormModal({
     modoVentaDesdeProducto(producto)
   );
   const [estado, setEstado] = useState(producto?.estado_producto ?? true);
+  const [controlaStock, setControlaStock] = useState(producto?.controla_stock ?? false);
+  const [codigoBarras, setCodigoBarras] = useState(producto?.codigo_barras ?? "");
   const [imagen, setImagen] = useState<File | null>(null);
 
   const [presentaciones, setPresentaciones] = useState<PresRow[]>(
@@ -171,6 +173,8 @@ export function ProductFormModal({
       tipo_cantidad: modoVenta,
       permite_fraccion: modoVenta !== "entero",
       estado_producto: estado,
+      controla_stock: controlaStock,
+      codigo_barras: codigoBarras.trim(),
       presentaciones: presValidas.map((p) => ({
         id: p.id ?? null,
         nombre_presentacion: p.nombre_presentacion.trim(),
@@ -327,6 +331,39 @@ export function ProductFormModal({
                 : "El producto queda guardado pero no se muestra ni se puede pedir."}
             </div>
           </div>
+        </div>
+
+        <div className="campo-switch">
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={controlaStock}
+              onChange={(e) => setControlaStock(e.target.checked)}
+            />
+            <span className="switch-riel" />
+          </label>
+          <div>
+            <div className="campo-switch-titulo">
+              {controlaStock ? "Lleva cuenta de existencias" : "Sin control de existencias"}
+            </div>
+            <div className="campo-switch-desc">
+              {controlaStock
+                ? "Los pedidos apartan unidades y no se puede vender mas de lo que hay. Registra la entrada inicial en Inventario."
+                : "Se puede pedir sin limite. Enciendelo cuando hayas contado lo que tienes."}
+            </div>
+          </div>
+        </div>
+
+        <div className="campo">
+          <label>Codigo de barras</label>
+          <input
+            value={codigoBarras}
+            onChange={(e) => setCodigoBarras(e.target.value)}
+            placeholder="7701234567890"
+          />
+          <span className="campo-ayuda">
+            Opcional. Identifica el articulo para el lector del punto de venta.
+          </span>
         </div>
 
         <div className="modal-seccion">

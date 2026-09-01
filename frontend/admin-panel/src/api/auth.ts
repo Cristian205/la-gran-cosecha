@@ -28,13 +28,15 @@ export interface VerifyResp {
 
 export async function verificarOtp(
   otpTicket: string,
-  otpToken: string
+  otpToken: string,
+  /** Sin esto la sesión muere al cerrar el navegador. */
+  recordar = true
 ): Promise<VerifyResp> {
   const { data } = await api.post<VerifyResp>("/auth/verify-otp/", {
     otp_ticket: otpTicket,
     otp_token: otpToken,
   });
-  tokenStore.set(data.access, data.refresh);
+  tokenStore.set(data.access, data.refresh, recordar);
   return data;
 }
 

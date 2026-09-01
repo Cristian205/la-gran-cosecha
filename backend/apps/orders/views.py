@@ -12,6 +12,7 @@ from apps.catalog.serializers import ProductoSerializer, ProductoWriteSerializer
 from apps.common.permissions import EsStaff, requiere_permiso
 from apps.tenancy.viewsets import ExigeNegocioMixin, TenantScopedMixin
 
+from .inventario import despachar_pedido
 from .models import Cliente, DetallePedido, HistorialDetallePedido, LotePedidos, Pedido
 from .serializers import (
     ClienteSerializer,
@@ -151,7 +152,19 @@ class PedidoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         total = pedidos_qs.aggregate(total=Sum("total_pedido"))["total"] or 0
-        pedidos_qs.update(estado="ENTREGADO")
+
+        # La entrega es lo que convierte lo apartado en una salida real: la
+        # mercancía deja de estar reservada y sale del saldo. Va antes del
+        # `update` masivo y dentro de la misma transacción para que el pedido no
+        # pueda quedar marcado como entregado sin haber descontado.
+        #
+        # Se recorre uno a uno porque `queryset.update()` no dispara señales ni
+        # sabe de líneas; `despachar_pedido` es idempotente, así que pulsar dos
+        # veces el botón —cosa que pasa— no descuenta dos veces.
+        with transaction.atomic():
+            for pedido in pedidos_qs:
+                despachar_pedido(pedido, usuario=request.user)
+            pedidos_qs.update(estado="ENTREGADO")
 
         lote = LotePedidos.objects.create(
             tipo="ENTREGA",

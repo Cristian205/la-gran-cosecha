@@ -134,6 +134,20 @@ class StoreSettings(models.Model):
     factura_telefono = models.CharField(max_length=25, blank=True)
     factura_direccion = models.CharField(max_length=255, blank=True)
 
+    # ------------------------------------------------------------------
+    # Aspecto fino: lo que el catálogo de `TokenTema` deja ajustar.
+    #
+    # Va en un JSON y no en columnas por lo mismo que los límites de un plan:
+    # las perillas cambian con el producto, y añadir «color del pie» no debería
+    # costar una migración sobre una tabla que se consulta en cada petición.
+    # Las claves son `TokenTema.codigo`, que sí son filas.
+    #
+    # Los campos de color de arriba (`color_primario` y compañía) siguen ahí y
+    # siguen mandando sobre lo suyo: son la identidad del negocio y ya los usan
+    # el correo del OTP y la factura, no solo la tienda.
+    # ------------------------------------------------------------------
+    tokens = models.JSONField(default=dict, blank=True)
+
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:

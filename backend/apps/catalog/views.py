@@ -5,6 +5,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from apps.common.permissions import EsStaff, SoloLecturaPublicaOStaff, requiere_permiso
+from apps.inventory.operaciones import anotacion_disponible
 from apps.tenancy.viewsets import TenantScopedMixin
 
 from .filters import ProductoFilter
@@ -85,7 +86,13 @@ class ProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
                 precio_desde=Min(
                     "presentaciones__precio_unitario",
                     filter=Q(presentaciones__estado_presentacion=True),
-                )
+                ),
+                # Subconsulta y no `Sum("existencias__…")`: esta consulta ya se
+                # une a las presentaciones para el precio, y dos uniones
+                # a-muchos multiplican las filas entre sí. El `Min` sobrevive a
+                # eso; una suma daría el stock multiplicado por el número de
+                # presentaciones. Ver `anotacion_disponible`.
+                disponible=anotacion_disponible(),
             )
             .order_by("orden", "nombre_producto")
         )
