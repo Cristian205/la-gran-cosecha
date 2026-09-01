@@ -57,3 +57,22 @@ export function alertaError(mensaje: string): Promise<unknown> {
     confirmButtonText: "Cerrar",
   });
 }
+
+/**
+ * Confirmacion breve de que algo salio bien.
+ *
+ * Es un aviso flotante y no un dialogo: el usuario acaba de pulsar el boton y
+ * ya sabe lo que pidio; obligarle a cerrar una ventana para seguir trabajando
+ * seria un paso de mas. Los errores si son dialogo, porque hay que leerlos.
+ */
+export function alertaExito(mensaje: string): Promise<unknown> {
+  return swalBase.fire({
+    icon: "success",
+    title: mensaje,
+    toast: true,
+    position: "top-end",
+    showConfirmButton: false,
+    timer: 2600,
+    timerProgressBar: true,
+  });
+}

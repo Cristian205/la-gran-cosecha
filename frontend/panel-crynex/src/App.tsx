@@ -1,55 +1,55 @@
-import { Building2, LayoutGrid, LogOut, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { sesion } from "./api/cliente";
+import { ProveedorPlataforma } from "./datos/plataforma";
+import { ProveedorNotificaciones } from "./ui/Notificaciones";
+import { Lateral } from "./componentes/Lateral";
+import { Cabecera } from "./componentes/Cabecera";
 import { Acceso } from "./paginas/Acceso";
+import { Empresa } from "./paginas/Empresa";
 import { Matriz } from "./paginas/Matriz";
 import { Negocios } from "./paginas/Negocios";
+import { Planes } from "./paginas/Planes";
+import { Plantillas } from "./paginas/Plantillas";
 import { Resumen } from "./paginas/Resumen";
-
-const SECCIONES = [
-  { to: "/", etiqueta: "Resumen", icono: LayoutGrid, exacto: true },
-  { to: "/planes", etiqueta: "Planes y permisos", icono: ShieldCheck },
-  { to: "/empresas", etiqueta: "Empresas", icono: Building2 },
-];
+import { Suscripciones } from "./paginas/Suscripciones";
 
 export default function App() {
   const [autenticado, setAutenticado] = useState(Boolean(sesion.acceso()));
 
   if (!autenticado) return <Acceso alEntrar={() => setAutenticado(true)} />;
 
-  return (
-    <div className="marco">
-      <aside className="lateral">
-        <span className="marca">Crynex</span>
-        <nav>
-          {SECCIONES.map(({ to, etiqueta, icono: Icono, exacto }) => (
-            <NavLink key={to} to={to} end={exacto}>
-              <Icono size={16} />
-              {etiqueta}
-            </NavLink>
-          ))}
-        </nav>
-        <button
-          type="button"
-          className="salir"
-          onClick={() => {
-            sesion.cerrar();
-            setAutenticado(false);
-          }}
-        >
-          <LogOut size={15} /> Cerrar sesión
-        </button>
-      </aside>
+  function salir() {
+    sesion.cerrar();
+    setAutenticado(false);
+  }
 
-      <main className="contenido">
-        <Routes>
-          <Route path="/" element={<Resumen />} />
-          <Route path="/planes" element={<Matriz />} />
-          <Route path="/empresas" element={<Negocios />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-    </div>
+  return (
+    <ProveedorNotificaciones>
+      <ProveedorPlataforma>
+        <div className="marco">
+          <Lateral />
+          <div className="marco__principal">
+            <Cabecera alSalir={salir} />
+            <main className="contenido">
+              <Routes>
+                <Route path="/" element={<Resumen />} />
+                <Route path="/empresas" element={<Negocios />} />
+                {/* Dos rutas y no un parámetro opcional: las pestañas son parte
+                    de la dirección, y así un aviso puede enlazar directo a la
+                    suscripción de un cliente. */}
+                <Route path="/empresas/:id" element={<Empresa />} />
+                <Route path="/empresas/:id/:pestana" element={<Empresa />} />
+                <Route path="/planes" element={<Planes />} />
+                <Route path="/permisos" element={<Matriz />} />
+                <Route path="/plantillas" element={<Plantillas />} />
+                <Route path="/suscripciones" element={<Suscripciones />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </main>
+          </div>
+        </div>
+      </ProveedorPlataforma>
+    </ProveedorNotificaciones>
   );
 }

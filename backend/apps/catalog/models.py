@@ -118,6 +118,19 @@ class Producto(ModeloConTenant):
     estado_producto = models.BooleanField(default=True)
     permite_fraccion = models.BooleanField(default=False)
 
+    # El producto lleva cuenta de sus existencias. Nace en False para TODOS los
+    # productos que ya existen: encender el inventario no puede empezar a
+    # rechazar pedidos de un catálogo cuyo stock nadie ha cargado todavía. Se
+    # activa producto a producto —o de golpe desde el panel— cuando el negocio
+    # ya ha contado. Desde la fase 9 el preset propone el valor inicial.
+    controla_stock = models.BooleanField(default=False)
+
+    # Lo lee el lector del POS y también la búsqueda del panel. Va en el
+    # producto y no en la presentación porque identifica el artículo, no su
+    # empaque; el código de la caja de 12, cuando el negocio lo necesite, es un
+    # atributo de la presentación.
+    codigo_barras = models.CharField(max_length=64, blank=True, db_index=True)
+
     imagen = models.ImageField(upload_to=ruta_producto, blank=True, null=True)
 
     categoria = models.ForeignKey(
@@ -239,6 +252,22 @@ class PresentacionProducto(ModeloConTenant):
     )
     unidad_manual = models.CharField(max_length=20, blank=True, null=True)
     estado_presentacion = models.BooleanField(default=True)
+
+    # En qué se diferencia esta presentación de las otras del mismo producto:
+    # {"talla": "M", "color": "negro"} en una boutique, {"empaque": "caja 100"}
+    # en una ferretería. Es JSON y no una tabla por tipo de negocio porque los
+    # ejes los declara el negocio, no el código: crear `ProductoBoutique` con
+    # columnas de talla y color obligaría a una migración por cada sector nuevo,
+    # que es exactamente lo que esta plataforma no puede permitirse.
+    #
+    # Quién lo valida: desde la fase 9, el `esquema_atributos` del perfil del
+    # negocio. Hasta entonces se guarda libre y solo se muestra.
+    #
+    # Cuándo dejará de ser JSON: el día que haya que FILTRAR el catálogo público
+    # por talla con paginación. Buscar puntualmente dentro de un JSONB va bien;
+    # recorrerlos todos para paginar, no. El disparador es esa consulta, no una
+    # intuición.
+    atributos = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = "ui_presentacionproducto"

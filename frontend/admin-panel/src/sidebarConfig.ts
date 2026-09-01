@@ -1,5 +1,7 @@
 import {
+  Boxes,
   Image as ImageIcon,
+  LayoutTemplate,
   LayoutDashboard,
   Package,
   PackagePlus,
@@ -24,6 +26,13 @@ export interface SeccionDisponible {
 export const SECCIONES_DISPONIBLES: SeccionDisponible[] = [
   { clave: "dashboard", to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { clave: "catalogo", to: "/productos", label: "Catálogo", icon: Package, permiso: "catalog.view_producto" },
+  {
+    clave: "inventario",
+    to: "/inventario",
+    label: "Inventario",
+    icon: Boxes,
+    permiso: "inventory.view_existencia",
+  },
   { clave: "pedidos", to: "/pedidos", label: "Pedidos", icon: Receipt, permiso: "orders.view_pedido" },
   {
     clave: "productos_pendientes",
@@ -35,6 +44,10 @@ export const SECCIONES_DISPONIBLES: SeccionDisponible[] = [
   { clave: "clientes", to: "/clientes", label: "Clientes", icon: Users, permiso: "orders.view_cliente" },
   { clave: "usuarios", to: "/usuarios", label: "Usuarios", icon: ShieldCheck, permiso: "accounts.view_usuario" },
   { clave: "contenido", to: "/contenido", label: "Contenido", icon: ImageIcon, permiso: "content.view_promobanner" },
+  // El constructor cambia lo que ven los visitantes, asi que pide el mismo
+  // permiso que administrar el contenido de la tienda: quien puede cambiar los
+  // banners puede cambiar donde van.
+  { clave: "tienda", to: "/tienda", label: "Tu tienda", icon: LayoutTemplate, permiso: "content.view_promobanner" },
 ];
 
 function puedeVerSeccion(usuario: Usuario | null | undefined, seccion: SeccionDisponible): boolean {
@@ -49,7 +62,7 @@ export const LAYOUT_POR_DEFECTO: NodoSidebar[] = [
     tipo: "grupo",
     id: "operacion",
     titulo: "Operación",
-    items: ["dashboard", "catalogo", "pedidos", "productos_pendientes", "clientes"],
+    items: ["dashboard", "catalogo", "inventario", "pedidos", "productos_pendientes", "clientes"],
   },
   {
     tipo: "grupo",

@@ -11,6 +11,24 @@ from apps.catalog.models import Categoria, PresentacionProducto, UnidadMedida
 from .models import Cliente, DetallePedido, HistorialDetallePedido, LotePedidos, Pedido
 
 
+def reservar_o_400(pedido, *, usuario=None):
+    """
+    Ajusta la reserva del pedido y traduce la falta de stock a un 400.
+
+    Sin esta traducción, quedarse sin mercancía saldría como un 500: un fallo
+    del servidor, cuando en realidad es una respuesta perfectamente normal a una
+    petición que pide más de lo que hay. El mensaje de `StockInsuficiente` está
+    escrito para que lo lea una persona, así que viaja tal cual.
+    """
+    from apps.inventory.operaciones import ErrorDeInventario  # noqa: PLC0415
+    from .inventario import resincronizar_reserva  # noqa: PLC0415
+
+    try:
+        resincronizar_reserva(pedido, usuario=usuario)
+    except ErrorDeInventario as error:
+        raise serializers.ValidationError({"stock": str(error)}) from error
+
+
 # ==========================================================================
 # CLIENTE
 # ==========================================================================
@@ -235,6 +253,11 @@ class CrearPedidoSerializer(serializers.Serializer):
             )
 
         pedido.actualizar_total()
+        # Aparta la mercancía de las líneas de catálogo. Va DENTRO del `atomic`
+        # de este método a propósito: si no hay stock, el pedido entero no se
+        # guarda. Un pedido confirmado que no se puede entregar es peor que un
+        # pedido rechazado, porque el cliente ya se fue creyendo que llegaría.
+        reservar_o_400(pedido, usuario=usuario)
         return pedido
 
     def to_representation(self, instance):
@@ -427,6 +450,11 @@ class EditarPedidoSerializer(serializers.Serializer):
         pedido.total_pedido = nuevo_total
         pedido.observaciones = validated_data.get("observaciones", pedido.observaciones)
         pedido.save()
+        # La edición pudo subir cantidades, bajarlas, añadir líneas o quitarlas.
+        # `resincronizar_reserva` trabaja por diferencia contra lo ya apartado,
+        # así que una sola llamada al final cubre los cuatro casos — y no hace
+        # nada si al final el pedido pide lo mismo que antes.
+        reservar_o_400(pedido, usuario=usuario)
         return pedido
 
     def to_representation(self, instance):

@@ -113,9 +113,21 @@ export function ProductCard({ producto }: { producto: Producto }) {
       );
   }
 
+  /**
+   * Si se puede prometer o no.
+   *
+   * Solo cuenta cuando el producto lleva inventario: para todo lo demás
+   * `disponible` no significa nada y tratar su ausencia como «agotado» dejaría
+   * el catálogo entero sin botón de comprar. La comprobación es explícita por
+   * eso, y no un `Number(...) > 0` a secas.
+   */
+  const agotado = producto.controla_stock === true && Number(producto.disponible ?? 0) <= 0;
+
   return (
     <article
-      className={`producto-card glass ${agregado ? "pc-agregado" : ""}`}
+      className={`producto-card glass ${agregado ? "pc-agregado" : ""} ${
+        agotado ? "pc-agotado" : ""
+      }`}
       id={`producto-${producto.id}`}
     >
       <div
@@ -132,6 +144,7 @@ export function ProductCard({ producto }: { producto: Producto }) {
         ) : (
           <Sprout size={38} strokeWidth={1.5} />
         )}
+        {agotado && <span className="pc-cinta-agotado">Agotado</span>}
       </div>
 
       <div className="pc-body">
@@ -242,13 +255,17 @@ export function ProductCard({ producto }: { producto: Producto }) {
               <button
                 className="pc-btn-add"
                 onClick={handleAgregar}
-                disabled={!presSeleccionada}
-                aria-label={`Agregar ${producto.nombre_producto} al pedido · ${formatoPrecio(
-                  precioUnitario
-                )}`}
+                disabled={!presSeleccionada || agotado}
+                aria-label={
+                  agotado
+                    ? `${producto.nombre_producto} está agotado`
+                    : `Agregar ${producto.nombre_producto} al pedido · ${formatoPrecio(
+                        precioUnitario
+                      )}`
+                }
               >
                 <ShoppingBasket size={16} />
-                <span>Agregar</span>
+                <span>{agotado ? "Agotado" : "Agregar"}</span>
               </button>
             )}
           </>

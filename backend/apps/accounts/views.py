@@ -145,10 +145,20 @@ class LoginView(APIView):
             )
 
         if settings.DEBUG:
-            # Con el backend de consola el correo son miles de líneas (el logo va
-            # adjunto en base64), así que dejamos el código a la vista. Nunca en
-            # producción: DEBUG es False allí.
-            logger.info("Código OTP para %s: %s", user.email_usuario, otp_code)
+            # Con el backend de consola el correo ocupa cientos de líneas de
+            # HTML, y una línea suelta con el código se pierde entre ellas. Va
+            # enmarcado para poder encontrarlo de un vistazo al desplazarse.
+            #
+            # Nunca en producción: DEBUG es False allí, así que este bloque no
+            # existe y el código solo viaja por correo.
+            marco = "=" * 52
+            logger.info(
+                "\n%s\n  CODIGO OTP  %s  ->  %s\n%s",
+                marco,
+                otp_code,
+                user.email_usuario,
+                marco,
+            )
 
         # Ticket firmado con el uid del usuario (válido durante la vida del OTP)
         otp_ticket = signing.dumps(

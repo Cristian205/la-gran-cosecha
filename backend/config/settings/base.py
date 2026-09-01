@@ -51,9 +51,11 @@ LOCAL_APPS = [
     "apps.billing",
     "apps.accounts",
     "apps.catalog",
+    "apps.inventory",
     "apps.orders",
     "apps.contact",
     "apps.content",
+    "apps.storefront",
     "apps.notifications",
     "apps.media",
 ]
@@ -107,7 +109,16 @@ DATABASES = {
         default="postgres://postgres:postgresql12@localhost:5432/la_gran_cosecha",
     )
 }
-DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=600)
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=0)
+
+# El pooler de Supabase en transaction mode (puerto 6543) reparte la MISMA
+# conexión de servidor entre peticiones distintas, así que no puede sostener ni
+# conexiones persistentes ni cursores del lado del servidor: los dos dependen
+# de un estado que ya no le pertenece a nadie. Se corrige aquí en vez de en el
+# .env porque olvidarlo no da un error claro, da resultados que se mezclan.
+if str(DATABASES["default"].get("PORT")) == "6543":
+    DATABASES["default"]["CONN_MAX_AGE"] = 0
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 
 # ==========================================================================
 # MODELO DE USUARIO PERSONALIZADO

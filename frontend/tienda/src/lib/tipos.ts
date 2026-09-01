@@ -32,6 +32,10 @@ export interface Producto {
   orden: number;
   /** Precio más bajo entre las presentaciones activas; lo anota el backend. */
   precio_desde: string | null;
+  /** El producto lleva cuenta de existencias. Si es false, `disponible` no dice nada. */
+  controla_stock?: boolean;
+  /** Lo que se puede prometer: existencias menos lo ya reservado. */
+  disponible?: string;
   presentaciones: Presentacion[];
 }
 
@@ -78,6 +82,10 @@ export interface RespuestaPedido {
 }
 
 export interface SiteConfig {
+  /** Las variables CSS del tema, ya resueltas por el backend. */
+  variables_tema?: Record<string, string>;
+  /** Lo que este negocio cambió, por código de token. Lo usa el editor. */
+  tokens?: Record<string, string>;
   /** El nombre del negocio. Lo devuelve el backend desde StoreSettings. */
   nombre_empresa: string;
   logo_url: string | null;
@@ -165,4 +173,35 @@ export interface OfertaProducto {
   precio_oferta: string;
   porcentaje_ahorro: number;
   fecha_fin: string | null;
+}
+
+// ==========================================================================
+// Motor de tiendas
+// ==========================================================================
+
+/**
+ * Un bloque colocado en una página.
+ *
+ * `tipo` es la llave del registro de React; `props` son sus opciones, sin
+ * tipar aquí a propósito: cada bloque conoce las suyas y declararlas todas en
+ * una unión gigante obligaría a tocar este archivo por cada bloque nuevo.
+ */
+export interface BloqueColocado {
+  id: string;
+  tipo: string;
+  variante: string;
+  props: Record<string, unknown>;
+  visible: { movil: boolean; tablet: boolean; escritorio: boolean };
+  /** Lo declara el catálogo, no la página: es propiedad del componente. */
+  a_sangre: boolean;
+}
+
+export interface PaginaTienda {
+  ruta: string;
+  titulo: string;
+  tipo: "HOME" | "CATALOGO" | "PRODUCTO" | "CATEGORIA" | "LIBRE";
+  seo_titulo: string;
+  seo_descripcion: string;
+  bloques: BloqueColocado[];
+  version: { numero: number; estado: string } | null;
 }

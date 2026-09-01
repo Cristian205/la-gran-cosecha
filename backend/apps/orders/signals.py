@@ -9,11 +9,12 @@ Por eso se escribe con `all_tenants` y un `tenant=` explícito: el negocio ya
 está determinado por el objeto de origen, así que exigir además un contexto
 declarado solo haría fallar la señal en esos casos.
 """
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from apps.notifications.models import Notificacion
 
+from .inventario import liberar_pedido
 from .models import Cliente, DetallePedido, Pedido
 
 
@@ -59,3 +60,19 @@ def notificar_producto_personalizado(sender, instance, created, **kwargs):
         mensaje=f"Categoría: {categoria} · Pedido #{instance.pedido_id}",
         enlace="/productos-pendientes",
     )
+
+
+@receiver(post_delete, sender=Pedido)
+def devolver_reserva_al_borrar(sender, instance, **kwargs):
+    """
+    Un pedido borrado devuelve al catálogo lo que tenía apartado.
+
+    Va en `post_delete` y no en la vista porque un pedido se borra desde varios
+    sitios —la API, el admin de Django, un comando— y lo que no se puede es que
+    la mercancía quede apartada para siempre a nombre de algo que ya no existe.
+
+    Funciona después del borrado porque `liberar_pedido` no lee las líneas: lee
+    los movimientos que este pedido escribió, y esos sobreviven. Es la ventaja
+    de que el origen sea una referencia floja y no una clave foránea en cascada.
+    """
+    liberar_pedido(instance)

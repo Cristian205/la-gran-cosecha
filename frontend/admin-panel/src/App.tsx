@@ -4,8 +4,10 @@ import { ProtectedRoute, RequierePermiso } from "./auth/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import { ClientsPage } from "./pages/ClientsPage";
 import { ContentPage } from "./pages/content/ContentPage";
+import { TiendaPage } from "./pages/tienda/TiendaPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { HelpPage } from "./pages/HelpPage";
+import { InventoryPage } from "./pages/inventory/InventoryPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { OrdersPage } from "./pages/orders/OrdersPage";
@@ -33,6 +35,14 @@ export default function App() {
             element={
               <RequierePermiso permiso="catalog.view_producto">
                 <ProductsPage />
+              </RequierePermiso>
+            }
+          />
+          <Route
+            path="/inventario"
+            element={
+              <RequierePermiso permiso="inventory.view_existencia">
+                <InventoryPage />
               </RequierePermiso>
             }
           />
@@ -73,6 +83,14 @@ export default function App() {
             element={
               <RequierePermiso permiso="content.view_promobanner">
                 <ContentPage />
+              </RequierePermiso>
+            }
+          />
+          <Route
+            path="/tienda"
+            element={
+              <RequierePermiso permiso="content.view_promobanner">
+                <TiendaPage />
               </RequierePermiso>
             }
           />

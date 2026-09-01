@@ -14,6 +14,7 @@ import {
 import { useEffect, useState } from "react";
 import { obtenerBeneficios } from "@/lib/datos";
 import type { BeneficioComercial } from "@/lib/tipos";
+import { Seccion, claseDeVariante } from "@/bloques/Seccion";
 
 const ICONOS: Record<BeneficioComercial["icono"], LucideIcon> = {
   truck: Truck,
@@ -26,7 +27,19 @@ const ICONOS: Record<BeneficioComercial["icono"], LucideIcon> = {
   users: Users,
 };
 
-export function PorQueElegirnos() {
+interface Props {
+  kicker?: string;
+  titulo?: string;
+  subtitulo?: string;
+  limite?: number;
+}
+
+export function PorQueElegirnos({
+  kicker = "Confianza",
+  titulo = "¿Por qué comprar con nosotros?",
+  subtitulo,
+  limite,
+}: Props) {
   const [beneficios, setBeneficios] = useState<BeneficioComercial[]>([]);
 
   useEffect(() => {
@@ -35,18 +48,13 @@ export function PorQueElegirnos() {
       .catch(() => setBeneficios([]));
   }, []);
 
-  if (beneficios.length === 0) return null;
+  const visibles = limite ? beneficios.slice(0, limite) : beneficios;
+  if (visibles.length === 0) return null;
 
   return (
-    <section className="seccion">
-      <div className="seccion-titulo">
-        <div>
-          <span className="seccion-kicker">Confianza</span>
-          <h2>¿Por qué comprar con nosotros?</h2>
-        </div>
-      </div>
+    <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo}>
       <div className="valores-grid">
-        {beneficios.map((b) => {
+        {visibles.map((b) => {
           const Icono = ICONOS[b.icono] ?? CheckCircle2;
           return (
             <article className="valor-card glass" key={b.id}>
@@ -59,6 +67,6 @@ export function PorQueElegirnos() {
           );
         })}
       </div>
-    </section>
+    </Seccion>
   );
 }

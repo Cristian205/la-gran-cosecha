@@ -5,7 +5,15 @@ import { RotateCcw } from "lucide-react";
 import { useCart } from "@/estado/carrito";
 import { useUltimoPedido } from "@/estado/ultimoPedido";
 
-export function RepetirPedido() {
+interface Props {
+  titulo?: string;
+  boton_texto?: string;
+}
+
+export function RepetirPedido({
+  titulo = "¿Pedimos lo mismo que la última vez?",
+  boton_texto = "Repetir pedido",
+}: Props) {
   const { items, fecha } = useUltimoPedido();
   const agregar = useCart((s) => s.agregar);
   const router = useRouter();
@@ -28,14 +36,14 @@ export function RepetirPedido() {
           <RotateCcw size={26} />
         </span>
         <div className="repetir-pedido-info">
-          <h3>¿Pedimos lo mismo que la última vez?</h3>
+          <h3>{titulo}</h3>
           <p>
             Tu pedido del {fechaTexto} tenía {items.length}{" "}
             {items.length === 1 ? "producto" : "productos"}
           </p>
         </div>
         <button className="btn btn-verde" onClick={repetirPedido}>
-          Repetir pedido
+          {boton_texto}
         </button>
       </div>
     </section>

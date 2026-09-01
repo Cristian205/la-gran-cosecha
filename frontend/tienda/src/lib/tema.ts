@@ -159,6 +159,13 @@ export function variablesDelTema(config: SiteConfig | null): string {
     reglas.push(`--superficie-rgb:${hexARgb(config.color_superficie).join(", ")}`);
   }
 
+  // Las del catálogo de tokens van ANTES que las derivadas del color de marca:
+  // si un negocio fija `--fondo` a mano, esa gana sobre la que sale de su
+  // color primario. Lo específico manda sobre lo calculado.
+  for (const [variable, valor] of Object.entries(config.variables_tema ?? {})) {
+    reglas.push(`${variable}:${valor}`);
+  }
+
   reglas.push(`--fuente-sitio:${FUENTES[config.fuente] ?? FUENTES.poppins}`);
   reglas.push(
     `--btn-radio:${RADIOS_BOTON[config.radio_boton] ?? RADIOS_BOTON.redondeado}`

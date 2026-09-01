@@ -130,6 +130,8 @@ export interface ProductoPayload {
   tipo_cantidad: string;
   permite_fraccion: boolean;
   estado_producto: boolean;
+  controla_stock: boolean;
+  codigo_barras: string;
   presentaciones: {
     id?: number | null;
     nombre_presentacion: string;

@@ -113,6 +113,18 @@ class DetallePedido(ModeloConTenant):
     precio_unitario = models.DecimalField(
         max_digits=12, decimal_places=2, default=Decimal("0.00")
     )
+
+    # Cómo se llamaba el producto cuando se vendió.
+    #
+    # El precio ya se congelaba —ver `save()`—, pero el nombre no: se leía por
+    # la clave foránea, así que renombrar un producto reescribía en silencio
+    # todas las facturas viejas que lo contenían. Una factura de hace seis meses
+    # no puede cambiar porque hoy alguien corrigiera una tilde.
+    #
+    # Es el mismo criterio de instantánea que `VersionPagina` aplica a la
+    # composición publicada, y por la misma razón: lo histórico se guarda como
+    # copia, nunca como referencia.
+    nombre_congelado = models.CharField(max_length=255, blank=True)
     subtotal = models.DecimalField(
         max_digits=12, decimal_places=2, editable=False, default=Decimal("0.00")
     )
@@ -174,13 +186,25 @@ class DetallePedido(ModeloConTenant):
         self.full_clean()
         if self.pk is None and self.presentacion:
             self.precio_unitario = self.presentacion.precio_unitario
+        if not self.nombre_congelado:
+            self.nombre_congelado = self.descripcion_actual()
         self.subtotal = self.calcular_subtotal()
         super().save(*args, **kwargs)
 
+    def descripcion_actual(self) -> str:
+        """Cómo se llama hoy lo que hay en esta línea, mire donde mire."""
+        if self.presentacion_id:
+            presentacion = self.presentacion
+            return (
+                f"{presentacion.producto.nombre_producto} "
+                f"({presentacion.nombre_presentacion})"
+            )
+        return self.nombre_personalizado or ""
+
     def __str__(self):
-        if self.presentacion:
-            return f"{self.cantidad} x {self.presentacion.producto.nombre_producto}"
-        return f"{self.cantidad} x {self.nombre_personalizado} (Manual)"
+        # El nombre congelado va primero: es cómo se vendió, que es lo que
+        # cuenta en una factura o en un histórico.
+        return f"{self.cantidad} x {self.nombre_congelado or self.descripcion_actual()}"
 
 
 # ==========================================================================

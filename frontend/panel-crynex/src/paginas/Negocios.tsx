@@ -1,135 +1,105 @@
-import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { api } from "../api/cliente";
-import type { Negocio, Plan } from "../api/tipos";
+/**
+ * El listado de clientes.
+ *
+ * La pantalla es casi toda tabla a propósito: aquí se viene a encontrar una
+ * empresa concreta entre muchas, no a leer indicadores. Las tres cifras de
+ * arriba son las que cambian lo que se busca —cuántas hay, cuántas están
+ * paradas, cuántas piden algo— y nada más.
+ */
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Building2 } from "lucide-react";
+import { usarPlataforma } from "../datos/plataforma";
+import { alertasDe, metricas } from "../datos/derivados";
+import { numero } from "../datos/formato";
+import { Aviso, Boton } from "../ui/basicos";
+import { TablaEmpresas } from "../componentes/TablaEmpresas";
+import { DialogoAltaNegocio } from "../componentes/DialogoAltaNegocio";
+import { tienda, type Plantilla } from "../api/tienda";
 
-const COLOR_ESTADO: Record<string, string> = {
-  ACTIVO: "ok",
-  PRUEBA: "aviso",
-  SUSPENDIDO: "malo",
-  ARCHIVADO: "neutro",
-};
-
-/** Las empresas que usan Crynex, y en qué plan está cada una. */
 export function Negocios() {
-  const [negocios, setNegocios] = useState<Negocio[]>([]);
-  const [planes, setPlanes] = useState<Plan[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [moviendo, setMoviendo] = useState<number | null>(null);
+  const { negocios, planes, suscripciones, cargando, error } = usarPlataforma();
+  const [parametros, setParametros] = useSearchParams();
+  const soloAtencion = parametros.get("filtro") === "atencion";
+  const [dandoAlta, setDandoAlta] = useState(false);
+  const [plantillas, setPlantillas] = useState<Plantilla[]>([]);
 
+  // Las plantillas solo hacen falta para el alta, así que se piden una vez y
+  // en silencio: que fallen no debe impedir ver la lista de clientes.
   useEffect(() => {
-    Promise.all([
-      api.get<Negocio[]>("/platform/tenants/"),
-      api.get<Plan[]>("/platform/plans/"),
-    ])
-      .then(([n, p]) => {
-        setNegocios(n);
-        setPlanes(p.filter((x) => x.activo));
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setCargando(false));
+    tienda.plantillas().then(setPlantillas).catch(() => setPlantillas([]));
   }, []);
 
-  async function cambiarPlan(negocio: Negocio, slug: string) {
-    setMoviendo(negocio.id);
-    setError(null);
-    try {
-      await api.post(`/platform/tenants/${negocio.id}/cambiar-plan/`, { plan: slug });
-      const plan = planes.find((p) => p.slug === slug)!;
-      setNegocios((previos) =>
-        previos.map((n) =>
-          n.id === negocio.id
-            ? { ...n, plan: { slug: plan.slug, nombre: plan.nombre } }
-            : n
-        )
-      );
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setMoviendo(null);
-    }
-  }
-
-  if (cargando) {
-    return (
-      <div className="cargando">
-        <Loader2 className="girando" size={18} /> Cargando empresas…
-      </div>
-    );
-  }
+  const cifras = useMemo(
+    () => metricas(negocios, planes, suscripciones),
+    [negocios, planes, suscripciones]
+  );
+  const alertas = useMemo(
+    () => alertasDe(negocios, planes, suscripciones),
+    [negocios, planes, suscripciones]
+  );
+  const conAlerta = new Set(alertas.map((a) => a.negocioId)).size;
 
   return (
-    <section>
-      <header className="cabecera-pagina">
+    <>
+      <header className="titulo-pagina titulo-pagina--con-resumen">
         <div>
           <h1>Empresas</h1>
-          <p className="ayuda">
-            Cada una tiene su catálogo, sus pedidos y sus clientes, completamente
-            separados. Desde aquí solo se decide su plan.
+          <p className="tenue">
+            Cada cliente tiene su catálogo, sus pedidos y su gente, completamente
+            separados del resto. Desde aquí se decide su plan y su estado.
           </p>
         </div>
+        <div className="ficha__acciones">
+          <Boton
+            variante="primario"
+            icono={<Building2 size={14} />}
+            onClick={() => setDandoAlta(true)}
+          >
+            Nueva empresa
+          </Boton>
+        </div>
+        <dl className="resumen-linea">
+          <div>
+            <dt>Total</dt>
+            <dd>{numero(cifras.empresas)}</dd>
+          </div>
+          <div>
+            <dt>Operativas</dt>
+            <dd>{numero(cifras.operativas)}</dd>
+          </div>
+          <div>
+            <dt>Con avisos</dt>
+            <dd className={conAlerta ? "es-aviso" : undefined}>{numero(conAlerta)}</dd>
+          </div>
+        </dl>
       </header>
 
-      {error && <p className="error">{error}</p>}
+      {error && <Aviso>{error}</Aviso>}
 
-      <div className="scroll-tabla">
-        <table className="tabla">
-          <thead>
-            <tr>
-              <th>Empresa</th>
-              <th>Estado</th>
-              <th>Dominios</th>
-              <th className="num">Usuarios</th>
-              <th>Plan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {negocios.map((negocio) => (
-              <tr key={negocio.id}>
-                <td>
-                  <span className="negocio-nombre">{negocio.nombre}</span>
-                  <code>{negocio.slug}</code>
-                </td>
-                <td>
-                  <span className={`pastilla ${COLOR_ESTADO[negocio.estado] ?? "neutro"}`}>
-                    {negocio.estado.toLowerCase()}
-                  </span>
-                </td>
-                <td className="dominios">
-                  {negocio.dominios.length ? (
-                    negocio.dominios.slice(0, 2).map((d) => <code key={d}>{d}</code>)
-                  ) : (
-                    <span className="ayuda">sin dominio</span>
-                  )}
-                  {negocio.dominios.length > 2 && (
-                    <span className="ayuda">+{negocio.dominios.length - 2}</span>
-                  )}
-                </td>
-                <td className="num">{negocio.usuarios}</td>
-                <td>
-                  <select
-                    value={negocio.plan?.slug ?? ""}
-                    disabled={moviendo === negocio.id}
-                    onChange={(e) => cambiarPlan(negocio, e.target.value)}
-                  >
-                    {!negocio.plan && <option value="">— sin plan —</option>}
-                    {planes.map((plan) => (
-                      <option key={plan.slug} value={plan.slug}>
-                        {plan.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {negocios.length === 0 && (
-        <p className="ayuda">Todavía no hay ninguna empresa dada de alta.</p>
+      {soloAtencion && (
+        <p className="filtro-activo">
+          Mostrando solo las empresas que requieren atención.
+          <button type="button" onClick={() => setParametros({})}>
+            Ver todas
+          </button>
+        </p>
       )}
-    </section>
+
+      <TablaEmpresas
+        negocios={negocios}
+        cargando={cargando}
+        soloAtencion={soloAtencion}
+        plantillas={plantillas}
+      />
+
+      {dandoAlta && (
+        <DialogoAltaNegocio
+          plantillas={plantillas}
+          onCerrar={() => setDandoAlta(false)}
+          onCreado={() => setDandoAlta(false)}
+        />
+      )}
+    </>
   );
 }

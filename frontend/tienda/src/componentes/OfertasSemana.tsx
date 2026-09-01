@@ -12,6 +12,7 @@ import {
   formatoPrecio,
   pasoCantidad,
 } from "@/lib/utiles";
+import { Seccion, claseDeVariante } from "@/bloques/Seccion";
 
 function tiempoRestante(fechaFin: string): string | null {
   const restante = new Date(fechaFin).getTime() - Date.now();
@@ -124,7 +125,23 @@ function TarjetaOferta({ oferta }: { oferta: OfertaProducto }) {
   );
 }
 
-export function OfertasSemana() {
+const VARIANTES = ["rejilla", "carrusel"] as const;
+
+interface Props {
+  kicker?: string;
+  titulo?: string;
+  subtitulo?: string;
+  limite?: number;
+  variante?: string;
+}
+
+export function OfertasSemana({
+  kicker = "Por tiempo limitado",
+  titulo = "Ofertas de la semana",
+  subtitulo = "Precios que no se repiten",
+  limite,
+  variante,
+}: Props) {
   const [ofertas, setOfertas] = useState<OfertaProducto[]>([]);
 
   useEffect(() => {
@@ -133,22 +150,21 @@ export function OfertasSemana() {
       .catch(() => setOfertas([]));
   }, []);
 
-  if (ofertas.length === 0) return null;
+  const visibles = limite ? ofertas.slice(0, limite) : ofertas;
+  if (visibles.length === 0) return null;
 
   return (
-    <section className="seccion ofertas-seccion">
-      <div className="seccion-titulo">
-        <div>
-          <span className="seccion-kicker">Por tiempo limitado</span>
-          <h2>Ofertas de la semana</h2>
-        </div>
-        <span className="linea">Precios que no se repiten</span>
-      </div>
-      <div className="grid">
-        {ofertas.map((o) => (
+    <Seccion
+      kicker={kicker}
+      titulo={titulo}
+      subtitulo={subtitulo}
+      className="ofertas-seccion"
+    >
+      <div className={`grid ${claseDeVariante(variante, VARIANTES, "grid", "rejilla")}`}>
+        {visibles.map((o) => (
           <TarjetaOferta key={o.id} oferta={o} />
         ))}
       </div>
-    </section>
+    </Seccion>
   );
 }

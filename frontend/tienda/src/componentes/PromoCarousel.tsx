@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { obtenerBanners } from "@/lib/datos";
 import type { PromoBanner } from "@/lib/tipos";
+import { claseDeVariante } from "@/bloques/Seccion";
 
 const INTERVALO_MS = 6000;
 
@@ -19,7 +20,18 @@ const SLIDE_RESPALDO: PromoBanner = {
   orden: 0,
 };
 
-export function PromoCarousel() {
+const VARIANTES = ["completo", "contenido"] as const;
+
+interface Props {
+  /** Rotar solo. Apagarlo deja el control al visitante, que es lo que piden
+   *  las tiendas con una sola banderola importante. */
+  autoplay?: boolean;
+  /** Segundos por banderola. Se acota para que nadie deje 0 y se dispare. */
+  segundos?: number;
+  variante?: string;
+}
+
+export function PromoCarousel({ autoplay = true, segundos, variante }: Props) {
   const [slides, setSlides] = useState<PromoBanner[]>([SLIDE_RESPALDO]);
   const [indice, setIndice] = useState(0);
 
@@ -48,16 +60,26 @@ export function PromoCarousel() {
   }, [total]);
 
   useEffect(() => {
-    if (total <= 1) return;
-    const id = setInterval(siguiente, INTERVALO_MS);
+    if (total <= 1 || !autoplay) return;
+    // Un valor fuera de rango no puede convertir el carrusel en un parpadeo ni
+    // en algo que no rota: el constructor acepta el numero, esto lo acota.
+    const espera = Math.min(30, Math.max(2, segundos ?? INTERVALO_MS / 1000)) * 1000;
+    const id = setInterval(siguiente, espera);
     return () => clearInterval(id);
-  }, [siguiente, total]);
+  }, [siguiente, total, autoplay, segundos]);
 
   const slide = slides[indice] ?? SLIDE_RESPALDO;
   const esExterno = slide.cta_href.startsWith("http");
 
   return (
-    <section className="hero-carrusel">
+    <section
+      className={`hero-carrusel ${claseDeVariante(
+        variante,
+        VARIANTES,
+        "hero-carrusel",
+        "completo"
+      )}`}
+    >
       {slide.imagen_url && (
         <div className="slide-bg">
           <img src={slide.imagen_url} alt="" />

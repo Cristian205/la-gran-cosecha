@@ -1,212 +1,246 @@
-import { Check, Loader2, Minus, Power } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { api } from "../api/cliente";
-import type { Permiso, Plan } from "../api/tipos";
-
 /**
  * La matriz: qué concede cada plan.
  *
- * Es la pantalla central del panel y la razón de que exista. Se dibuja como
+ * Es la pantalla que decide qué puede hacer cada cliente y se dibuja como
  * tabla —permisos en filas, planes en columnas— porque la pregunta que responde
  * es comparativa: no "¿qué tiene Growth?" sino "¿qué diferencia hay entre
  * Starter y Growth?". Una lista por plan obligaría a recordar la anterior.
  *
- * Las celdas se guardan al pulsarlas, sin botón de guardar. Es un panel
- * interno de poca gente y el cambio es de un solo dato; un formulario con
- * confirmación solo añadiría un paso donde no hay ambigüedad.
+ * Las celdas se guardan al pulsarlas, sin botón de guardar. Es un panel interno
+ * de poca gente y el cambio es de un solo dato; un formulario con confirmación
+ * solo añadiría un paso donde no hay ambigüedad. Retirar un permiso de Crynex
+ * entero sí se confirma: eso lo apaga en todas las empresas a la vez.
  */
-export function Matriz() {
-  const [permisos, setPermisos] = useState<Permiso[]>([]);
-  const [planes, setPlanes] = useState<Plan[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [guardando, setGuardando] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+import { Fragment, useMemo, useState } from "react";
+import { Check, Minus, Power, Search } from "lucide-react";
+import type { Permiso } from "../api/tipos";
+import { usarPlataforma } from "../datos/plataforma";
+import { moneda } from "../datos/formato";
+import { Aviso, Boton, EstadoVacio, Esqueleto } from "../ui/basicos";
+import { Confirmar } from "../ui/Modal";
+import { usarAviso } from "../ui/Notificaciones";
 
-  useEffect(() => {
-    Promise.all([
-      api.get<Permiso[]>("/platform/permissions/"),
-      api.get<Plan[]>("/platform/plans/"),
-    ])
-      .then(([p, pl]) => {
-        setPermisos(p);
-        setPlanes(pl);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setCargando(false));
-  }, []);
+export function Matriz() {
+  const { permisos, planes, cargando, error, guardarPlan, guardarPermiso } =
+    usarPlataforma();
+  const avisar = usarAviso();
+  const [texto, setTexto] = useState("");
+  const [guardandoCelda, setGuardandoCelda] = useState<string | null>(null);
+  const [retirando, setRetirando] = useState<Permiso | null>(null);
+  const [trabajando, setTrabajando] = useState(false);
 
   /** Los permisos agrupados por módulo, que es como se leen. */
   const porModulo = useMemo(() => {
+    const busqueda = texto.trim().toLowerCase();
     const grupos = new Map<string, Permiso[]>();
     for (const permiso of permisos) {
+      if (
+        busqueda &&
+        !`${permiso.etiqueta} ${permiso.codename} ${permiso.modulo}`
+          .toLowerCase()
+          .includes(busqueda)
+      )
+        continue;
       if (!grupos.has(permiso.modulo)) grupos.set(permiso.modulo, []);
       grupos.get(permiso.modulo)!.push(permiso);
     }
     return [...grupos.entries()];
-  }, [permisos]);
+  }, [permisos, texto]);
 
-  async function alternarCelda(plan: Plan, codename: string) {
-    const clave = `${plan.id}:${codename}`;
+  async function alternarCelda(planId: number, codename: string) {
+    const plan = planes.find((p) => p.id === planId);
+    if (!plan) return;
+    const clave = `${planId}:${codename}`;
     const incluido = plan.permisos.includes(codename);
     const siguiente = incluido
       ? plan.permisos.filter((c) => c !== codename)
       : [...plan.permisos, codename];
 
-    setGuardando(clave);
-    setError(null);
-    // Se pinta antes de que el servidor conteste: la respuesta tarda poco y
-    // ver la celda cambiar al instante es lo que hace usable una tabla de 45
-    // casillas.
-    setPlanes((previos) =>
-      previos.map((p) => (p.id === plan.id ? { ...p, permisos: siguiente } : p))
-    );
-
+    setGuardandoCelda(clave);
     try {
-      const actualizado = await api.patch<Plan>(`/platform/plans/${plan.id}/`, {
-        permisos: siguiente,
-      });
-      setPlanes((previos) =>
-        previos.map((p) => (p.id === plan.id ? actualizado : p))
-      );
+      await guardarPlan(plan.id, { permisos: siguiente });
     } catch (e) {
-      // Se revierte: dejar la celda cambiada mentiría sobre lo que hay guardado.
-      setPlanes((previos) =>
-        previos.map((p) => (p.id === plan.id ? plan : p))
-      );
-      setError((e as Error).message);
+      avisar((e as Error).message, "malo");
     } finally {
-      setGuardando(null);
+      setGuardandoCelda(null);
     }
   }
 
-  async function alternarPermiso(permiso: Permiso) {
-    setGuardando(permiso.codename);
-    setError(null);
+  async function retirar(permiso: Permiso, activo: boolean) {
+    setTrabajando(true);
     try {
-      const actualizado = await api.patch<Permiso>(
-        `/platform/permissions/${permiso.id}/`,
-        { activo: !permiso.activo }
+      await guardarPermiso(permiso.id, { activo });
+      avisar(
+        activo
+          ? `${permiso.etiqueta} vuelve a estar disponible.`
+          : `${permiso.etiqueta} queda retirado de toda la plataforma.`
       );
-      setPermisos((previos) =>
-        previos.map((p) => (p.id === permiso.id ? actualizado : p))
-      );
+      setRetirando(null);
     } catch (e) {
-      setError((e as Error).message);
+      avisar((e as Error).message, "malo");
     } finally {
-      setGuardando(null);
+      setTrabajando(false);
     }
   }
 
   if (cargando) {
     return (
-      <div className="cargando">
-        <Loader2 className="girando" size={18} /> Cargando la matriz…
+      <div className="marco-tabla">
+        <div className="esqueleto-tabla">
+          {Array.from({ length: 8 }, (_, i) => (
+            <div key={i} className="esqueleto-tabla__fila">
+              <Esqueleto alto={12} ancho="30%" />
+              <Esqueleto alto={22} ancho={26} radio={7} />
+              <Esqueleto alto={22} ancho={26} radio={7} />
+              <Esqueleto alto={22} ancho={26} radio={7} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <section>
-      <header className="cabecera-pagina">
+    <>
+      <header className="titulo-pagina titulo-pagina--con-resumen">
         <div>
-          <h1>Planes y permisos</h1>
-          <p className="ayuda">
-            Qué puede hacer cada empresa según el plan que tenga contratado.
-            Un permiso desactivado desaparece de todos los negocios, sea cual
-            sea su plan.
+          <h1>Permisos</h1>
+          <p className="tenue">
+            Qué concede cada plan. El plan marca el techo de una empresa; quién
+            hace qué dentro de ella lo reparte su propio panel. Un permiso
+            retirado desaparece de todos los negocios, sea cual sea su plan.
           </p>
+        </div>
+        <div className="filtros__buscar filtros__buscar--suelto">
+          <Search size={15} />
+          <input
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="Filtrar permisos…"
+            aria-label="Filtrar permisos"
+          />
         </div>
       </header>
 
-      {error && <p className="error">{error}</p>}
+      {error && <Aviso>{error}</Aviso>}
 
-      <div className="scroll-tabla">
-        <table className="matriz">
-          <thead>
-            <tr>
-              <th className="col-permiso">Permiso</th>
-              {planes.map((plan) => (
-                <th key={plan.id} className="col-plan">
-                  <span className="plan-nombre">{plan.nombre}</span>
-                  <span className="plan-meta">
-                    {Number(plan.precio_mensual) === 0
-                      ? "Gratis"
-                      : `$${Number(plan.precio_mensual).toLocaleString("es-CO")}`}
-                  </span>
-                  <span className="plan-meta">
-                    {plan.negocios} {plan.negocios === 1 ? "empresa" : "empresas"}
-                    {plan.es_predeterminado && " · por defecto"}
-                  </span>
-                </th>
-              ))}
-              <th className="col-estado">En Crynex</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {porModulo.map(([modulo, delModulo]) => (
-              <>
-                <tr key={modulo} className="fila-modulo">
-                  <td colSpan={planes.length + 2}>{modulo}</td>
-                </tr>
-
-                {delModulo.map((permiso) => (
-                  <tr
-                    key={permiso.id}
-                    className={permiso.activo ? undefined : "permiso-inactivo"}
-                  >
-                    <td className="col-permiso">
-                      <span className="permiso-etiqueta">{permiso.etiqueta}</span>
-                      <code>{permiso.codename}</code>
-                    </td>
-
-                    {planes.map((plan) => {
-                      const incluido = plan.permisos.includes(permiso.codename);
-                      const clave = `${plan.id}:${permiso.codename}`;
-                      return (
-                        <td key={plan.id} className="celda">
-                          <button
-                            type="button"
-                            className={`casilla ${incluido ? "si" : "no"}`}
-                            onClick={() => alternarCelda(plan, permiso.codename)}
-                            disabled={guardando === clave || !permiso.activo}
-                            aria-pressed={incluido}
-                            aria-label={`${permiso.etiqueta} en ${plan.nombre}`}
-                            title={
-                              permiso.activo
-                                ? undefined
-                                : "Este permiso está retirado de Crynex"
-                            }
-                          >
-                            {incluido ? <Check size={15} /> : <Minus size={13} />}
-                          </button>
-                        </td>
-                      );
-                    })}
-
-                    <td className="col-estado">
-                      <button
-                        type="button"
-                        className={`interruptor ${permiso.activo ? "on" : "off"}`}
-                        onClick={() => alternarPermiso(permiso)}
-                        disabled={guardando === permiso.codename}
-                      >
-                        <Power size={13} />
-                        {permiso.activo ? "Activo" : "Retirado"}
-                      </button>
-                    </td>
-                  </tr>
+      {porModulo.length === 0 ? (
+        <EstadoVacio titulo="Ningún permiso coincide" accion={<Boton onClick={() => setTexto("")}>Quitar el filtro</Boton>}>
+          Prueba con otro término o con el nombre de un módulo.
+        </EstadoVacio>
+      ) : (
+        <div className="marco-tabla">
+          <table className="tabla matriz">
+            <thead>
+              <tr>
+                <th className="col-permiso">Permiso</th>
+                {planes.map((plan) => (
+                  <th key={plan.id} className="col-plan">
+                    <span className="col-plan__nombre">{plan.nombre}</span>
+                    <span className="col-plan__meta">
+                      {Number(plan.precio_mensual) === 0
+                        ? "Gratis"
+                        : `${moneda(plan.precio_mensual, plan.moneda)}/mes`}
+                    </span>
+                    <span className="col-plan__meta">
+                      {plan.negocios} {plan.negocios === 1 ? "empresa" : "empresas"}
+                      {plan.es_predeterminado && " · por defecto"}
+                    </span>
+                  </th>
                 ))}
-              </>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                <th className="col-estado">En Crynex</th>
+              </tr>
+            </thead>
 
-      <p className="ayuda pie-tabla">
-        Los cambios se guardan al pulsar. Lo que marques aquí decide qué
-        permisos puede repartir cada empresa entre su propio equipo.
+            <tbody>
+              {porModulo.map(([modulo, delModulo]) => (
+                <Fragment key={modulo}>
+                  <tr className="fila-modulo">
+                    <td colSpan={planes.length + 2}>{modulo}</td>
+                  </tr>
+
+                  {delModulo.map((permiso) => (
+                    <tr
+                      key={permiso.id}
+                      className={permiso.activo ? undefined : "esta-retirado"}
+                    >
+                      <td className="col-permiso">
+                        <span className="permiso__etiqueta">{permiso.etiqueta}</span>
+                        <code>{permiso.codename}</code>
+                      </td>
+
+                      {planes.map((plan) => {
+                        const incluido = plan.permisos.includes(permiso.codename);
+                        const clave = `${plan.id}:${permiso.codename}`;
+                        return (
+                          <td key={plan.id} className="celda">
+                            <button
+                              type="button"
+                              className={`casilla ${incluido ? "esta-marcada" : ""}`}
+                              onClick={() => alternarCelda(plan.id, permiso.codename)}
+                              disabled={guardandoCelda === clave || !permiso.activo}
+                              aria-pressed={incluido}
+                              aria-label={`${permiso.etiqueta} en ${plan.nombre}`}
+                              title={
+                                permiso.activo
+                                  ? undefined
+                                  : "Este permiso está retirado de Crynex"
+                              }
+                            >
+                              {incluido ? <Check size={14} /> : <Minus size={12} />}
+                            </button>
+                          </td>
+                        );
+                      })}
+
+                      <td className="col-estado">
+                        <button
+                          type="button"
+                          className={`interruptor ${permiso.activo ? "esta-activo" : ""}`}
+                          onClick={() =>
+                            permiso.activo ? setRetirando(permiso) : retirar(permiso, true)
+                          }
+                        >
+                          <Power size={12} />
+                          {permiso.activo ? "Activo" : "Retirado"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <p className="nota-seccion">
+        Los cambios en las casillas se guardan al pulsar.
       </p>
-    </section>
+
+      {retirando && (
+        <Confirmar
+          titulo={`Retirar ${retirando.etiqueta}`}
+          afecta="Todas las empresas de Crynex"
+          etiquetaAccion="Retirar el permiso"
+          peligrosa
+          trabajando={trabajando}
+          onCerrar={() => setRetirando(null)}
+          onConfirmar={() => retirar(retirando, false)}
+          consecuencias={
+            <>
+              <p>
+                Desaparece de todos los negocios a la vez, tengan el plan que
+                tengan, y quien lo estuviera usando dejará de ver ese módulo.
+              </p>
+              <p className="tenue">
+                No se borra nada: los planes conservan la casilla y volver a
+                activarlo lo restituye tal cual.
+              </p>
+            </>
+          }
+        />
+      )}
+    </>
   );
 }

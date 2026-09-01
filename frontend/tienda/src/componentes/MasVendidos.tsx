@@ -4,38 +4,52 @@ import { useEffect, useState } from "react";
 import { obtenerProductosMasVendidos } from "@/lib/datos";
 import type { Producto } from "@/lib/tipos";
 import { ProductCard } from "@/componentes/ProductCard";
+import { Seccion, claseDeVariante } from "@/bloques/Seccion";
+
+const VARIANTES = ["rejilla", "carrusel"] as const;
 
 interface Props {
-  /** Los que ya vienen renderizados del servidor. Se usan como estado inicial
-   *  para que el inicio no parpadee ni vuelva a pedirlos al hidratar. */
-  iniciales?: Producto[];
+  /** Lo que el lienzo resolvio en el servidor. Se usa como estado inicial para
+   *  que el inicio no parpadee ni vuelva a pedirlo al hidratar. */
+  datos?: Producto[];
+  /** Cuantos mostrar. Lo fija el bloque desde el constructor. */
+  limite?: number;
+  kicker?: string;
+  titulo?: string;
+  subtitulo?: string;
+  variante?: string;
 }
 
-export function MasVendidos({ iniciales = [] }: Props) {
-  const [productos, setProductos] = useState<Producto[]>(iniciales);
+export function MasVendidos({
+  datos = [],
+  limite,
+  kicker = "Los preferidos",
+  titulo = "Lo que más piden los negocios como el tuyo",
+  subtitulo = "Disponibilidad confirmada",
+  variante,
+}: Props) {
+  const [productos, setProductos] = useState<Producto[]>(datos);
 
   useEffect(() => {
+    // Solo se vuelve a pedir si el servidor no los trajo: con el motor, la
+    // home los resuelve antes de pintar y repetir la peticion al hidratar
+    // seria trabajo tirado.
+    if (datos.length > 0) return;
     obtenerProductosMasVendidos()
       .then(setProductos)
       .catch(() => setProductos([]));
-  }, []);
+  }, [datos.length]);
 
-  if (productos.length === 0) return null;
+  const visibles = limite ? productos.slice(0, limite) : productos;
+  if (visibles.length === 0) return null;
 
   return (
-    <section className="seccion">
-      <div className="seccion-titulo">
-        <div>
-          <span className="seccion-kicker">Los preferidos</span>
-          <h2>Lo que más piden los negocios como el tuyo</h2>
-        </div>
-        <span className="linea">Disponibilidad confirmada</span>
-      </div>
-      <div className="grid">
-        {productos.map((p) => (
+    <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo}>
+      <div className={`grid ${claseDeVariante(variante, VARIANTES, "grid", "rejilla")}`}>
+        {visibles.map((p) => (
           <ProductCard key={p.id} producto={p} />
         ))}
       </div>
-    </section>
+    </Seccion>
   );
 }

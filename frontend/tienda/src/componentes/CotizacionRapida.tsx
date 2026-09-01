@@ -6,7 +6,19 @@ import { useSiteConfig } from "@/componentes/CapaCliente";
 import { whatsappHref } from "@/lib/utiles";
 import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
 
-export function CotizacionRapida() {
+interface Props {
+  titulo?: string;
+  texto?: string;
+}
+
+/**
+ * El bloque manda; la configuracion del negocio es el respaldo.
+ *
+ * Durante el traslado al motor conviven los dos: las paginas ya compuestas
+ * traen el texto en sus propiedades y las que aun no, lo siguen leyendo de
+ * `StoreSettings`. Cuando esas columnas se retiren, el `??` cae solo.
+ */
+export function CotizacionRapida({ titulo, texto }: Props) {
   const { config } = useSiteConfig();
 
   return (
@@ -16,8 +28,8 @@ export function CotizacionRapida() {
           <ClipboardList size={26} />
         </span>
         <div className="cotizacion-info">
-          <h3>{config.cotizacion_titulo}</h3>
-          <p>{config.cotizacion_texto}</p>
+          <h3>{titulo || config.cotizacion_titulo}</h3>
+          <p>{texto || config.cotizacion_texto}</p>
         </div>
         <div className="cotizacion-acciones">
           <Link className="btn btn-outline" href="/contacto">

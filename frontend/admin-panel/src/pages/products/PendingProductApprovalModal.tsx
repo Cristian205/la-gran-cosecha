@@ -90,6 +90,10 @@ export function PendingProductApprovalModal({
       unidad_base: unidadBase === "" ? null : Number(unidadBase),
       tipo_cantidad: tipoCantidad,
       permite_fraccion: permiteFraccion,
+      // Nace sin control de existencias: nadie ha contado todavia cuantas
+      // hay de un producto que acaba de existir.
+      controla_stock: false,
+      codigo_barras: "",
       estado_producto: true,
       presentaciones: presValidas.map((p) => ({
         nombre_presentacion: p.nombre_presentacion.trim(),

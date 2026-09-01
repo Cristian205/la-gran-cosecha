@@ -29,8 +29,11 @@
   --radio: 20px;
   --radio-lg: 28px;
 
-  --sombra: 0 10px 34px rgba(6, 46, 26, 0.1);
-  --sombra-lg: 0 24px 60px rgba(6, 46, 26, 0.18);
+  /* La fuerza es un token: 0 deja la tienda plana, 1.5 la marca. Se multiplica
+     la opacidad en vez de tener tres juegos de sombras escritos. */
+  --sombra-fuerza: 1;
+  --sombra: 0 10px 34px rgba(6, 46, 26, calc(0.1 * var(--sombra-fuerza)));
+  --sombra-lg: 0 24px 60px rgba(6, 46, 26, calc(0.18 * var(--sombra-fuerza)));
 
   /* Editables desde Admin → Contenido → Apariencia (ver theming.ts) */
   --superficie-rgb: 255, 255, 255;
@@ -49,7 +52,13 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; font-size: 17px; }
+/* El tamano de todo el texto sale de aqui: el resto de la hoja usa `rem`, asi
+   que mover esta raiz agranda o encoge la tienda entera de forma coherente.
+   Es lo que hace posible un "texto grande" sin revisar doscientas reglas. */
+html {
+  scroll-behavior: smooth;
+  font-size: calc(var(--fuente-base, 16px) * var(--fuente-escala, 1));
+}
 
 body {
   margin: 0;
@@ -68,8 +77,15 @@ button { font-family: inherit; cursor: pointer; }
 input, select, textarea { font-family: inherit; }
 img { max-width: 100%; display: block; }
 
+h1, h2, h3 {
+  font-weight: var(--titulo-peso, 800);
+  /* Solo los titulos, encima de la escala general: hay tiendas que quieren el
+     texto normal y los titulares grandes, y al reves. */
+  font-size: calc(1em * var(--titulo-escala, 1));
+}
+
 .contenedor {
-  max-width: 1440px;
+  max-width: var(--contenedor-ancho, 1440px);
   margin: 0 auto;
   padding: 0 1.5rem;
 }
@@ -148,10 +164,18 @@ img { max-width: 100%; display: block; }
   align-items: center;
   gap: 1.2rem;
   padding: 0.85rem 1.5rem;
-  background: linear-gradient(120deg, rgba(6, 46, 26, 0.62), rgba(10, 61, 35, 0.58) 55%, rgba(6, 46, 26, 0.62));
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  color: white;
+  /* Los colores salen de los tokens del tema. Antes estaban escritos aqui,
+     que es por lo que "cambiar el color de la barra" no era posible sin tocar
+     esta hoja. El fallback deja la tienda igual si un token falta. */
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--navbar-fondo, #062e1a) calc(var(--navbar-opacidad, 0.62) * 100%), transparent),
+    color-mix(in srgb, var(--navbar-fondo-2, #0a3d23) calc(var(--navbar-opacidad, 0.62) * 100%), transparent) 55%,
+    color-mix(in srgb, var(--navbar-fondo, #062e1a) calc(var(--navbar-opacidad, 0.62) * 100%), transparent)
+  );
+  backdrop-filter: blur(var(--navbar-desenfoque, 18px)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--navbar-desenfoque, 18px)) saturate(160%);
+  color: var(--navbar-texto, white);
   transition: padding 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
 }
 .navbar::after {
@@ -884,7 +908,7 @@ img { max-width: 100%; display: block; }
 }
 
 /* ---------- Chips de categoría + grid de productos ---------- */
-.seccion { padding: 1rem 0 2.5rem; }
+.seccion { padding: 1rem 0 var(--seccion-espacio, 2.5rem); }
 .seccion-titulo {
   display: flex;
   align-items: baseline;
@@ -1955,8 +1979,12 @@ img { max-width: 100%; display: block; }
 .footer {
   position: relative;
   margin-top: 3rem;
-  background: linear-gradient(180deg, var(--tinta), var(--verde-900));
-  color: rgba(255, 255, 255, 0.82);
+  background: linear-gradient(
+    180deg,
+    var(--footer-fondo, var(--tinta)),
+    color-mix(in srgb, var(--footer-fondo, var(--verde-900)) 85%, black)
+  );
+  color: color-mix(in srgb, var(--footer-texto, white) 82%, transparent);
 }
 /* Curva orgánica en el borde superior: separa el pie del contenido sin una
    línea dura, guiño al carácter agrícola sin llenar de ilustraciones. */
@@ -2562,3 +2590,195 @@ img { max-width: 100%; display: block; }
   .navbar .marca { font-size: 0.88rem; gap: 0.4rem; }
   .navbar .logo-circ { width: 32px; height: 32px; }
 }
+
+/* --------------------------------------------------------------------------
+ * Visibilidad por dispositivo — la decide el constructor, la aplica el CSS.
+ *
+ * El servidor no sabe con que pantalla viene el visitante, asi que el HTML
+ * lleva los tres casos y aqui se ocultan. Los cortes son los mismos que usa el
+ * resto de la hoja: cambiarlos solo aqui daria una visibilidad que no coincide
+ * con como se reordena la pagina.
+ * -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .oculto-movil {
+    display: none !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .oculto-tablet {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .oculto-escritorio {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+ * VARIANTES DE BLOQUE
+ *
+ * Cada variante que el catalogo declara tiene que verse, o el desplegable del
+ * constructor promete algo que no ocurre. Se implementan como una clase sobre
+ * la rejilla que el bloque ya usaba, para no duplicar la maqueta: la variante
+ * por defecto no anade nada y solo se escribe lo que cambia.
+ * ========================================================================== */
+
+/* --- carrusel: la misma rejilla, en una fila que se desliza --------------- */
+.grid--carrusel,
+.testi-grid--carrusel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  /* El padding compensa la sombra de las tarjetas, que si no se recorta al
+     salir del area con scroll. */
+  padding: 0.4rem 0.2rem 1rem;
+  margin: -0.4rem -0.2rem 0;
+  gap: 1.2rem;
+  scrollbar-width: thin;
+}
+
+.grid--carrusel > *,
+.testi-grid--carrusel > * {
+  flex: 0 0 clamp(230px, 24vw, 290px);
+  scroll-snap-align: start;
+}
+
+/* --- categorias en tiras: horizontal y compacto -------------------------- */
+.categorias-grid--tiras {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.8rem;
+  gap: 0.8rem;
+  scrollbar-width: thin;
+}
+
+.categorias-grid--tiras > * {
+  flex: 0 0 clamp(120px, 15vw, 160px);
+  scroll-snap-align: start;
+}
+
+/* --- insignias en tarjetas: cada una con su caja ------------------------- */
+.trust-strip--tarjetas {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0;
+}
+
+.trust-strip--tarjetas .trust-item {
+  background: var(--superficie);
+  border: 1px solid var(--borde, rgba(0, 0, 0, 0.07));
+  border-radius: var(--radio);
+  padding: 1rem 1.1rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+/* --- carrusel dentro del contenedor, no a sangre ------------------------- */
+.hero-carrusel--contenido {
+  max-width: 1200px;
+  margin-inline: auto;
+  border-radius: var(--radio-lg);
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid--carrusel,
+  .testi-grid--carrusel,
+  .categorias-grid--tiras {
+    scroll-behavior: auto;
+  }
+}
+
+/* ==========================================================================
+ * MODO EDITOR
+ *
+ * Solo se aplica cuando la tienda va dentro del constructor (`?editor=1`). Un
+ * visitante no carga nada de esto, y por eso las reglas cuelgan de
+ * `.capa-editor`: sin ese contenedor no existen.
+ * ========================================================================== */
+
+/* En el editor no se navega: los enlaces se ven, pero llevar a otra pagina
+   mientras se compone seria perder el trabajo de vista. */
+.capa-editor a,
+.capa-editor button {
+  cursor: default;
+}
+
+.bloque-editable {
+  position: relative;
+  /* La transicion es del contorno, no del contenido: mover el bloque no puede
+     costar un reflow de la seccion entera. */
+  transition: outline-color .12s ease;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+}
+
+.bloque-editable:hover {
+  outline-color: rgba(59, 130, 246, .45);
+}
+
+/* La seccion elegida en el panel. El atributo lo pone la capa, asi que una
+   sola regla sirve para las doce. */
+.capa-editor[data-elegido] .bloque-editable[data-bloque] {
+  outline-color: transparent;
+}
+
+.capa-editor .bloque-editable.esta-elegido,
+.capa-editor[data-elegido] .bloque-editable:hover {
+  outline-color: rgba(59, 130, 246, .45);
+}
+
+.bloque-editable::after {
+  content: attr(data-etiqueta);
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  padding: 2px 8px;
+  border-radius: 0 0 6px 0;
+  background: #2563eb;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+
+.bloque-editable:hover::after {
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Producto agotado
+
+   La imagen se apaga y una cinta lo dice. Se hace con opacidad y no ocultando
+   la tarjeta porque el cliente tiene que poder VER que el producto existe y
+   volver por él: un catálogo que esconde lo agotado parece un catálogo más
+   pobre, y además desconcierta a quien llega desde un enlace.
+   -------------------------------------------------------------------------- */
+.pc-agotado .pc-media img,
+.pc-agotado .pc-media > svg { opacity: .38; filter: grayscale(1); }
+
+.pc-cinta-agotado {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: .3rem .5rem;
+  background: rgba(15, 23, 42, .82);
+  color: #fff;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.pc-agotado .pc-btn-add { cursor: not-allowed; }

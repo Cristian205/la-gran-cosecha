@@ -5,27 +5,46 @@ import { useEffect, useState } from "react";
 import { obtenerCategorias } from "@/lib/datos";
 import type { Categoria } from "@/lib/tipos";
 import { colorCategoria, iconoCategoria } from "@/lib/utiles";
+import { Seccion, claseDeVariante } from "@/bloques/Seccion";
 
-export function CategoriasDestacadas() {
+const VARIANTES = ["rejilla", "tiras"] as const;
+
+interface Props {
+  kicker?: string;
+  titulo?: string;
+  subtitulo?: string;
+  /** Cuántas mostrar. Vacío las muestra todas. */
+  limite?: number;
+  variante?: string;
+}
+
+export function CategoriasDestacadas({
+  kicker = "Catálogo",
+  titulo = "Compra por categoría",
+  subtitulo = "Encuentra justo lo que necesitas",
+  limite,
+  variante,
+}: Props) {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
 
   useEffect(() => {
     obtenerCategorias().then(setCategorias).catch(() => setCategorias([]));
   }, []);
 
-  if (categorias.length === 0) return null;
+  const visibles = limite ? categorias.slice(0, limite) : categorias;
+  if (visibles.length === 0) return null;
 
   return (
-    <section className="seccion">
-      <div className="seccion-titulo">
-        <div>
-          <span className="seccion-kicker">Catálogo</span>
-          <h2>Compra por categoría</h2>
-        </div>
-        <span className="linea">Encuentra justo lo que necesitas</span>
-      </div>
-      <div className="categorias-grid">
-        {categorias.map((c) => {
+    <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo}>
+      <div
+        className={`categorias-grid ${claseDeVariante(
+          variante,
+          VARIANTES,
+          "categorias-grid",
+          "rejilla"
+        )}`}
+      >
+        {visibles.map((c) => {
           const Icono = iconoCategoria(c.nombre_categoria);
           return (
             <Link
@@ -44,6 +63,6 @@ export function CategoriasDestacadas() {
           );
         })}
       </div>
-    </section>
+    </Seccion>
   );
 }

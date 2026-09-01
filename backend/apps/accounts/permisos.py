@@ -22,6 +22,16 @@ CATALOGO_PERMISOS = [
         ],
     },
     {
+        "modulo": "Inventario",
+        "permisos": [
+            {"codename": "inventory.view_existencia", "etiqueta": "Ver existencias y kardex"},
+            {
+                "codename": "inventory.change_existencia",
+                "etiqueta": "Registrar entradas, ajustes y traslados",
+            },
+        ],
+    },
+    {
         "modulo": "Clientes",
         "permisos": [
             {"codename": "orders.view_cliente", "etiqueta": "Ver clientes"},
