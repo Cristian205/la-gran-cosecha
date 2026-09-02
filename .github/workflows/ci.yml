@@ -28,6 +28,25 @@ jobs:
   backend:
     runs-on: ubuntu-latest
 
+    # `config/settings/base.py` exige DATABASE_URL al IMPORTARSE —`env.db()` sin
+    # valor por defecto—, y `settings/test.py` importa base antes de sustituir
+    # la base de datos por la suya. Asi que sin esta variable no arranca nada:
+    # ni `makemigrations --check`, ni la suite.
+    #
+    # En local nadie lo nota porque `backend/.env` existe y `read_env` lo lee.
+    # Ese archivo esta en `.gitignore`, asi que aqui no hay ninguno: CI es el
+    # unico sitio donde el proyecto arranca de verdad sin configuracion previa.
+    #
+    # Va a nivel de TRABAJO y no de paso para que ningun paso futuro se olvide.
+    env:
+      DATABASE_URL: postgres://app_crynex:app@localhost:5432/crynex_ci
+      # Con esta se activan los dos tests de RLS y los dos de concurrencia
+      # —dos cajeros vendiendo la ultima unidad, dos camareros dando la misma
+      # mesa—, que en SQLite se saltan solos porque `select_for_update` no
+      # bloquea nada.
+      TEST_DATABASE_URL: postgres://app_crynex:app@localhost:5432/crynex_ci
+      DJANGO_SETTINGS_MODULE: config.settings.test
+
     services:
       db:
         image: postgres:16
@@ -71,17 +90,10 @@ jobs:
 
       - name: Migraciones al dia
         working-directory: backend
-        env:
-          DJANGO_SETTINGS_MODULE: config.settings.test
         run: python manage.py makemigrations --check --dry-run
 
-      # Con `TEST_DATABASE_URL` se activan los dos tests de RLS y el de
-      # concurrencia del POS —dos cajeros vendiendo la ultima unidad—, que en
-      # SQLite se saltan solos porque `select_for_update` no bloquea nada.
       - name: Suite completa
         working-directory: backend
-        env:
-          TEST_DATABASE_URL: postgres://app_crynex:app@localhost:5432/crynex_ci
         run: pytest -q
 
   # ==========================================================================
