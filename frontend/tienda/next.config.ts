@@ -7,7 +7,14 @@ const config: NextConfig = {
   // `node_modules` entero: la vieja se servia con nginx porque era estatica,
   // pero esta renderiza en el servidor —es la razon de haberla migrado— y
   // necesita un proceso vivo.
-  output: "standalone",
+  //
+  // Solo para la imagen de Docker. En Vercel NO va: allí el empaquetado lo hace
+  // la plataforma, y declararlo la deja compilando una salida que luego no sabe
+  // servir. El Dockerfile lo enciende con `SALIDA_STANDALONE=1`; cualquier otro
+  // sitio —Vercel incluido— compila normal sin tener que apagar nada.
+  ...(process.env.SALIDA_STANDALONE === "1"
+    ? { output: "standalone" as const }
+    : {}),
   // Las imagenes del catalogo viven en Cloudflare R2, en el dominio publico
   // del bucket. Sin declararlo, next/image las rechaza.
   images: {
