@@ -13,6 +13,7 @@ import {
   pasoCantidad,
 } from "@/lib/utiles";
 import { TEXTO_PRECIOS_ESTIMADOS } from "@/componentes/AvisoPrecios";
+import { useSiteConfig } from "@/componentes/CapaCliente";
 
 interface GrupoPresentacion {
   nombre: string;
@@ -123,6 +124,18 @@ export function ProductCard({ producto }: { producto: Producto }) {
    */
   const agotado = producto.controla_stock === true && Number(producto.disponible ?? 0) <= 0;
 
+  /**
+   * Hay negocios cuyo canal es el mostrador y no internet.
+   *
+   * Su tienda sigue siendo un catálogo —se ve, se busca, se comparte—; lo que
+   * no tiene es botón de pedir. El valor por defecto es `true` para que un
+   * negocio cuya configuración aún no ha llegado siga vendiendo: fallar hacia
+   * el comportamiento de siempre, nunca hacia la tienda apagada.
+   */
+  const { config } = useSiteConfig();
+  const recibePedidos = config.acepta_pedidos_online !== false;
+  const noSePuedePedir = agotado || !recibePedidos;
+
   return (
     <article
       className={`producto-card glass ${agregado ? "pc-agregado" : ""} ${
@@ -219,7 +232,7 @@ export function ProductCard({ producto }: { producto: Producto }) {
               </div>
             )}
 
-            {enCarrito ? (
+            {!recibePedidos ? null : enCarrito ? (
               <div className="pc-stepper pc-stepper-carrito">
                 <button
                   type="button"
@@ -255,7 +268,7 @@ export function ProductCard({ producto }: { producto: Producto }) {
               <button
                 className="pc-btn-add"
                 onClick={handleAgregar}
-                disabled={!presSeleccionada || agotado}
+                disabled={!presSeleccionada || noSePuedePedir}
                 aria-label={
                   agotado
                     ? `${producto.nombre_producto} está agotado`

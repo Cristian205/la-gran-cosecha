@@ -121,7 +121,7 @@ def mover(
     origen_id=None,
     usuario=None,
     motivo="",
-    permitir_negativo=False,
+    permitir_negativo=None,
 ):
     """
     Aplica un movimiento y devuelve la `Existencia` ya actualizada.
@@ -142,6 +142,14 @@ def mover(
     tenant_id = producto.tenant_id
     if ubicacion is None:
         ubicacion = ubicacion_por_defecto(producto.tenant)
+
+    if permitir_negativo is None:
+        # Sin orden expresa manda el perfil del negocio. Una ferretería prefiere
+        # vender y cuadrar después; una farmacia no puede. Es una decisión de
+        # negocio, y por eso vive en el perfil y no en una constante de aquí.
+        from apps.business.consulta import politica_stock  # noqa: PLC0415
+
+        permitir_negativo = politica_stock(producto.tenant)["permite_negativo"]
 
     if ubicacion.tenant_id != tenant_id:
         # Sin esta comprobación, un id de ubicación de otro negocio movería

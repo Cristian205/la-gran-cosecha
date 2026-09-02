@@ -94,6 +94,10 @@ export interface Plantilla {
   paginas: Record<string, Composicion>;
   /** El aspecto que propone, por código de token. */
   tema_valores: Record<string, string>;
+  /** La identidad que propone: color de marca, tipografía, redondeo. Son
+   *  campos de la configuración del negocio, no tokens, porque de
+   *  `color_primario` cuelga una escala entera. Se copian al adoptarla. */
+  marca: Record<string, string>;
   activa: boolean;
   es_predeterminada: boolean;
   orden: number;
@@ -104,7 +108,9 @@ export type GrupoToken =
   | "NAVEGACION"
   | "TIPOGRAFIA"
   | "SUPERFICIE"
-  | "FORMA";
+  | "FORMA"
+  | "DENSIDAD"
+  | "CAJA";
 
 export const ETIQUETA_GRUPO: Record<GrupoToken, string> = {
   MARCA: "Marca",
@@ -112,6 +118,8 @@ export const ETIQUETA_GRUPO: Record<GrupoToken, string> = {
   TIPOGRAFIA: "Tipografía",
   SUPERFICIE: "Superficies",
   FORMA: "Formas y espacios",
+  DENSIDAD: "Densidad",
+  CAJA: "Punto de venta",
 };
 
 /** Una perilla del aspecto de la tienda. */
@@ -138,11 +146,34 @@ export interface NegocioBreve {
   dominios: string[];
 }
 
+/** Lo que devuelve el generador de enlaces de prueba. */
+export interface EnlaceDePrueba {
+  url: string;
+  negocio: string;
+  /** Cuánto vale, en horas. Se enseña: un enlace que caduca sin avisar es un
+   *  enlace que alguien va a abrir un lunes y no va a entender. */
+  horas: number;
+  rutas: string[];
+}
+
 export const tienda = {
   tokens: () => api.get<TokenTema[]>("/platform/theme-tokens/"),
   bloques: () => api.get<Bloque[]>("/platform/blocks/"),
   temas: () => api.get<Tema[]>("/platform/themes/"),
   plantillas: () => api.get<Plantilla[]>("/platform/templates/"),
+
+  negocios: () => api.get<NegocioBreve[]>("/platform/tenants/"),
+
+  /**
+   * Un enlace para ver una plantilla en una empresa real, sin asignársela.
+   *
+   * No escribe nada en el negocio: el enlace lleva un testigo firmado y la
+   * tienda compone al vuelo. Es lo que separa «enséñamela» de «póngasela».
+   */
+  enlaceDePrueba: (plantillaId: number, negocioId: number) =>
+    api.post<EnlaceDePrueba>(`/platform/templates/${plantillaId}/enlace-de-prueba/`, {
+      negocio: negocioId,
+    }),
 
   crearPlantilla: (datos: Partial<Plantilla>) =>
     api.post<Plantilla>("/platform/templates/", datos),

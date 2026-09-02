@@ -1,4 +1,4 @@
-import { negocioDeLaPeticion } from "./negocio";
+import { negocioDeLaPeticion, testigoDeVista } from "./negocio";
 
 /**
  * Cliente de la API para el SERVIDOR.
@@ -58,14 +58,23 @@ export async function pedirAlBackend<T>(
     }
   }
 
+  const testigo = await testigoDeVista();
   const cabeceras: Record<string, string> = {
     Accept: "application/json",
     ...cabecerasDelNegocio(slug, host),
+    // La vista de plantilla viaja en cabecera y no en la URL: si fuera un
+    // parametro mas, la respuesta se guardaria en la cache compartida y el
+    // siguiente visitante normal recibiria la previa de otro.
+    ...(testigo ? { "X-Crynex-Vista": testigo } : {}),
   };
 
   const respuesta = await fetch(url, {
     headers: cabeceras,
-    next: { revalidate: opciones.revalidar ?? REVALIDAR },
+    // Una previa NO se cachea. Es de un momento y de una persona, y guardarla
+    // acabaria sirviendola a quien entre por la puerta normal.
+    ...(testigo
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: opciones.revalidar ?? REVALIDAR } }),
   });
 
   // 404 es la respuesta normal a un host que no es de ningún negocio; no es un

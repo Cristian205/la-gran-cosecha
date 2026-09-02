@@ -1,4 +1,4 @@
-# Orquestación completa: base de datos + backend API + 2 frontends React.
+# Orquestación completa: base de datos + backend API + la tienda y el panel.
 # Uso:  docker compose up --build
 services:
   db:
@@ -39,15 +39,23 @@ services:
     ports:
       - "8000:8000"
 
-  storefront:
+  # La tienda pública. Renderiza en el servidor, así que es un proceso node y
+  # no un nginx sirviendo estáticos: es lo que hace que cada negocio se
+  # posicione por separado, con su catálogo dentro del HTML.
+  tienda:
     build:
-      context: ./frontend/storefront
-      args:
-        VITE_API_URL: /api
+      context: ./frontend/tienda
+    environment:
+      # Desde dentro de la red de compose el backend se llama por su nombre de
+      # servicio. No es la misma URL que usa el navegador.
+      API_URL: http://backend:8000/api
+      TENANCY_CLAVE_SERVIDOR: ${TENANCY_CLAVE_SERVIDOR:-cambia-esta-clave}
+      DOMINIO_PLATAFORMA: ${DOMINIO_PLATAFORMA:-localhost}
+      REVALIDAR_SEGUNDOS: "60"
     depends_on:
       - backend
     ports:
-      - "8080:80"
+      - "8080:3000"
 
   admin-panel:
     build:

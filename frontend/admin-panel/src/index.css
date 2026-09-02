@@ -1420,3 +1420,120 @@ td .input:focus, td select:focus {
   opacity: 0.7;
   font-size: 0.85em;
 }
+
+/* ==========================================================================
+   LA CAJA, VESTIDA POR EL TEMA DEL NEGOCIO
+   --------------------------------------------------------------------------
+   Es la mitad visual de lo que `perfil_pos` hace con el comportamiento: no hay
+   una caja de boutique y otra de ferreteria, hay esta leyendo tres valores que
+   el servidor resuelve del tema del negocio (ver `apps/pos/aspecto.py`).
+
+       --caja-columnas   cuantos productos por fila en el selector
+       --caja-densidad   cuanto respira todo
+       --caja-marca      el acento: el producto elegido, el boton de cobrar
+       data-caja         donde va el carrito
+
+   Los valores de reserva son los que la caja tenia escritos a mano, asi que un
+   negocio sin nada configurado ve exactamente lo de siempre.
+   ========================================================================== */
+.caja-reparto {
+  display: grid;
+  gap: calc(1rem * var(--caja-densidad, 1));
+  align-items: start;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+}
+.caja-reparto[data-caja="izquierda"] {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+}
+/* El orden se invierte con `order` y no reordenando el JSX: el selector va
+   PRIMERO en el marcado pase lo que pase, porque es lo primero que necesita
+   quien navega con teclado o con lector de pantalla. */
+.caja-reparto[data-caja="izquierda"] .caja-selector { order: 2; }
+.caja-reparto[data-caja="izquierda"] .caja-carrito { order: 1; }
+
+.caja-reparto[data-caja="abajo"] { grid-template-columns: minmax(0, 1fr); }
+.caja-reparto[data-caja="abajo"] .caja-carrito { position: static; }
+
+.caja-selector {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.caja-carrito {
+  position: sticky;
+  top: 1rem;
+}
+.caja-lista {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.caja-rejilla {
+  display: grid;
+  gap: calc(0.6rem * var(--caja-densidad, 1));
+  /* `minmax(0, 1fr)` y no `auto-fill`: con auto-fill el numero de columnas lo
+     decidia el ancho y la perilla no habria cambiado nada. */
+  grid-template-columns: repeat(var(--caja-columnas, 4), minmax(0, 1fr));
+}
+
+.caja-ficha {
+  text-align: left;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radio-sm);
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.caja-ficha:hover {
+  border-color: var(--caja-marca, var(--verde-500));
+  transform: translateY(-1px);
+}
+.caja-ficha:focus-visible {
+  outline: 2px solid var(--caja-marca, var(--verde-500));
+  outline-offset: 2px;
+}
+.caja-ficha-foto {
+  aspect-ratio: 4 / 3;
+  background: var(--gris-claro);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.caja-ficha-cuerpo { padding: calc(0.55rem * var(--caja-densidad, 1)) 0.6rem; }
+.caja-ficha-nombre {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* El acento del negocio, solo dentro de la caja. El resto del panel conserva
+   sus colores: es una herramienta de trabajo con su modo oscuro y sus
+   contrastes revisados, y retenirla entera con el rosa de una boutique la
+   haria mas bonita y menos legible. */
+.caja-reparto .btn:not(.secundario):not(.btn-icon) {
+  background: var(--caja-marca, var(--verde-600));
+  color: var(--caja-marca-texto, #fff);
+  border-color: transparent;
+}
+
+@media (max-width: 1000px) {
+  /* Por debajo de este ancho no caben las dos columnas se elija lo que se
+     elija: el carrito baja, que es lo que la disposicion «abajo» hace a
+     proposito en pantallas pequenas. */
+  .caja-reparto,
+  .caja-reparto[data-caja="izquierda"] { grid-template-columns: minmax(0, 1fr); }
+  .caja-reparto .caja-carrito { position: static; }
+  .caja-reparto[data-caja="izquierda"] .caja-selector { order: 1; }
+  .caja-reparto[data-caja="izquierda"] .caja-carrito { order: 2; }
+}
+
+@media (max-width: 620px) {
+  /* Con menos de seiscientos pixeles, cinco columnas dejan fichas de cincuenta
+     pixeles donde no cabe el nombre. La perilla manda hasta donde tiene
+     sentido, y a partir de ahi manda la pantalla. */
+  .caja-rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

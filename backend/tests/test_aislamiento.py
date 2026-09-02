@@ -588,3 +588,104 @@ def test_un_negocio_inventado_por_el_servidor_no_cae_al_host(
         HTTP_X_TENANT_KEY=CLAVE,
     )
     assert respuesta.status_code == 404
+
+
+# ==========================================================================
+# LA COBERTURA DE LA TERCERA CAPA
+# ==========================================================================
+#: Tablas con columna de negocio que NO llevan politica de fila, y por que.
+#:
+#: Cada exencion es una decision, no un olvido — que es exactamente la
+#: diferencia que este test existe para mantener visible.
+EXENTAS_DE_RLS = {
+    "tenancy_domain": (
+        "Es la tabla que RESUELVE el negocio a partir del host. Protegerla con "
+        "una politica que necesita saber el negocio seria circular: el "
+        "middleware no podria averiguar cual es."
+    ),
+    "tenancy_membership": (
+        "Igual: decide a que negocios pertenece quien llama, y se consulta "
+        "antes de que haya ambito declarado."
+    ),
+    "billing_subscription": (
+        "Dato comercial de plataforma, no del negocio. El panel de Crynex "
+        "compara suscripciones entre clientes, que es su trabajo."
+    ),
+    "soporte_cosa": "Modelo de la propia suite, no existe en produccion.",
+}
+
+
+def tablas_bajo_rls() -> set:
+    """
+    Las tablas que alguna migracion de RLS declara.
+
+    Se leen de los propios modulos y no de una lista escrita aqui: una lista a
+    mano habria que acordarse de ampliarla, y de eso justamente no se acuerda
+    nadie. Es el mismo criterio que el test del registro de bloques.
+    """
+    import importlib
+    import pkgutil
+
+    from django.apps import apps as registro_de_apps
+
+    tablas = set()
+    for config in registro_de_apps.get_app_configs():
+        if not config.name.startswith("apps."):
+            continue
+        try:
+            paquete = importlib.import_module(f"{config.name}.migrations")
+        except ModuleNotFoundError:
+            continue
+        for info in pkgutil.iter_modules(paquete.__path__):
+            if "row_level_security" not in info.name:
+                continue
+            modulo = importlib.import_module(f"{config.name}.migrations.{info.name}")
+            tablas.update(getattr(modulo, "TABLAS", []))
+    return tablas
+
+
+def test_toda_tabla_con_negocio_esta_bajo_rls():
+    """
+    La tercera capa se activa TABLA POR TABLA.
+
+    `ENABLE ROW LEVEL SECURITY` no se hereda: una app creada despues de
+    `tenancy.0003` se queda fuera de la red y nada avisa. Ya paso cuatro veces
+    —storefront en la fase 7, business y pos despues— y las dos primeras capas
+    tapan el agujero lo suficiente como para que nadie lo note.
+
+    Este test lo convierte en un fallo de la suite en vez de en un hallazgo de
+    auditoria. Anadir un modelo con columna de negocio obliga a cubrirlo o a
+    escribir por que no.
+    """
+    from django.apps import apps as registro_de_apps
+
+    cubiertas = tablas_bajo_rls()
+    descubiertas = sorted(
+        modelo._meta.db_table
+        for modelo in registro_de_apps.get_models()
+        if any(campo.name == "tenant" for campo in modelo._meta.fields)
+        and modelo._meta.db_table not in cubiertas
+        and modelo._meta.db_table not in EXENTAS_DE_RLS
+    )
+
+    assert not descubiertas, (
+        "Estas tablas guardan datos de un negocio y ninguna politica de fila "
+        f"las protege: {descubiertas}. Anade la migracion de RLS de su app, o "
+        "declaralas en EXENTAS_DE_RLS con la razon."
+    )
+
+
+def test_ninguna_exencion_sobra():
+    """
+    Una exencion que ya no aplica es peor que no tenerla: hace creer que hay
+    una decision detras cuando lo que hay es una linea que nadie borro.
+    """
+    from django.apps import apps as registro_de_apps
+
+    con_negocio = {
+        modelo._meta.db_table
+        for modelo in registro_de_apps.get_models()
+        if any(campo.name == "tenant" for campo in modelo._meta.fields)
+    }
+    sobran = sorted(set(EXENTAS_DE_RLS) - con_negocio)
+    assert not sobran, f"Exenciones de tablas que ya no existen: {sobran}"

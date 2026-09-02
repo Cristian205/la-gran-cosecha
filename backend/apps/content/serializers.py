@@ -21,6 +21,22 @@ class SiteConfigSerializer(serializers.ModelSerializer):
 
         return variables_css(obj)
 
+    #: Si esta tienda recibe pedidos o es solo un catalogo.
+    #:
+    #: Viaja con la configuracion del sitio y no en un endpoint aparte porque
+    #: la tienda ya la pide una vez por pagina: una segunda llamada solo para
+    #: un booleano seria una peticion de red por cada visita.
+    #:
+    #: Es SOLO informativo: quien de verdad rechaza un pedido sin esta
+    #: capacidad es el serializer de pedidos, en el servidor. Esconder el boton
+    #: es cortesia con el cliente, no la comprobacion.
+    acepta_pedidos_online = serializers.SerializerMethodField()
+
+    def get_acepta_pedidos_online(self, obj) -> bool:
+        from apps.business.consulta import puede  # noqa: PLC0415
+
+        return puede(obj.tenant, "acepta_pedidos_online")
+
     class Meta:
         model = StoreSettings
         fields = [
@@ -28,6 +44,7 @@ class SiteConfigSerializer(serializers.ModelSerializer):
             "logo_url",
             "tokens",
             "variables_tema",
+            "acepta_pedidos_online",
             "nombre_empresa",
             "color_primario",
             "color_primario_texto",

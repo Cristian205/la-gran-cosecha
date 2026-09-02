@@ -17,11 +17,34 @@ type MensajeDeLaTienda =
   | { fuente: "crynex-tienda"; tipo: "listo" }
   | { fuente: "crynex-tienda"; tipo: "seleccion"; id: string };
 
+/** Los campos de identidad que una plantilla propone. Espejo de
+ *  `storefront.aspecto.CAMPOS_DE_MARCA`. */
+export interface MarcaPropuesta {
+  color_primario?: string;
+  color_primario_texto?: string;
+  color_secundario?: string;
+  color_secundario_texto?: string;
+  color_fondo?: string;
+  color_superficie?: string;
+  color_texto?: string;
+  fuente?: string;
+  radio_boton?: string;
+}
+
 interface Opciones {
   origen: string | null;
   composicion: Composicion;
-  /** Las variables CSS del tema, ya resueltas. */
+  /** Las variables CSS de los tokens, ya resueltas. */
   variables: Record<string, string>;
+  /**
+   * El color de marca y la tipografia que la plantilla propone.
+   *
+   * Se manda SIN resolver, y es deliberado: de `color_primario` cuelga una
+   * escala de nueve pasos, y quien sabe derivarla es la tienda. Resolverla aqui
+   * seria una segunda copia de esa matematica, y la copia que se queda vieja
+   * siempre es la del panel.
+   */
+  marca?: MarcaPropuesta;
   elegido: string | null;
   onSeleccion: (id: string) => void;
 }
@@ -30,6 +53,7 @@ export function usarPrevia({
   origen,
   composicion,
   variables,
+  marca,
   elegido,
   onSeleccion,
 }: Opciones) {
@@ -66,8 +90,13 @@ export function usarPrevia({
   }, [lista, composicion, enviar]);
 
   useEffect(() => {
-    if (lista) enviar({ tipo: "tema", variables });
-  }, [lista, variables, enviar]);
+    // Con marca se manda el aspecto entero y la tienda lo traduce; sin ella
+    // —el panel del negocio, que ya tiene su color puesto— basta con las
+    // variables de los tokens.
+    if (!lista) return;
+    if (marca) enviar({ tipo: "aspecto", marca, tokens: variables });
+    else enviar({ tipo: "tema", variables });
+  }, [lista, variables, marca, enviar]);
 
   useEffect(() => {
     if (lista) enviar({ tipo: "seleccion", id: elegido });

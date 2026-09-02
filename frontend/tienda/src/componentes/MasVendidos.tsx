@@ -17,6 +17,9 @@ interface Props {
   kicker?: string;
   titulo?: string;
   subtitulo?: string;
+  /** El encabezado centrado. Lo pide el escaparate de una boutique; el
+   *  catalogo de una distribuidora lo quiere a la izquierda. */
+  centrado?: boolean;
   variante?: string;
 }
 
@@ -26,6 +29,7 @@ export function MasVendidos({
   kicker = "Los preferidos",
   titulo = "Lo que más piden los negocios como el tuyo",
   subtitulo = "Disponibilidad confirmada",
+  centrado = false,
   variante,
 }: Props) {
   const [productos, setProductos] = useState<Producto[]>(datos);
@@ -44,7 +48,7 @@ export function MasVendidos({
   if (visibles.length === 0) return null;
 
   return (
-    <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo}>
+    <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado}>
       <div className={`grid ${claseDeVariante(variante, VARIANTES, "grid", "rejilla")}`}>
         {visibles.map((p) => (
           <ProductCard key={p.id} producto={p} />

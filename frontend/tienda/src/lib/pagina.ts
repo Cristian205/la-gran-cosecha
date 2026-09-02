@@ -56,3 +56,19 @@ export async function datosDeLosBloques(
 
   return Object.fromEntries(await Promise.all(pendientes));
 }
+
+
+/** La ruta reservada del armazon. Espejo de `Pagina.RUTA_LAYOUT`. */
+export const RUTA_LAYOUT = "/_layout";
+
+/**
+ * La cabecera y el pie de esta tienda.
+ *
+ * Devuelve `null` si el negocio todavia no tiene armazon compuesto, y ese caso
+ * NO es un error: son todas las tiendas creadas antes de que esto existiera. El
+ * layout las sigue pintando con la cabecera y el pie de siempre, que es
+ * exactamente lo que veian ayer.
+ */
+export const armazonDeLaTienda = cache(
+  async (): Promise<PaginaTienda | null> => composicionDe(RUTA_LAYOUT)
+);

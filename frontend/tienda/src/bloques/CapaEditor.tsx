@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BloqueColocado } from "@/lib/tipos";
+import {
+  hojaDeTitulos,
+  variablesDeAspecto,
+  type MarcaPropuesta,
+} from "@/lib/tema";
 import { Lienzo } from "./Lienzo";
 
 /**
@@ -27,6 +32,26 @@ type MensajeDelPanel =
       fuente: "crynex-editor";
       tipo: "tema";
       variables: Record<string, string>;
+    }
+  /**
+   * Lo que una PLANTILLA propone, sin resolver.
+   *
+   * Es distinto de `tema` y la diferencia importa. `tema` lo manda el panel del
+   * NEGOCIO con las variables ya resueltas, porque ese negocio tiene su color
+   * de marca puesto y solo esta moviendo perillas encima. Esto lo manda el
+   * editor de plantillas de Crynex, donde la plantilla PROPONE un color de
+   * marca que no es de nadie todavia — y de ese color cuelga una escala de
+   * nueve pasos que solo la tienda sabe derivar.
+   *
+   * Sin esto, la previa de una plantilla de boutique salia con la maqueta nueva
+   * y el verde de la empresa de referencia, que es justo lo que hace imposible
+   * juzgar una plantilla.
+   */
+  | {
+      fuente: "crynex-editor";
+      tipo: "aspecto";
+      marca: MarcaPropuesta;
+      tokens: Record<string, string>;
     };
 
 /** Lo que se responde. */
@@ -56,6 +81,10 @@ export function CapaEditor({ inicial, datos, origenPanel }: Props) {
   const [bloques, setBloques] = useState(inicial);
   const [elegido, setElegido] = useState<string | null>(null);
   const raiz = useRef<HTMLDivElement>(null);
+  /** Lo que ya se escribio sobre la raiz, para poder retirarlo al cambiar de
+   *  plantilla. Sin esto, pasar de una plantilla rosa a una que no declara
+   *  color dejaria el rosa puesto y la segunda pareceria mal hecha. */
+  const aplicadas = useRef<Set<string>>(new Set());
 
   const permitidos = useMemo(
     () =>
@@ -97,6 +126,36 @@ export function CapaEditor({ inicial, datos, origenPanel }: Props) {
           else document.documentElement.style.removeProperty(variable);
         }
       }
+      if (dato.tipo === "aspecto") {
+        const variables = variablesDeAspecto(dato.marca, dato.tokens);
+        for (const vieja of aplicadas.current) {
+          if (!(vieja in variables)) {
+            document.documentElement.style.removeProperty(vieja);
+          }
+        }
+        for (const [variable, valor] of Object.entries(variables)) {
+          document.documentElement.style.setProperty(variable, valor);
+        }
+        aplicadas.current = new Set(Object.keys(variables));
+
+        // La tipografia de los titulos hay que CARGARLA, no solo nombrarla: la
+        // etiqueta de fuentes la pone el layout con la del negocio, y en la
+        // previa de una plantilla esa no es la que se esta juzgando.
+        const hoja = hojaDeTitulos((dato.tokens["--fuente-titulos"] ?? "").trim());
+        if (hoja) {
+          let enlace = document.getElementById("fuente-de-previa");
+          if (!enlace) {
+            enlace = document.createElement("link");
+            enlace.id = "fuente-de-previa";
+            (enlace as HTMLLinkElement).rel = "stylesheet";
+            document.head.appendChild(enlace);
+          }
+          if ((enlace as HTMLLinkElement).href !== hoja) {
+            (enlace as HTMLLinkElement).href = hoja;
+          }
+        }
+      }
+
       if (dato.tipo === "seleccion") {
         setElegido(dato.id);
         if (dato.id) {

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute, RequierePermiso } from "./auth/ProtectedRoute";
 import { Layout } from "./components/Layout";
+import { BusinessProfilePage } from "./pages/business/BusinessProfilePage";
 import { ClientsPage } from "./pages/ClientsPage";
 import { ContentPage } from "./pages/content/ContentPage";
 import { TiendaPage } from "./pages/tienda/TiendaPage";
@@ -12,6 +13,8 @@ import { LoginPage } from "./pages/LoginPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { OrdersPage } from "./pages/orders/OrdersPage";
 import { PendingProductsPage } from "./pages/PendingProductsPage";
+import { PosPage } from "./pages/pos/PosPage";
+import { ReservationsPage } from "./pages/reservations/ReservationsPage";
 import { ProductsPage } from "./pages/products/ProductsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -43,6 +46,22 @@ export default function App() {
             element={
               <RequierePermiso permiso="inventory.view_existencia">
                 <InventoryPage />
+              </RequierePermiso>
+            }
+          />
+          <Route
+            path="/caja"
+            element={
+              <RequierePermiso permiso="pos.add_venta">
+                <PosPage />
+              </RequierePermiso>
+            }
+          />
+          <Route
+            path="/reservas"
+            element={
+              <RequierePermiso permiso="reservations.view_reserva">
+                <ReservationsPage />
               </RequierePermiso>
             }
           />
@@ -94,6 +113,10 @@ export default function App() {
               </RequierePermiso>
             }
           />
+          {/* El perfil del NEGOCIO, no el de la persona. Sin permiso
+              propio: todo el equipo lo ve; solo el dueno lo cambia, y eso
+              lo decide la vista. */}
+          <Route path="/negocio" element={<BusinessProfilePage />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/configuracion" element={<SettingsPage />} />
           <Route path="/notificaciones" element={<NotificationsPage />} />

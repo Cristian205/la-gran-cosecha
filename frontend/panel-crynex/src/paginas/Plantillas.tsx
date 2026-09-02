@@ -27,6 +27,8 @@ import {
   tienda,
   type Bloque,
   type Composicion,
+  type EnlaceDePrueba,
+  type NegocioBreve,
   type Plantilla,
   type TokenTema,
 } from "../api/tienda";
@@ -37,11 +39,23 @@ import { Editor } from "../constructor/Editor";
 import { PanelTema, variablesDe } from "../constructor/PanelTema";
 import { usarPrevia } from "../constructor/usarPrevia";
 
-/** Las rutas que una plantilla puede componer hoy. */
+/**
+ * Las rutas que una plantilla puede componer hoy.
+ *
+ * `/_layout` no es una pagina que se visite: es el armazon —la cabecera y el
+ * pie— que envuelve a todas las demas. Se edita aqui como una composicion mas
+ * porque lo es: mismos bloques, mismas variantes, misma visibilidad por
+ * dispositivo. Va primero porque es lo que el visitante ve en todas las rutas.
+ */
 const RUTAS = [
+  { ruta: "/_layout", nombre: "Cabecera y pie" },
   { ruta: "/", nombre: "Inicio" },
   { ruta: "/nosotros", nombre: "Nosotros" },
   { ruta: "/contacto", nombre: "Contacto" },
+  // La trajo la plantilla «Belleza». Una plantilla que no la use la ensena
+  // vacia, que es lo mismo que le pasa hoy a «Nosotros» en «Mercado»: la lista
+  // es de rutas que Crynex sabe componer, no de rutas obligatorias.
+  { ruta: "/entrar", nombre: "Acceso" },
 ];
 
 const PANTALLAS = [
@@ -79,6 +93,13 @@ export function Plantillas() {
   const [creando, setCreando] = useState(false);
   const [borrando, setBorrando] = useState<Plantilla | null>(null);
 
+  /** Las empresas contra las que se puede probar la plantilla. */
+  const [negocios, setNegocios] = useState<NegocioBreve[]>([]);
+  const [negocioPrueba, setNegocioPrueba] = useState<number | "">("");
+  const [enlace, setEnlace] = useState<EnlaceDePrueba | null>(null);
+  const [probando, setProbando] = useState(false);
+  const [asignando, setAsignando] = useState(false);
+
   const origen = urlTienda();
   const composicion = borrador?.paginas[ruta] ?? [];
   const valoresTema = useMemo(
@@ -99,16 +120,28 @@ export function Plantillas() {
     origen,
     composicion,
     variables,
+    // Lo que la plantilla PROPONE como identidad. Sin esto la previa pintaba la
+    // maqueta nueva con el color de la empresa de referencia, que es como
+    // juzgar una plantilla de boutique en verde.
+    marca: borrador?.marca ?? {},
     elegido: bloqueElegido,
     onSeleccion: alSeleccionar,
   });
 
   useEffect(() => {
-    Promise.all([tienda.bloques(), tienda.plantillas(), tienda.tokens()])
-      .then(([b, p, t]) => {
+    Promise.all([
+      tienda.bloques(),
+      tienda.plantillas(),
+      tienda.tokens(),
+      // Si falla, se sigue: el editor funciona sin poder probar en una empresa,
+      // y quedarse sin editor por eso seria peor que quedarse sin la prueba.
+      tienda.negocios().catch(() => [] as NegocioBreve[]),
+    ])
+      .then(([b, p, t, n]) => {
         setCatalogo(b);
         setPlantillas(p);
         setTokens(t);
+        setNegocios(n);
         if (p.length > 0) setElegida(p[0].id);
       })
       .catch((e) => setError((e as Error).message))
@@ -130,6 +163,47 @@ export function Plantillas() {
     borrador !== null &&
     original !== null &&
     JSON.stringify(borrador) !== JSON.stringify(original);
+
+  async function generarEnlace() {
+    if (!borrador || negocioPrueba === "") return;
+    setProbando(true);
+    try {
+      setEnlace(await tienda.enlaceDePrueba(borrador.id, negocioPrueba));
+    } catch (e) {
+      avisar((e as Error).message, "malo");
+    } finally {
+      setProbando(false);
+    }
+  }
+
+  /**
+   * Asignar es lo contrario de probar: esto SI escribe.
+   *
+   * Deja un borrador en cada ruta y le copia la identidad. No publica, asi que
+   * los visitantes siguen viendo lo de antes hasta que alguien lo revise — que
+   * es la unica forma de que rediseñar una tienda en marcha no sea un salto al
+   * vacio.
+   */
+  async function asignar() {
+    if (!borrador || negocioPrueba === "") return;
+    const empresa = negocios.find((n) => n.id === negocioPrueba);
+    setAsignando(true);
+    try {
+      const { paginas } = await tienda.aplicarPlantilla(
+        negocioPrueba,
+        borrador.slug,
+        { aplicar_tema: true, publicar: false }
+      );
+      avisar(
+        `«${borrador.nombre}» asignada a ${empresa?.nombre ?? "la empresa"}: ` +
+          `${paginas.length} pagina(s) en borrador, sin publicar.`
+      );
+    } catch (e) {
+      avisar((e as Error).message, "malo");
+    } finally {
+      setAsignando(false);
+    }
+  }
 
   function componer(siguiente: Composicion) {
     if (!borrador) return;
@@ -434,6 +508,86 @@ export function Plantillas() {
                   </Dato>
                 </dl>
               </div>
+
+              <hr className="constructor__separador" />
+
+              {/*
+                Probar y asignar, en ese orden y separados a proposito.
+
+                La previa de al lado ensena la plantilla con datos de ejemplo en
+                un marco estrecho; lo que decide si un molde sirve es verlo con
+                el catalogo real de alguien y a pantalla completa. El enlace hace
+                eso sin escribir nada. Asignar si escribe, y por eso va debajo y
+                dice lo que hace.
+              */}
+              <div className="campo">
+                <span className="campo__etiqueta">Probar en una empresa</span>
+                <select
+                  value={negocioPrueba}
+                  onChange={(e) => {
+                    setNegocioPrueba(e.target.value ? Number(e.target.value) : "");
+                    setEnlace(null);
+                  }}
+                >
+                  <option value="">Elige una empresa…</option>
+                  {negocios.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.nombre}
+                    </option>
+                  ))}
+                </select>
+                <span className="campo__ayuda">
+                  Con su catálogo, sus fotos y sus precios. No le cambia nada.
+                </span>
+              </div>
+
+              <div className="ficha__acciones">
+                <Boton
+                  disabled={negocioPrueba === "" || probando || cambiado}
+                  onClick={() => void generarEnlace()}
+                >
+                  {probando ? "Generando…" : "Enlace de prueba"}
+                </Boton>
+                <Boton
+                  disabled={negocioPrueba === "" || asignando || cambiado}
+                  onClick={() => void asignar()}
+                >
+                  {asignando ? "Asignando…" : "Asignar a esta empresa"}
+                </Boton>
+              </div>
+              {cambiado && (
+                <span className="campo__ayuda">
+                  Guarda los cambios antes: el enlace y la asignación leen lo que
+                  hay en el servidor, no lo que tienes a medias aquí.
+                </span>
+              )}
+
+              {enlace && (
+                <div className="campo">
+                  <span className="campo__etiqueta">
+                    Enlace para {enlace.negocio}
+                  </span>
+                  <input readOnly value={enlace.url} spellCheck={false} />
+                  <div className="ficha__acciones">
+                    <Boton
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(enlace.url);
+                        avisar("Enlace copiado.");
+                      }}
+                    >
+                      Copiar
+                    </Boton>
+                    <Boton onClick={() => window.open(enlace.url, "_blank")}>
+                      Abrir
+                    </Boton>
+                  </div>
+                  <span className="campo__ayuda">
+                    Vale {enlace.horas} horas. Compone {enlace.rutas.join(", ")}{" "}
+                    sobre la tienda real; lo publicado no se toca y los
+                    visitantes siguen viendo lo de siempre.
+                  </span>
+                </div>
+              )}
 
               <hr className="constructor__separador" />
 
