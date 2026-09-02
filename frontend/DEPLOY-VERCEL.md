@@ -164,14 +164,41 @@ enmarca en un iframe para la vista previa.
 
 ---
 
+## Hay DOS 404 distintos, y confundirlos cuesta horas
+
+Lo primero que hay que mirar cuando la tienda «no se ve» es **de quién es el
+404**, porque son problemas opuestos.
+
+| Lo que ves | De quién es | Qué significa |
+|---|---|---|
+| Página blanca con `404: NOT_FOUND`, un `Code:`, un `ID:` y un enlace a la documentación | **De Vercel** | La petición no llegó a la aplicación. Es un problema de *configuración del proyecto*. |
+| «Esta tienda no existe», en español y con los estilos de la tienda | **De la tienda** | La aplicación funciona. Lo que falta es que ese host esté en la tabla `Domain` del backend. |
+
+El segundo es una buena noticia: significa que todo lo difícil está bien.
+
+Para confirmarlo sin abrir el navegador:
+
+```bash
+curl -sI https://tu-despliegue.vercel.app | grep -i "x-vercel-error\|x-matched-path"
+```
+
+`x-vercel-error: NOT_FOUND` es el de la plataforma. Si no aparece esa cabecera,
+la aplicación respondió.
+
+---
+
 ## Si el despliegue falla, en este orden
 
 1. **«No such file or directory» / no encuentra `package.json`** → el *Root
    Directory* apunta a `frontend/storefront`, que ya no existe.
-2. **Compila y no encuentra la salida** → el Framework Preset es Vite o el
-   *Output Directory* dice `dist`. La tienda es Next y compila a `.next`.
-3. **404 en todas las rutas** → el host por el que entras no está en la tabla
-   `Domain` del backend, o `API_URL` no apunta a un Django accesible.
+2. **Compila bien y todo da el 404 de Vercel** → el proyecto compiló Next pero
+   Vercel está sirviendo otra cosa. Casi siempre es un *Output Directory*
+   escrito a mano —normalmente `dist`, heredado de cuando la tienda era Vite—
+   o un Framework Preset que no es Next.js. Déjalo **vacío**: Next compila a
+   `.next` y Vercel lo detecta solo. Si el proyecto muestra
+   «Recommendations» en los ajustes del despliegue, suele estar señalando esto.
+3. **El 404 de la tienda** → el host por el que entras no está en `Domain`, o
+   `API_URL` no apunta a un Django accesible.
 4. **La tienda carga sin catálogo** → `TENANCY_CLAVE_SERVIDOR` no coincide con
    la del backend. El backend ignora la llamada y responde como si no hubiera
    negocio.
