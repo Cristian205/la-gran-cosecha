@@ -86,11 +86,28 @@ jobs:
           psql -h localhost -U postgres -d crynex_ci -v ON_ERROR_STOP=1 <<'SQL'
           CREATE ROLE app_crynex LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS CREATEDB;
           GRANT ALL ON SCHEMA public TO app_crynex;
+          -- Que sea DUEÑO de la base, no solo invitado con permisos. Django
+          -- crea `test_crynex_ci` aparte y ahi los GRANT de arriba no llegan;
+          -- siendo dueño no hay ninguna pregunta de permisos que responder, ni
+          -- aqui ni en la de pruebas, que tambien crea el.
+          ALTER DATABASE crynex_ci OWNER TO app_crynex;
           SQL
 
       - name: Migraciones al dia
         working-directory: backend
         run: python manage.py makemigrations --check --dry-run
+
+      # Aplicarlas de verdad, y en un paso propio.
+      #
+      # No es redundante con la suite: si una migracion falla sobre PostgreSQL
+      # —una RunPython que toca una tabla que su `dependencies` no declara, un
+      # ALTER que SQLite se traga y este no— la suite lo cuenta como
+      # trescientos «relation ... does not exist», que es un muro de ruido
+      # donde la causa no aparece por ninguna parte. Aqui falla una vez, con su
+      # error, y con el nombre de la migracion delante.
+      - name: Migraciones sobre PostgreSQL
+        working-directory: backend
+        run: python manage.py migrate --no-input
 
       - name: Suite completa
         working-directory: backend
