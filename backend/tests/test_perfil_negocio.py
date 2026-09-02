@@ -330,16 +330,20 @@ def test_nadie_ramifica_por_sector():
 
     Se ramifica sobre CAPACIDADES. El sector es una etiqueta para mostrar y
     para puntuar en el alta; nada más.
+
+    Busca en el CÓDIGO y no con `git grep`, por dos razones que se descubrieron
+    juntas: `git grep` solo mira lo que está comiteado —así que este test pasó
+    tres fases sin buscar en las apps nuevas, que estaban sin subir— y no
+    distingue una rama de la frase que pide no escribirla. Los docstrings de
+    `capacidades.py` y de `reservations/models.py` citan el patrón prohibido
+    justamente para prohibirlo. Ver `tests/inspeccion.py`.
     """
+    from tests.inspeccion import buscar_en_codigo
+
     raiz = Path(__file__).resolve().parent.parent / "apps"
-    hallazgos = subprocess.run(
-        ["git", "grep", "-nE", r"sector\s*(==|!=)\s*[\"']", "--", str(raiz)],
-        capture_output=True,
-        text=True,
-        cwd=raiz.parent.parent,
-    )
-    assert not hallazgos.stdout.strip(), (
-        "Alguien está ramificando por sector:\n" + hallazgos.stdout
+    hallazgos = buscar_en_codigo(raiz, r"sector\s*(==|!=)\s*[\"']")
+    assert not hallazgos, "Alguien está ramificando por sector:\n" + "\n".join(
+        hallazgos
     )
 
 
