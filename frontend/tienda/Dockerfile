@@ -23,6 +23,9 @@ COPY . .
 ARG NEXT_PUBLIC_MEDIA_HOST=""
 ENV NEXT_PUBLIC_MEDIA_HOST=$NEXT_PUBLIC_MEDIA_HOST
 ENV NEXT_TELEMETRY_DISABLED=1
+# La salida `standalone` es de esta imagen y de ninguna otra: es lo que copian
+# las lineas de abajo. Ver el comentario en `next.config.ts`.
+ENV SALIDA_STANDALONE=1
 RUN npm run build
 
 # --- 3. lo que se despliega ---
