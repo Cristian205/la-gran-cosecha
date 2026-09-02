@@ -453,7 +453,12 @@ def test_rls_bloquea_incluso_el_sql_crudo(settings, tenant_a, recursos_del_tenan
     ajeno = recursos_del_tenant_b["producto"]
 
     with connection.cursor() as cursor:
-        cursor.execute("SET LOCAL app.current_tenant = %s", [str(tenant_a.uuid)])
+        # La CLAVE PRIMARIA, no el uuid. La política compara
+        # `tenant_id = current_setting('app.current_tenant')::bigint`, así que
+        # un uuid revienta el cast antes de comparar nada y la consulta
+        # ERRORÍA en vez de devolver cero filas. Es lo que declara
+        # `db.declarar_tenant_en_la_base`, que es a quien este test imita.
+        cursor.execute("SET LOCAL app.current_tenant = %s", [str(tenant_a.pk)])
         cursor.execute("SELECT id FROM ui_producto WHERE id = %s", [ajeno.id])
         assert cursor.fetchone() is None, "RLS no está activo o el rol lo ignora"
 

@@ -28,6 +28,25 @@ jobs:
   backend:
     runs-on: ubuntu-latest
 
+    # `config/settings/base.py` exige DATABASE_URL al IMPORTARSE —`env.db()` sin
+    # valor por defecto—, y `settings/test.py` importa base antes de sustituir
+    # la base de datos por la suya. Asi que sin esta variable no arranca nada:
+    # ni `makemigrations --check`, ni la suite.
+    #
+    # En local nadie lo nota porque `backend/.env` existe y `read_env` lo lee.
+    # Ese archivo esta en `.gitignore`, asi que aqui no hay ninguno: CI es el
+    # unico sitio donde el proyecto arranca de verdad sin configuracion previa.
+    #
+    # Va a nivel de TRABAJO y no de paso para que ningun paso futuro se olvide.
+    env:
+      DATABASE_URL: postgres://app_crynex:app@localhost:5432/crynex_ci
+      # Con esta se activan los dos tests de RLS y los dos de concurrencia
+      # —dos cajeros vendiendo la ultima unidad, dos camareros dando la misma
+      # mesa—, que en SQLite se saltan solos porque `select_for_update` no
+      # bloquea nada.
+      TEST_DATABASE_URL: postgres://app_crynex:app@localhost:5432/crynex_ci
+      DJANGO_SETTINGS_MODULE: config.settings.test
+
     services:
       db:
         image: postgres:16
@@ -43,9 +62,9 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -67,21 +86,31 @@ jobs:
           psql -h localhost -U postgres -d crynex_ci -v ON_ERROR_STOP=1 <<'SQL'
           CREATE ROLE app_crynex LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS CREATEDB;
           GRANT ALL ON SCHEMA public TO app_crynex;
+          -- Que sea DUEÑO de la base, no solo invitado con permisos. Django
+          -- crea `test_crynex_ci` aparte y ahi los GRANT de arriba no llegan;
+          -- siendo dueño no hay ninguna pregunta de permisos que responder, ni
+          -- aqui ni en la de pruebas, que tambien crea el.
+          ALTER DATABASE crynex_ci OWNER TO app_crynex;
           SQL
 
       - name: Migraciones al dia
         working-directory: backend
-        env:
-          DJANGO_SETTINGS_MODULE: config.settings.test
         run: python manage.py makemigrations --check --dry-run
 
-      # Con `TEST_DATABASE_URL` se activan los dos tests de RLS y el de
-      # concurrencia del POS —dos cajeros vendiendo la ultima unidad—, que en
-      # SQLite se saltan solos porque `select_for_update` no bloquea nada.
+      # Aplicarlas de verdad, y en un paso propio.
+      #
+      # No es redundante con la suite: si una migracion falla sobre PostgreSQL
+      # —una RunPython que toca una tabla que su `dependencies` no declara, un
+      # ALTER que SQLite se traga y este no— la suite lo cuenta como
+      # trescientos «relation ... does not exist», que es un muro de ruido
+      # donde la causa no aparece por ninguna parte. Aqui falla una vez, con su
+      # error, y con el nombre de la migracion delante.
+      - name: Migraciones sobre PostgreSQL
+        working-directory: backend
+        run: python manage.py migrate --no-input
+
       - name: Suite completa
         working-directory: backend
-        env:
-          TEST_DATABASE_URL: postgres://app_crynex:app@localhost:5432/crynex_ci
         run: pytest -q
 
   # ==========================================================================
@@ -97,11 +126,11 @@ jobs:
         app: [tienda, admin-panel, panel-crynex]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: frontend/${{ matrix.app }}/package-lock.json
 
