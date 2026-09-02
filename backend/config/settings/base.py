@@ -278,16 +278,45 @@ SIMPLE_JWT = {
 # ==========================================================================
 # CORS
 # ==========================================================================
-CORS_ALLOWED_ORIGINS = env.list(
+def origenes(nombre, defecto):
+    """
+    Una lista de orígenes leída del entorno, normalizada.
+
+    `env.list` parte por comas y no toca nada más, así que
+    `A, https://b.com/` da un espacio delante del segundo y una barra al final.
+    Las dos cosas son inválidas para `django-cors-headers`, que lo comprueba en
+    el arranque —`corsheaders.E014`— y tumba el despliegue entero antes de
+    servir la primera petición.
+
+    Y eso es lo que pasó: el backend llevaba días sin desplegarse por una barra
+    de más en una variable de Render, mientras se buscaba el fallo en la tienda.
+    El síntoma no se parecía en nada a la causa.
+
+    Un origen es esquema + host + puerto y nada más. Se recorta lo que sobra en
+    vez de rechazarlo: quien pega una URL desde la barra del navegador la pega
+    con la barra final, y esa es la forma normal de escribirla.
+    """
+    limpios = []
+    for bruto in env.list(nombre, default=defecto):
+        origen = bruto.strip().rstrip("/")
+        if origen and origen not in limpios:
+            limpios.append(origen)
+    return limpios
+
+
+#: La tienda NO necesita estar aquí. Sus llamadas salen del servidor de Next,
+#: no del navegador, así que no hay origen que comprobar; lo que la acredita es
+#: `TENANCY_CLAVE_SERVIDOR`. Los que van aquí son los paneles.
+CORS_ALLOWED_ORIGINS = origenes(
     "CORS_ALLOWED_ORIGINS",
-    default=[
+    [
         "http://localhost:5173",  # storefront (Vite)
         "http://localhost:5174",  # admin-panel (Vite)
     ],
 )
-CSRF_TRUSTED_ORIGINS = env.list(
+CSRF_TRUSTED_ORIGINS = origenes(
     "CSRF_TRUSTED_ORIGINS",
-    default=["http://localhost:5173", "http://localhost:5174"],
+    ["http://localhost:5173", "http://localhost:5174"],
 )
 
 # ==========================================================================

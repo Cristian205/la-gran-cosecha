@@ -83,30 +83,18 @@ def test_el_pos_no_sabe_que_existen_las_reservas():
     ningún otro test se enterara: todo seguiría funcionando, y el cuarto módulo
     volvería a necesitar una rama.
     """
-    import subprocess
     from pathlib import Path
 
+    from tests.inspeccion import buscar_en_codigo
+
     pos = Path(__file__).resolve().parents[1] / "apps" / "pos"
-    hallazgos = subprocess.run(
-        ["git", "grep", "-niE", r"reserva|recurso reservable", "--", str(pos)],
-        capture_output=True,
-        text=True,
+    # Los docstrings SÍ pueden nombrarlas: `paneles.py` explica el mecanismo con
+    # las mesas de ejemplo, y ese texto es justo lo que hay que conservar. Lo
+    # que no puede haber es una rama, y eso es lo que se busca.
+    hallazgos = buscar_en_codigo(pos, r"reserva")
+    assert not hallazgos, "La caja está ramificando por reservas:\n" + "\n".join(
+        hallazgos
     )
-    # Los comentarios sí pueden nombrarlas: `paneles.py` explica el mecanismo
-    # con las mesas de ejemplo, y ese texto es justo lo que hay que conservar.
-    codigo = [
-        linea
-        for linea in hallazgos.stdout.splitlines()
-        if not _es_comentario(linea)
-    ]
-    assert not codigo, (
-        "La caja está ramificando por reservas:\n" + "\n".join(codigo)
-    )
-
-
-def _es_comentario(linea: str) -> bool:
-    cuerpo = linea.split(":", 2)[-1].strip()
-    return cuerpo.startswith("#") or cuerpo.startswith('"') or not cuerpo
 
 
 def test_el_modulo_aporta_su_panel_a_la_caja(con_reservas):

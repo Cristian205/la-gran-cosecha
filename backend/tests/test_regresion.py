@@ -246,3 +246,53 @@ def test_una_contrasena_incorrecta_no_envia_otp(api, usuario_owner):
 
     assert respuesta.status_code == 400
     assert len(mail.outbox) == 0
+
+
+# ==========================================================================
+# EL DESPLIEGUE
+# ==========================================================================
+def test_un_origen_con_barra_o_espacio_no_tumba_el_arranque():
+    """
+    El fallo que dejo el backend dias sin desplegarse.
+
+    `CORS_ALLOWED_ORIGINS=" https://a.app/,https://b.app/"` —una barra final y
+    un espacio de separar con «, »— hace que `django-cors-headers` falle su
+    comprobacion de arranque (`corsheaders.E014`) y Django aborte ANTES de
+    servir la primera peticion. El sintoma no se parecia en nada a la causa: la
+    tienda daba 404 en todo y se busco el fallo alli durante horas.
+
+    Un origen es esquema, host y puerto. Lo que sobra se recorta en vez de
+    rechazarse: quien copia una URL de la barra del navegador la copia con la
+    barra final, y esa es la forma normal de escribirla.
+    """
+    from config.settings.base import origenes
+
+    monkeypatched = " https://tienda.vercel.app/ , https://panel.vercel.app//"
+    import os
+
+    anterior = os.environ.get("CORS_DE_PRUEBA")
+    os.environ["CORS_DE_PRUEBA"] = monkeypatched
+    try:
+        assert origenes("CORS_DE_PRUEBA", []) == [
+            "https://tienda.vercel.app",
+            "https://panel.vercel.app",
+        ]
+    finally:
+        if anterior is None:
+            del os.environ["CORS_DE_PRUEBA"]
+        else:
+            os.environ["CORS_DE_PRUEBA"] = anterior
+
+
+def test_los_origenes_repetidos_se_colapsan():
+    """Pegar dos veces el mismo dominio es lo normal cuando se van anadiendo a
+    mano; duplicarlo no aporta nada y ensucia el diagnostico."""
+    import os
+
+    from config.settings.base import origenes
+
+    os.environ["CORS_DE_PRUEBA"] = "https://a.app,https://a.app/,https://b.app"
+    try:
+        assert origenes("CORS_DE_PRUEBA", []) == ["https://a.app", "https://b.app"]
+    finally:
+        del os.environ["CORS_DE_PRUEBA"]
