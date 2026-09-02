@@ -1,33 +1,49 @@
-# La Gran Cosecha — Plataforma de venta por pedido
+# CryneX — Plataforma modular de gestión, POS y e-commerce
 
-Monorepo reestructurado en **backend** (API REST) y **frontend** (dos apps React
-independientes). El backend es un monolito Django modular; cada frontend tiene sus
-propias dependencias.
+Un solo núcleo con módulos configurables, sirviendo a varios negocios a la vez.
+El backend es un monolito Django modular; cada frontend tiene sus propias
+dependencias.
 
 ```
-La-Gran-cosecha/
+crynex/
 ├─ backend/              API REST (Django + DRF + JWT)
 │  ├─ config/settings/   base / dev / prod / test
-│  ├─ tests/             regresión + aislamiento multi-tenant
+│  ├─ tests/             regresión, aislamiento, motor, inventario, POS
 │  └─ apps/
 │     ├─ common/         permisos, paginación, utilidades
-│     ├─ accounts/       usuarios + login OTP + JWT
+│     ├─ tenancy/        negocios, dominios, pertenencias, aislamiento
+│     ├─ accounts/       identidad de plataforma, login OTP, JWT
+│     ├─ billing/        catálogo comercial, planes, límites, suscripción
+│     ├─ business/       perfil de negocio, presets, módulos activos
 │     ├─ catalog/        categorías, unidades, productos, presentaciones
-│     ├─ orders/         clientes, pedidos, detalles, lotes, estadísticas, PDF
+│     ├─ inventory/      existencias, movimientos, ubicaciones
+│     ├─ orders/         clientes, pedidos, lotes, estadísticas, PDF
+│     ├─ pos/            turnos de caja, ventas, medios de pago
+│     ├─ storefront/     motor de tiendas: bloques, temas, plantillas, páginas
 │     ├─ content/        configuración del sitio, banners, testimonios, ofertas
 │     ├─ media/          biblioteca de archivos (Cloudflare R2)
 │     ├─ notifications/  centro de notificaciones del panel
 │     └─ contact/        mensajes del formulario público
 ├─ frontend/
-│  ├─ storefront/        ecommerce del cliente (React + Vite + TS) — puerto 5173
-│  └─ admin-panel/       panel administrativo (React + Vite + TS) — puerto 5174
-└─ docker-compose.yml    db + backend + ambos frontends
+│  ├─ tienda/            tienda pública (Next.js + TS) — puerto 3000
+│  ├─ admin-panel/       panel del negocio (React + Vite + TS) — puerto 5174
+│  └─ panel-crynex/      panel de la plataforma (React + Vite + TS) — puerto 5176
+└─ docker-compose.yml    db + backend + tienda + panel
 ```
+
+> **La tienda vieja en Vite (`frontend/storefront`) se retiró.** Servía las
+> mismas cinco rutas, pero como aplicación de una sola página: el rastreador
+> recibía un HTML vacío y el catálogo llegaba después, por JavaScript. Con una
+> tienda por negocio eso significaba que ninguna se posicionaba. `tienda`
+> renderiza en el servidor y compone sus páginas desde el motor, así que
+> mantener las dos era escribir cada bloque nuevo dos veces.
 
 ## Arquitectura
 
-- **Cliente (storefront):** navega el catálogo, arma su carrito y genera pedidos
-  **sin cuenta** (se identifica con nombre/teléfono/dirección al ordenar).
+- **Tienda (`tienda`):** navega el catálogo, arma su carrito y genera pedidos
+  **sin cuenta** (se identifica con nombre/teléfono/dirección al ordenar). Sus
+  páginas no están escritas en código: son composiciones de bloques que cada
+  negocio edita desde el panel.
 - **Administración (admin-panel):** login con **OTP por correo** (2 pasos) → JWT.
   Gestiona productos, pedidos, clientes, usuarios y ve estadísticas.
 - **API:** `/api/auth/…`, `/api/catalog/…`, `/api/orders/…`, `/api/clients/…`,
@@ -50,20 +66,34 @@ python manage.py runserver         # http://localhost:8000
 > Con `EMAIL_BACKEND=console` (default en dev) el código OTP se imprime en la
 > terminal del backend al iniciar sesión, sin necesidad de SMTP real.
 
-### 2. Storefront (cliente)
+### 2. Tienda pública
 
 ```bash
-cd frontend/storefront
+cd frontend/tienda
+cp .env.example .env.local     # API_URL, TENANCY_CLAVE_SERVIDOR, DOMINIO_PLATAFORMA
 npm install
-npm run dev        # http://localhost:5173  (proxy /api → :8000)
+npm run dev        # http://localhost:3000
 ```
 
-### 3. Admin-panel
+> La clave `TENANCY_CLAVE_SERVIDOR` acredita que la llamada viene de este
+> servidor y no de un navegador. Nunca lleva prefijo `NEXT_PUBLIC_`: eso la
+> incrustaría en el paquete que descarga el cliente y cualquiera podría pedir
+> el catálogo de cualquier negocio.
+
+### 3. Panel del negocio
 
 ```bash
 cd frontend/admin-panel
 npm install
 npm run dev        # http://localhost:5174  (proxy /api → :8000)
+```
+
+### 4. Panel de la plataforma
+
+```bash
+cd frontend/panel-crynex
+npm install
+npm run dev        # http://localhost:5176  (proxy /api → :8000)
 ```
 
 ## Puesta en marcha — Docker (todo en uno)
@@ -72,8 +102,8 @@ npm run dev        # http://localhost:5174  (proxy /api → :8000)
 docker compose up --build
 ```
 
-- Storefront:   http://localhost:8080
-- Admin-panel:  http://localhost:8081
+- Tienda:       http://localhost:8080
+- Panel:        http://localhost:8081
 - API:          http://localhost:8000/api
 - Django admin: http://localhost:8000/admin
 

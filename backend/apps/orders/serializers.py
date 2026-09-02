@@ -201,6 +201,22 @@ class CrearPedidoSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "El pedido debe incluir al menos un producto."
             )
+
+        # Hay negocios cuyo canal es el mostrador y no internet —una ferreteria,
+        # un restaurante sin domicilios—. Su tienda sigue siendo un catalogo
+        # que se puede ver; lo que no se puede es pedir desde ella.
+        #
+        # Se comprueba en el servidor y no solo ocultando el boton: quien tenga
+        # la URL del endpoint puede llamarlo igual.
+        from apps.business.consulta import puede  # noqa: PLC0415
+
+        peticion = self.context.get("request")
+        tenant = getattr(peticion, "tenant", None)
+        if not puede(tenant, "acepta_pedidos_online"):
+            raise serializers.ValidationError(
+                "Este negocio no recibe pedidos por internet. Escribenos o "
+                "acercate al punto de venta."
+            )
         return attrs
 
     @transaction.atomic

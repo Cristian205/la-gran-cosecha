@@ -98,6 +98,8 @@ export interface Producto {
   codigo_barras: string;
   /** Anotado por el servidor: `cantidad - reservada`, sumando ubicaciones. */
   disponible: string;
+  /** El más bajo de sus presentaciones activas. Lo anota el servidor. */
+  precio_desde: string | null;
   imagen_url: string | null;
   orden: number;
   presentaciones: Presentacion[];

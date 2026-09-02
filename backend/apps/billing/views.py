@@ -62,7 +62,6 @@ def aplicar_plantilla(negocio, slug, *, aplicar_tema=True, publicar=False, autor
     El import va dentro de la función a propósito: `billing` se carga antes que
     `storefront`, y arriba sería un ciclo en el arranque de Django.
     """
-    from apps.content.models import StoreSettings  # noqa: PLC0415
     from apps.storefront.composicion import adoptar_plantilla  # noqa: PLC0415
     from apps.storefront.models import Plantilla  # noqa: PLC0415
 
@@ -73,18 +72,19 @@ def aplicar_plantilla(negocio, slug, *, aplicar_tema=True, publicar=False, autor
         raise drf.ValidationError({"plantilla": "No existe esa plantilla."})
 
     with usar_tenant(negocio):
+        # `adoptar_plantilla` ya copia el aspecto: las paginas Y la identidad.
+        # Antes se copiaba aqui otra vez, y esa segunda copia solo miraba
+        # `tema_valores` — asi que una plantilla con color de marca propio se
+        # asignaba desde el Control Center con su maqueta y el color anterior.
+        # El sintoma era una boutique en verde y nadie diria que es un fallo de
+        # esta funcion.
         paginas = adoptar_plantilla(
-            negocio, plantilla, autor=autor, publicar_ya=publicar
+            negocio,
+            plantilla,
+            autor=autor,
+            publicar_ya=publicar,
+            con_aspecto=aplicar_tema,
         )
-
-        # El aspecto se COPIA a la configuración del negocio, no se enlaza: si
-        # apuntara a la plantilla, que Crynex la retocara le cambiaría los
-        # colores de la tienda a todos sus clientes sin avisar.
-        if aplicar_tema and plantilla.tema_valores:
-            config = StoreSettings.get_para(negocio)
-            if config is not None:
-                config.tokens = {**(config.tokens or {}), **plantilla.tema_valores}
-                config.save(update_fields=["tokens"])
 
     return [p.ruta for p in paginas]
 

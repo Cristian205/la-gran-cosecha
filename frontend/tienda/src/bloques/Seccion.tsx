@@ -18,10 +18,14 @@ interface Props {
   subtitulo?: string;
   /** Clases extra de la propia sección, para las variantes de cada bloque. */
   className?: string;
+  /** El encabezado centrado, con el subtítulo debajo en vez de a la derecha.
+   *  Es la diferencia entre una sección de catálogo y una de escaparate, y no
+   *  es una variante del bloque: el mismo bloque puede querer las dos. */
+  centrado?: boolean;
   children: ReactNode;
 }
 
-export function Seccion({ kicker, titulo, subtitulo, className = "", children }: Props) {
+export function Seccion({ kicker, titulo, subtitulo, className = "", centrado = false, children }: Props) {
   // Sin título ni antetítulo no se dibuja el encabezado: dejar el hueco de un
   // `h2` vacío desplaza la sección y parece que algo falló al cargar.
   const conEncabezado = Boolean(kicker || titulo || subtitulo);
@@ -29,7 +33,7 @@ export function Seccion({ kicker, titulo, subtitulo, className = "", children }:
   return (
     <section className={`seccion ${className}`.trim()}>
       {conEncabezado && (
-        <div className="seccion-titulo">
+        <div className={`seccion-titulo ${centrado ? "seccion-titulo--centrado" : ""}`}>
           <div>
             {kicker && <span className="seccion-kicker">{kicker}</span>}
             {titulo && <h2>{titulo}</h2>}

@@ -1,5 +1,8 @@
 import {
   Boxes,
+  Building2,
+  CalendarClock,
+  ScanLine,
   Image as ImageIcon,
   LayoutTemplate,
   LayoutDashboard,
@@ -27,6 +30,20 @@ export const SECCIONES_DISPONIBLES: SeccionDisponible[] = [
   { clave: "dashboard", to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { clave: "catalogo", to: "/productos", label: "Catálogo", icon: Package, permiso: "catalog.view_producto" },
   {
+    clave: "caja",
+    to: "/caja",
+    label: "Caja",
+    icon: ScanLine,
+    permiso: "pos.add_venta",
+  },
+  {
+    clave: "reservas",
+    to: "/reservas",
+    label: "Reservas",
+    icon: CalendarClock,
+    permiso: "reservations.view_reserva",
+  },
+  {
     clave: "inventario",
     to: "/inventario",
     label: "Inventario",
@@ -44,6 +61,7 @@ export const SECCIONES_DISPONIBLES: SeccionDisponible[] = [
   { clave: "clientes", to: "/clientes", label: "Clientes", icon: Users, permiso: "orders.view_cliente" },
   { clave: "usuarios", to: "/usuarios", label: "Usuarios", icon: ShieldCheck, permiso: "accounts.view_usuario" },
   { clave: "contenido", to: "/contenido", label: "Contenido", icon: ImageIcon, permiso: "content.view_promobanner" },
+  { clave: "negocio", to: "/negocio", label: "Tu negocio", icon: Building2 },
   // El constructor cambia lo que ven los visitantes, asi que pide el mismo
   // permiso que administrar el contenido de la tienda: quien puede cambiar los
   // banners puede cambiar donde van.
@@ -62,13 +80,22 @@ export const LAYOUT_POR_DEFECTO: NodoSidebar[] = [
     tipo: "grupo",
     id: "operacion",
     titulo: "Operación",
-    items: ["dashboard", "catalogo", "inventario", "pedidos", "productos_pendientes", "clientes"],
+    items: [
+      "dashboard",
+      "caja",
+      "reservas",
+      "catalogo",
+      "inventario",
+      "pedidos",
+      "productos_pendientes",
+      "clientes",
+    ],
   },
   {
     tipo: "grupo",
     id: "administracion",
     titulo: "Administración",
-    items: ["usuarios", "contenido"],
+    items: ["usuarios", "contenido", "negocio"],
   },
 ];
 

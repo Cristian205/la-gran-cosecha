@@ -177,6 +177,21 @@ class TokenTema(models.Model):
         TIPOGRAFIA = "TIPOGRAFIA", "Tipografía"
         SUPERFICIE = "SUPERFICIE", "Superficies"
         FORMA = "FORMA", "Formas y espacios"
+        #: Cuánto aire tiene la tienda. Es lo que separa el catálogo apretado
+        #: de una ferretería —trescientas referencias que hay que comparar— de
+        #: una boutique, donde cada producto pide espacio para respirar.
+        DENSIDAD = "DENSIDAD", "Densidad"
+        #: La caja. Está en el MISMO catálogo que la tienda y no en uno propio
+        #: a propósito: un negocio tiene UNA identidad, y el mostrador es otra
+        #: superficie que la lleva puesta, no otra marca. Un segundo catálogo
+        #: daría dos sitios donde elegir el color y el segundo se quedaría
+        #: viejo — que es el fallo contra el que está escrita media
+        #: arquitectura de este sistema.
+        #:
+        #: Lo que sí es propio de la caja es la DISPOSICIÓN: dónde va el
+        #: carrito y cuánto cabe en pantalla. Eso no tiene equivalente en la
+        #: tienda, y por eso son tokens y no ajustes reaprovechados.
+        CAJA = "CAJA", "Punto de venta"
 
     class Tipo(models.TextChoices):
         COLOR = "COLOR", "Color"
@@ -248,6 +263,17 @@ class Plantilla(models.Model):
     #: una paleta entre varias.
     tema_valores = models.JSONField(default=dict, blank=True)
 
+    #: La identidad que propone: color de marca, tipografía, redondeo. Son los
+    #: campos de `StoreSettings`, no tokens, porque eso es donde el color de
+    #: marca vive desde antes del motor de temas y de donde la tienda deriva su
+    #: escala entera. Guardarlo aquí NO lo duplica: se COPIA al adoptar, igual
+    #: que las páginas, y a partir de ahí manda el del negocio.
+    #:
+    #: Sin esto, una plantilla podía traer su maqueta pero no su color, y
+    #: adoptar «boutique» dejaba una tienda rosa con la barra verde de la
+    #: anterior. Las claves se filtran contra `aspecto.CAMPOS_DE_MARCA`.
+    marca = models.JSONField(default=dict, blank=True)
+
     activa = models.BooleanField(default=True)
     es_predeterminada = models.BooleanField(default=False)
     orden = models.PositiveIntegerField(default=0)
@@ -291,6 +317,19 @@ class Pagina(ModeloConTenant):
         PRODUCTO = "PRODUCTO", "Ficha de producto"
         CATEGORIA = "CATEGORIA", "Categoría"
         LIBRE = "LIBRE", "Página libre"
+        #: El armazón: la cabecera y el pie que envuelven a TODAS las demás.
+        #: No es una ruta que se visite —vive en `/_layout`, y el listado de
+        #: rutas la excluye— sino una composición más, con las mismas
+        #: versiones, el mismo editor y la misma visibilidad por dispositivo.
+        #:
+        #: Está aquí y no como bloques dentro de cada página por una razón
+        #: concreta: con cuatro rutas, el pie tendría cuatro copias, y cambiar
+        #: un teléfono serían cuatro ediciones de las que la cuarta se olvida.
+        LAYOUT = "LAYOUT", "Cabecera y pie"
+
+    #: La ruta reservada del armazón. Empieza por «_» para que no choque nunca
+    #: con una página real: ningún negocio va a llamar «/_layout» a una suya.
+    RUTA_LAYOUT = "/_layout"
 
     ruta = models.CharField(
         max_length=120, help_text="Empieza por /. La home es exactamente «/»."

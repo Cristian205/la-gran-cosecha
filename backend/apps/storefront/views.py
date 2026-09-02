@@ -11,7 +11,7 @@ Tres públicos bien separados, y la separación es la que sostiene el aislamient
   no pertenece a ningún negocio.
 """
 from django.db.models import Prefetch
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny
@@ -24,6 +24,8 @@ from apps.content.models import StoreSettings
 from apps.tenancy.viewsets import ExigeNegocioMixin, TenantScopedMixin
 
 from . import composicion as servicio
+from . import vista_previa
+from .aspecto import limpiar_marca, variables_de_plantilla
 from .models import Bloque, Pagina, Plantilla, Tema, TokenTema, VersionPagina
 from .serializers import (
     AdoptarPlantillaSerializer,
@@ -50,12 +52,25 @@ class PaginaPublicaView(ExigeNegocioMixin, APIView):
     `?borrador=1` devuelve el borrador, pero solo a quien puede editarlo. Sin
     esa comprobación, cualquiera podría leer los cambios sin publicar de
     cualquier tienda cambiando un parámetro.
+
+    `?vista=<testigo>` pinta una PLANTILLA sobre este negocio sin haberla
+    asignado: es el enlace de prueba que genera el Control Center. No escribe
+    nada y no toca lo publicado — ver `storefront/vista_previa.py`.
     """
 
     permission_classes = [AllowAny]
 
     def get(self, request):
         ruta = request.query_params.get("ruta") or "/"
+
+        # La vista de plantilla se resuelve ANTES de buscar la página: una
+        # plantilla puede traer rutas que este negocio todavía no tiene —`/entrar`
+        # es justo el caso— y exigirle la fila de antemano haría que la mitad de
+        # la plantilla no se pudiera ni enseñar.
+        compuesta = self._de_plantilla(request, ruta)
+        if compuesta is not None:
+            return Response(compuesta)
+
         pagina = Pagina.objects.filter(ruta=ruta, activa=True).first()
         if pagina is None:
             raise NotFound("Esta tienda no tiene esa página.")
@@ -73,6 +88,52 @@ class PaginaPublicaView(ExigeNegocioMixin, APIView):
             ).data
         )
 
+    def _de_plantilla(self, request, ruta):
+        """
+        La composición que propone una plantilla, si el testigo la autoriza.
+
+        Devuelve `None` cuando no hay testigo, no vale, o la plantilla no
+        compone esta ruta. Ese último caso es deliberado: si la plantilla no
+        dice nada de `/contacto`, se sigue enseñando la página real del negocio
+        en vez de un vacío — la previa es la plantilla ENCIMA de la tienda, no
+        en lugar de ella.
+        """
+        testigo = request.query_params.get(vista_previa.PARAMETRO) or request.headers.get(
+            vista_previa.CABECERA
+        )
+        if not testigo:
+            return None
+
+        slug = vista_previa.abrir(testigo, tenant_id=self.obtener_tenant().pk)
+        if slug is None:
+            return None
+
+        plantilla = Plantilla.objects.filter(slug=slug, activa=True).first()
+        if plantilla is None:
+            return None
+
+        bloques = (plantilla.paginas or {}).get(ruta)
+        if not bloques:
+            return None
+
+        return {
+            "ruta": ruta,
+            "titulo": servicio.titulo_de(ruta),
+            "tipo": servicio.tipo_de(ruta),
+            "seo_titulo": "",
+            "seo_descripcion": "",
+            "bloques": bloques,
+            "version": None,
+            # El aspecto viaja con la composición para que el layout pueda
+            # repintar la tienda entera. Sin esto la previa saldría con la
+            # maqueta de la plantilla y el color del negocio, que es
+            # exactamente la mezcla que no deja juzgar nada.
+            "aspecto": {
+                "tokens": variables_de_plantilla(plantilla),
+                "marca": limpiar_marca(plantilla.marca),
+            },
+        }
+
 
 class RutasPublicasView(ExigeNegocioMixin, APIView):
     """
@@ -89,6 +150,10 @@ class RutasPublicasView(ExigeNegocioMixin, APIView):
             Pagina.objects.filter(
                 activa=True, versiones__estado=VersionPagina.Estado.PUBLICADA
             )
+            # El armazón no es una ruta que se visite: si entrara aquí, Next
+            # generaría una página «/_layout» con la cabecera y el pie sueltos,
+            # y el buscador acabaría indexándola.
+            .exclude(tipo=Pagina.Tipo.LAYOUT)
             .values_list("ruta", flat=True)
             .distinct()
         )
@@ -269,6 +334,57 @@ class TemaViewSet(BaseDeCatalogo):
 class PlantillaViewSet(BaseDeCatalogo):
     serializer_class = PlantillaSerializer
     queryset = Plantilla.objects.select_related("tema")
+
+    @action(detail=True, methods=["post"], url_path="enlace-de-prueba")
+    def enlace_de_prueba(self, request, pk=None):
+        """
+        Un enlace para ver esta plantilla en una empresa real, sin asignarla.
+
+        Es la pregunta que el editor no puede contestar: una plantilla se juzga
+        con el catálogo de verdad de alguien —sus fotos, sus categorías, sus
+        precios— y en una pantalla entera, no en un marco de 900 píxeles con
+        datos de ejemplo.
+
+        No escribe NADA en el negocio. Asignar la plantilla para mirarla crearía
+        borradores en cada ruta y le cambiaría el color de marca, y deshacerlo
+        después no devuelve el estado anterior: enseñar algo no puede costar
+        modificarlo. Ver `storefront/vista_previa.py`.
+        """
+        from apps.tenancy.models import Tenant  # noqa: PLC0415
+
+        plantilla = self.get_object()
+        negocio = Tenant.objects.filter(pk=request.data.get("negocio")).first()
+        if negocio is None:
+            return Response(
+                {"negocio": "No existe esa empresa."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # El dominio principal del negocio. Sin dominio no hay enlace que dar:
+        # la tienda se resuelve por el host, así que una empresa que todavía no
+        # tiene dirección no se puede visitar de ninguna forma.
+        dominio = (
+            negocio.dominios.filter(es_primario=True)
+            .values_list("hostname", flat=True)
+            .first()
+            or negocio.dominios.values_list("hostname", flat=True).first()
+        )
+        if not dominio:
+            return Response(
+                {"negocio": f"«{negocio.nombre}» todavía no tiene un dominio asignado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        testigo = vista_previa.firmar(
+            tenant_id=negocio.pk, plantilla_slug=plantilla.slug
+        )
+        return Response(
+            {
+                "url": vista_previa.enlace(dominio=dominio, testigo=testigo),
+                "negocio": negocio.nombre,
+                "horas": vista_previa.VIGENCIA // 3600,
+                "rutas": sorted((plantilla.paginas or {}).keys()),
+            }
+        )
 
 
 class CatalogoDeBloquesView(ExigeNegocioMixin, APIView):

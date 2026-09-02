@@ -11,6 +11,7 @@ import { Matriz } from "./paginas/Matriz";
 import { Negocios } from "./paginas/Negocios";
 import { Planes } from "./paginas/Planes";
 import { Plantillas } from "./paginas/Plantillas";
+import { Presets } from "./paginas/Presets";
 import { Resumen } from "./paginas/Resumen";
 import { Suscripciones } from "./paginas/Suscripciones";
 
@@ -43,6 +44,7 @@ export default function App() {
                 <Route path="/planes" element={<Planes />} />
                 <Route path="/permisos" element={<Matriz />} />
                 <Route path="/plantillas" element={<Plantillas />} />
+                <Route path="/presets" element={<Presets />} />
                 <Route path="/suscripciones" element={<Suscripciones />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

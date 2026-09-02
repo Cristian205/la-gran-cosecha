@@ -86,6 +86,14 @@ export interface SiteConfig {
   variables_tema?: Record<string, string>;
   /** Lo que este negocio cambió, por código de token. Lo usa el editor. */
   tokens?: Record<string, string>;
+  /**
+   * Si este negocio recibe pedidos por internet.
+   *
+   * Hay negocios cuyo canal es el mostrador: su tienda es un catalogo que
+   * se puede ver, no un comercio. Ocultar el boton es cortesia; quien de
+   * verdad rechaza el pedido es el servidor.
+   */
+  acepta_pedidos_online?: boolean;
   /** El nombre del negocio. Lo devuelve el backend desde StoreSettings. */
   nombre_empresa: string;
   logo_url: string | null;
@@ -204,4 +212,14 @@ export interface PaginaTienda {
   seo_descripcion: string;
   bloques: BloqueColocado[];
   version: { numero: number; estado: string } | null;
+  /**
+   * Solo en la vista de prueba de una plantilla: el aspecto que esa plantilla
+   * propone, sin haberlo escrito en el negocio. Viaja con la composicion del
+   * armazon para que el layout pueda repintar la tienda entera — si no, la
+   * previa saldria con la maqueta de la plantilla y el color del negocio.
+   */
+  aspecto?: {
+    tokens: Record<string, string>;
+    marca: Record<string, string>;
+  };
 }

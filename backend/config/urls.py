@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.static import serve as serve_static
 
+from apps.business import urls as rutas_de_negocio
 from apps.storefront import urls as rutas_de_tienda
 
 from .health import healthz
@@ -17,6 +18,8 @@ urlpatterns = [
     path("api/", include("apps.catalog.urls")),
     path("api/", include("apps.inventory.urls")),
     path("api/", include("apps.orders.urls")),
+    path("api/", include("apps.pos.urls")),
+    path("api/", include("apps.reservations.urls")),
     path("api/contact/", include("apps.contact.urls")),
     path("api/content/", include("apps.content.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
@@ -31,6 +34,10 @@ urlpatterns = [
     path("api/storefront/", include(rutas_de_tienda.publicas)),
     path("api/content/", include(rutas_de_tienda.del_negocio)),
     path("api/platform/", include(rutas_de_tienda.de_plataforma)),
+    # El perfil del negocio: que modulos usa, que sabe hacer y de que
+    # preset nacio. Mismo reparto por publico que el motor de tiendas.
+    path("api/business/", include(rutas_de_negocio.del_negocio)),
+    path("api/platform/", include(rutas_de_negocio.de_plataforma)),
 ]
 
 if getattr(settings, "USE_R2", False):

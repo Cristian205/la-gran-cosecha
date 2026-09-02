@@ -99,10 +99,78 @@ function filas<T>(datos: T[] | Paginado<T>): T[] {
   return Array.isArray(datos) ? datos : (datos.results ?? []);
 }
 
+export interface OpcionToken {
+  valor: string;
+  nombre: string;
+}
+
+/**
+ * Una perilla del aspecto de la tienda.
+ *
+ * El catálogo lo administra Crynex; cada negocio elige sus valores. Un token
+ * que no esté en el catálogo se ignora al resolver el tema, así que retirar uno
+ * devuelve a todas las tiendas a su valor por defecto sin migrar nada.
+ */
+export interface TokenTema {
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  grupo:
+    | "MARCA"
+    | "NAVEGACION"
+    | "TIPOGRAFIA"
+    | "SUPERFICIE"
+    | "FORMA"
+    | "DENSIDAD"
+    // La caja va en el MISMO catálogo que la tienda: un negocio tiene una
+    // identidad, y el mostrador es otra superficie que la lleva puesta. Ver
+    // `TokenTema.Grupo.CAJA`.
+    | "CAJA";
+  tipo: "COLOR" | "MEDIDA" | "NUMERO" | "OPCION" | "TEXTO";
+  variable_css: string;
+  valor_por_defecto: string;
+  opciones: OpcionToken[];
+  unidad: string;
+}
+
+export const ETIQUETA_GRUPO: Record<TokenTema["grupo"], string> = {
+  MARCA: "Marca",
+  NAVEGACION: "Navegación",
+  TIPOGRAFIA: "Tipografía",
+  SUPERFICIE: "Superficies",
+  FORMA: "Formas y espacios",
+  DENSIDAD: "Densidad",
+  CAJA: "Punto de venta",
+};
+
 export const tienda = {
   async catalogo(): Promise<Bloque[]> {
     const { data } = await api.get<{ bloques: Bloque[] }>("/content/constructor/");
     return data.bloques;
+  },
+
+  /**
+   * El catálogo de perillas del tema, tal como lo define Crynex.
+   *
+   * Viene de la misma petición que los bloques —el endpoint ya lo mandaba y
+   * nadie lo leía— así que abrir la pestaña de apariencia no cuesta una
+   * llamada más.
+   */
+  async tokens(): Promise<TokenTema[]> {
+    const { data } = await api.get<{ tokens: TokenTema[] }>("/content/constructor/");
+    return data.tokens ?? [];
+  },
+
+  /** Lo que este negocio ha cambiado, por código de token. */
+  async valoresDeTema(): Promise<Record<string, string>> {
+    const { data } = await api.get<{ tokens?: Record<string, string> }>(
+      "/content/site-config/"
+    );
+    return data.tokens ?? {};
+  },
+
+  async guardarTema(valores: Record<string, string>): Promise<void> {
+    await api.patch("/content/site-config/", { tokens: valores });
   },
 
   async paginas(): Promise<PaginaTienda[]> {

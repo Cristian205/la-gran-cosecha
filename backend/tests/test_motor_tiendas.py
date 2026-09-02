@@ -566,13 +566,407 @@ def test_cada_variante_declarada_tiene_estilo_que_la_aplique():
 
 def test_el_catalogo_declara_bloques_que_el_frontend_conoce():
     """
-    Cada fila del catálogo nombra un componente del registro de React. Esta
-    lista es el contrato, y romperla deja secciones que no se pintan.
+    Cada fila del catálogo nombra un componente del registro de React.
+
+    Se lee el REGISTRO de verdad, no una lista copiada aquí. La diferencia
+    importa: una lista escrita a mano hay que acordarse de actualizarla, y de
+    eso justamente no se acuerda nadie — así que el test acabaría midiendo si
+    alguien tocó el test, no si el contrato se cumple.
+
+    Una fila sin componente detrás es una sección que se puede colocar desde el
+    constructor y que no pinta nada. Es el fallo más difícil de diagnosticar del
+    motor, porque no da ningún error: solo falta un trozo de la página.
     """
-    esperados = {
-        "carrusel-promociones", "insignias-confianza", "repetir-pedido",
-        "productos-destacados", "ofertas-semana", "categorias-destacadas",
-        "por-que-elegirnos", "estadisticas", "testimonios", "como-funciona",
-        "cotizacion-rapida", "cta-banda",
-    }
-    assert set(Bloque.objects.values_list("codigo", flat=True)) == esperados
+    registro = (RAIZ_TIENDA / "src" / "bloques" / "registro.tsx").read_text(
+        encoding="utf-8"
+    )
+    # Las claves del mapa: `"codigo": Componente as Bloque,`. Las comillas son
+    # opcionales en JS cuando la clave no lleva guiones, y el archivo usa las
+    # dos formas: exigirlas daria un falso positivo en `testimonios`.
+    conocidos = set(
+        re.findall(r'^\s*"?([a-z0-9-]+)"?:\s*\w+ as Bloque,', registro, re.M)
+    )
+
+    declarados = set(Bloque.objects.values_list("codigo", flat=True))
+
+    sin_componente = declarados - conocidos
+    assert not sin_componente, (
+        f"El catálogo ofrece bloques que React no sabe pintar: {sorted(sin_componente)}"
+    )
+
+    # Al revés solo se avisa: el backend y el frontend se despliegan por
+    # separado, así que un componente puede llegar antes que su fila.
+    sin_declarar = conocidos - declarados
+    assert not sin_declarar, (
+        f"Hay componentes que nadie puede colocar: {sorted(sin_declarar)}"
+    )
+
+
+def test_toda_plantilla_sembrada_es_una_composicion_valida():
+    """
+    Una plantilla con un bloque mal escrito se adopta y deja la pagina coja.
+
+    `adoptar_plantilla` valida al copiar, asi que el fallo no aparece al sembrar
+    sino la primera vez que un negocio la elige — y para entonces ya esta en
+    produccion. Esto lo mueve al momento de escribirla.
+
+    Cubre todas, no solo la ultima: la comprobacion vale igual para la que venga
+    despues, y una lista de nombres habria que acordarse de ampliarla.
+    """
+    from apps.storefront.composicion import validar
+    from apps.storefront.models import Plantilla
+
+    for plantilla in Plantilla.objects.all():
+        for ruta, composicion in (plantilla.paginas or {}).items():
+            try:
+                validar(composicion)
+            except Exception as error:  # noqa: BLE001
+                pytest.fail(f"«{plantilla.slug}» en «{ruta}»: {error}")
+
+
+def test_la_plantilla_de_la_gran_cosecha_compone_el_diseno():
+    """
+    Las cinco piezas del diseno, en orden, y ninguna escrita en codigo.
+
+    Es la prueba de que el reparto esta bien puesto: de una portada entera, lo
+    unico que hubo que programar son dos componentes; el titular, los cuatro
+    publicos y los cuatro pasos son datos.
+    """
+    from apps.storefront.models import Plantilla
+
+    plantilla = Plantilla.objects.get(slug="la-gran-cosecha")
+    home = plantilla.paginas["/"]
+    tipos = [b["tipo"] for b in home]
+
+    assert tipos[:4] == [
+        "portada",
+        "publicos-objetivo",
+        "como-funciona",
+        "insignias-confianza",
+    ]
+    # No es la de arranque: un negocio nuevo no deberia estrenar la portada
+    # pensada para un mayorista concreto.
+    assert plantilla.es_predeterminada is False
+
+    portada = home[0]["props"]
+    assert len(portada["ventajas"]) == 4
+    assert home[1]["props"]["publicos"][0]["titulo"] == "Restaurantes"
+    # Los pasos van en fila y numerados: es una variante, no un bloque nuevo.
+    assert home[2]["variante"] == "linea"
+    assert len(home[2]["props"]["pasos"]) == 4
+
+
+# ==========================================================================
+# EL ARMAZON: LA CABECERA Y EL PIE, EDITABLES
+# ==========================================================================
+def test_el_armazon_no_es_una_ruta_visitable(api, negocio):
+    """
+    `/_layout` es una composicion, no una pagina.
+
+    Si entrara en el listado de rutas publicas, Next generaria una pagina con
+    la cabecera y el pie sueltos, y el buscador acabaria indexandola.
+    """
+    from apps.storefront.models import Pagina
+
+    assert Pagina.objects.filter(ruta="/_layout", tipo="LAYOUT").exists()
+
+    respuesta = api.get("/api/storefront/rutas/")
+    assert respuesta.status_code == 200
+    assert "/_layout" not in respuesta.data["rutas"]
+
+    # Pero SI se puede pedir por su ruta: es lo que hace el layout de Next.
+    composicion = api.get("/api/storefront/pagina/?ruta=/_layout")
+    assert composicion.status_code == 200
+    assert [b["tipo"] for b in composicion.data["bloques"]] == ["cabecera", "pie"]
+
+
+def test_todo_negocio_hereda_el_menu_que_estaba_en_codigo(negocio):
+    """
+    Los enlaces vivian en `lib/navegacion.ts` como una constante de cuatro
+    entradas. Ahora son datos, y lo primero que hay que garantizar es que
+    nadie note el cambio: la tienda de ayer se ve igual hoy.
+    """
+    from apps.storefront.models import Pagina
+
+    armazon = Pagina.objects.get(ruta="/_layout")
+    bloques = armazon.publicada.composicion
+    cabecera = next(b for b in bloques if b["tipo"] == "cabecera")
+
+    assert [e["href"] for e in cabecera["props"]["enlaces"]] == [
+        "/", "/tienda", "/nosotros", "/contacto",
+    ]
+
+
+def test_adoptar_una_plantilla_marca_bien_el_armazon(negocio):
+    """
+    El fallo que se colaba: `adoptar_plantilla` daba tipo LIBRE a todo lo que
+    no fuera «/», y entonces `/_layout` acababa en las rutas publicas.
+    """
+    from apps.storefront.composicion import adoptar_plantilla
+    from apps.storefront.models import Pagina, Plantilla
+
+    Pagina.objects.filter(ruta="/_layout").delete()
+    adoptar_plantilla(negocio, Plantilla.objects.get(slug="la-gran-cosecha"))
+
+    assert Pagina.objects.get(ruta="/_layout").tipo == "LAYOUT"
+
+
+def test_la_plantilla_de_la_gran_cosecha_trae_todas_sus_paginas():
+    """Una plantilla que solo compone la home deja el resto sin administrar."""
+    from apps.storefront.models import Plantilla
+
+    plantilla = Plantilla.objects.get(slug="la-gran-cosecha")
+    assert set(plantilla.paginas) == {"/", "/_layout", "/nosotros", "/contacto"}
+
+    armazon = [b["tipo"] for b in plantilla.paginas["/_layout"]]
+    assert armazon == ["cabecera", "pie"]
+
+
+def test_todo_bloque_se_puede_ocultar_por_dispositivo():
+    """
+    La visibilidad es del bloque, no del tipo de bloque.
+
+    Incluye la cabecera y el pie: un negocio puede querer el buscador solo en
+    escritorio, o esconder la llamada final en movil, donde ya hay barra de
+    navegacion abajo.
+    """
+    from apps.storefront.composicion import validar
+
+    salida = validar([
+        {"tipo": "cabecera", "visible": {"movil": False, "tablet": True, "escritorio": True}},
+        {"tipo": "pie"},
+    ])
+    assert salida[0]["visible"] == {"movil": False, "tablet": True, "escritorio": True}
+    # Lo que no se declara se rellena: el lienzo asume que las tres claves estan.
+    assert salida[1]["visible"] == {"movil": True, "tablet": True, "escritorio": True}
+
+
+def test_todo_aspecto_de_tarjeta_esta_dibujado():
+    """
+    Un aspecto sin CSS es un desplegable que no hace nada.
+
+    Es el mismo guardia que ya protege las variantes de bloque, un nivel mas
+    abajo: los datos NOMBRAN el aspecto y la hoja lo dibuja. La opcion por
+    defecto no necesita reglas propias —es lo que la tarjeta ya es— asi que se
+    exige desde la segunda.
+
+    Sin esto, anadir «premium» al token seria una linea que se ve en Apariencia,
+    se puede elegir, se guarda... y no cambia nada. Que es peor que no ofrecerla.
+    """
+    from apps.storefront.models import TokenTema
+
+    token = TokenTema.objects.filter(codigo="estilo-tarjeta").first()
+    assert token is not None, "El token del estilo de tarjeta no esta sembrado"
+
+    css = (RAIZ_TIENDA / "src" / "app" / "global.css").read_text(encoding="utf-8")
+    valores = [o["valor"] for o in token.opciones]
+    assert valores[0] == token.valor_por_defecto
+
+    sin_dibujar = [
+        valor for valor in valores[1:] if f'[data-tarjeta="{valor}"]' not in css
+    ]
+    assert not sin_dibujar, f"aspectos de tarjeta sin estilo: {sin_dibujar}"
+
+
+def test_el_frontend_conoce_los_mismos_aspectos_que_el_catalogo():
+    """
+    La lista vive en dos sitios —el token en la base y `ESTILOS_DE_TARJETA` en
+    `tema.ts`— porque el frontend tiene que poder rechazar un valor que no sabe
+    dibujar. Lo que no puede es que las dos listas se separen: un aspecto que el
+    negocio elige y el frontend descarta cae al estandar en silencio.
+    """
+    import re
+
+    from apps.storefront.models import TokenTema
+
+    token = TokenTema.objects.get(codigo="estilo-tarjeta")
+    fuente = (RAIZ_TIENDA / "src" / "lib" / "tema.ts").read_text(encoding="utf-8")
+
+    bloque = re.search(
+        r"const ESTILOS_DE_TARJETA = \[(.*?)\]", fuente, re.S
+    )
+    assert bloque, "No se encontro ESTILOS_DE_TARJETA en tema.ts"
+    conocidos = set(re.findall(r'"([a-z-]+)"', bloque.group(1)))
+
+    assert conocidos == {o["valor"] for o in token.opciones}
+
+
+def test_el_negocio_elige_el_aspecto_de_sus_tarjetas(api_staff, negocio):
+    """
+    El eslabon que faltaba.
+
+    El token existia, la hoja lo dibujaba y el endpoint mandaba el catalogo,
+    pero el panel del negocio no tenia donde elegirlo: solo Crynex podia, y
+    solo desde una plantilla. Una opcion a la que nadie llega no esta entregada.
+    """
+    from apps.content.models import StoreSettings
+
+    catalogo = api_staff.get("/api/content/constructor/")
+    assert catalogo.status_code == 200
+    codigos = {t["codigo"] for t in catalogo.data["tokens"]}
+    assert "estilo-tarjeta" in codigos
+
+    guardado = api_staff.patch(
+        "/api/content/site-config/",
+        {"tokens": {"estilo-tarjeta": "editorial"}},
+        format="json",
+    )
+    assert guardado.status_code == 200
+
+    config = StoreSettings.objects.get(tenant=negocio)
+    assert config.tokens["estilo-tarjeta"] == "editorial"
+
+    # Y llega resuelto a la tienda, que es quien lo estampa en el <body>.
+    publico = api_staff.get("/api/content/site-config/")
+    assert publico.data["variables_tema"]["--estilo-tarjeta"] == "editorial"
+
+
+#: Tokens cuya variable CSS no se consume con `var(...)`, y por que.
+#:
+#: La regla del motor es que un token cuya variable nadie lee se puede
+#: configurar y no cambia nada — una perilla suelta que ensena a desconfiar del
+#: resto del panel. Cada excepcion es una decision, no un olvido.
+TOKENS_SIN_VARIABLE = {
+    "estilo-tarjeta": (
+        "Nombra un ASPECTO, no un valor. Una variable CSS no puede decidir "
+        "donde va el precio ni si hay foto, asi que el valor resuelto viaja "
+        "como atributo `data-tarjeta` en el <body> y la hoja define los cinco. "
+        "Lo cubre `test_todo_aspecto_de_tarjeta_esta_dibujado`."
+    ),
+    "caja-disposicion": (
+        "Lo mismo un piso mas abajo: nombra una MAQUETA —donde va el carrito— "
+        "y una variable CSS no mueve un panel de sitio. Viaja como atributo "
+        "`data-caja` y la hoja del panel define los tres repartos. Lo cubre "
+        "`test_todo_reparto_de_la_caja_esta_dibujado`."
+    ),
+}
+
+#: Las hojas donde un token puede consumirse. Son dos porque el tema del
+#: negocio viste DOS superficies: su tienda y su caja. Que el catalogo sea uno
+#: solo es deliberado —un negocio tiene una identidad, no dos— y esta explicado
+#: en `TokenTema.Grupo.CAJA`.
+HOJAS = (
+    RAIZ_TIENDA / "src" / "app" / "global.css",
+    RAIZ_TIENDA.parent / "admin-panel" / "src" / "index.css",
+)
+
+
+def test_todo_token_del_tema_lo_consume_la_hoja():
+    """
+    Un token cuya variable nadie lee es una perilla que no hace nada.
+
+    Es la regla que el propio motor documenta —«crear un token obliga a usarlo
+    alli»— y hasta ahora no la comprobaba nadie. Con el panel de Apariencia ya
+    en manos del negocio pesa mas: cada token es una fila que alguien va a
+    mover esperando ver algo.
+    """
+    from apps.storefront.models import TokenTema
+
+    css = "".join(h.read_text(encoding="utf-8") for h in HOJAS)
+
+    huerfanos = sorted(
+        f"{t.codigo} ({t.variable_css})"
+        for t in TokenTema.objects.filter(activo=True)
+        if t.codigo not in TOKENS_SIN_VARIABLE
+        and f"var({t.variable_css}" not in css
+    )
+    assert not huerfanos, (
+        "Estos tokens se pueden configurar y no cambian nada: "
+        f"{huerfanos}. Consumelos en la hoja de la tienda o en la del panel, "
+        "o declaralos en TOKENS_SIN_VARIABLE con la razon."
+    )
+
+
+def test_todo_reparto_de_la_caja_esta_dibujado():
+    """
+    Un reparto que la hoja del panel no conoce deja la caja sin maquetar.
+
+    Es el gemelo de `test_todo_aspecto_de_tarjeta_esta_dibujado`, y existe por
+    lo mismo: `caja-disposicion` no viaja como variable sino como atributo, asi
+    que el guardia de los tokens no lo alcanza. Sin esto, anadir un cuarto
+    reparto al catalogo daria una opcion elegible que no cambia nada.
+    """
+    from apps.pos.aspecto import DISPOSICIONES
+    from apps.storefront.models import TokenTema
+
+    css = (RAIZ_TIENDA.parent / "admin-panel" / "src" / "index.css").read_text(
+        encoding="utf-8"
+    )
+
+    token = TokenTema.objects.filter(codigo="caja-disposicion", activo=True).first()
+    assert token is not None, "El catalogo perdio `caja-disposicion`."
+
+    ofrecidos = {o["valor"] for o in (token.opciones or [])}
+    # Lo que el catalogo ofrece tiene que estar en la lista blanca del servidor,
+    # o el valor se descartaria en silencio y la caja caeria al reparto de
+    # siempre sin que nadie entendiera por que.
+    assert ofrecidos <= set(DISPOSICIONES), (
+        f"El catalogo ofrece repartos que el servidor descarta: "
+        f"{sorted(ofrecidos - set(DISPOSICIONES))}"
+    )
+
+    # El primero es el de por defecto y no necesita regla propia: es la reja
+    # base de `.caja-reparto`. Mismo criterio que las variantes de bloque.
+    sin_dibujar = sorted(
+        d for d in list(DISPOSICIONES)[1:] if f'data-caja="{d}"' not in css
+    )
+    assert not sin_dibujar, (
+        f"Repartos que se pueden elegir y no cambian nada: {sin_dibujar}"
+    )
+
+
+def test_ninguna_excepcion_de_token_sobra():
+    """Una excepcion que ya no aplica hace creer que hay una decision detras."""
+    from apps.storefront.models import TokenTema
+
+    codigos = set(TokenTema.objects.values_list("codigo", flat=True))
+    sobran = sorted(set(TOKENS_SIN_VARIABLE) - codigos)
+    assert not sobran, f"Excepciones de tokens que ya no existen: {sobran}"
+
+
+# ==========================================================================
+# EL ENLACE DE PRUEBA
+# ==========================================================================
+def test_el_enlace_de_prueba_no_escribe_nada_en_el_negocio(negocio):
+    """
+    La promesa entera de esta funcion, y la que se rompe sola en cuanto alguien
+    la "optimice" asignando la plantilla para poder mirarla.
+
+    Ensenar algo no puede costar modificarlo: si la previa escribiera, cada vez
+    que Crynex quisiera ensenarle una plantilla a un cliente le crearia
+    borradores en cada ruta y le cambiaria el color de marca, y deshacerlo
+    despues no devuelve el estado anterior.
+    """
+    from apps.storefront import vista_previa
+    from apps.storefront.models import Pagina, Plantilla
+
+    plantilla = Plantilla.objects.filter(slug="belleza").first()
+    assert plantilla is not None, "La 0015 dejo de sembrar «belleza»."
+
+    antes_paginas = Pagina.all_tenants.filter(tenant=negocio).count()
+
+    testigo = vista_previa.firmar(tenant_id=negocio.pk, plantilla_slug="belleza")
+    assert vista_previa.abrir(testigo, tenant_id=negocio.pk) == "belleza"
+
+    assert Pagina.all_tenants.filter(tenant=negocio).count() == antes_paginas
+
+
+def test_un_testigo_no_vale_para_otro_negocio():
+    """
+    Sin esta comprobacion, un enlace valido para una empresa serviria para
+    forzar la maqueta en cualquier otra cambiando el dominio. El enlace acaba en
+    chats y correos: hay que asumir que lo lee quien no deberia.
+    """
+    from apps.storefront import vista_previa
+
+    testigo = vista_previa.firmar(tenant_id=1, plantilla_slug="belleza")
+    assert vista_previa.abrir(testigo, tenant_id=2) is None
+
+
+def test_un_testigo_manipulado_no_abre_nada():
+    """Falla cerrado y sin lanzar: quien abre un enlace roto ve la tienda
+    normal, no una pagina de error que no sabria interpretar."""
+    from apps.storefront import vista_previa
+
+    assert vista_previa.abrir("no-es-un-testigo", tenant_id=1) is None
+    assert vista_previa.abrir("", tenant_id=1) is None

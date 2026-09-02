@@ -32,6 +32,25 @@ CATALOGO_PERMISOS = [
         ],
     },
     {
+        "modulo": "Punto de venta",
+        "permisos": [
+            {"codename": "pos.add_venta", "etiqueta": "Vender en caja"},
+            {"codename": "pos.change_turno", "etiqueta": "Abrir y cerrar caja, medios de pago"},
+            {"codename": "pos.delete_venta", "etiqueta": "Anular ventas"},
+        ],
+    },
+    {
+        "modulo": "Reservas",
+        "permisos": [
+            {"codename": "reservations.view_reserva", "etiqueta": "Ver la agenda"},
+            {"codename": "reservations.add_reserva", "etiqueta": "Crear y mover reservas"},
+            {
+                "codename": "reservations.change_recurso",
+                "etiqueta": "Administrar mesas y recursos",
+            },
+        ],
+    },
+    {
         "modulo": "Clientes",
         "permisos": [
             {"codename": "orders.view_cliente", "etiqueta": "Ver clientes"},

@@ -37,9 +37,21 @@ class PlantillaSerializer(serializers.ModelSerializer):
         model = Plantilla
         fields = [
             "id", "slug", "nombre", "descripcion", "sector", "vista_previa",
-            "tema", "tema_nombre", "tema_valores", "paginas", "activa",
+            "tema", "tema_nombre", "tema_valores", "marca", "paginas", "activa",
             "es_predeterminada", "orden",
         ]
+
+    def validate_marca(self, valor):
+        """
+        Solo las claves del catalogo. Sin esto, un JSON editable desde el panel
+        de Crynex seria escritura arbitraria sobre la configuracion de cada
+        negocio que adopte la plantilla: `aplicar_aspecto` hace `setattr`.
+        """
+        from .aspecto import limpiar_marca  # noqa: PLC0415
+
+        if not isinstance(valor, dict):
+            raise serializers.ValidationError("Debe ser un objeto.")
+        return limpiar_marca(valor)
 
     def validate_paginas(self, valor):
         if not isinstance(valor, dict):

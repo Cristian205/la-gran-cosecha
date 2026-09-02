@@ -1,16 +1,22 @@
 import type { ComponentType } from "react";
 
 import { CategoriasDestacadas } from "@/componentes/CategoriasDestacadas";
+import { Footer } from "@/componentes/Footer";
 import { CotizacionRapida } from "@/componentes/CotizacionRapida";
 import { EstadisticasConfianza } from "@/componentes/EstadisticasConfianza";
 import { MasVendidos } from "@/componentes/MasVendidos";
+import { Navbar } from "@/componentes/Navbar";
 import { OfertasSemana } from "@/componentes/OfertasSemana";
 import { PorQueElegirnos } from "@/componentes/PorQueElegirnos";
 import { PromoCarousel } from "@/componentes/PromoCarousel";
 import { RepetirPedido } from "@/componentes/RepetirPedido";
 import { Testimonials } from "@/componentes/Testimonials";
 import { TrustBadges } from "@/componentes/TrustBadges";
+import { Acceso } from "./Acceso";
+import { BarraCategorias } from "./BarraCategorias";
 import { ComoFunciona } from "./ComoFunciona";
+import { Portada } from "./Portada";
+import { PublicosObjetivo } from "./PublicosObjetivo";
 import { CtaBanda } from "./CtaBanda";
 
 /**
@@ -56,6 +62,11 @@ export interface PropsDeBloque {
 type Bloque = ComponentType<any>;
 
 const REGISTRO: Record<string, Bloque> = {
+  // El armazon. Van en la composicion de `/_layout`, no en la de cada
+  // pagina: con cuatro rutas, tenerlos por pagina serian cuatro copias del
+  // menu y del pie, y cambiar un telefono seria editarlo cuatro veces.
+  cabecera: Navbar as Bloque,
+  pie: Footer as Bloque,
   "carrusel-promociones": PromoCarousel as Bloque,
   "insignias-confianza": TrustBadges as Bloque,
   "repetir-pedido": RepetirPedido as Bloque,
@@ -66,8 +77,12 @@ const REGISTRO: Record<string, Bloque> = {
   estadisticas: EstadisticasConfianza as Bloque,
   testimonios: Testimonials as Bloque,
   "como-funciona": ComoFunciona as Bloque,
+  portada: Portada as Bloque,
+  "publicos-objetivo": PublicosObjetivo as Bloque,
   "cotizacion-rapida": CotizacionRapida as Bloque,
   "cta-banda": CtaBanda as Bloque,
+  "barra-categorias": BarraCategorias as Bloque,
+  acceso: Acceso as Bloque,
 };
 
 export function componenteDe(tipo: string): Bloque | null {

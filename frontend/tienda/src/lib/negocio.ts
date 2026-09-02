@@ -22,6 +22,18 @@ export interface Negocio {
   host: string;
 }
 
+/**
+ * El testigo del enlace de prueba, si esta peticion lo trae.
+ *
+ * Lo pone `proxy.ts` como cabecera a partir de `?vista=` o de su cookie. Vive
+ * aqui —junto a la resolucion del negocio— porque es lo mismo: informacion de
+ * la peticion que cualquier cosa que se renderice puede necesitar.
+ */
+export async function testigoDeVista(): Promise<string> {
+  const cabeceras = await headers();
+  return cabeceras.get("x-crynex-vista") ?? "";
+}
+
 export async function negocioDeLaPeticion(): Promise<Negocio> {
   const cabeceras = await headers();
   // `x-forwarded-host` es el que llega detrás de un proxy o de Vercel; `host`

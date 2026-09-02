@@ -49,10 +49,13 @@ LOCAL_APPS = [
     "apps.common",
     "apps.tenancy",
     "apps.billing",
+    "apps.business",
     "apps.accounts",
     "apps.catalog",
     "apps.inventory",
     "apps.orders",
+    "apps.pos",
+    "apps.reservations",
     "apps.contact",
     "apps.content",
     "apps.storefront",
@@ -104,10 +107,7 @@ ASGI_APPLICATION = "config.asgi.application"
 # BASE DE DATOS (PostgreSQL)
 # ==========================================================================
 DATABASES = {
-    "default": env.db(
-        "DATABASE_URL",
-        default="postgres://postgres:postgresql12@localhost:5432/la_gran_cosecha",
-    )
+    "default": env.db("DATABASE_URL")
 }
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=0)
 

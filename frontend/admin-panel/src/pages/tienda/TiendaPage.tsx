@@ -27,10 +27,12 @@ import {
   type Composicion,
   type PaginaTienda,
   type VersionPagina,
+  type TokenTema,
 } from "../../api/tienda";
 import { extraerMensajeError } from "../../utils";
 import { alertaError, alertaExito, confirmarAccion } from "../../utils/alertas";
 import { PanelSecciones } from "./PanelSecciones";
+import { PanelTema } from "./PanelTema";
 import { usarPrevia } from "./usarPrevia";
 import "./TiendaPage.css";
 
@@ -69,6 +71,19 @@ export function TiendaPage() {
   );
   const [historial, setHistorial] = useState<VersionPagina[] | null>(null);
 
+  /**
+   * La apariencia vive aparte de la composicion, y por eso tiene su propio
+   * guardado: los bloques van a una VERSION de la pagina —con borrador,
+   * publicada e historial— y el tema va a la configuracion del negocio, que no
+   * tiene versiones porque vale para toda la tienda a la vez.
+   *
+   * Mezclarlos habria obligado a publicar una pagina para cambiar un color.
+   */
+  const [pestana, setPestana] = useState<"secciones" | "apariencia">("secciones");
+  const [tokens, setTokens] = useState<TokenTema[]>([]);
+  const [tema, setTema] = useState<Record<string, string>>({});
+  const [temaGuardado, setTemaGuardado] = useState<Record<string, string>>({});
+
   const origen = urlTienda();
   // Memorizado porque el hook lo tiene como dependencia: sin esto, cada
   // repintado volvería a suscribir el `message` y se perderían mensajes.
@@ -98,10 +113,18 @@ export function TiendaPage() {
   );
 
   useEffect(() => {
-    Promise.all([tienda.catalogo(), tienda.paginas()])
-      .then(([bloques, lista]) => {
+    Promise.all([
+      tienda.catalogo(),
+      tienda.paginas(),
+      tienda.tokens(),
+      tienda.valoresDeTema(),
+    ])
+      .then(([bloques, lista, catalogoTema, valores]) => {
         setCatalogo(bloques);
         setPaginas(lista);
+        setTokens(catalogoTema);
+        setTema(valores);
+        setTemaGuardado(valores);
         const inicial = lista.find((p) => p.ruta === "/") ?? lista[0] ?? null;
         if (inicial) void abrir(inicial);
       })
@@ -111,9 +134,13 @@ export function TiendaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const sinGuardar = JSON.stringify(composicion) !== JSON.stringify(guardado);
+  const sinGuardar =
+    pestana === "apariencia"
+      ? JSON.stringify(tema) !== JSON.stringify(temaGuardado)
+      : JSON.stringify(composicion) !== JSON.stringify(guardado);
 
   async function guardar(): Promise<boolean> {
+    if (pestana === "apariencia") return guardarTema();
     if (!pagina) return false;
     setTrabajando(true);
     try {
@@ -123,6 +150,28 @@ export function TiendaPage() {
       return true;
     } catch (e) {
       alertaError(extraerMensajeError(e, "No se pudo guardar."));
+      return false;
+    } finally {
+      setTrabajando(false);
+    }
+  }
+
+  /**
+   * El tema se aplica en el momento, sin publicar.
+   *
+   * No es un descuido: la apariencia no tiene borrador porque no hay una
+   * version de ella que un visitante pueda estar viendo mientras se edita. Es
+   * la configuracion del negocio, como su logo o su telefono.
+   */
+  async function guardarTema(): Promise<boolean> {
+    setTrabajando(true);
+    try {
+      await tienda.guardarTema(tema);
+      setTemaGuardado(tema);
+      reiniciar();
+      return true;
+    } catch (e) {
+      alertaError(extraerMensajeError(e, "No se pudo guardar la apariencia."));
       return false;
     } finally {
       setTrabajando(false);
@@ -266,13 +315,34 @@ export function TiendaPage() {
 
       <div className="editor-cuerpo">
         <aside className="editor-panel">
-          <PanelSecciones
-            catalogo={catalogo}
-            composicion={composicion}
-            elegido={elegido}
-            onCambio={setComposicion}
-            onElegir={setElegido}
-          />
+          <div className="segmentado editor-pestanas">
+            <button
+              type="button"
+              className={pestana === "secciones" ? "activo" : ""}
+              onClick={() => setPestana("secciones")}
+            >
+              Secciones
+            </button>
+            <button
+              type="button"
+              className={pestana === "apariencia" ? "activo" : ""}
+              onClick={() => setPestana("apariencia")}
+            >
+              Apariencia
+            </button>
+          </div>
+
+          {pestana === "secciones" ? (
+            <PanelSecciones
+              catalogo={catalogo}
+              composicion={composicion}
+              elegido={elegido}
+              onCambio={setComposicion}
+              onElegir={setElegido}
+            />
+          ) : (
+            <PanelTema catalogo={tokens} valores={tema} onCambio={setTema} />
+          )}
         </aside>
 
         <main className="editor-previa">

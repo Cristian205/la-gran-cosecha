@@ -219,9 +219,34 @@ class ProductoWriteSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         presentaciones = validated_data.pop("presentaciones", [])
+        self._aplicar_perfil(validated_data)
         producto = Producto.objects.create(**validated_data)
         self._sync_presentaciones(producto, presentaciones)
         return producto
+
+    def _aplicar_perfil(self, datos):
+        """
+        Cómo nace un producto según lo que este negocio hace.
+
+        Solo rellena lo que la petición NO trae: quien manda un valor explícito
+        manda, siempre. Y solo al crear, nunca al editar — un producto que ya
+        existe no puede cambiar de comportamiento porque alguien tocara el
+        perfil del negocio tres meses después.
+
+        Es la única forma en que una capacidad debe influir en el catálogo:
+        proponiendo el valor inicial, no imponiéndolo.
+        """
+        from apps.business.consulta import puede  # noqa: PLC0415
+
+        peticion = self.context.get("request")
+        tenant = getattr(peticion, "tenant", None)
+        if tenant is None:
+            return
+
+        if "controla_stock" not in datos:
+            datos["controla_stock"] = puede(tenant, "controla_stock")
+        if "permite_fraccion" not in datos:
+            datos["permite_fraccion"] = puede(tenant, "vende_por_peso")
 
     @transaction.atomic
     def update(self, instance, validated_data):

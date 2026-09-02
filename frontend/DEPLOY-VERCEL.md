@@ -5,7 +5,7 @@ propio `package.json` y su propio `vercel.json`:
 
 | App | Directorio | Qué es |
 |---|---|---|
-| `lgc-storefront` | `frontend/storefront` | Tienda pública |
+| `crynex-tienda` | `frontend/tienda` | Tienda pública (Next.js) |
 | `lgc-admin-panel` | `frontend/admin-panel` | Panel administrativo |
 
 Vercel despliega **un directorio por proyecto**, así que hay que crear
@@ -41,7 +41,7 @@ En Vercel: **Add New > Project > Import** el repo, y luego:
 
 | Ajuste | Valor |
 |---|---|
-| Root Directory | `frontend/storefront` |
+| Root Directory | `frontend/tienda` |
 | Framework Preset | Vite (se detecta solo) |
 | Build Command | `npm run build` (ya viene en `vercel.json`) |
 | Output Directory | `dist` (ya viene en `vercel.json`) |

@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
+  Wand2,
   Building2,
   ChevronsLeft,
   ChevronsRight,
@@ -45,6 +46,7 @@ export const GRUPOS: { titulo: string; destinos: Destino[] }[] = [
       { to: "/planes", etiqueta: "Planes", icono: Layers },
       { to: "/permisos", etiqueta: "Permisos", icono: ShieldCheck },
       { to: "/plantillas", etiqueta: "Plantillas", icono: LayoutTemplate },
+      { to: "/presets", etiqueta: "Presets", icono: Wand2 },
     ],
   },
   {

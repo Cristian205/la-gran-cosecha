@@ -182,7 +182,9 @@ def restaurar(pagina: Pagina, version: VersionPagina, autor=None) -> VersionPagi
     return borrador
 
 
-def adoptar_plantilla(tenant, plantilla, *, autor=None, publicar_ya=False) -> list:
+def adoptar_plantilla(
+    tenant, plantilla, *, autor=None, publicar_ya=False, con_aspecto=True
+) -> list:
     """
     Copia las páginas de una plantilla al negocio.
 
@@ -192,15 +194,30 @@ def adoptar_plantilla(tenant, plantilla, *, autor=None, publicar_ya=False) -> li
 
     Las rutas que el negocio ya tiene se respetan; solo se les crea o actualiza
     el BORRADOR, nunca lo publicado.
+
+    Copia también el ASPECTO —color de marca, tipografía, tokens—. Antes no lo
+    hacía, y era un agujero silencioso: adoptar una plantilla traía su maqueta
+    pero no su paleta, así que una tienda que estrenaba «boutique» quedaba con
+    la portada nueva y la barra verde de la anterior. Nadie veía un error;
+    simplemente parecía que la plantilla estaba mal hecha.
     """
+    from .aspecto import aplicar_aspecto  # noqa: PLC0415
+
+    # `con_aspecto=False` copia solo la maqueta. Lo pide el Control Center
+    # cuando le rediseña la tienda a un cliente que ya tiene su identidad
+    # puesta: cambiarle el logotipo de color por estrenar una plantilla sería
+    # una decisión de marca tomada por un programador.
+    if con_aspecto:
+        aplicar_aspecto(tenant, plantilla)
+
     tocadas = []
     for ruta, composicion in (plantilla.paginas or {}).items():
         pagina, _ = Pagina.objects.get_or_create(
             tenant=tenant,
             ruta=ruta,
             defaults={
-                "titulo": ruta.strip("/").capitalize() or "Inicio",
-                "tipo": Pagina.Tipo.HOME if ruta == "/" else Pagina.Tipo.LIBRE,
+                "titulo": titulo_de(ruta),
+                "tipo": tipo_de(ruta),
             },
         )
         borrador = obtener_borrador(pagina, autor=autor)
@@ -212,3 +229,25 @@ def adoptar_plantilla(tenant, plantilla, *, autor=None, publicar_ya=False) -> li
             publicar(pagina, autor=autor)
         tocadas.append(pagina)
     return tocadas
+
+
+def tipo_de(ruta: str):
+    """
+    Qué clase de página es esta ruta.
+
+    El armazón se reconoce por su ruta reservada. Sin esto, adoptar una
+    plantilla que traiga `/_layout` lo crearía como página LIBRE, y entonces
+    aparecería en el listado de rutas públicas: Next generaría una página con
+    la cabecera y el pie sueltos, y el buscador acabaría indexándola.
+    """
+    if ruta == Pagina.RUTA_LAYOUT:
+        return Pagina.Tipo.LAYOUT
+    if ruta == "/":
+        return Pagina.Tipo.HOME
+    return Pagina.Tipo.LIBRE
+
+
+def titulo_de(ruta: str) -> str:
+    if ruta == Pagina.RUTA_LAYOUT:
+        return "Cabecera y pie"
+    return ruta.strip("/").capitalize() or "Inicio"

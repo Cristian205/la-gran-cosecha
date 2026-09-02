@@ -44,6 +44,14 @@
   /* Alto aproximado de la navbar sticky: lo usa la barra de filtros de la
      tienda para quedar pegada justo debajo y no desaparecer tras ella. */
   --navbar-alto: 62px;
+  /* Cuanto aire tiene la tienda. Multiplica los espacios en vez de tener tres
+     juegos de medidas escritos, igual que `--sombra-fuerza` con las sombras.
+     Lo mueve el token `densidad-escala`. */
+  --densidad-escala: 1;
+  /* Productos por fila en escritorio. En movil manda la consulta de medios:
+     una tienda no puede quedarse con cinco columnas en un telefono porque
+     alguien lo eligiera en el panel. */
+  --columnas-catalogo: 4;
   --navbar-espaciado-logo: 0px;
   --fuente-sitio: "Poppins", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
 
@@ -78,6 +86,11 @@ input, select, textarea { font-family: inherit; }
 img { max-width: 100%; display: block; }
 
 h1, h2, h3 {
+  /* La familia de los titulos puede ser distinta de la del texto. Sin token,
+     hereda: ninguna tienda de las que ya existen cambia de tipografia. Es lo
+     que permite una boutique con titulares en serif y cuerpo en sans sin
+     escribir una segunda hoja de estilos. */
+  font-family: var(--fuente-titulos, var(--fuente-sitio));
   font-weight: var(--titulo-peso, 800);
   /* Solo los titulos, encima de la escala general: hay tiendas que quieren el
      texto normal y los titulares grandes, y al reves. */
@@ -908,7 +921,10 @@ h1, h2, h3 {
 }
 
 /* ---------- Chips de categoría + grid de productos ---------- */
-.seccion { padding: 1rem 0 var(--seccion-espacio, 2.5rem); }
+.seccion {
+  padding: calc(1rem * var(--densidad-escala)) 0
+    calc(var(--seccion-espacio, 2.5rem) * var(--densidad-escala));
+}
 .seccion-titulo {
   display: flex;
   align-items: baseline;
@@ -931,7 +947,7 @@ h1, h2, h3 {
 .categorias-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 1rem;
+  gap: calc(1rem * var(--densidad-escala));
 }
 .categoria-tile {
   position: relative;
@@ -1059,8 +1075,8 @@ h1, h2, h3 {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.2rem;
+  grid-template-columns: repeat(var(--columnas-catalogo, 4), minmax(0, 1fr));
+  gap: calc(1.2rem * var(--densidad-escala));
 }
 @media (max-width: 1200px) {
   .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1098,7 +1114,13 @@ h1, h2, h3 {
 }
 .pc-media > svg { position: relative; }
 .pc-media img { width: 100%; height: 100%; object-fit: cover; }
-.pc-body { padding: 0.85rem; display: flex; flex-direction: column; gap: 0.45rem; flex: 1; }
+.pc-body {
+  padding: calc(0.85rem * var(--densidad-escala));
+  display: flex;
+  flex-direction: column;
+  gap: calc(0.45rem * var(--densidad-escala));
+  flex: 1;
+}
 .pc-nombre {
   margin: 0;
   font-weight: 700;
@@ -2782,3 +2804,800 @@ h1, h2, h3 {
 }
 
 .pc-agotado .pc-btn-add { cursor: not-allowed; }
+
+/* ==========================================================================
+   PORTADA — el bloque «portada»
+   ========================================================================== */
+/* A sangre: el fondo llega de borde a borde y el contenido se alinea con el
+   resto de la pagina por el propio grid, no por un contenedor extra. */
+.portada {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: center;
+  padding: clamp(2rem, 5vw, 4rem) clamp(1rem, 4vw, 3.5rem);
+  background:
+    radial-gradient(60% 80% at 78% 30%, var(--verde-100) 0%, transparent 60%),
+    linear-gradient(180deg, #fff 0%, var(--fondo) 100%);
+}
+.portada--sin-imagen,
+.portada--centrado {
+  grid-template-columns: 1fr;
+  text-align: center;
+  justify-items: center;
+}
+
+.portada-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(var(--superficie-rgb), 0.85);
+  border: 1px solid var(--borde);
+  box-shadow: var(--sombra);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--verde-700);
+}
+
+.portada h1 {
+  margin: 1rem 0 0;
+  font-size: clamp(2.1rem, 5.2vw, 3.6rem);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--verde-900);
+  text-wrap: balance;
+}
+/* El enfasis es una decision del tema, no marcado dentro del texto: asi un
+   titular escrito por el negocio nunca puede romper la maqueta. */
+.portada h1 em {
+  display: block;
+  font-style: normal;
+  color: var(--verde-500);
+}
+
+.portada-texto {
+  margin: 1rem 0 0;
+  max-width: 46ch;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--gris-600);
+}
+.portada--centrado .portada-texto,
+.portada--sin-imagen .portada-texto { margin-inline: auto; }
+
+.portada-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.6rem;
+}
+.portada--centrado .portada-acciones,
+.portada--sin-imagen .portada-acciones { justify-content: center; }
+
+.portada-ventajas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.6rem;
+  margin: 1.7rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.portada-ventajas li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--verde-800);
+  max-width: 9rem;
+}
+.portada-ventajas svg { color: var(--verde-500); flex: none; }
+.portada--centrado .portada-ventajas,
+.portada--sin-imagen .portada-ventajas { justify-content: center; }
+
+.portada-media { position: relative; }
+.portada-media img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radio-lg);
+}
+
+.portada-tarjeta {
+  position: absolute;
+  right: clamp(-0.5rem, 1vw, 1rem);
+  bottom: clamp(1rem, 5%, 2.5rem);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.8rem 1.1rem;
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-lg);
+  max-width: 15rem;
+}
+.portada-tarjeta .icono {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--verde-100);
+  color: var(--verde-600);
+  flex: none;
+}
+.portada-tarjeta strong {
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  color: var(--verde-900);
+}
+.portada-tarjeta span:not(.icono) {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--gris-600);
+}
+
+@media (max-width: 860px) {
+  .portada { grid-template-columns: 1fr; }
+  /* La foto va primero en pantallas anchas y ultima en el movil: ahi lo que
+     importa es leer la propuesta y llegar al boton sin desplazarse. */
+  .portada-media { order: 2; }
+  .portada-tarjeta { position: static; margin-top: 0.9rem; max-width: none; }
+}
+
+/* ==========================================================================
+   PUBLICOS OBJETIVO — el bloque «publicos-objetivo»
+   ========================================================================== */
+.publicos {
+  background: var(--verde-800);
+  color: #fff;
+  padding: clamp(2rem, 4vw, 3rem) 0;
+}
+.publicos h2 {
+  margin: 0 0 1.8rem;
+  text-align: center;
+  font-size: clamp(1.25rem, 2.6vw, 1.7rem);
+  color: #fff;
+  text-wrap: balance;
+}
+.publicos-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+.publicos-grid article {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+/* La separacion entre columnas es una linea, no un borde de tarjeta: la franja
+   tiene que leerse como una sola pieza y no como cuatro cajas sueltas. */
+.publicos-grid article + article {
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  padding-left: 1.5rem;
+}
+.publicos-grid .icono {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: var(--verde-300);
+  flex: none;
+}
+.publicos-grid h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.98rem;
+  color: #fff;
+}
+.publicos-grid p {
+  margin: 0;
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.78);
+}
+@media (max-width: 700px) {
+  .publicos-grid article + article { border-left: 0; padding-left: 0; }
+}
+
+/* ==========================================================================
+   PASOS EN LINEA — variante «linea» de «como-funciona»
+   ========================================================================== */
+.pasos--linea {
+  display: grid;
+  gap: 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.pasos--linea .paso {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+/* El hilo que une un paso con el siguiente. Va en el `::after` del paso y no
+   como elemento propio para que desaparezca solo cuando la rejilla envuelve. */
+@media (min-width: 900px) {
+  .pasos--linea .paso:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 1.15rem;
+    right: -1rem;
+    width: 0.8rem;
+    border-top: 2px dashed var(--verde-300);
+  }
+}
+.pasos--linea .paso-numero {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 50%;
+  background: var(--verde-100);
+  color: var(--verde-700);
+  font-weight: 700;
+  flex: none;
+}
+.pasos--linea .paso-icono {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--verde-100);
+  color: var(--verde-600);
+  flex: none;
+}
+.pasos--linea .paso h3 {
+  margin: 0.15rem 0 0.3rem;
+  font-size: 0.95rem;
+  color: var(--gris-900);
+}
+.pasos--linea .paso p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--gris-600);
+}
+
+/* ==========================================================================
+   ESTILOS DE TARJETA DE PRODUCTO
+
+   Cinco aspectos del MISMO componente. No hay un ProductCard de boutique y
+   otro de ferreteria: hay este, y una hoja que lo dibuja de cinco maneras.
+   Cual se usa lo decide el token `estilo-tarjeta`, que el layout estampa en el
+   `<body>` como `data-tarjeta`.
+
+   El estandar no lleva reglas propias: es lo que ya estaba escrito arriba, y
+   repetirlo aqui daria dos sitios donde cambiarlo. Lo mismo que hace el motor
+   con la variante por defecto de cada bloque.
+   ========================================================================== */
+
+/* ---------- Editorial: moda, boutique, perfumeria ----------
+   Foto vertical y esquinas rectas. El producto se mira antes de leerse, asi
+   que la imagen manda y el texto se aparta: nombre en versalitas, precio
+   discreto, sin sombra que separe la tarjeta del fondo. */
+[data-tarjeta="editorial"] .producto-card {
+  border-radius: 2px;
+  box-shadow: none;
+  background: transparent;
+}
+[data-tarjeta="editorial"] .producto-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+[data-tarjeta="editorial"] .producto-card:hover .pc-media img {
+  transform: scale(1.04);
+}
+[data-tarjeta="editorial"] .pc-media {
+  aspect-ratio: 3 / 4;
+  border-radius: 2px;
+  background: var(--fondo);
+}
+[data-tarjeta="editorial"] .pc-media img { transition: transform 0.4s ease; }
+[data-tarjeta="editorial"] .pc-body { padding: 0.85rem 0 0; }
+[data-tarjeta="editorial"] .pc-nombre {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+/* La categoria ya la dice la seccion en la que esta la rejilla: repetirla en
+   cada tarjeta llena la columna de ruido. */
+[data-tarjeta="editorial"] .pc-cat { display: none; }
+[data-tarjeta="editorial"] .pc-precio-valor {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gris-900);
+}
+
+/* ---------- Gastronomico: restaurantes, panaderias ----------
+   La foto es el plato y ocupa lo que pueda; el precio se lee de lejos porque
+   es lo segundo que se mira. */
+[data-tarjeta="gastronomico"] .producto-card { border-radius: var(--radio-lg); }
+[data-tarjeta="gastronomico"] .pc-media { aspect-ratio: 4 / 3; }
+[data-tarjeta="gastronomico"] .pc-body { padding: 1rem 1.05rem 1.05rem; gap: 0.35rem; }
+[data-tarjeta="gastronomico"] .pc-nombre { font-size: 1.02rem; font-weight: 700; }
+[data-tarjeta="gastronomico"] .pc-precio-valor {
+  font-size: 1.35rem;
+  color: var(--ambar-600);
+}
+
+/* ---------- Tecnico: ferreteria, repuestos, papeleria ----------
+   Trescientas referencias que el cliente distingue por codigo, no de vista.
+   La foto se encoge a un lado y el codigo pasa a ser lo primero que se lee.
+   El precio va tabular para que la columna se compare de un vistazo. */
+[data-tarjeta="tecnico"] .producto-card {
+  flex-direction: row;
+  align-items: stretch;
+  border-radius: var(--radio-sm);
+}
+[data-tarjeta="tecnico"] .pc-media {
+  aspect-ratio: 1;
+  width: 88px;
+  flex: none;
+}
+[data-tarjeta="tecnico"] .pc-body { padding: 0.7rem 0.85rem; gap: 0.3rem; }
+[data-tarjeta="tecnico"] .pc-nombre {
+  font-size: 0.88rem;
+  font-weight: 600;
+  -webkit-line-clamp: 2;
+}
+[data-tarjeta="tecnico"] .pc-cat {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.7rem;
+}
+[data-tarjeta="tecnico"] .pc-precio-valor {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+/* Con la tarjeta en fila, el selector de presentacion y el boton apilados la
+   estirarian el doble que sus vecinas. Van seguidos y compactos. */
+[data-tarjeta="tecnico"] .pc-presentacion-linea { margin-top: auto; }
+[data-tarjeta="tecnico"] .pc-btn-add { padding: 0.4rem 0.7rem; font-size: 0.8rem; }
+
+/* ---------- Minimo: catalogos sin fotografia ----------
+   Muchos negocios no tienen foto de nada, y una rejilla de marcos vacios se ve
+   peor que una lista honesta. Se quita la imagen en vez de dejar el hueco. */
+[data-tarjeta="minimo"] .producto-card {
+  border-radius: var(--radio-sm);
+  box-shadow: none;
+  border: 1px solid var(--borde);
+}
+[data-tarjeta="minimo"] .producto-card:hover {
+  transform: none;
+  border-color: var(--verde-400);
+}
+[data-tarjeta="minimo"] .pc-media { display: none; }
+[data-tarjeta="minimo"] .pc-body { padding: 0.9rem; }
+[data-tarjeta="minimo"] .pc-nombre { font-size: 0.92rem; }
+[data-tarjeta="minimo"] .pc-precio-valor { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 520px) {
+  /* En movil la tarjeta en fila se queda sin ancho para el nombre y el precio
+     a la vez. Vuelve a apilarse, que es lo que hacen las demas. */
+  [data-tarjeta="tecnico"] .producto-card { flex-direction: column; }
+  [data-tarjeta="tecnico"] .pc-media { width: 100%; aspect-ratio: 16 / 10; }
+}
+
+/* ==========================================================================
+   LA PLANTILLA DE BOUTIQUE
+   --------------------------------------------------------------------------
+   Todo lo de aqui abajo se dibuja con las MISMAS variables que el resto de la
+   tienda: `--verde-*` es el color de marca del negocio, no un verde. Un rosa
+   palo sale de que el negocio elija ese primario, no de que estas reglas lo
+   escriban. Si algun dia se codifica un color aqui, la plantilla deja de ser
+   una plantilla y pasa a ser el diseno de un solo cliente.
+   ========================================================================== */
+
+/* --- la barra fina de avisos, sobre la cabecera ------------------------- */
+.navbar-avisos {
+  background: var(--verde-900);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.74rem;
+}
+.navbar-avisos-cara {
+  max-width: var(--contenedor-ancho);
+  margin: 0 auto;
+  padding: 0.42rem clamp(0.9rem, 3vw, 2rem);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.navbar-avisos-cara > div { display: flex; gap: 1.4rem; flex-wrap: wrap; }
+.navbar-avisos span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.navbar-avisos svg { opacity: 0.75; flex: none; }
+
+@media (max-width: 780px) {
+  /* En movil solo caben los de la izquierda. El segundo grupo son atajos de
+     cuenta y soporte, que en movil ya viven en la barra inferior. */
+  .navbar-avisos-cara > div:last-child { display: none; }
+  .navbar-avisos-cara { justify-content: center; }
+}
+
+/* --- la cabecera clara ------------------------------------------------- */
+/* `clasica` es la de siempre y no lleva reglas propias a proposito: anadirlas
+   cambiaria el aspecto de las tiendas que ya existen, que es justo lo que una
+   variante nueva no puede hacer. */
+.navbar--boutique {
+  background: var(--superficie);
+  color: var(--gris-900);
+  border-bottom: 1px solid var(--borde);
+  box-shadow: none;
+}
+.navbar--boutique .marca-txt,
+.navbar--boutique .nav-links a { color: var(--gris-900); }
+.navbar--boutique .nav-links a.activo { color: var(--verde-600); }
+.navbar--boutique .btn-carrito {
+  background: var(--superficie);
+  color: var(--gris-900);
+  border: 1px solid var(--borde);
+}
+.navbar--boutique .btn-buscar-movil { color: var(--gris-900); }
+
+/* --- la franja de categorias ------------------------------------------- */
+.barra-cat {
+  background: color-mix(in srgb, var(--verde-100) 55%, var(--superficie));
+  border-bottom: 1px solid var(--borde);
+}
+.barra-cat-cara {
+  max-width: var(--contenedor-ancho);
+  margin: 0 auto;
+  padding: 0.55rem clamp(0.9rem, 3vw, 2rem);
+  display: flex;
+  align-items: center;
+  gap: clamp(0.4rem, 2vw, 1.5rem);
+  /* Con doce categorias no caben todas: se desplaza en horizontal en vez de
+     partirse en dos filas, que descolocaria la portada de debajo. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.barra-cat-cara::-webkit-scrollbar { display: none; }
+.barra-cat--centrada .barra-cat-cara { justify-content: center; }
+
+.barra-cat a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--gris-900);
+  text-decoration: none;
+  padding: 0.35rem 0.2rem;
+  border-radius: var(--radio-sm);
+}
+.barra-cat a:hover { color: var(--verde-600); }
+.barra-cat svg { color: var(--verde-600); flex: none; }
+
+.barra-cat-destacado {
+  margin-left: auto;
+  padding: 0.45rem 1rem !important;
+  border-radius: var(--btn-radio);
+  background: var(--verde-500);
+  color: var(--btn-primario-texto) !important;
+}
+.barra-cat-destacado svg { color: currentColor; }
+.barra-cat--centrada .barra-cat-destacado { margin-left: 0; }
+
+/* --- la portada de boutique -------------------------------------------- */
+/* Misma reja que `imagen`; lo que cambia es el marco: la portada entera vive
+   dentro de una tarjeta redondeada en vez de ir a sangre. */
+.portada--boutique {
+  margin: clamp(0.8rem, 2vw, 1.4rem) auto;
+  max-width: var(--contenedor-ancho);
+  width: calc(100% - clamp(1.2rem, 4vw, 3rem));
+  border-radius: clamp(var(--radio), 2.2vw, var(--radio-lg));
+  background:
+    radial-gradient(70% 90% at 80% 40%, color-mix(in srgb, var(--verde-100) 85%, transparent) 0%, transparent 65%),
+    color-mix(in srgb, var(--verde-100) 42%, var(--superficie));
+}
+.portada--boutique h1 {
+  font-size: clamp(2rem, 4.6vw, 3.2rem);
+  letter-spacing: -0.01em;
+}
+/* En esta variante el enfasis es una CURSIVA en la segunda linea, no un
+   cambio de color a secas. Es lo que separa un titular de boutique de uno de
+   distribuidora, y por eso vive en la variante y no en la regla base. */
+.portada--boutique h1 em { font-style: italic; }
+.portada--boutique .portada-media img { border-radius: clamp(var(--radio-sm), 1.6vw, var(--radio)); }
+
+/* La segunda linea de una ventaja. Solo aparece si el dato la trae, asi que
+   las tiendas que ya usaban ventajas de una linea no cambian. */
+.portada-ventajas li span { display: flex; flex-direction: column; }
+.portada-ventajas em {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.76rem;
+  color: var(--gris-600);
+}
+.portada--boutique .portada-ventajas li { max-width: 11rem; }
+
+/* --- los publicos, en tarjetas claras ---------------------------------- */
+.publicos--tarjetas {
+  background: transparent;
+  color: var(--gris-900);
+  padding: clamp(1.4rem, 3vw, 2.2rem) 0;
+}
+.publicos--tarjetas h2 { color: var(--gris-900); }
+.publicos--tarjetas article {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1.1rem;
+  box-shadow: var(--sombra);
+}
+.publicos--tarjetas article h3 { color: var(--gris-900); }
+.publicos--tarjetas article p { color: var(--gris-600); }
+.publicos--tarjetas .icono {
+  background: color-mix(in srgb, var(--verde-100) 70%, var(--superficie));
+  color: var(--verde-600);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.9rem;
+  height: 2.9rem;
+}
+
+/* --- la pantalla de acceso --------------------------------------------- */
+.acceso {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: min(88vh, 46rem);
+}
+.acceso--centrado,
+.acceso--solo-forma { grid-template-columns: 1fr; }
+
+.acceso-panel {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  background:
+    radial-gradient(80% 70% at 30% 20%, color-mix(in srgb, var(--verde-100) 90%, transparent) 0%, transparent 70%),
+    color-mix(in srgb, var(--verde-100) 50%, var(--superficie));
+  overflow: hidden;
+}
+.acceso-panel > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.acceso-panel-texto { position: relative; }
+.acceso-panel h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--verde-900);
+}
+.acceso-panel h1 em { font-style: italic; color: var(--verde-500); }
+.acceso-panel p {
+  margin: 0.9rem 0 0;
+  max-width: 34ch;
+  color: var(--gris-600);
+  line-height: 1.6;
+}
+
+.acceso-ventajas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 1rem;
+  margin: 2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.acceso-ventajas li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--verde-800);
+}
+.acceso-ventajas svg { color: var(--verde-500); }
+.acceso-ventajas strong { display: block; font-weight: 600; line-height: 1.3; }
+.acceso-ventajas em {
+  display: block;
+  font-style: normal;
+  color: var(--gris-600);
+}
+
+.acceso-forma {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: color-mix(in srgb, var(--verde-100) 28%, var(--fondo));
+}
+.acceso-tarjeta {
+  width: min(26rem, 100%);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: clamp(var(--radio), 2vw, var(--radio-lg));
+  box-shadow: var(--sombra-lg);
+  padding: clamp(1.4rem, 3vw, 2.4rem);
+}
+.acceso-tarjeta h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 1.4rem;
+  color: var(--gris-900);
+}
+.acceso-subtitulo {
+  margin: 0.4rem 0 1.6rem;
+  text-align: center;
+  color: var(--gris-600);
+  font-size: 0.9rem;
+}
+
+.acceso-campo { display: block; margin-bottom: 1rem; }
+.acceso-campo > span {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gris-900);
+}
+.acceso-campo input {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  background: var(--superficie);
+  color: var(--gris-900);
+  font: inherit;
+}
+.acceso-campo input:focus {
+  outline: none;
+  border-color: var(--verde-400);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--verde-100) 70%, transparent);
+}
+.acceso-campo input:disabled { background: var(--fondo); cursor: not-allowed; }
+
+.acceso-olvido { text-align: right; margin-bottom: 1.1rem; }
+.acceso-olvido a { color: var(--verde-600); font-size: 0.8rem; text-decoration: none; }
+.acceso-boton { width: 100%; justify-content: center; }
+.acceso-boton:disabled { opacity: 0.55; cursor: not-allowed; }
+.acceso-aviso {
+  margin: 0.7rem 0 0;
+  text-align: center;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--gris-600);
+}
+
+.acceso-separador {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1.4rem 0 1rem;
+  color: var(--gris-400);
+  font-size: 0.78rem;
+}
+.acceso-separador::before,
+.acceso-separador::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--borde);
+}
+
+.acceso-sociales { display: grid; gap: 0.6rem; }
+.acceso-social {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  background: var(--superficie);
+  color: var(--gris-900);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.acceso-social:hover { border-color: var(--verde-400); }
+/* Un distintivo con la inicial, y no el logotipo de la marca: los logos de
+   Google y Facebook tienen condiciones de uso propias, y empaquetarlos aqui
+   los pondria en las mil tiendas del sistema sin que nadie lo revisara. */
+.acceso-social-marca {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #fff;
+  background: var(--gris-400);
+}
+.acceso-social--google .acceso-social-marca { background: #4285f4; }
+.acceso-social--facebook .acceso-social-marca { background: #1877f2; }
+
+.acceso-pie {
+  margin: 1.4rem 0 0;
+  text-align: center;
+  font-size: 0.84rem;
+  color: var(--gris-600);
+}
+.acceso-pie a { color: var(--verde-600); font-weight: 600; text-decoration: none; }
+
+@media (max-width: 900px) {
+  /* El panel de argumento se va debajo del formulario, no encima: en un movil
+     lo primero que se busca en esta pagina es el campo del correo. */
+  .acceso { grid-template-columns: 1fr; }
+  .acceso-panel { order: 2; min-height: 18rem; }
+  .acceso-forma { order: 1; }
+}
+
+/* --- ajustes de la cabecera de boutique --------------------------------- */
+/* La barra de avisos por defecto es oscura —la heredo del pie—, pero en esta
+   variante todo el bloque superior es claro: una franja negra encima de una
+   cabecera blanca parte la pagina en dos antes de empezar. */
+.navbar--boutique-avisos {
+  background: color-mix(in srgb, var(--verde-100) 38%, var(--superficie));
+  color: var(--gris-600);
+  border-bottom: 1px solid var(--borde);
+}
+.navbar--boutique-avisos svg { opacity: 1; color: var(--verde-600); }
+
+/* El boton que abre el catalogo. Solo se dibuja si el negocio le pone texto. */
+.navbar-categorias {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--btn-radio);
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: var(--gris-900);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.navbar-categorias:hover { border-color: var(--verde-400); }
+
+/* En esta variante la navegacion vive en la franja de categorias, no en la
+   cabecera: repetir ahi los mismos enlaces deja dos menus discutiendo cual es
+   el principal. */
+.navbar--boutique .nav-links { display: none; }
+.navbar--boutique .buscador { flex: 1; max-width: none; }
+.navbar--boutique .btn-carrito { padding: 0.5rem 1.1rem; }
+
+/* El importe bajo el texto del carrito. */
+.btn-carrito-txt em {
+  display: block;
+  font-style: normal;
+  font-size: 0.74rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+@media (max-width: 900px) {
+  .navbar-categorias { display: none; }
+}
+
+/* El antetitulo de la portada ya no lleva una hoja escrita a mano: el icono lo
+   nombra el dato, asi que hay que darle sitio. */
+.portada-kicker svg { flex: none; }
+
+/* El encabezado centrado: el subtitulo debajo en vez de a la derecha. Es lo
+   que separa un escaparate de un listado de catalogo. */
+.seccion-titulo--centrado {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+}
+.seccion-titulo--centrado .linea { color: var(--gris-600); font-weight: 500; }
