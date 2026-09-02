@@ -21,6 +21,34 @@ import { negocioDeLaPeticion, testigoDeVista } from "./negocio";
 const API = process.env.API_URL ?? "http://localhost:8000/api";
 const CLAVE = process.env.TENANCY_CLAVE_SERVIDOR ?? "";
 
+/**
+ * La base de la API, comprobada.
+ *
+ * Existe porque los dos fallos de configuración más probables daban el MISMO
+ * error mudo: «This page couldn't load», un 500 sin una palabra sobre la causa.
+ *
+ *   1. `API_URL` sin definir. Cae al valor de desarrollo, `localhost:8000`, que
+ *      en un servidor de Vercel no es nadie: el `fetch` lanza.
+ *   2. `API_URL` sin esquema —`mi-backend.onrender.com/api`—. `new URL()` la
+ *      rechaza y lanza antes de salir a la red.
+ *
+ * Los dos son un despiste de un minuto que cuesta una tarde de diagnóstico,
+ * porque el síntoma aparece en la tienda y la causa está en un panel de
+ * ajustes. Decirlo con nombre y apellidos sale en los registros y ahorra la
+ * cacería.
+ */
+function baseDeLaApi(): string {
+  const base = API.trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(base)) {
+    throw new Error(
+      `API_URL tiene que empezar por http:// o https://, y está puesta como ` +
+        `«${base}». Es una URL absoluta al backend, terminada en /api y sin ` +
+        `barra final.`
+    );
+  }
+  return base;
+}
+
 /** Cuánto se cachea una respuesta del catálogo, en segundos. */
 const REVALIDAR = Number(process.env.REVALIDAR_SEGUNDOS ?? 60);
 
@@ -45,13 +73,33 @@ export class RespuestaSinNegocio extends Error {
   }
 }
 
+/**
+ * `fetch`, pero con el fallo de red contado.
+ *
+ * Un backend caido o una URL equivocada hacen que `fetch` lance un
+ * `TypeError: fetch failed` sin decir a donde intento ir. En un servidor que
+ * atiende cuarenta tiendas eso es un 500 en blanco; con el origen dentro, el
+ * registro dice en una linea que hay que mirar.
+ */
+async function pedir(url: URL, opciones: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, opciones);
+  } catch (causa) {
+    throw new Error(
+      `No se pudo hablar con el backend en ${url.origin}. Comprueba que este ` +
+        `desplegado y que API_URL apunte a el. (${(causa as Error).message})`,
+      { cause: causa }
+    );
+  }
+}
+
 export async function pedirAlBackend<T>(
   ruta: string,
   opciones: { params?: Record<string, unknown>; revalidar?: number } = {}
 ): Promise<T | null> {
   const { slug, host } = await negocioDeLaPeticion();
 
-  const url = new URL(API.replace(/\/$/, "") + ruta);
+  const url = new URL(baseDeLaApi() + ruta);
   for (const [clave, valor] of Object.entries(opciones.params ?? {})) {
     if (valor !== undefined && valor !== null && valor !== "") {
       url.searchParams.set(clave, String(valor));
@@ -68,7 +116,7 @@ export async function pedirAlBackend<T>(
     ...(testigo ? { "X-Crynex-Vista": testigo } : {}),
   };
 
-  const respuesta = await fetch(url, {
+  const respuesta = await pedir(url, {
     headers: cabeceras,
     // Una previa NO se cachea. Es de un momento y de una persona, y guardarla
     // acabaria sirviendola a quien entre por la puerta normal.
@@ -98,7 +146,7 @@ export async function enviarAlBackend<T>(ruta: string, cuerpo: unknown): Promise
     ...cabecerasDelNegocio(slug, host),
   };
 
-  const respuesta = await fetch(API.replace(/\/$/, "") + ruta, {
+  const respuesta = await pedir(new URL(baseDeLaApi() + ruta), {
     method: "POST",
     headers: cabeceras,
     body: JSON.stringify(cuerpo),
