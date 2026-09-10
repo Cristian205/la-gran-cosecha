@@ -39,7 +39,9 @@ from .serializers import (
     AltaNegocioSerializer,
     CambiarPlanSerializer,
     CaracteristicaSerializer,
+    DomainPlataformaSerializer,
     DuplicarPlanSerializer,
+    MembershipPlataformaSerializer,
     NegocioSerializer,
     PermisoDisponibleSerializer,
     PlanSerializer,
@@ -393,6 +395,45 @@ class NegocioViewSet(BaseDePlataforma):
 
         suscripcion.save(update_fields=campos)
         return Response(SubscriptionSerializer(suscripcion).data)
+
+    @action(detail=True, methods=["get"])
+    def equipo(self, request, pk=None):
+        """
+        Quiénes trabajan en este negocio, de solo lectura.
+
+        No se edita desde aquí: las pertenencias las administra el propio
+        negocio, que es quien tiene contexto sobre su gente. Esto es solo lo
+        que hace falta para que la plataforma vea cuántos y quiénes son, en vez
+        de solo el número que ya daba `NegocioSerializer.usuarios`.
+        """
+        negocio = Tenant.objects.filter(pk=pk).first()
+        if negocio is None:
+            return Response({"detail": "No existe ese negocio."}, status=404)
+
+        membresias = (
+            negocio.memberships.filter(activo=True)
+            .select_related("usuario")
+            .order_by("-rol", "usuario__nombre_usuario")
+        )
+        return Response(MembershipPlataformaSerializer(membresias, many=True).data)
+
+    @action(detail=True, methods=["get"])
+    def dominios(self, request, pk=None):
+        """
+        El detalle de cada dominio: si es el principal, si ya se verificó.
+
+        `NegocioSerializer.dominios` solo trae el hostname —lo que ya
+        consumen la búsqueda global y la tabla de empresas—; esto es lo que
+        hace falta además para que la pestaña «Dominios» muestre el detalle,
+        sin cambiarle la forma a nadie que ya lea la lista simple.
+        """
+        negocio = Tenant.objects.filter(pk=pk).first()
+        if negocio is None:
+            return Response({"detail": "No existe ese negocio."}, status=404)
+
+        return Response(
+            DomainPlataformaSerializer(negocio.dominios.all(), many=True).data
+        )
 
 
 class SubscriptionViewSet(BaseDePlataforma):

@@ -296,3 +296,56 @@ def test_los_origenes_repetidos_se_colapsan():
         assert origenes("CORS_DE_PRUEBA", []) == ["https://a.app", "https://b.app"]
     finally:
         del os.environ["CORS_DE_PRUEBA"]
+
+
+def test_las_comillas_de_una_variable_no_rompen_el_remitente():
+    """
+    El fallo que dejo el correo de produccion mudo.
+
+    En el panel de Render se escribe `DEFAULT_FROM_EMAIL="Nombre <a@b.com>"`
+    con comillas, porque es como se escribe en un `.env` y en un shell. Pero
+    `django-environ` solo las quita al leer un ARCHIVO, no una variable de
+    entorno de verdad, asi que sobrevivian dentro del valor — y entonces
+    `parseaddr` tomaba la cadena entera como direccion:
+
+        ('', 'Seguridad La Gran Cosecha <danicrg05@gmail.com>')
+
+    Brevo recibia eso como `sender.email`, respondia 400, y el motivo solo
+    aparecia en los registros del servidor. Desde fuera: no llega el correo y
+    nadie sabe por que.
+    """
+    from email.utils import parseaddr
+
+    from config.settings.base import _sin_comillas
+
+    for crudo in (
+        '"Seguridad Crynex <hola@ejemplo.com>"',
+        "'Seguridad Crynex <hola@ejemplo.com>'",
+        "Seguridad Crynex <hola@ejemplo.com>",
+        '  "Seguridad Crynex <hola@ejemplo.com>"  ',
+    ):
+        nombre, correo = parseaddr(_sin_comillas(crudo))
+        assert correo == "hola@ejemplo.com", crudo
+        assert nombre == "Seguridad Crynex", crudo
+
+
+def test_un_remitente_invalido_se_para_antes_de_llamar_a_brevo():
+    """
+    Un 400 de Brevo por remitente invalido y otro por remitente sin verificar
+    son indistinguibles, y se arreglan en sitios distintos: uno en la variable
+    de entorno y otro en el panel de Brevo. Distinguirlos aqui ahorra buscar en
+    el sitio equivocado.
+    """
+    from django.core.mail import EmailMessage
+
+    from apps.common.email_backends import BrevoAPIBackend
+
+    backend = BrevoAPIBackend(api_key="xkeysib-de-prueba")
+    mensaje = EmailMessage(
+        subject="Hola",
+        body="Cuerpo",
+        from_email='"Seguridad Crynex <hola@ejemplo.com>"',
+        to=["destino@ejemplo.com"],
+    )
+    with pytest.raises(ValueError, match="DEFAULT_FROM_EMAIL"):
+        backend._enviar(mensaje)

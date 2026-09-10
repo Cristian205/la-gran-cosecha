@@ -1,31 +1,9 @@
 import { useEffect, useState } from "react";
+import { FUENTES, RADIOS_BOTON, pilaFuente, radioPx } from "../../api/apariencia";
 import { actualizarSiteConfig, obtenerSiteConfig } from "../../api/content";
 import { MediaField } from "../../components/MediaField";
 import type { SiteConfig } from "../../types";
 import { extraerMensajeError } from "../../utils";
-
-const FUENTES: { valor: string; etiqueta: string; pila: string }[] = [
-  { valor: "poppins", etiqueta: "Poppins", pila: '"Poppins", sans-serif' },
-  { valor: "inter", etiqueta: "Inter", pila: '"Inter", sans-serif' },
-  { valor: "nunito", etiqueta: "Nunito", pila: '"Nunito", sans-serif' },
-  { valor: "work-sans", etiqueta: "Work Sans", pila: '"Work Sans", sans-serif' },
-  { valor: "jakarta", etiqueta: "Plus Jakarta Sans", pila: '"Plus Jakarta Sans", sans-serif' },
-  { valor: "quicksand", etiqueta: "Quicksand", pila: '"Quicksand", sans-serif' },
-];
-
-const RADIOS_BOTON: { valor: string; etiqueta: string; px: number }[] = [
-  { valor: "redondeado", etiqueta: "Redondeado", px: 999 },
-  { valor: "suave", etiqueta: "Suave", px: 14 },
-  { valor: "cuadrado", etiqueta: "Cuadrado", px: 6 },
-];
-
-function pilaFuente(valor: string): string {
-  return FUENTES.find((f) => f.valor === valor)?.pila ?? FUENTES[0].pila;
-}
-
-function radioPx(valor: string): number {
-  return RADIOS_BOTON.find((r) => r.valor === valor)?.px ?? 999;
-}
 
 interface CampoColorProps {
   etiqueta: string;

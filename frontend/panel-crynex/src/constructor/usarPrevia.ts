@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Composicion } from "../api/tienda";
+import { composicionParaPrevia, type Composicion, type TokenTema } from "@constructor/index";
 
 /**
  * La conversación con la tienda que se está previsualizando.
@@ -34,6 +34,20 @@ export interface MarcaPropuesta {
 interface Opciones {
   origen: string | null;
   composicion: Composicion;
+  /**
+   * Lo que la plantilla propone para su propio armazón (cabecera y pie),
+   * independientemente de qué ruta se esté editando ahora mismo.
+   *
+   * Sin esto, la tienda de referencia envuelve la previa con SU navbar y pie
+   * reales — los del negocio prestado, no los que esta plantilla propone — y
+   * una plantilla que no sea la de ese mismo negocio se demuestra con el menú
+   * de otro. Va aparte de `composicion` porque viaja siempre, sin importar
+   * qué página esté abierta.
+   */
+  armazon: Composicion;
+  /** El catálogo de tokens, para traducir el estilo de cada bloque antes de
+   *  mandarlo — ver `composicionParaPrevia`. */
+  tokens: TokenTema[];
   /** Las variables CSS de los tokens, ya resueltas. */
   variables: Record<string, string>;
   /**
@@ -52,6 +66,8 @@ interface Opciones {
 export function usarPrevia({
   origen,
   composicion,
+  armazon,
+  tokens,
   variables,
   marca,
   elegido,
@@ -86,8 +102,18 @@ export function usarPrevia({
   // Los mensajes solo salen cuando la tienda ha dicho que está lista: un
   // `postMessage` a un iframe que aún carga se pierde sin avisar.
   useEffect(() => {
-    if (lista) enviar({ tipo: "composicion", bloques: composicion });
-  }, [lista, composicion, enviar]);
+    if (lista) {
+      enviar({ tipo: "composicion", bloques: composicionParaPrevia(composicion, tokens) });
+    }
+  }, [lista, composicion, tokens, enviar]);
+
+  // Va en su propio efecto y no junto a la composicion de arriba porque viaja
+  // siempre, sin importar que ruta este abierta: el armazon envuelve a todas.
+  useEffect(() => {
+    if (lista) {
+      enviar({ tipo: "armazon", bloques: composicionParaPrevia(armazon, tokens) });
+    }
+  }, [lista, armazon, tokens, enviar]);
 
   useEffect(() => {
     // Con marca se manda el aspecto entero y la tienda lo traduce; sin ella

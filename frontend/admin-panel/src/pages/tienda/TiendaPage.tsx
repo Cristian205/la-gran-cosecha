@@ -91,6 +91,7 @@ export function TiendaPage() {
   const { marco, reiniciar } = usarPrevia({
     origen,
     composicion,
+    tokens,
     elegido,
     onSeleccion: alSeleccionar,
   });
@@ -335,6 +336,7 @@ export function TiendaPage() {
           {pestana === "secciones" ? (
             <PanelSecciones
               catalogo={catalogo}
+              tokens={tokens}
               composicion={composicion}
               elegido={elegido}
               onCambio={setComposicion}

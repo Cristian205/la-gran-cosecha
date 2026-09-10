@@ -467,10 +467,18 @@ def test_cada_panel_registrado_tiene_componente_en_el_panel():
         / "frontend" / "admin-panel" / "src" / "pages" / "pos" / "paneles" / "registro.tsx"
     ).read_text(encoding="utf-8")
 
-    cuerpo = registro.split("export const PANELES")[1]
+    # Solo el OBJETO, hasta su llave de cierre. Antes se leia todo lo que
+    # venia despues de `export const PANELES` y eso empezo a mentir en cuanto
+    # el archivo crecio: la firma de `panelesDelPerfil(claves: string[] ...)`
+    # casa con el mismo patron que una entrada del registro, y el guardia
+    # denuncio un panel llamado «claves» que no existe. Un guardia que denuncia
+    # de mas se acaba desactivando, que es peor que no tenerlo.
+    cuerpo = registro.split("export const PANELES")[1].split("};")[0]
     conocidos = set(re.findall(r'^\s*"?([a-z0-9_-]+)"?:\s*[{A-Za-z]', cuerpo, re.M))
 
-    declarados = {p.clave for p in paneles.disponibles(["pos", "reservas"])}
+    declarados = {
+        p.clave for p in paneles.disponibles(["pos", "reservas", "domicilios"])
+    }
     sin_componente = declarados - conocidos
     assert not sin_componente, (
         f"El servidor ofrece paneles que la caja no sabe pintar: {sorted(sin_componente)}"

@@ -1,4 +1,45 @@
 /**
+ * Los tipos y las operaciones de una composicion viven en `@constructor`, que es
+ * el codigo que este panel comparte con el otro editor de tiendas. Estaban
+ * declarados en los dos y ya habian empezado a separarse —el del negocio no
+ * declaraba `activo` ni `id` en `TokenTema`, ni `icono` en `Bloque`, aunque el
+ * servidor los manda—. Ninguna de las dos cosas daba error: cada panel era
+ * correcto por su cuenta, que es lo que hace peligrosa esta duplicacion. No
+ * falla, diverge.
+ *
+ * Se REEXPORTAN para no tocar los sitios que ya importaban de aqui.
+ * Ver `frontend/constructor/README.md`.
+ */
+export type {
+  Bloque,
+  BloqueColocado,
+  CampoEsquema,
+  CategoriaBloque,
+  Composicion,
+  EstadoVersion,
+  GrupoToken,
+  OpcionToken,
+  TokenTema,
+  Variante,
+  VersionPagina,
+} from "@constructor/index";
+export {
+  ETIQUETA_CATEGORIA,
+  ETIQUETA_GRUPO,
+  actualizar,
+  bloqueNuevo,
+  duplicar,
+  esHeredado,
+  fijarToken,
+  mover,
+  nuevoId,
+  quitar,
+  tiposPuestos,
+  tokensDelBloque,
+  valoresPorDefecto,
+} from "@constructor/index";
+
+/**
  * El catálogo del motor de tiendas, visto desde el Control Center.
  *
  * Son los tipos que devuelve `apps/storefront`. El `esquema_props` de cada
@@ -6,70 +47,20 @@
  * con cuidado aquí en vez de tratarlo como un JSON opaco — el editor se genera
  * de él, y un esquema mal entendido produce un formulario que guarda basura.
  */
+// Reexportar NO deja el nombre en ambito local, y este archivo los usa en las
+// firmas de `tienda`. Por eso ademas se importan.
+import type { Bloque, Composicion, TokenTema } from "@constructor/index";
+
 import { api } from "./cliente";
 
-export type CategoriaBloque =
-  | "ESTRUCTURA"
-  | "CONTENIDO"
-  | "CATALOGO"
-  | "PRUEBA_SOCIAL"
-  | "CONVERSION";
-
-export const ETIQUETA_CATEGORIA: Record<CategoriaBloque, string> = {
-  ESTRUCTURA: "Estructura",
-  CONTENIDO: "Contenido",
-  CATALOGO: "Catálogo",
-  PRUEBA_SOCIAL: "Prueba social",
-  CONVERSION: "Conversión",
-};
 
 /** Un campo del esquema de propiedades de un bloque. */
-export interface CampoEsquema {
-  tipo: "string" | "number" | "boolean" | "array" | "object" | "enum";
-  titulo?: string;
-  ayuda?: string;
-  default?: unknown;
-  minimo?: number;
-  maximo?: number;
-  /** Para `enum`. */
-  opciones?: string[];
-  /** Para `array`: la forma de cada elemento. */
-  items?: CampoEsquema;
-  /** Para `object`. */
-  properties?: Record<string, CampoEsquema>;
-}
 
-export interface Variante {
-  codigo: string;
-  nombre: string;
-}
 
-export interface Bloque {
-  id: number;
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  categoria: CategoriaBloque;
-  icono: string;
-  esquema_props: CampoEsquema;
-  variantes: Variante[];
-  requiere_datos: boolean;
-  unico_por_pagina: boolean;
-  a_sangre: boolean;
-  activo: boolean;
-  orden: number;
-}
 
 /** Un bloque colocado en una composición. La forma que valida el servidor. */
-export interface BloqueColocado {
-  id: string;
-  tipo: string;
-  variante: string;
-  props: Record<string, unknown>;
-  visible: { movil: boolean; tablet: boolean; escritorio: boolean };
-}
 
-export type Composicion = BloqueColocado[];
+
 
 export interface Tema {
   id: number;
@@ -103,40 +94,8 @@ export interface Plantilla {
   orden: number;
 }
 
-export type GrupoToken =
-  | "MARCA"
-  | "NAVEGACION"
-  | "TIPOGRAFIA"
-  | "SUPERFICIE"
-  | "FORMA"
-  | "DENSIDAD"
-  | "CAJA";
-
-export const ETIQUETA_GRUPO: Record<GrupoToken, string> = {
-  MARCA: "Marca",
-  NAVEGACION: "Navegación",
-  TIPOGRAFIA: "Tipografía",
-  SUPERFICIE: "Superficies",
-  FORMA: "Formas y espacios",
-  DENSIDAD: "Densidad",
-  CAJA: "Punto de venta",
-};
 
 /** Una perilla del aspecto de la tienda. */
-export interface TokenTema {
-  id: number;
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  grupo: GrupoToken;
-  tipo: "COLOR" | "MEDIDA" | "NUMERO" | "OPCION" | "TEXTO";
-  variable_css: string;
-  valor_por_defecto: string;
-  opciones: { valor: string; nombre: string }[];
-  unidad: string;
-  orden: number;
-  activo: boolean;
-}
 
 /** Las empresas, solo para elegir contra cuál se previsualiza una plantilla. */
 export interface NegocioBreve {
@@ -211,50 +170,4 @@ export interface AltaNegocio {
   plantilla?: string;
   aplicar_tema?: boolean;
   estado?: string;
-}
-
-// ==========================================================================
-// Utilidades de composición
-// ==========================================================================
-
-/** Identificador de bloque, único dentro de su página. */
-export function nuevoId(tipo: string, existentes: Composicion): string {
-  let n = 1;
-  const usados = new Set(existentes.map((b) => b.id));
-  while (usados.has(`${tipo}-${n}`)) n += 1;
-  return `${tipo}-${n}`;
-}
-
-/**
- * Un bloque nuevo, con las propiedades por defecto de su esquema ya puestas.
- *
- * Se rellenan aquí y no se dejan vacías porque el servidor no las inventa: un
- * bloque recién colocado sin `titulo` se pintaría sin encabezado, y quien lo
- * acaba de arrastrar pensaría que está roto.
- */
-export function bloqueNuevo(bloque: Bloque, existentes: Composicion): BloqueColocado {
-  return {
-    id: nuevoId(bloque.codigo, existentes),
-    tipo: bloque.codigo,
-    variante: bloque.variantes[0]?.codigo ?? "",
-    props: valoresPorDefecto(bloque.esquema_props),
-    visible: { movil: true, tablet: true, escritorio: true },
-  };
-}
-
-export function valoresPorDefecto(esquema: CampoEsquema | undefined): Record<string, unknown> {
-  const salida: Record<string, unknown> = {};
-  for (const [clave, campo] of Object.entries(esquema?.properties ?? {})) {
-    if (campo.default !== undefined) salida[clave] = campo.default;
-  }
-  return salida;
-}
-
-/** Mueve un bloque de posición. Devuelve una lista nueva. */
-export function mover(composicion: Composicion, desde: number, hasta: number): Composicion {
-  if (desde === hasta || hasta < 0 || hasta >= composicion.length) return composicion;
-  const copia = [...composicion];
-  const [pieza] = copia.splice(desde, 1);
-  copia.splice(hasta, 0, pieza);
-  return copia;
 }

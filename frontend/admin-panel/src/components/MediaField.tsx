@@ -1,6 +1,6 @@
 import { ImagePlus, Library, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { subirArchivo } from "../api/media";
+import { descargarArchivo, subirArchivo } from "../api/media";
 import type { Archivo } from "../types";
 import { MediaPickerModal } from "./MediaPickerModal";
 
@@ -43,14 +43,12 @@ export function MediaField({ valor, urlActual, onCambiar, ayuda, accept = ACCEPT
 
   async function elegirDeLaBiblioteca(archivo: Archivo) {
     setPickerAbierto(false);
-    if (!archivo.url) return;
     try {
-      const resp = await fetch(archivo.url);
-      const blob = await resp.blob();
+      const blob = await descargarArchivo(archivo.id);
       const file = new File([blob], archivo.nombre_original, { type: archivo.content_type });
       onCambiar(file);
     } catch {
-      // si el fetch falla, simplemente no se selecciona nada — no rompe el formulario
+      // si la descarga falla, simplemente no se selecciona nada — no rompe el formulario
     }
   }
 

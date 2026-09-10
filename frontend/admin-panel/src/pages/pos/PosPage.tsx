@@ -19,7 +19,7 @@ import { extraerMensajeError, formatoPrecio, tienePermiso } from "../../utils";
 import { useAuth } from "../../auth/AuthContext";
 import { alertaError, alertaExito, confirmarAccion } from "../../utils/alertas";
 import { CobroModal } from "./CobroModal";
-import { panelDelPerfil } from "./paneles/registro";
+import { panelesDelPerfil } from "./paneles/registro";
 import { Selector } from "./Selector";
 
 /**
@@ -27,10 +27,10 @@ import { Selector } from "./Selector";
  *
  * Cuatro zonas, y quién decide cada una:
  *
- *   selector       `perfil.busqueda` y `muestra_imagenes`
- *   carrito        `pide_atributos_en_linea`, `permite_nota_por_linea`
- *   panel lateral  `perfil.panel_lateral` — lo aportan los módulos
- *   cobro          los medios de pago que el negocio dio de alta
+ *   selector        `perfil.busqueda` y `muestra_imagenes`
+ *   carrito         `pide_atributos_en_linea`, `permite_nota_por_linea`
+ *   panel lateral   `perfil.panel_lateral` — los aportan los módulos
+ *   cobro           los medios de pago que el negocio dio de alta
  *
  * No hay una caja de boutique y otra de ferretería: hay esta, leyendo una
  * configuración distinta. Mejorarla las mejora todas a la vez, que es la razón
@@ -54,10 +54,16 @@ export function PosPage() {
   const [arqueo, setArqueo] = useState<{ efectivo_esperado: string; ventas: number } | null>(null);
   const [contado, setContado] = useState("");
   const [notaCierre, setNotaCierre] = useState("");
-  /** Lo que el panel lateral aporta a la venta. Se elige ANTES de la primera
-   *  línea: la venta nace con ello dentro, y así no hace falta un endpoint
-   *  para cambiarlo después. La caja NO lo interpreta — ver paneles/registro. */
-  const [aporte, setAporte] = useState<Record<string, unknown>>({});
+  /** Lo que los paneles laterales aportan a la venta, UNO POR PANEL. Se elige
+   *  ANTES de la primera línea: la venta nace con ello dentro, y así no hace
+   *  falta un endpoint para cambiarlo después. La caja NO lo interpreta — ver
+   *  paneles/registro.
+   *
+   *  Separado por clave y no en un diccionario común porque con dos paneles
+   *  compartirlo es un fallo silencioso: el segundo en escribir borra lo que
+   *  eligió el primero, y quien lo sufre es el restaurante que reserva mesa y
+   *  manda a domicilio en la misma venta. */
+  const [aportes, setAportes] = useState<Record<string, Record<string, unknown>>>({});
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -83,7 +89,7 @@ export function PosPage() {
 
   const turno = config?.turno ?? null;
   const perfil = config?.perfil_pos;
-  const panel = panelDelPerfil(perfil?.panel_lateral);
+  const paneles = panelesDelPerfil(perfil?.panel_lateral);
   // El aspecto viaja como variables CSS y un atributo, no como condiciones:
   // esta pantalla no sabe si el negocio es una boutique o una ferreteria, solo
   // aplica lo que el servidor resolvio. Ver `pos/aspecto.py`.
@@ -104,10 +110,21 @@ export function PosPage() {
 
   async function asegurarVenta(): Promise<Venta> {
     if (venta && venta.estado === "ABIERTA") return venta;
-    const nueva = await abrirVenta(aporte);
-    // Lo que el módulo tenga que hacer con su venta recién abierta lo hace él.
-    // La caja no sabe qué es: solo que este panel declaró un gancho.
-    await panel?.alAbrirVenta?.(nueva, aporte);
+
+    // Los trozos de cada panel se unen aquí y viajan como uno solo: para el
+    // servidor `Venta.contexto` sigue siendo un diccionario plano y opaco, que
+    // es lo que el contrato dice desde la fase 10.
+    const unido = Object.assign({}, ...paneles.map(({ clave }) => aportes[clave] ?? {}));
+    const nueva = await abrirVenta(unido);
+
+    // Lo que cada módulo tenga que hacer con la venta recién abierta lo hace
+    // él, y con SU trozo. La caja no sabe qué es ninguno: solo que declararon
+    // un gancho. En serie y no en paralelo a propósito: si dos fallan, los dos
+    // mensajes de error importan y encimarlos no ayuda a nadie.
+    for (const { clave, panel } of paneles) {
+      await panel.alAbrirVenta?.(nueva, aportes[clave] ?? {});
+    }
+
     setVenta(nueva);
     return nueva;
   }
@@ -135,7 +152,7 @@ export function PosPage() {
     await conError(async () => {
       await anularVenta(venta.id, "Anulada desde la caja");
       setVenta(null);
-      setAporte({});
+      setAportes({});
     });
   }
 
@@ -161,6 +178,11 @@ export function PosPage() {
       const cerrado = await cerrarTurno(turno.id, contado, notaCierre);
       setCerrando(false);
       setVenta(null);
+      // También lo que eligieron los paneles: si no, la dirección del último
+      // domicilio del turno de la tarde reaparece en la primera venta de la
+      // noche. Ya pasaba con el aporte único y no se veía porque el panel de
+      // clientes vuelve a pintar lo elegido; una dirección escrita a mano, no.
+      setAportes({});
       setConfig((prev) => (prev ? { ...prev, turno: null } : prev));
       const dif = Number(cerrado.diferencia);
       alertaExito(
@@ -261,12 +283,20 @@ export function PosPage() {
             <span>{venta ? `Venta ${venta.numero}` : "Venta nueva"}</span>
           </div>
 
-          {/* El panel lateral lo aporta un módulo. El servidor NOMBRA la
-              clave y `paneles/registro` dice qué componente la PINTA: añadir
-              el tercero es una fila allí, no una condición aquí. */}
-          {panel && (
-            <panel.Componente venta={venta} aporte={aporte} onAporte={setAporte} />
-          )}
+          {/* Los paneles laterales los aportan los módulos. El servidor NOMBRA
+              las claves y `paneles/registro` dice qué componente pinta cada
+              una: añadir el tercero es una fila allí, no una condición aquí.
+              Cada uno recibe su propio trozo de aporte — ver `aportes`. */}
+          {paneles.map(({ clave, panel }) => (
+            <panel.Componente
+              key={clave}
+              venta={venta}
+              aporte={aportes[clave] ?? {}}
+              onAporte={(propio) =>
+                setAportes((previos) => ({ ...previos, [clave]: propio }))
+              }
+            />
+          ))}
 
           {!venta || venta.lineas.length === 0 ? (
             <p className="vacio">Elige un producto para empezar</p>
@@ -353,7 +383,7 @@ export function PosPage() {
           onCobrada={() => {
             setCobrando(false);
             setVenta(null);
-            setAporte({});
+            setAportes({});
             alertaExito("Venta cobrada.");
           }}
         />

@@ -122,7 +122,11 @@ class PaginaPublicaView(ExigeNegocioMixin, APIView):
             "tipo": servicio.tipo_de(ruta),
             "seo_titulo": "",
             "seo_descripcion": "",
-            "bloques": bloques,
+            # Enriquecida igual que la de una página real. Antes viajaba en
+            # crudo, así que en la previa faltaba `a_sangre` y una portada a
+            # sangre se pintaba dentro del contenedor: la plantilla se veía peor
+            # de lo que era justo en la pantalla que existe para juzgarla.
+            "bloques": servicio.para_la_tienda(bloques),
             "version": None,
             # El aspecto viaja con la composición para que el layout pueda
             # repintar la tienda entera. Sin esto la previa saldría con la

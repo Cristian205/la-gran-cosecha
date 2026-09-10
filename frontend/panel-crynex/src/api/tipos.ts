@@ -8,6 +8,7 @@
 
 export interface Permiso {
   id: number;
+  producto: number | null;
   modulo: string;
   codename: string;
   etiqueta: string;
@@ -119,7 +120,7 @@ export interface Plan {
 }
 
 export type EstadoNegocio = "PRUEBA" | "ACTIVO" | "SUSPENDIDO" | "ARCHIVADO";
-export type EstadoSuscripcion = "PRUEBA" | "ACTIVA" | "VENCIDA" | "CANCELADA";
+export type EstadoSuscripcion = "PRUEBA" | "ACTIVA" | "PAUSADA" | "VENCIDA" | "CANCELADA";
 
 export interface Negocio {
   id: number;
@@ -144,7 +145,29 @@ export interface Suscripcion {
   fecha_inicio: string;
   fecha_fin: string | null;
   limites_extra: Record<string, number | null>;
+  /** Codenames concedidos a ESTA empresa además de los de su plan. */
+  permisos_extra: string[];
+  /** Codenames que el plan concede pero que a ESTA empresa se le apagó. Manda
+   *  sobre `permisos_extra`: no se recupera colándolo también ahí. */
+  permisos_excluidos: string[];
   notas: string;
+}
+
+/** Un miembro del equipo de una empresa, visto desde la plataforma. Solo lectura. */
+export interface MiembroEquipo {
+  nombre: string;
+  email: string;
+  rol: string;
+  tiene_acceso_total: boolean;
+  permisos: string[];
+  activo: boolean;
+}
+
+/** El detalle de un dominio, aparte de la lista simple que trae `Negocio`. */
+export interface DominioDetalle {
+  hostname: string;
+  es_primario: boolean;
+  verificado: boolean;
 }
 
 export interface Resumen {

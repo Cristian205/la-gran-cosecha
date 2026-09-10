@@ -51,6 +51,20 @@ CATALOGO_PERMISOS = [
         ],
     },
     {
+        "modulo": "Domicilios",
+        "permisos": [
+            {"codename": "delivery.view_envio", "etiqueta": "Ver el tablero de envíos"},
+            {
+                "codename": "delivery.add_envio",
+                "etiqueta": "Crear, asignar y despachar envíos",
+            },
+            {
+                "codename": "delivery.change_zona",
+                "etiqueta": "Administrar zonas y repartidores",
+            },
+        ],
+    },
+    {
         "modulo": "Clientes",
         "permisos": [
             {"codename": "orders.view_cliente", "etiqueta": "Ver clientes"},

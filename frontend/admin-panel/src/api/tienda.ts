@@ -9,61 +9,60 @@
  * lectura. Crear bloques o plantillas es cambiar lo que la plataforma ofrece y
  * eso lo administra Crynex, no cada negocio.
  */
+/**
+ * Los tipos y las operaciones de una composicion viven en `@constructor`, que es
+ * el codigo que este panel comparte con el editor de plantillas de Crynex.
+ * Estaban declarados en los dos y ya habian empezado a separarse: este archivo
+ * no declaraba `activo`, `id` ni `orden` en `TokenTema` —aunque el servidor los
+ * manda— ni `icono` en `Bloque`. Ninguna de las dos cosas daba error, porque
+ * cada panel era correcto por su cuenta. Eso es lo que hace peligrosa esta
+ * duplicacion: no falla, diverge.
+ *
+ * Se REEXPORTAN para no tocar los sitios que ya importaban de aqui.
+ * Ver `frontend/constructor/README.md`.
+ */
+export type {
+  Bloque,
+  BloqueColocado,
+  CampoEsquema,
+  CategoriaBloque,
+  Composicion,
+  EstadoVersion,
+  GrupoToken,
+  OpcionToken,
+  TokenTema,
+  Variante,
+} from "@constructor/index";
+export {
+  ETIQUETA_CATEGORIA,
+  ETIQUETA_GRUPO,
+  actualizar,
+  bloqueNuevo,
+  duplicar,
+  esHeredado,
+  fijarToken,
+  mover,
+  nuevoId,
+  quitar,
+  tiposPuestos,
+  tokensDelBloque,
+  valoresPorDefecto,
+} from "@constructor/index";
+
+// Reexportar NO deja el nombre en ambito local, y este archivo los usa en las
+// firmas de `tienda`. Por eso ademas se importan.
+import type {
+  Bloque,
+  Composicion,
+  EstadoVersion,
+  TokenTema,
+} from "@constructor/index";
+
 import { api } from "./client";
 
-export type CategoriaBloque =
-  | "ESTRUCTURA"
-  | "CONTENIDO"
-  | "CATALOGO"
-  | "PRUEBA_SOCIAL"
-  | "CONVERSION";
 
-export const ETIQUETA_CATEGORIA: Record<CategoriaBloque, string> = {
-  ESTRUCTURA: "Estructura",
-  CONTENIDO: "Contenido",
-  CATALOGO: "Catálogo",
-  PRUEBA_SOCIAL: "Prueba social",
-  CONVERSION: "Conversión",
-};
 
-export interface CampoEsquema {
-  tipo: "string" | "number" | "boolean" | "array" | "object" | "enum";
-  titulo?: string;
-  ayuda?: string;
-  default?: unknown;
-  minimo?: number;
-  maximo?: number;
-  opciones?: string[];
-  items?: CampoEsquema;
-  properties?: Record<string, CampoEsquema>;
-}
 
-export interface Bloque {
-  id: number;
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  categoria: CategoriaBloque;
-  esquema_props: CampoEsquema;
-  variantes: { codigo: string; nombre: string }[];
-  requiere_datos: boolean;
-  unico_por_pagina: boolean;
-  a_sangre: boolean;
-  activo: boolean;
-  orden: number;
-}
-
-export interface BloqueColocado {
-  id: string;
-  tipo: string;
-  variante: string;
-  props: Record<string, unknown>;
-  visible: { movil: boolean; tablet: boolean; escritorio: boolean };
-}
-
-export type Composicion = BloqueColocado[];
-
-export type EstadoVersion = "BORRADOR" | "PUBLICADA" | "ARCHIVADA";
 
 export interface VersionPagina {
   id: number;
@@ -99,49 +98,6 @@ function filas<T>(datos: T[] | Paginado<T>): T[] {
   return Array.isArray(datos) ? datos : (datos.results ?? []);
 }
 
-export interface OpcionToken {
-  valor: string;
-  nombre: string;
-}
-
-/**
- * Una perilla del aspecto de la tienda.
- *
- * El catálogo lo administra Crynex; cada negocio elige sus valores. Un token
- * que no esté en el catálogo se ignora al resolver el tema, así que retirar uno
- * devuelve a todas las tiendas a su valor por defecto sin migrar nada.
- */
-export interface TokenTema {
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  grupo:
-    | "MARCA"
-    | "NAVEGACION"
-    | "TIPOGRAFIA"
-    | "SUPERFICIE"
-    | "FORMA"
-    | "DENSIDAD"
-    // La caja va en el MISMO catálogo que la tienda: un negocio tiene una
-    // identidad, y el mostrador es otra superficie que la lleva puesta. Ver
-    // `TokenTema.Grupo.CAJA`.
-    | "CAJA";
-  tipo: "COLOR" | "MEDIDA" | "NUMERO" | "OPCION" | "TEXTO";
-  variable_css: string;
-  valor_por_defecto: string;
-  opciones: OpcionToken[];
-  unidad: string;
-}
-
-export const ETIQUETA_GRUPO: Record<TokenTema["grupo"], string> = {
-  MARCA: "Marca",
-  NAVEGACION: "Navegación",
-  TIPOGRAFIA: "Tipografía",
-  SUPERFICIE: "Superficies",
-  FORMA: "Formas y espacios",
-  DENSIDAD: "Densidad",
-  CAJA: "Punto de venta",
-};
 
 export const tienda = {
   async catalogo(): Promise<Bloque[]> {
@@ -223,38 +179,3 @@ export const tienda = {
 // ==========================================================================
 // Utilidades de composición
 // ==========================================================================
-export function nuevoId(tipo: string, existentes: Composicion): string {
-  let n = 1;
-  const usados = new Set(existentes.map((b) => b.id));
-  while (usados.has(`${tipo}-${n}`)) n += 1;
-  return `${tipo}-${n}`;
-}
-
-/**
- * Un bloque nuevo con las propiedades por defecto de su esquema ya puestas.
- *
- * Se rellenan porque el servidor no las inventa: un bloque recién colocado sin
- * `titulo` se pintaría sin encabezado y quien acaba de arrastrarlo pensaría
- * que está roto.
- */
-export function bloqueNuevo(bloque: Bloque, existentes: Composicion): BloqueColocado {
-  const props: Record<string, unknown> = {};
-  for (const [clave, campo] of Object.entries(bloque.esquema_props?.properties ?? {})) {
-    if (campo.default !== undefined) props[clave] = campo.default;
-  }
-  return {
-    id: nuevoId(bloque.codigo, existentes),
-    tipo: bloque.codigo,
-    variante: bloque.variantes[0]?.codigo ?? "",
-    props,
-    visible: { movil: true, tablet: true, escritorio: true },
-  };
-}
-
-export function mover(composicion: Composicion, desde: number, hasta: number): Composicion {
-  if (desde === hasta || hasta < 0 || hasta >= composicion.length) return composicion;
-  const copia = [...composicion];
-  const [pieza] = copia.splice(desde, 1);
-  copia.splice(hasta, 0, pieza);
-  return copia;
-}

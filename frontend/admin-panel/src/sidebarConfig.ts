@@ -1,4 +1,5 @@
 import {
+  Bike,
   Boxes,
   Building2,
   CalendarClock,
@@ -44,6 +45,13 @@ export const SECCIONES_DISPONIBLES: SeccionDisponible[] = [
     permiso: "reservations.view_reserva",
   },
   {
+    clave: "domicilios",
+    to: "/domicilios",
+    label: "Domicilios",
+    icon: Bike,
+    permiso: "delivery.view_envio",
+  },
+  {
     clave: "inventario",
     to: "/inventario",
     label: "Inventario",
@@ -84,6 +92,7 @@ export const LAYOUT_POR_DEFECTO: NodoSidebar[] = [
       "dashboard",
       "caja",
       "reservas",
+      "domicilios",
       "catalogo",
       "inventario",
       "pedidos",

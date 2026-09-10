@@ -84,6 +84,30 @@ class Bloque(models.Model):
         help_text='Aspectos disponibles: [{"codigo": "rejilla-4", "nombre": "Rejilla"}]',
     )
 
+    #: Qué tokens de tema se pueden retocar SOLO en este bloque, por código de
+    #: `TokenTema`. Es lo que convierte el motor en un constructor: hasta ahora
+    #: el aspecto era una decisión de la tienda entera —un único `:root`— así
+    #: que un pie oscuro sobre una página clara no era configurable, era un
+    #: despliegue.
+    #:
+    #: Es una LISTA BLANCA y no «todos los tokens» a propósito. Dos razones:
+    #:
+    #: 1. No todos tienen sentido en todos los bloques. `columnas-catalogo` en
+    #:    un pie es una perilla que no hace nada, y una perilla que no hace
+    #:    nada es peor que no tenerla — la misma regla que gobierna
+    #:    `capacidades.py` y el propio catálogo de tokens.
+    #: 2. El panel de propiedades se dibuja de aquí, igual que el de contenido
+    #:    se dibuja de `esquema_props`. Declarar es lo que hace que un bloque
+    #:    nuevo traiga su pestaña de diseño puesta sin tocar el editor.
+    #:
+    #: Vacío significa que el bloque no admite retoques propios y solo obedece
+    #: al tema del negocio, que es como se comportaban todos hasta la fase 12.
+    tokens_admitidos = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Códigos de TokenTema que este bloque puede sobrescribir.",
+    )
+
     #: El bloque necesita datos del servidor antes de pintarse. Los que lo
     #: declaran se resuelven en el render del servidor de Next: si se dejaran
     #: al navegador, el rastreador vería un hueco donde va el contenido y se
@@ -177,6 +201,16 @@ class TokenTema(models.Model):
         TIPOGRAFIA = "TIPOGRAFIA", "Tipografía"
         SUPERFICIE = "SUPERFICIE", "Superficies"
         FORMA = "FORMA", "Formas y espacios"
+        #: Cuánto aire hay ENTRE las cosas, frente a `FORMA`, que es qué forma
+        #: tienen. Se separaron al llegar el estilo por bloque: son las dos
+        #: perillas que más se retocan sección a sección, y tenerlas mezcladas
+        #: con los radios obligaba a buscarlas.
+        ESPACIADO = "ESPACIADO", "Espaciado"
+        #: La penumbra. Hasta la fase 12 solo se podía graduar su fuerza y el
+        #: color estaba escrito quince veces en la hoja —un verde muy oscuro,
+        #: el de la primera tienda—, así que todas las tiendas del motor
+        #: proyectaban sombras verdes sin que nadie lo hubiera decidido.
+        SOMBRA = "SOMBRA", "Sombras"
         #: Cuánto aire tiene la tienda. Es lo que separa el catálogo apretado
         #: de una ferretería —trescientas referencias que hay que comparar— de
         #: una boutique, donde cada producto pide espacio para respirar.

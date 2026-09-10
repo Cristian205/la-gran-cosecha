@@ -601,6 +601,16 @@ class Subscription(models.Model):
     # Concesiones puntuales a un negocio, por encima de su plan. Evita tener
     # que inventar un plan nuevo para un solo cliente que negoció algo.
     limites_extra = models.JSONField(default=dict, blank=True)
+    #: Lo mismo que `limites_extra`, pero de módulos: codenames que este
+    #: negocio concreto tiene además de los de su plan. Un cliente que necesita
+    #: Domicilios sin subir de plan entero se resuelve aquí, no inventándole un
+    #: plan a la medida que nadie más va a contratar.
+    permisos_extra = models.JSONField(default=list, blank=True)
+    #: El opuesto de `permisos_extra`: codenames que el PLAN de este negocio
+    #: concede pero que a este cliente en concreto se le apagó. Sin esto, la
+    #: única forma de quitarle un módulo a una sola empresa sería bajarla de
+    #: plan entero, perdiendo también todo lo demás que ese plan le da.
+    permisos_excluidos = models.JSONField(default=list, blank=True)
 
     notas = models.TextField(blank=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
@@ -643,9 +653,13 @@ class Subscription(models.Model):
         """
         Los permisos que este negocio puede repartir entre su gente.
 
-        Es la intersección de dos cosas: lo que su plan incluye y lo que la
-        plataforma tiene activo. Si Crynex retira un módulo, desaparece de
-        todos los negocios sin tocar ningún plan.
+        Se parte de lo que el plan incluye, se le suma lo concedido aparte en
+        `permisos_extra` y se le resta lo apagado aparte en
+        `permisos_excluidos` —esto último manda: un permiso que el plan
+        concede pero que este cliente tiene excluido no se recupera colándolo
+        también en `permisos_extra`—. El resultado se acota siempre a lo que
+        la plataforma tenga activo: si Crynex retira un módulo, desaparece de
+        todos los negocios sin tocar ningún plan ni ninguna concesión puntual.
         """
         if not self.vigente:
             return []
@@ -654,4 +668,7 @@ class Subscription(models.Model):
                 "codename", flat=True
             )
         )
-        return sorted(activos.intersection(self.plan.permisos or []))
+        concedidos = (set(self.plan.permisos or []) | set(self.permisos_extra or [])) - set(
+            self.permisos_excluidos or []
+        )
+        return sorted(activos.intersection(concedidos))

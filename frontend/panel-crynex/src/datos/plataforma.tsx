@@ -21,11 +21,16 @@ import {
 } from "react";
 import { api } from "../api/cliente";
 import type {
+  DominioDetalle,
   EstadoNegocio,
+  MiembroEquipo,
   Negocio,
   Permiso,
   Plan,
+  PrecioPlan,
+  Producto,
   Suscripcion,
+  TipoLimite,
   UsuarioActual,
 } from "../api/tipos";
 
@@ -33,6 +38,8 @@ interface Datos {
   negocios: Negocio[];
   planes: Plan[];
   permisos: Permiso[];
+  productos: Producto[];
+  tiposLimite: TipoLimite[];
   suscripciones: Suscripcion[];
   usuario: UsuarioActual | null;
 }
@@ -45,14 +52,28 @@ interface Plataforma extends Datos {
   planDe: (negocio: Negocio | null | undefined) => Plan | null;
   cambiarPlan: (negocio: Negocio, slug: string) => Promise<void>;
   cambiarEstado: (negocio: Negocio, estado: EstadoNegocio) => Promise<void>;
+  crearPlan: (datos: Partial<Plan>) => Promise<Plan>;
   guardarPlan: (id: number, cambios: Partial<Plan>) => Promise<Plan>;
   archivarPlan: (plan: Plan) => Promise<void>;
   marcarPredeterminado: (plan: Plan) => Promise<Plan>;
+  duplicarPlan: (
+    plan: Plan,
+    datos: { slug: string; nombre?: string; nueva_version?: boolean }
+  ) => Promise<Plan>;
+  crearPrecio: (planId: number, datos: Partial<PrecioPlan>) => Promise<PrecioPlan>;
+  editarPrecio: (id: number, cambios: Partial<PrecioPlan>) => Promise<PrecioPlan>;
+  crearPermiso: (datos: Partial<Permiso>) => Promise<Permiso>;
   guardarPermiso: (id: number, cambios: Partial<Permiso>) => Promise<Permiso>;
+  crearProducto: (datos: Partial<Producto>) => Promise<Producto>;
+  guardarProducto: (id: number, cambios: Partial<Producto>) => Promise<Producto>;
+  archivarProducto: (producto: Producto) => Promise<void>;
   guardarSuscripcion: (
     id: number,
     cambios: Partial<Suscripcion>
   ) => Promise<Suscripcion>;
+  /** Por empresa y bajo demanda: no son catálogos que casi toda pantalla use. */
+  equipoDe: (negocioId: number) => Promise<MiembroEquipo[]>;
+  dominiosDe: (negocioId: number) => Promise<DominioDetalle[]>;
 }
 
 const Contexto = createContext<Plataforma | null>(null);
@@ -61,6 +82,8 @@ const VACIO: Datos = {
   negocios: [],
   planes: [],
   permisos: [],
+  productos: [],
+  tiposLimite: [],
   suscripciones: [],
   usuario: null,
 };
@@ -73,16 +96,19 @@ export function ProveedorPlataforma({ children }: { children: ReactNode }) {
   const recargar = useCallback(async () => {
     setError(null);
     try {
-      const [negocios, planes, permisos, suscripciones, usuario] = await Promise.all([
-        api.get<Negocio[]>("/platform/tenants/"),
-        api.get<Plan[]>("/platform/plans/"),
-        api.get<Permiso[]>("/platform/permissions/"),
-        api.get<Suscripcion[]>("/platform/subscriptions/"),
-        // El nombre para saludar. Si falla, el panel funciona igual: no es un
-        // dato del que dependa ninguna decisión.
-        api.get<UsuarioActual>("/auth/me/").catch(() => null),
-      ]);
-      setDatos({ negocios, planes, permisos, suscripciones, usuario });
+      const [negocios, planes, permisos, productos, tiposLimite, suscripciones, usuario] =
+        await Promise.all([
+          api.get<Negocio[]>("/platform/tenants/"),
+          api.get<Plan[]>("/platform/plans/"),
+          api.get<Permiso[]>("/platform/permissions/"),
+          api.get<Producto[]>("/platform/products/"),
+          api.get<TipoLimite[]>("/platform/limit-types/"),
+          api.get<Suscripcion[]>("/platform/subscriptions/"),
+          // El nombre para saludar. Si falla, el panel funciona igual: no es un
+          // dato del que dependa ninguna decisión.
+          api.get<UsuarioActual>("/auth/me/").catch(() => null),
+        ]);
+      setDatos({ negocios, planes, permisos, productos, tiposLimite, suscripciones, usuario });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -154,6 +180,12 @@ export function ProveedorPlataforma({ children }: { children: ReactNode }) {
         }));
       },
 
+      async crearPlan(datos) {
+        const creado = await api.post<Plan>("/platform/plans/", datos);
+        setDatos((previos) => ({ ...previos, planes: [...previos.planes, creado] }));
+        return creado;
+      },
+
       async guardarPlan(id, cambios) {
         const actualizado = await api.patch<Plan>(`/platform/plans/${id}/`, cambios);
         setDatos((previos) => ({
@@ -199,6 +231,50 @@ export function ProveedorPlataforma({ children }: { children: ReactNode }) {
         return actualizado;
       },
 
+      /**
+       * Copia un plan, opcionalmente como su versión siguiente.
+       *
+       * Se recarga en vez de insertar la respuesta a mano porque, con
+       * `nueva_version`, el original queda archivado en el mismo golpe —dos
+       * filas cambian a la vez, y `recargar()` es lo único que las deja
+       * consistentes sin duplicar esa regla aquí.
+       */
+      async duplicarPlan(plan, datos) {
+        const copia = await api.post<Plan>(`/platform/plans/${plan.id}/duplicar/`, datos);
+        await recargar();
+        return copia;
+      },
+
+      async crearPrecio(planId, datos) {
+        const creado = await api.post<PrecioPlan>(`/platform/plans/${planId}/precios/`, datos);
+        setDatos((previos) => ({
+          ...previos,
+          planes: previos.planes.map((p) =>
+            p.id === planId ? { ...p, precios: [...p.precios, creado] } : p
+          ),
+        }));
+        return creado;
+      },
+
+      async editarPrecio(id, cambios) {
+        const actualizado = await api.patch<PrecioPlan>(`/platform/prices/${id}/`, cambios);
+        setDatos((previos) => ({
+          ...previos,
+          planes: previos.planes.map((p) =>
+            p.id === actualizado.plan
+              ? { ...p, precios: reemplazar(p.precios, actualizado) }
+              : p
+          ),
+        }));
+        return actualizado;
+      },
+
+      async crearPermiso(datos) {
+        const creado = await api.post<Permiso>("/platform/permissions/", datos);
+        setDatos((previos) => ({ ...previos, permisos: [...previos.permisos, creado] }));
+        return creado;
+      },
+
       async guardarPermiso(id, cambios) {
         const actualizado = await api.patch<Permiso>(
           `/platform/permissions/${id}/`,
@@ -209,6 +285,27 @@ export function ProveedorPlataforma({ children }: { children: ReactNode }) {
           permisos: reemplazar(previos.permisos, actualizado),
         }));
         return actualizado;
+      },
+
+      async crearProducto(datos) {
+        const creado = await api.post<Producto>("/platform/products/", datos);
+        setDatos((previos) => ({ ...previos, productos: [...previos.productos, creado] }));
+        return creado;
+      },
+
+      async guardarProducto(id, cambios) {
+        const actualizado = await api.patch<Producto>(`/platform/products/${id}/`, cambios);
+        setDatos((previos) => ({
+          ...previos,
+          productos: reemplazar(previos.productos, actualizado),
+        }));
+        return actualizado;
+      },
+
+      /** Igual que `archivarPlan`: `DELETE` archiva solo si tiene permisos vivos. */
+      async archivarProducto(producto) {
+        await api.delete(`/platform/products/${producto.id}/`);
+        await recargar();
       },
 
       async guardarSuscripcion(id, cambios) {
@@ -227,6 +324,10 @@ export function ProveedorPlataforma({ children }: { children: ReactNode }) {
         }));
         return actualizado;
       },
+
+      equipoDe: (negocioId) => api.get<MiembroEquipo[]>(`/platform/tenants/${negocioId}/equipo/`),
+      dominiosDe: (negocioId) =>
+        api.get<DominioDetalle[]>(`/platform/tenants/${negocioId}/dominios/`),
     };
   }, [datos, cargando, error, recargar]);
 

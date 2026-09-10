@@ -14,6 +14,10 @@ export interface Usuario {
   es_administrador: boolean;
   debe_cambiar_password: boolean;
   permisos: string[];
+  /** Los codenames que el PLAN del negocio incluye, sin importar el rol. Un
+   *  codename puede estar en `permisos` (por ser dueño o por delegación) y
+   *  aun así no estar aquí, si el negocio no contrató ese módulo. */
+  permisos_del_plan: string[];
   ultimo_login_exitoso: string | null;
   fecha_creacion: string;
   sidebar_layout: NodoSidebar[] | null;
@@ -243,6 +247,13 @@ export interface SiteConfig {
   factura_proveedor: string;
   factura_telefono: string;
   factura_direccion: string;
+  /**
+   * Variables del tema del negocio que el panel administrativo sabe usar
+   * (`--densidad-escala`, `--sombra-fuerza`) — las mismas que Apariencia ya
+   * deja tocar para la tienda. Calculadas por el servidor, no un campo que
+   * PATCH acepte guardar.
+   */
+  panel_variables?: Record<string, string>;
 }
 
 export interface PromoBanner {

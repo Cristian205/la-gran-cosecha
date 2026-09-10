@@ -10,6 +10,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { loginPaso1, verificarOtp } from "../api/auth";
+import { pilaFuente, radioPx } from "../api/apariencia";
 import { cargarMarca, type MarcaNegocio } from "../api/marca";
 import { useAuth } from "../auth/AuthContext";
 import { extraerMensajeError } from "../utils";
@@ -141,7 +142,15 @@ export function LoginPage() {
       className="acceso"
       // El color del negocio entra como variable y no como estilo suelto: de
       // aquí lo heredan el botón, los iconos y los focos sin repetirlo.
-      style={marca ? ({ "--marca": marca.color } as React.CSSProperties) : undefined}
+      style={
+        marca
+          ? ({
+              "--marca": marca.color,
+              "--fuente": pilaFuente(marca.fuente),
+              "--radio-boton": `${radioPx(marca.radioBoton)}px`,
+            } as React.CSSProperties)
+          : undefined
+      }
     >
       {/* ---------------------------------------------------- panel de marca */}
       <section className="acceso__marca">

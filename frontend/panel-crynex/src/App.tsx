@@ -12,6 +12,7 @@ import { Negocios } from "./paginas/Negocios";
 import { Planes } from "./paginas/Planes";
 import { Plantillas } from "./paginas/Plantillas";
 import { Presets } from "./paginas/Presets";
+import { Productos } from "./paginas/Productos";
 import { Resumen } from "./paginas/Resumen";
 import { Suscripciones } from "./paginas/Suscripciones";
 
@@ -43,6 +44,7 @@ export default function App() {
                 <Route path="/empresas/:id/:pestana" element={<Empresa />} />
                 <Route path="/planes" element={<Planes />} />
                 <Route path="/permisos" element={<Matriz />} />
+                <Route path="/productos" element={<Productos />} />
                 <Route path="/plantillas" element={<Plantillas />} />
                 <Route path="/presets" element={<Presets />} />
                 <Route path="/suscripciones" element={<Suscripciones />} />

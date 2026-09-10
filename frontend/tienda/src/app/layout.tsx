@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import type { BloqueColocado } from "@/lib/tipos";
 import { notFound } from "next/navigation";
+import { ArmazonPrevia } from "@/componentes/ArmazonPrevia";
 import { CapaCliente } from "@/componentes/CapaCliente";
-import { Footer } from "@/componentes/Footer";
-import { Navbar } from "@/componentes/Navbar";
-import { Lienzo } from "@/bloques/Lienzo";
 import { armazonDeLaTienda } from "@/lib/pagina";
 import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
 import {
@@ -106,50 +103,20 @@ export default async function RootLayout({
             Sin armazon compuesto se pintan los de siempre. Ese respaldo no es
             provisional: es lo que hace que las tiendas creadas antes de que
             esto existiera sigan viendose igual sin que nadie las migre.
+
+            `ArmazonPrevia` es quien decide esto en produccion (aqui no cambia
+            nada); dentro del taller de plantillas, ademas escucha lo que esa
+            plantilla propone para su propio armazon. Ver el comentario en ese
+            archivo.
           */}
-          {armazon ? (
-            <Armazon bloques={armazon.bloques} lugar="cabecera">
-              {children}
-            </Armazon>
-          ) : (
-            <>
-              <Navbar />
-              {children}
-              <Footer />
-            </>
-          )}
+          <ArmazonPrevia
+            inicial={armazon?.bloques ?? []}
+            origenPanel={process.env.NEXT_PUBLIC_PANEL_URL ?? ""}
+          >
+            {children}
+          </ArmazonPrevia>
         </CapaCliente>
       </body>
     </html>
-  );
-}
-
-
-/**
- * Reparte los bloques del armazon alrededor de la pagina.
- *
- * Todo lo que va ANTES del primer bloque de tipo `pie` envuelve por arriba, y
- * el resto por abajo. Se decide por posicion y no por una lista de tipos
- * «de cabecera» para que anadir un aviso sobre el menu —una franja de envios
- * gratis, por ejemplo— sea colocar un bloque, no tocar este archivo.
- */
-function Armazon({
-  bloques,
-  children,
-}: {
-  bloques: BloqueColocado[];
-  lugar?: string;
-  children: React.ReactNode;
-}) {
-  const corte = bloques.findIndex((b) => b.tipo === "pie");
-  const arriba = corte === -1 ? bloques : bloques.slice(0, corte);
-  const abajo = corte === -1 ? [] : bloques.slice(corte);
-
-  return (
-    <>
-      <Lienzo bloques={arriba} />
-      {children}
-      <Lienzo bloques={abajo} />
-    </>
   );
 }

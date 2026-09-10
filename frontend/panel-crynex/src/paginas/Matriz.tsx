@@ -12,22 +12,24 @@
  * entero sí se confirma: eso lo apaga en todas las empresas a la vez.
  */
 import { Fragment, useMemo, useState } from "react";
-import { Check, Minus, Power, Search } from "lucide-react";
+import { Check, Minus, Pencil, Plus, Power, Search } from "lucide-react";
 import type { Permiso } from "../api/tipos";
 import { usarPlataforma } from "../datos/plataforma";
 import { moneda } from "../datos/formato";
-import { Aviso, Boton, EstadoVacio, Esqueleto } from "../ui/basicos";
-import { Confirmar } from "../ui/Modal";
+import { Aviso, Boton, Campo, EstadoVacio, Esqueleto } from "../ui/basicos";
+import { Confirmar, Modal } from "../ui/Modal";
 import { usarAviso } from "../ui/Notificaciones";
 
 export function Matriz() {
-  const { permisos, planes, cargando, error, guardarPlan, guardarPermiso } =
+  const { permisos, planes, productos, cargando, error, guardarPlan, crearPermiso, guardarPermiso } =
     usarPlataforma();
   const avisar = usarAviso();
   const [texto, setTexto] = useState("");
   const [guardandoCelda, setGuardandoCelda] = useState<string | null>(null);
   const [retirando, setRetirando] = useState<Permiso | null>(null);
   const [trabajando, setTrabajando] = useState(false);
+  const [creando, setCreando] = useState(false);
+  const [editando, setEditando] = useState<Permiso | null>(null);
 
   /** Los permisos agrupados por módulo, que es como se leen. */
   const porModulo = useMemo(() => {
@@ -111,14 +113,19 @@ export function Matriz() {
             retirado desaparece de todos los negocios, sea cual sea su plan.
           </p>
         </div>
-        <div className="filtros__buscar filtros__buscar--suelto">
-          <Search size={15} />
-          <input
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            placeholder="Filtrar permisos…"
-            aria-label="Filtrar permisos"
-          />
+        <div className="flex items-center gap-2">
+          <div className="filtros__buscar filtros__buscar--suelto">
+            <Search size={15} />
+            <input
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              placeholder="Filtrar permisos…"
+              aria-label="Filtrar permisos"
+            />
+          </div>
+          <Boton variante="primario" icono={<Plus size={14} />} onClick={() => setCreando(true)}>
+            Nuevo permiso
+          </Boton>
         </div>
       </header>
 
@@ -165,7 +172,14 @@ export function Matriz() {
                       className={permiso.activo ? undefined : "esta-retirado"}
                     >
                       <td className="col-permiso">
-                        <span className="permiso__etiqueta">{permiso.etiqueta}</span>
+                        <button
+                          type="button"
+                          className="permiso__etiqueta permiso__etiqueta--editable"
+                          onClick={() => setEditando(permiso)}
+                          title="Editar este permiso"
+                        >
+                          {permiso.etiqueta} <Pencil size={11} />
+                        </button>
                         <code>{permiso.codename}</code>
                       </td>
 
@@ -241,6 +255,136 @@ export function Matriz() {
           }
         />
       )}
+
+      {creando && (
+        <ModalPermiso
+          titulo="Nuevo permiso"
+          productos={productos}
+          onCerrar={() => setCreando(false)}
+          onGuardar={async (datos) => {
+            await crearPermiso(datos);
+            setCreando(false);
+            avisar(`${datos.etiqueta} creado. Ya se puede marcar en los planes.`);
+          }}
+        />
+      )}
+
+      {editando && (
+        <ModalPermiso
+          titulo={`Editar ${editando.etiqueta}`}
+          permiso={editando}
+          productos={productos}
+          onCerrar={() => setEditando(null)}
+          onGuardar={async (datos) => {
+            await guardarPermiso(editando.id, datos);
+            setEditando(null);
+            avisar("Permiso actualizado.");
+          }}
+        />
+      )}
     </>
+  );
+}
+
+// ------------------------------------------------------------ crear/editar
+
+function ModalPermiso({
+  titulo,
+  permiso,
+  productos,
+  onCerrar,
+  onGuardar,
+}: {
+  titulo: string;
+  /** Si viene, es edición: el codename se ve pero no se toca. */
+  permiso?: Permiso;
+  productos: { id: number; nombre: string }[];
+  onCerrar: () => void;
+  onGuardar: (datos: Partial<Permiso>) => Promise<void>;
+}) {
+  const [producto, setProducto] = useState<string>(
+    permiso?.producto != null ? String(permiso.producto) : ""
+  );
+  const [modulo, setModulo] = useState(permiso?.modulo ?? "");
+  const [codename, setCodename] = useState(permiso?.codename ?? "");
+  const [etiqueta, setEtiqueta] = useState(permiso?.etiqueta ?? "");
+  const [descripcion, setDescripcion] = useState(permiso?.descripcion ?? "");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const listo = codename.trim() && etiqueta.trim() && modulo.trim();
+
+  async function guardar() {
+    if (!listo) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      await onGuardar({
+        producto: producto ? Number(producto) : null,
+        modulo: modulo.trim(),
+        codename: codename.trim(),
+        etiqueta: etiqueta.trim(),
+        descripcion: descripcion.trim(),
+      });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <Modal
+      titulo={titulo}
+      onCerrar={onCerrar}
+      pie={
+        <>
+          <Boton onClick={onCerrar}>Cancelar</Boton>
+          <Boton variante="primario" cargando={guardando} disabled={!listo} onClick={guardar}>
+            Guardar
+          </Boton>
+        </>
+      }
+    >
+      {error && <Aviso>{error}</Aviso>}
+
+      <Campo etiqueta="Producto" ayuda="A qué solución de Crynex pertenece.">
+        <select value={producto} onChange={(e) => setProducto(e.target.value)}>
+          <option value="">Sin producto</option>
+          {productos.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nombre}
+            </option>
+          ))}
+        </select>
+      </Campo>
+
+      <Campo etiqueta="Módulo" ayuda="La etiqueta con la que se agrupa en esta matriz.">
+        <input value={modulo} onChange={(e) => setModulo(e.target.value)} />
+      </Campo>
+
+      <Campo
+        etiqueta="Codename"
+        ayuda={
+          permiso
+            ? "No se puede cambiar: es la llave que ya usan los planes."
+            : 'Formato "app.accion_modelo", por ejemplo "delivery.view_envio".'
+        }
+      >
+        <input
+          value={codename}
+          disabled={Boolean(permiso)}
+          onChange={(e) => setCodename(e.target.value)}
+        />
+      </Campo>
+
+      <Campo etiqueta="Etiqueta" ayuda="Lo que lee el dueño del negocio al repartirlo.">
+        <input value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} />
+      </Campo>
+
+      <Campo etiqueta="Descripción">
+        <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+      </Campo>
+    </Modal>
   );
 }

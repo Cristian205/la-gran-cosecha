@@ -52,6 +52,19 @@ class BrevoAPIBackend(BaseEmailBackend):
     def _enviar(self, mensaje):
         nombre_remitente, correo_remitente = parseaddr(mensaje.from_email)
 
+        # Una direccion que no lo parece se para AQUI, no en Brevo. El 400 que
+        # devuelve la API por un remitente invalido es indistinguible del que
+        # devuelve por un remitente sin verificar, y son dos arreglos
+        # distintos: uno se corrige en la variable de entorno y el otro en el
+        # panel de Brevo. El caso real fue `DEFAULT_FROM_EMAIL` con las
+        # comillas dentro del valor — ver `_sin_comillas` en los settings.
+        if "@" not in correo_remitente or " " in correo_remitente:
+            raise ValueError(
+                f"DEFAULT_FROM_EMAIL no contiene una direccion valida: "
+                f"{mensaje.from_email!r}. Se esperaba «Nombre <buzon@dominio>» "
+                f"o «buzon@dominio», sin comillas alrededor."
+            )
+
         cuerpo = {
             "sender": {"email": correo_remitente},
             "to": [{"email": destino} for destino in mensaje.to],

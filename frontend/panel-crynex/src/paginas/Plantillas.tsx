@@ -11,33 +11,55 @@
  * la que verla: se previsualiza sobre una tienda de referencia, mandándole la
  * composición y el tema por `postMessage`. Lo que se ve es «cómo quedaría este
  * molde», sin que la tienda real cambie nada.
+ *
+ * # Las tres zonas
+ *
+ * Izquierda: la estructura de la página (o, temporalmente, el catálogo para
+ * agregar una sección, o el editor de apariencia global — los tres se turnan
+ * el mismo hueco, nunca compiten por espacio). Centro: el lienzo, la tienda de
+ * referencia real. Derecha: los ajustes de lo que esté elegido, o un estado
+ * vacío si no hay nada. Elegir una sección ya no navega a otra pantalla — solo
+ * la resalta a la izquierda y abre sus ajustes a la derecha, así que el árbol
+ * entero sigue a la vista mientras se edita.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  ExternalLink,
+  ArrowLeft,
   Layers,
   Monitor,
   Plus,
   Save,
+  Settings,
   Smartphone,
   Tablet,
   Trash2,
 } from "lucide-react";
 import {
+  actualizar as actualizarBloque,
+  bloqueNuevo,
+  duplicar as duplicarBloque,
+  mover,
+  quitar as quitarBloque,
   tienda,
   type Bloque,
+  type BloqueColocado,
   type Composicion,
   type EnlaceDePrueba,
   type NegocioBreve,
   type Plantilla,
   type TokenTema,
 } from "../api/tienda";
-import { Aviso, Boton, Dato, EstadoVacio, Insignia } from "../ui/basicos";
+import { Aviso, Boton, EstadoVacio, Insignia } from "../ui/basicos";
 import { Confirmar, Modal } from "../ui/Modal";
 import { usarAviso } from "../ui/Notificaciones";
-import { Editor } from "../constructor/Editor";
+import { BarraFlotante } from "../constructor/BarraFlotante";
+import { ListaEstructura } from "../constructor/ListaEstructura";
+import { PanelAjustesBloque } from "../constructor/PanelAjustesBloque";
 import { PanelTema, variablesDe } from "../constructor/PanelTema";
+import { SelectorDeBloques } from "../constructor/SelectorDeBloques";
 import { usarPrevia } from "../constructor/usarPrevia";
+import { PlantillaConfiguracion } from "./PlantillaConfiguracion";
 
 /**
  * Las rutas que una plantilla puede componer hoy.
@@ -64,6 +86,9 @@ const PANTALLAS = [
   { clave: "movil", icono: Smartphone, nombre: "Móvil", ancho: "390px" },
 ] as const;
 
+/** Dónde vive esta plantilla: solo se muestra un hueco a la vez. */
+type VistaIzquierda = "estructura" | "catalogo" | "apariencia";
+
 function urlTienda(): string | null {
   const bruta = import.meta.env.VITE_TIENDA_URL;
   return bruta ? String(bruta).replace(/\/+$/, "") : null;
@@ -71,6 +96,7 @@ function urlTienda(): string | null {
 
 export function Plantillas() {
   const avisar = usarAviso();
+  const navegar = useNavigate();
   const [catalogo, setCatalogo] = useState<Bloque[]>([]);
   const [tokens, setTokens] = useState<TokenTema[]>([]);
   const [plantillas, setPlantillas] = useState<Plantilla[]>([]);
@@ -79,9 +105,8 @@ export function Plantillas() {
 
   const [elegida, setElegida] = useState<number | null>(null);
   const [ruta, setRuta] = useState("/");
-  const [pestana, setPestana] = useState<"secciones" | "tema" | "datos">(
-    "secciones"
-  );
+  const [vistaIzquierda, setVistaIzquierda] = useState<VistaIzquierda>("estructura");
+  const [configAbierta, setConfigAbierta] = useState(false);
   const [bloqueElegido, setBloqueElegido] = useState<string | null>(null);
   const [pantalla, setPantalla] = useState<(typeof PANTALLAS)[number]["clave"]>(
     "escritorio"
@@ -102,6 +127,13 @@ export function Plantillas() {
 
   const origen = urlTienda();
   const composicion = borrador?.paginas[ruta] ?? [];
+  const porCodigo = useMemo(
+    () => new Map(catalogo.map((b) => [b.codigo, b])),
+    [catalogo]
+  );
+  const bloqueActual = composicion.find((b) => b.id === bloqueElegido) ?? null;
+  const definicionActual = bloqueActual ? porCodigo.get(bloqueActual.tipo) : undefined;
+
   const valoresTema = useMemo(
     () => (borrador?.tema_valores ?? {}) as Record<string, string>,
     [borrador]
@@ -113,12 +145,14 @@ export function Plantillas() {
 
   const alSeleccionar = useCallback((id: string) => {
     setBloqueElegido(id);
-    setPestana("secciones");
+    setVistaIzquierda("estructura");
   }, []);
 
   const { marco, reiniciar } = usarPrevia({
     origen,
     composicion,
+    armazon: borrador?.paginas["/_layout"] ?? [],
+    tokens,
     variables,
     // Lo que la plantilla PROPONE como identidad. Sin esto la previa pintaba la
     // maqueta nueva con el color de la empresa de referencia, que es como
@@ -155,6 +189,7 @@ export function Plantillas() {
     setBorrador(original ? structuredClone(original) : null);
     setRuta("/");
     setBloqueElegido(null);
+    setVistaIzquierda("estructura");
     reiniciar();
   }, [elegida, plantillas, reiniciar]);
 
@@ -163,6 +198,48 @@ export function Plantillas() {
     borrador !== null &&
     original !== null &&
     JSON.stringify(borrador) !== JSON.stringify(original);
+
+  function componer(siguiente: Composicion) {
+    if (!borrador) return;
+    setBorrador({
+      ...borrador,
+      paginas: { ...borrador.paginas, [ruta]: siguiente },
+    });
+  }
+
+  // Las mismas cuatro operaciones que antes vivian dentro de `Editor.tsx`,
+  // ahora aqui porque las necesitan dos superficies distintas: la lista de la
+  // izquierda y la barra flotante sobre el lienzo.
+  function actualizarSeleccion(id: string, cambios: Partial<BloqueColocado>) {
+    componer(actualizarBloque(composicion, id, cambios));
+  }
+
+  function agregarBloque(bloque: Bloque) {
+    const nuevo = bloqueNuevo(bloque, composicion);
+    componer([...composicion, nuevo]);
+    setBloqueElegido(nuevo.id);
+    setVistaIzquierda("estructura");
+  }
+
+  function duplicarSeleccion(id: string) {
+    const siguiente = duplicarBloque(composicion, id);
+    componer(siguiente);
+    const i = siguiente.findIndex((b) => b.id === id);
+    if (i >= 0 && siguiente[i + 1]) setBloqueElegido(siguiente[i + 1].id);
+  }
+
+  function quitarSeleccion(id: string) {
+    componer(quitarBloque(composicion, id));
+    if (bloqueElegido === id) setBloqueElegido(null);
+  }
+
+  function alternarVisibleSeleccion(id: string) {
+    const bloque = composicion.find((b) => b.id === id);
+    if (!bloque) return;
+    const todosVisibles = bloque.visible.movil && bloque.visible.tablet && bloque.visible.escritorio;
+    const valor = !todosVisibles;
+    actualizarSeleccion(id, { visible: { movil: valor, tablet: valor, escritorio: valor } });
+  }
 
   async function generarEnlace() {
     if (!borrador || negocioPrueba === "") return;
@@ -203,14 +280,6 @@ export function Plantillas() {
     } finally {
       setAsignando(false);
     }
-  }
-
-  function componer(siguiente: Composicion) {
-    if (!borrador) return;
-    setBorrador({
-      ...borrador,
-      paginas: { ...borrador.paginas, [ruta]: siguiente },
-    });
   }
 
   async function guardar() {
@@ -284,27 +353,46 @@ export function Plantillas() {
     <div className="taller">
       <header className="taller__barra">
         <div className="taller__izq">
-          <select
-            value={elegida ?? ""}
-            onChange={(e) => setElegida(Number(e.target.value))}
+          <button
+            type="button"
+            className="taller__volver"
+            onClick={() => navegar("/")}
+            title="Volver al panel"
           >
-            {plantillas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-                {p.es_predeterminada ? " · por defecto" : ""}
-                {p.activa ? "" : " · retirada"}
-              </option>
-            ))}
-          </select>
-          <select value={ruta} onChange={(e) => setRuta(e.target.value)}>
-            {RUTAS.map((r) => (
-              <option key={r.ruta} value={r.ruta}>
-                {r.nombre} ({borrador?.paginas[r.ruta]?.length ?? 0})
-              </option>
-            ))}
-          </select>
+            <ArrowLeft size={16} />
+          </button>
+
+          <div className="taller__migas">
+            <select
+              className="taller__miga"
+              value={elegida ?? ""}
+              onChange={(e) => setElegida(Number(e.target.value))}
+            >
+              {plantillas.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nombre}
+                  {p.es_predeterminada ? " · por defecto" : ""}
+                  {p.activa ? "" : " · retirada"}
+                </option>
+              ))}
+            </select>
+            <span className="taller__miga-separador">/</span>
+            <select
+              className="taller__miga"
+              value={ruta}
+              onChange={(e) => setRuta(e.target.value)}
+            >
+              {RUTAS.map((r) => (
+                <option key={r.ruta} value={r.ruta}>
+                  {r.nombre} ({borrador?.paginas[r.ruta]?.length ?? 0})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <Boton
             tamano="pequeno"
+            variante="fantasma"
             icono={<Plus size={13} />}
             onClick={() => setCreando(true)}
           >
@@ -331,30 +419,33 @@ export function Plantillas() {
         <div className="taller__der">
           {cambiado && <Insignia tono="aviso">Sin guardar</Insignia>}
           {origen && (
-            <a
-              className="icono-boton"
-              href={origen}
-              target="_blank"
-              rel="noreferrer"
-              title="Abrir la tienda de referencia"
-            >
-              <ExternalLink size={15} />
+            <a className="btn btn--fantasma btn--pequeno" href={origen} target="_blank" rel="noreferrer">
+              Vista previa
             </a>
           )}
-          <Boton
-            variante="fantasma"
-            tamano="pequeno"
-            icono={<Trash2 size={13} />}
-            onClick={() => setBorrando(original)}
-            disabled={borrador?.es_predeterminada}
+          <button
+            type="button"
+            className="icono-boton"
+            aria-label="Configuración de la plantilla"
+            title="Ficha, probar y asignar"
+            onClick={() => setConfigAbierta(true)}
+          >
+            <Settings size={15} />
+          </button>
+          <button
+            type="button"
+            className="icono-boton"
+            aria-label="Eliminar plantilla"
             title={
               borrador?.es_predeterminada
                 ? "Es la plantilla por defecto: no se puede eliminar"
-                : undefined
+                : "Eliminar plantilla"
             }
+            disabled={borrador?.es_predeterminada}
+            onClick={() => setBorrando(original)}
           >
-            Eliminar
-          </Boton>
+            <Trash2 size={15} />
+          </button>
           <Boton
             variante="primario"
             icono={<Save size={14} />}
@@ -370,240 +461,49 @@ export function Plantillas() {
       {error && <Aviso>{error}</Aviso>}
 
       <div className="taller__cuerpo">
-        <aside className="taller__panel">
-          <nav className="pestanas pestanas--rutas">
-            <button
-              type="button"
-              className={pestana === "secciones" ? "active" : undefined}
-              onClick={() => setPestana("secciones")}
-            >
-              Secciones
-            </button>
-            <button
-              type="button"
-              className={pestana === "tema" ? "active" : undefined}
-              onClick={() => {
-                setPestana("tema");
-                setBloqueElegido(null);
-              }}
-            >
-              Aspecto
-            </button>
-            <button
-              type="button"
-              className={pestana === "datos" ? "active" : undefined}
-              onClick={() => setPestana("datos")}
-            >
-              Ficha
-            </button>
-          </nav>
-
-          {borrador && pestana === "secciones" && (
-            <Editor
+        <aside className="taller__estructura">
+          {vistaIzquierda === "estructura" && (
+            <ListaEstructura
               catalogo={catalogo}
               composicion={composicion}
               elegido={bloqueElegido}
               onElegir={setBloqueElegido}
               onCambio={componer}
+              onAgregarSeccion={() => setVistaIzquierda("catalogo")}
+              onAbrirApariencia={() => {
+                setVistaIzquierda("apariencia");
+                setBloqueElegido(null);
+              }}
             />
           )}
 
-          {borrador && pestana === "tema" && (
-            <PanelTema
-              tokens={tokens}
-              valores={valoresTema}
-              onCambio={(valores) =>
-                setBorrador({ ...borrador, tema_valores: valores })
-              }
+          {vistaIzquierda === "catalogo" && (
+            <SelectorDeBloques
+              catalogo={catalogo}
+              composicion={composicion}
+              onAgregar={agregarBloque}
+              onVolver={() => setVistaIzquierda("estructura")}
             />
           )}
 
-          {borrador && pestana === "datos" && (
-            <div className="formulario">
-              <label className="campo">
-                <span className="campo__etiqueta">Nombre</span>
-                <input
-                  value={borrador.nombre}
-                  onChange={(e) =>
-                    setBorrador({ ...borrador, nombre: e.target.value })
-                  }
-                />
-              </label>
-
-              <label className="campo">
-                <span className="campo__etiqueta">Identificador</span>
-                <input value={borrador.slug} readOnly spellCheck={false} />
-                <span className="campo__ayuda">
-                  No se cambia: las tiendas ya adoptadas lo tienen anotado en su
-                  historial.
-                </span>
-              </label>
-
-              <label className="campo">
-                <span className="campo__etiqueta">Sector</span>
-                <input
-                  value={borrador.sector}
-                  placeholder="Alimentos, Moda, Restaurante…"
-                  onChange={(e) =>
-                    setBorrador({ ...borrador, sector: e.target.value })
-                  }
-                />
-                <span className="campo__ayuda">
-                  Agrupa las plantillas en la galería y guía la elección al dar
-                  de alta un cliente.
-                </span>
-              </label>
-
-              <label className="campo">
-                <span className="campo__etiqueta">Descripción</span>
-                <textarea
-                  rows={3}
-                  value={borrador.descripcion}
-                  placeholder="Para quién es y qué trae."
-                  onChange={(e) =>
-                    setBorrador({ ...borrador, descripcion: e.target.value })
-                  }
-                />
-              </label>
-
-              <label className="campo">
-                <span className="campo__etiqueta">Imagen de muestra</span>
-                <input
-                  value={borrador.vista_previa}
-                  placeholder="https://…"
-                  spellCheck={false}
-                  onChange={(e) =>
-                    setBorrador({ ...borrador, vista_previa: e.target.value })
-                  }
-                />
-                <span className="campo__ayuda">
-                  Una captura de cómo queda. Se enseña al elegir plantilla.
-                </span>
-              </label>
-
-              <label className="campo">
-                <span className="campo__etiqueta">Orden en la galería</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={borrador.orden}
-                  onChange={(e) =>
-                    setBorrador({ ...borrador, orden: Number(e.target.value) })
-                  }
-                />
-              </label>
-
-              <div className="campo">
-                <span className="campo__etiqueta">Resumen</span>
-                <dl className="datos">
-                  <Dato etiqueta="Secciones">
-                    {Object.values(borrador.paginas).reduce(
-                      (n, c) => n + c.length,
-                      0
-                    )}{" "}
-                    en {Object.keys(borrador.paginas).length} páginas
-                  </Dato>
-                  <Dato etiqueta="Aspecto">
-                    {Object.keys(borrador.tema_valores ?? {}).length} ajustes
-                  </Dato>
-                </dl>
-              </div>
-
-              <hr className="constructor__separador" />
-
-              {/*
-                Probar y asignar, en ese orden y separados a proposito.
-
-                La previa de al lado ensena la plantilla con datos de ejemplo en
-                un marco estrecho; lo que decide si un molde sirve es verlo con
-                el catalogo real de alguien y a pantalla completa. El enlace hace
-                eso sin escribir nada. Asignar si escribe, y por eso va debajo y
-                dice lo que hace.
-              */}
-              <div className="campo">
-                <span className="campo__etiqueta">Probar en una empresa</span>
-                <select
-                  value={negocioPrueba}
-                  onChange={(e) => {
-                    setNegocioPrueba(e.target.value ? Number(e.target.value) : "");
-                    setEnlace(null);
-                  }}
-                >
-                  <option value="">Elige una empresa…</option>
-                  {negocios.map((n) => (
-                    <option key={n.id} value={n.id}>
-                      {n.nombre}
-                    </option>
-                  ))}
-                </select>
-                <span className="campo__ayuda">
-                  Con su catálogo, sus fotos y sus precios. No le cambia nada.
-                </span>
-              </div>
-
-              <div className="ficha__acciones">
-                <Boton
-                  disabled={negocioPrueba === "" || probando || cambiado}
-                  onClick={() => void generarEnlace()}
-                >
-                  {probando ? "Generando…" : "Enlace de prueba"}
-                </Boton>
-                <Boton
-                  disabled={negocioPrueba === "" || asignando || cambiado}
-                  onClick={() => void asignar()}
-                >
-                  {asignando ? "Asignando…" : "Asignar a esta empresa"}
-                </Boton>
-              </div>
-              {cambiado && (
-                <span className="campo__ayuda">
-                  Guarda los cambios antes: el enlace y la asignación leen lo que
-                  hay en el servidor, no lo que tienes a medias aquí.
-                </span>
-              )}
-
-              {enlace && (
-                <div className="campo">
-                  <span className="campo__etiqueta">
-                    Enlace para {enlace.negocio}
-                  </span>
-                  <input readOnly value={enlace.url} spellCheck={false} />
-                  <div className="ficha__acciones">
-                    <Boton
-                      onClick={() => {
-                        void navigator.clipboard?.writeText(enlace.url);
-                        avisar("Enlace copiado.");
-                      }}
-                    >
-                      Copiar
-                    </Boton>
-                    <Boton onClick={() => window.open(enlace.url, "_blank")}>
-                      Abrir
-                    </Boton>
-                  </div>
-                  <span className="campo__ayuda">
-                    Vale {enlace.horas} horas. Compone {enlace.rutas.join(", ")}{" "}
-                    sobre la tienda real; lo publicado no se toca y los
-                    visitantes siguen viendo lo de siempre.
-                  </span>
-                </div>
-              )}
-
-              <hr className="constructor__separador" />
-
-              <div className="ficha__acciones">
-                <Boton
-                  onClick={() =>
-                    setBorrador({ ...borrador, activa: !borrador.activa })
-                  }
-                >
-                  {borrador.activa ? "Retirar del catálogo" : "Reactivar"}
-                </Boton>
-              </div>
-              <span className="campo__ayuda">
-                Retirarla impide adoptarla en clientes nuevos. Las tiendas que
-                salieron de ella no cambian: al adoptarla se copió, no se enlazó.
-              </span>
+          {vistaIzquierda === "apariencia" && borrador && (
+            <div className="apariencia-global">
+              <button type="button" className="volver-link" onClick={() => setVistaIzquierda("estructura")}>
+                <ArrowLeft size={14} />
+                Estructura
+              </button>
+              <p className="constructor__titulo" style={{ marginTop: 10 }}>
+                Apariencia global
+              </p>
+              <p className="tenue" style={{ marginBottom: 14 }}>
+                Colores, tipografía, botones y más — afecta a toda la plantilla, sin editar
+                sección por sección.
+              </p>
+              <PanelTema
+                tokens={tokens}
+                valores={valoresTema}
+                onCambio={(valores) => setBorrador({ ...borrador, tema_valores: valores })}
+              />
             </div>
           )}
         </aside>
@@ -616,19 +516,66 @@ export function Plantillas() {
               <code>http://localhost:5175</code>.
             </p>
           ) : (
-            <div
-              className="taller__marco"
-              style={{ width: PANTALLAS.find((p) => p.clave === pantalla)!.ancho }}
-            >
-              <iframe
-                ref={marco}
-                key={`${elegida}:${ruta}`}
-                title="Vista previa de la plantilla"
-                src={`${origen}${ruta}?editor=1`}
-              />
-            </div>
+            <>
+              {bloqueActual && (
+                <BarraFlotante
+                  nombre={definicionActual?.nombre ?? bloqueActual.tipo}
+                  oculto={
+                    !(
+                      bloqueActual.visible.movil &&
+                      bloqueActual.visible.tablet &&
+                      bloqueActual.visible.escritorio
+                    )
+                  }
+                  indice={composicion.findIndex((b) => b.id === bloqueActual.id)}
+                  total={composicion.length}
+                  duplicarDeshabilitado={definicionActual?.unico_por_pagina}
+                  onSubir={() =>
+                    componer(
+                      mover(
+                        composicion,
+                        composicion.findIndex((b) => b.id === bloqueActual.id),
+                        composicion.findIndex((b) => b.id === bloqueActual.id) - 1
+                      )
+                    )
+                  }
+                  onBajar={() =>
+                    componer(
+                      mover(
+                        composicion,
+                        composicion.findIndex((b) => b.id === bloqueActual.id),
+                        composicion.findIndex((b) => b.id === bloqueActual.id) + 1
+                      )
+                    )
+                  }
+                  onDuplicar={() => duplicarSeleccion(bloqueActual.id)}
+                  onAlternarVisible={() => alternarVisibleSeleccion(bloqueActual.id)}
+                  onQuitar={() => quitarSeleccion(bloqueActual.id)}
+                  onCerrar={() => setBloqueElegido(null)}
+                />
+              )}
+              <div
+                className="taller__marco"
+                style={{ width: PANTALLAS.find((p) => p.clave === pantalla)!.ancho }}
+              >
+                <iframe
+                  ref={marco}
+                  key={`${elegida}:${ruta}`}
+                  title="Vista previa de la plantilla"
+                  src={`${origen}${ruta}?editor=1`}
+                />
+              </div>
+            </>
           )}
         </main>
+
+        <PanelAjustesBloque
+          bloque={bloqueActual}
+          definicion={definicionActual}
+          tokens={tokens}
+          onActualizar={actualizarSeleccion}
+          onQuitar={quitarSeleccion}
+        />
       </div>
 
       {creando && (
@@ -640,6 +587,31 @@ export function Plantillas() {
             setCreando(false);
             avisar(`«${nueva.nombre}» creada. Añádele secciones y guarda.`);
           }}
+        />
+      )}
+
+      {configAbierta && borrador && (
+        <PlantillaConfiguracion
+          borrador={borrador}
+          onCambiar={setBorrador}
+          negocios={negocios}
+          negocioPrueba={negocioPrueba}
+          onCambiarNegocioPrueba={(v) => {
+            setNegocioPrueba(v);
+            setEnlace(null);
+          }}
+          enlace={enlace}
+          probando={probando}
+          asignando={asignando}
+          cambiado={cambiado}
+          onGenerarEnlace={() => void generarEnlace()}
+          onAsignar={() => void asignar()}
+          onCopiarEnlace={() => {
+            if (!enlace) return;
+            void navigator.clipboard?.writeText(enlace.url);
+            avisar("Enlace copiado.");
+          }}
+          onCerrar={() => setConfigAbierta(false)}
         />
       )}
 

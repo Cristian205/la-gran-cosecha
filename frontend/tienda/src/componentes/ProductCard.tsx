@@ -1,49 +1,35 @@
 "use client";
 
-import { Minus, Plus, ShoppingBasket, Sprout, Trash2 } from "lucide-react";
+import { Sprout } from "lucide-react";
 import { useMemo, useState, type CSSProperties } from "react";
 import { useAgregarAlCarrito } from "@/hooks/useAgregarAlCarrito";
 import { useCart } from "@/estado/carrito";
-import type { Presentacion, Producto } from "@/lib/tipos";
-import {
-  ajustarCantidad,
-  colorCategoria,
-  formatoCantidad,
-  formatoPrecio,
-  pasoCantidad,
-} from "@/lib/utiles";
+import type { Producto } from "@/lib/tipos";
+import { ajustarCantidad, colorCategoria, formatoPrecio, pasoCantidad } from "@/lib/utiles";
 import { TEXTO_PRECIOS_ESTIMADOS } from "@/componentes/AvisoPrecios";
 import { useSiteConfig } from "@/componentes/CapaCliente";
+import { agruparPresentaciones, PresentationSelector } from "@/componentes/PresentationSelector";
+import { QuantityControl } from "@/componentes/QuantityControl";
+import { AddToCartButton } from "@/componentes/AddToCartButton";
+import { claseDeVariante } from "@/bloques/Seccion";
 
-interface GrupoPresentacion {
-  nombre: string;
-  /** Unidades disponibles para ese nombre, de menor a mayor precio. */
-  opciones: Presentacion[];
-}
-
-const precio = (p: Presentacion) => parseFloat(p.precio_unitario);
+const precio = (p: { precio_unitario: string }) => parseFloat(p.precio_unitario);
 
 /**
- * Agrupa las presentaciones por nombre. Un mismo "Tommy" puede venderse por
- * unidad, kilo y caja: listarlo tres veces obliga a leer el mismo nombre una y
- * otra vez, así que el nombre se elige una vez y la unidad por separado.
- * Grupos y opciones van de menor a mayor precio, para que lo primero que se
- * ofrece sea siempre la entrada más barata.
+ * `estandar` es la tarjeta de siempre. `compacta` es una fila —imagen chica,
+ * nombre y precio en línea, mismo stepper y mismo botón— para donde una
+ * tarjeta grande sobra: compra rápida, un carrusel denso, una lista larga.
+ * Mismos datos, mismos componentes por dentro (`PresentationSelector`,
+ * `QuantityControl`, `AddToCartButton`); solo cambia cómo se acomodan.
  */
-function agruparPresentaciones(presentaciones: Presentacion[]): GrupoPresentacion[] {
-  const mapa = new Map<string, Presentacion[]>();
-  for (const p of presentaciones) {
-    const grupo = mapa.get(p.nombre_presentacion);
-    if (grupo) grupo.push(p);
-    else mapa.set(p.nombre_presentacion, [p]);
-  }
-  return Array.from(mapa, ([nombre, opciones]) => ({
-    nombre,
-    opciones: [...opciones].sort((a, b) => precio(a) - precio(b)),
-  })).sort((a, b) => precio(a.opciones[0]) - precio(b.opciones[0]));
+const VARIANTES = ["estandar", "compacta"] as const;
+
+interface Props {
+  producto: Producto;
+  variante?: string;
 }
 
-export function ProductCard({ producto }: { producto: Producto }) {
+export function ProductCard({ producto, variante }: Props) {
   const { agregar, agregado } = useAgregarAlCarrito();
   const cambiarCantidad = useCart((s) => s.cambiarCantidad);
   const quitar = useCart((s) => s.quitar);
@@ -74,9 +60,6 @@ export function ProductCard({ producto }: { producto: Producto }) {
 
   const sinPresentaciones = grupos.length === 0;
   const precioUnitario = presSeleccionada ? precio(presSeleccionada) : 0;
-
-  const hayVariosNombres = grupos.length > 1;
-  const hayVariasUnidades = (grupoSel?.opciones.length ?? 0) > 1;
   const enElMinimo = enCarrito ? enCarrito.cantidad - paso < paso - 1e-6 : false;
 
   function elegirNombre(nombre: string) {
@@ -114,6 +97,19 @@ export function ProductCard({ producto }: { producto: Producto }) {
       );
   }
 
+  function subirCantidad() {
+    if (!presSeleccionada) return;
+    if (enCarrito) {
+      cambiarCantidad(
+        presSeleccionada.id,
+        ajustarCantidad(enCarrito.cantidad, paso, paso),
+        paso
+      );
+    } else {
+      handleAgregar();
+    }
+  }
+
   /**
    * Si se puede prometer o no.
    *
@@ -136,27 +132,85 @@ export function ProductCard({ producto }: { producto: Producto }) {
   const recibePedidos = config.acepta_pedidos_online !== false;
   const noSePuedePedir = agotado || !recibePedidos;
 
+  const clase = claseDeVariante(variante, VARIANTES, "producto-card", "estandar");
+  const esCompacta = clase.endsWith("compacta");
+
+  const imagen = producto.imagen_url ? (
+    <img src={producto.imagen_url} alt={producto.nombre_producto} loading="lazy" decoding="async" />
+  ) : (
+    <Sprout size={esCompacta ? 22 : 38} strokeWidth={1.5} />
+  );
+
+  const controlDeCompra = sinPresentaciones ? null : !recibePedidos ? null : enCarrito ? (
+    <QuantityControl
+      cantidad={enCarrito.cantidad}
+      permiteFraccion={producto.permite_fraccion}
+      enElMinimo={enElMinimo}
+      leyenda={esCompacta ? undefined : "en tu pedido"}
+      nombreProducto={producto.nombre_producto}
+      onDisminuir={bajarCantidad}
+      onAumentar={subirCantidad}
+    />
+  ) : (
+    <AddToCartButton
+      disabled={!presSeleccionada || noSePuedePedir}
+      agotado={agotado}
+      nombreProducto={producto.nombre_producto}
+      precioUnitario={precioUnitario}
+      onClick={handleAgregar}
+      compacto={esCompacta}
+    />
+  );
+
+  if (esCompacta) {
+    return (
+      <article
+        className={`producto-card ${clase} ${agregado ? "pc-agregado" : ""} ${agotado ? "pc-agotado" : ""}`}
+        id={`producto-${producto.id}`}
+      >
+        <div className="pc-media" style={{ "--cat-grad": colorCategoria(producto.categoria) } as CSSProperties}>
+          {imagen}
+          {agotado && <span className="pc-cinta-agotado">Agotado</span>}
+        </div>
+
+        <div className="pc-compacta-info">
+          <h3 className="pc-nombre" title={producto.nombre_producto}>
+            {producto.nombre_producto}
+          </h3>
+          {sinPresentaciones ? (
+            <span className="pc-vacio">Sin presentaciones</span>
+          ) : (
+            <PresentationSelector
+              grupos={grupos}
+              grupoSeleccionado={grupoSel}
+              presentacionSeleccionada={presSeleccionada}
+              productoNombre={producto.nombre_producto}
+              onElegirNombre={elegirNombre}
+              onElegirPresentacion={setPresId}
+              compacto
+            />
+          )}
+        </div>
+
+        {!sinPresentaciones && (
+          <span className="pc-precio-valor pc-precio-compacta">{formatoPrecio(precioUnitario)}</span>
+        )}
+
+        {controlDeCompra}
+      </article>
+    );
+  }
+
   return (
     <article
-      className={`producto-card glass ${agregado ? "pc-agregado" : ""} ${
-        agotado ? "pc-agotado" : ""
-      }`}
+      className={`producto-card glass ${agregado ? "pc-agregado" : ""} ${agotado ? "pc-agotado" : ""}`}
       id={`producto-${producto.id}`}
     >
       <div
         className="pc-media"
         style={{ "--cat-grad": colorCategoria(producto.categoria) } as CSSProperties}
       >
-        {producto.imagen_url ? (
-          <img
-            src={producto.imagen_url}
-            alt={producto.nombre_producto}
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <Sprout size={38} strokeWidth={1.5} />
-        )}
+        {imagen}
         {agotado && <span className="pc-cinta-agotado">Agotado</span>}
       </div>
 
@@ -188,99 +242,16 @@ export function ProductCard({ producto }: { producto: Producto }) {
               )}
             </p>
 
-            {(hayVariosNombres || hayVariasUnidades) && (
-              <div className="pc-presentacion-linea">
-                {hayVariosNombres ? (
-                  <select
-                    className="pc-presentacion"
-                    aria-label={`Presentación de ${producto.nombre_producto}`}
-                    value={grupoSel?.nombre ?? ""}
-                    onChange={(e) => elegirNombre(e.target.value)}
-                  >
-                    {grupos.map((g) => (
-                      <option key={g.nombre} value={g.nombre}>
-                        {g.nombre}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className="pc-presentacion-fija">{grupoSel?.nombre}</span>
-                )}
+            <PresentationSelector
+              grupos={grupos}
+              grupoSeleccionado={grupoSel}
+              presentacionSeleccionada={presSeleccionada}
+              productoNombre={producto.nombre_producto}
+              onElegirNombre={elegirNombre}
+              onElegirPresentacion={setPresId}
+            />
 
-                <span className="pc-presentacion-x" aria-hidden="true">
-                  ×
-                </span>
-
-                {hayVariasUnidades ? (
-                  <select
-                    className="pc-presentacion"
-                    aria-label={`Unidad de ${grupoSel?.nombre}`}
-                    value={presSeleccionada?.id ?? ""}
-                    onChange={(e) => setPresId(Number(e.target.value))}
-                  >
-                    {grupoSel?.opciones.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.unidad_venta_nombre}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className="pc-presentacion-fija">
-                    {presSeleccionada?.unidad_venta_nombre}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {!recibePedidos ? null : enCarrito ? (
-              <div className="pc-stepper pc-stepper-carrito">
-                <button
-                  type="button"
-                  onClick={bajarCantidad}
-                  aria-label={
-                    enElMinimo
-                      ? `Quitar ${producto.nombre_producto} del pedido`
-                      : "Disminuir cantidad"
-                  }
-                >
-                  {enElMinimo ? <Trash2 size={15} /> : <Minus size={15} />}
-                </button>
-                <span className="pc-cantidad-valor" aria-live="polite">
-                  {formatoCantidad(enCarrito.cantidad, producto.permite_fraccion)}
-                  <i>en tu pedido</i>
-                </span>
-                <button
-                  type="button"
-                  aria-label="Aumentar cantidad"
-                  onClick={() =>
-                    presSeleccionada &&
-                    cambiarCantidad(
-                      presSeleccionada.id,
-                      ajustarCantidad(enCarrito.cantidad, paso, paso),
-                      paso
-                    )
-                  }
-                >
-                  <Plus size={15} />
-                </button>
-              </div>
-            ) : (
-              <button
-                className="pc-btn-add"
-                onClick={handleAgregar}
-                disabled={!presSeleccionada || noSePuedePedir}
-                aria-label={
-                  agotado
-                    ? `${producto.nombre_producto} está agotado`
-                    : `Agregar ${producto.nombre_producto} al pedido · ${formatoPrecio(
-                        precioUnitario
-                      )}`
-                }
-              >
-                <ShoppingBasket size={16} />
-                <span>{agotado ? "Agotado" : "Agregar"}</span>
-              </button>
-            )}
+            {controlDeCompra}
           </>
         )}
       </div>

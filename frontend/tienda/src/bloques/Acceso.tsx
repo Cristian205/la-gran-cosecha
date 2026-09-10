@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MarcadorSinPie } from "@/componentes/MarcadorSinPie";
 import { icono } from "./iconos";
 import { claseDeVariante } from "./Seccion";
 
@@ -111,6 +112,10 @@ export function Acceso({
 
   return (
     <section className={`acceso ${clase} ${conPanel ? "" : "acceso--solo-forma"}`}>
+      {/* Esta pantalla ya es su propia página completa —trae su propio pie,
+          con el enlace de "¿No tienes una cuenta?"—, así que el pie del
+          sitio debajo solo compite con ella. No pinta nada por sí mismo. */}
+      <MarcadorSinPie />
       {conPanel && (
         <div className="acceso-panel">
           {panel_imagen && (

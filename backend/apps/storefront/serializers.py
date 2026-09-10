@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .composicion import validar
+from .composicion import para_la_tienda, validar
 from .models import Bloque, Pagina, Plantilla, Tema, TokenTema, VersionPagina
 
 
@@ -10,6 +10,9 @@ class BloqueSerializer(serializers.ModelSerializer):
         fields = [
             "id", "codigo", "nombre", "descripcion", "categoria", "icono",
             "esquema_props", "variantes", "requiere_datos", "unico_por_pagina",
+            # Con esto el editor dibuja la pestaña de diseño del bloque, igual
+            # que dibuja la de contenido con `esquema_props`.
+            "tokens_admitidos",
             "a_sangre", "activo", "orden",
         ]
 
@@ -134,28 +137,15 @@ class PaginaPublicaSerializer(serializers.ModelSerializer):
         """
         La composición, más lo que el catálogo sabe de cada bloque.
 
-        `a_sangre` viaja aquí y no dentro de la composición guardada a
-        propósito: es una propiedad del componente, no de esta página. Si se
-        hubiera copiado al JSON, cambiar un bloque de ancho obligaría a
-        reescribir las mil composiciones que lo usan.
+        El enriquecido vive en `composicion.para_la_tienda` y no aquí porque el
+        enlace de prueba de una plantilla lo necesita igual, y tenerlo escrito
+        dos veces era justo por donde se coló que en la previa faltara
+        `a_sangre`.
         """
         version = self._version(obj)
         if version is None:
             return []
-
-        catalogo = {
-            b.codigo: b for b in Bloque.objects.filter(activo=True)
-        }
-        salida = []
-        for bloque in version.composicion:
-            definicion = catalogo.get(bloque.get("tipo"))
-            salida.append(
-                {
-                    **bloque,
-                    "a_sangre": bool(definicion and definicion.a_sangre),
-                }
-            )
-        return salida
+        return para_la_tienda(version.composicion)
 
     def get_version(self, obj):
         version = self._version(obj)

@@ -15,6 +15,7 @@ import { OrdersPage } from "./pages/orders/OrdersPage";
 import { PendingProductsPage } from "./pages/PendingProductsPage";
 import { PosPage } from "./pages/pos/PosPage";
 import { ReservationsPage } from "./pages/reservations/ReservationsPage";
+import { DeliveryPage } from "./pages/delivery/DeliveryPage";
 import { ProductsPage } from "./pages/products/ProductsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -62,6 +63,14 @@ export default function App() {
             element={
               <RequierePermiso permiso="reservations.view_reserva">
                 <ReservationsPage />
+              </RequierePermiso>
+            }
+          />
+          <Route
+            path="/domicilios"
+            element={
+              <RequierePermiso permiso="delivery.view_envio">
+                <DeliveryPage />
               </RequierePermiso>
             }
           />

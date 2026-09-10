@@ -54,13 +54,19 @@
   --info: #6ba6f5;
   --info-tenue: rgba(107, 166, 245, 0.14);
 
-  --radio: 10px;
-  --radio-s: 7px;
-  --radio-l: 14px;
-  --sombra: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --radio: 12px;
+  --radio-s: 8px;
+  --radio-l: 16px;
+  --sombra: 0 12px 32px rgba(0, 0, 0, 0.28);
   --lateral-ancho: 232px;
   --lateral-plegado: 62px;
   --transicion: 120ms ease;
+
+  /* El lienzo del taller es la única superficie clara de todo el panel: es lo
+     que separa "editor" (oscuro, este sistema) de "página" (clara, la tienda
+     que se está editando) de un vistazo, sin depender del marco del iframe. */
+  --lienzo-claro: #e8e9ee;
+  --lienzo-claro-linea: #d5d7e0;
 }
 
 * {
@@ -216,25 +222,32 @@ kbd {
 }
 
 .lateral__marca {
-  padding: 4px 8px 0;
+  padding: 6px 8px 16px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--linea);
 }
 
 .marca {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 16.5px;
   letter-spacing: -0.02em;
 }
 
-.marca__punto {
-  width: 9px;
-  height: 9px;
-  border-radius: 3px;
-  background: linear-gradient(140deg, var(--marca-viva), var(--marca));
-  box-shadow: 0 0 0 3px var(--marca-tenue);
+.marca__logo {
+  height: 24px;
+  width: auto;
   flex: none;
+  object-fit: contain;
+}
+
+.lateral.esta-plegado .lateral__marca {
+  padding-left: 0;
+  padding-right: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .lateral__nav {
@@ -687,6 +700,15 @@ textarea {
 
 select {
   cursor: pointer;
+}
+
+/* Sin esto cada `.campo` solo tenía su propio `gap:5px` interno y nada entre
+   un campo y el siguiente — el formulario de Ficha, de Contenido y el de
+   "Nueva plantilla" se leían amontonados. */
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .campo {
@@ -1960,6 +1982,19 @@ select {
   background: var(--ok);
 }
 
+/* En la ficha de una empresa cada permiso trae su propio checkbox: el punto
+   decorativo estorbaría en el mismo sitio. */
+.modulo__permisos--editable li {
+  padding-left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modulo__permisos--editable li::before {
+  content: none;
+}
+
 /* ================================================================== planes */
 
 
@@ -2075,6 +2110,8 @@ select {
 
 .plan__botones {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
 }
 
@@ -2468,32 +2505,12 @@ select {
 /* ============================================================ constructor */
 
 /*
- * El editor de composicion: tres columnas con trabajos distintos.
- *
- * Que sean tres y no una es la decision que sostiene la pantalla: en una sola
- * columna, abrir el catalogo de bloques tapa la pagina que estas componiendo, y
- * configurar uno te hace perder de vista donde estaba.
+ * Piezas que comparten Contenido, Diseño y Apariencia global: un título de
+ * sección, un grupo de campos, los toggles de dispositivo, el separador y el
+ * pie con la acción de quitar. El catálogo de tres columnas que vivía aquí se
+ * fue con `Editor.tsx` — hoy las tres zonas del taller las arma `.taller`
+ * directamente (ver más abajo), no esta clase.
  */
-.constructor {
-  display: grid;
-  grid-template-columns: 216px minmax(0, 1fr) 320px;
-  gap: 12px;
-  align-items: start;
-}
-
-.constructor__catalogo,
-.constructor__lienzo,
-.constructor__ajustes {
-  background: var(--superficie);
-  border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  padding: 14px;
-  /* Cada columna se desplaza por su cuenta: con 12 bloques puestos y 12 por
-     poner, una sola barra obligaria a subir para cambiar de columna. */
-  max-height: calc(100vh - 190px);
-  overflow-y: auto;
-}
-
 .constructor__titulo {
   display: flex;
   align-items: baseline;
@@ -2518,103 +2535,6 @@ select {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--texto-tenue);
-}
-
-.constructor__disponible {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: 100%;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: var(--radio-s);
-  background: none;
-  color: var(--texto-medio);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.constructor__disponible:hover:not(:disabled) {
-  background: var(--marca-tenue);
-  color: var(--texto);
-}
-
-.constructor__disponible:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* --------------------------------------------------------- la composicion */
-.constructor__pila {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.constructor__pieza {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border: 1px solid var(--linea);
-  border-radius: var(--radio-s);
-  background: var(--superficie-alta);
-  cursor: pointer;
-  transition: border-color var(--transicion), background var(--transicion);
-}
-
-.constructor__pieza:hover {
-  border-color: var(--linea-viva);
-}
-
-.constructor__pieza.esta-elegida {
-  border-color: var(--marca-linea);
-  background: var(--marca-tenue);
-}
-
-/* Se atenua lo que se arrastra, no lo que esta debajo: asi se ve donde va a
-   caer en vez de perder de vista lo que estas moviendo. */
-.constructor__pieza.se-arrastra {
-  opacity: 0.4;
-}
-
-.constructor__asa {
-  color: var(--texto-tenue);
-  cursor: grab;
-  flex: none;
-}
-
-.constructor__pieza-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.constructor__pieza-nombre {
-  font-size: 13px;
-  font-weight: 550;
-}
-
-.constructor__pieza-acciones {
-  display: flex;
-  gap: 1px;
-  flex: none;
-}
-
-.constructor__pieza-acciones .icono-boton {
-  width: 26px;
-  height: 26px;
-}
-
-.constructor__pieza-acciones .icono-boton:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
 }
 
 /* ------------------------------------------------------------- los ajustes */
@@ -2777,28 +2697,6 @@ select {
   margin-bottom: 14px;
 }
 
-@media (max-width: 1280px) {
-  .constructor {
-    grid-template-columns: 190px minmax(0, 1fr);
-  }
-  /* Los ajustes bajan a ancho completo antes que estrecharse: un panel de
-     propiedades de 200px no deja escribir un titulo. */
-  .constructor__ajustes {
-    grid-column: 1 / -1;
-    max-height: none;
-  }
-}
-
-@media (max-width: 900px) {
-  .constructor {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .constructor__catalogo,
-  .constructor__lienzo {
-    max-height: none;
-  }
-}
-
 /* ================================================================= taller */
 
 /*
@@ -2834,6 +2732,57 @@ select {
   gap: 8px;
 }
 
+.taller__volver {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-s);
+  background: none;
+  color: var(--texto-medio);
+  cursor: pointer;
+}
+
+.taller__volver:hover {
+  background: var(--superficie-alta);
+  color: var(--texto);
+  border-color: var(--linea-viva);
+}
+
+/* Las dos migas (plantilla / página) se leen como contexto, no como un
+   control dominante: son `<select>` de siempre, solo que ya no parecen dos
+   cajas de formulario sueltas en la barra. */
+.taller__migas {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  border-radius: var(--radio-s);
+  background: var(--superficie-alta);
+}
+
+.taller__miga {
+  border: 0;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  padding: 4px 2px;
+  max-width: 220px;
+}
+
+.taller__miga:last-child {
+  color: var(--texto-medio);
+  font-weight: 500;
+}
+
+.taller__miga-separador {
+  color: var(--texto-tenue);
+  font-size: 12px;
+}
+
 /* Los tres anchos van al centro y no con las acciones: cambiar de pantalla es
    mirar, no editar, y mezclarlo con Guardar invita a confundirlos. */
 .taller__pantallas {
@@ -2851,22 +2800,26 @@ select {
 
 .taller__cuerpo {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: 300px minmax(0, 1fr) 340px;
   min-height: 0;
 }
 
-.taller__panel {
-  padding: 12px;
+.taller__estructura {
+  padding: 16px;
   background: var(--superficie);
   border-right: 1px solid var(--linea);
   overflow-y: auto;
 }
 
+/* El lienzo claro y no oscuro a propósito: es la única superficie del taller
+   que no es "editor" sino "página", y el contraste de tono lo dice sin que
+   haga falta una etiqueta. */
 .taller__previa {
+  position: relative;
   display: flex;
   justify-content: center;
-  padding: 14px;
-  background: var(--superficie-alta);
+  padding: 24px;
+  background: var(--lienzo-claro);
   overflow: auto;
 }
 
@@ -2887,32 +2840,10 @@ select {
 .taller__marco iframe {
   width: 100%;
   height: 100%;
-  border: 1px solid var(--linea-viva);
+  border: 1px solid var(--lienzo-claro-linea);
   border-radius: var(--radio);
   background: #fff;
   box-shadow: var(--sombra);
-}
-
-/* Dentro del taller el editor pierde sus columnas: ya esta en una. */
-.taller__panel .constructor {
-  display: block;
-}
-
-.taller__panel .constructor__catalogo,
-.taller__panel .constructor__lienzo,
-.taller__panel .constructor__ajustes {
-  background: none;
-  border: 0;
-  padding: 0;
-  max-height: none;
-  overflow: visible;
-}
-
-.taller__panel .constructor__catalogo,
-.taller__panel .constructor__ajustes {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--linea);
 }
 
 /* ============================================================ panel de tema */
@@ -3005,10 +2936,15 @@ select {
   .taller__cuerpo {
     grid-template-columns: minmax(0, 1fr);
   }
-  /* En pantalla estrecha manda el panel: componer sin poder tocar los ajustes
-     no es posible, y mirar la tienda tiene otra puerta en la barra. */
+  /* En pantalla estrecha manda la estructura y sus ajustes: componer sin
+     poder tocarlos no es posible, y mirar la tienda tiene otra puerta en la
+     barra ("Vista previa"). */
   .taller__previa {
     display: none;
+  }
+  .taller__estructura {
+    border-right: 0;
+    border-bottom: 1px solid var(--linea);
   }
 }
 
@@ -3109,4 +3045,352 @@ select {
     opacity: 0;
     transform: translateY(8px);
   }
+}
+
+/* ---------- El diseño de un bloque, dentro del constructor ---------- */
+/* `constructor__formulario` solo apila: los campos ya traen su propio margen.
+   Existe para que el bloque de diseño no herede el espaciado del de contenido,
+   que es mas apretado porque ahi los campos van de dos en dos. */
+.constructor__formulario { display: flex; flex-direction: column; gap: 16px; }
+
+/* Un color y, al lado, si esta heredado del tema o fijado en esta seccion.
+   El texto importa tanto como el color: sin el no hay forma de distinguir
+   «blanco elegido» de «blanco porque nadie lo toco». */
+.campo__color { display: flex; align-items: center; gap: 8px; }
+.campo__color input[type="color"] {
+  width: 35px; height: 35px; padding: 0;
+  border: 1px solid var(--linea); border-radius: var(--radio-s);
+  background: none; cursor: pointer;
+}
+
+/* ===================================================================== */
+/* ================== rediseño del taller: las tres zonas ============== */
+/* ===================================================================== */
+
+/* ------------------------------------------------- zona izquierda: volver */
+/* Comparten "Agregar sección" y "Apariencia global": las dos reemplazan la
+   estructura por otra cosa, y las dos necesitan la misma puerta de vuelta. */
+.volver-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--texto-tenue);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.volver-link:hover {
+  color: var(--texto);
+}
+
+/* ------------------------------------------------- zona izquierda: árbol */
+.estructura {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.estructura__pila {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.estructura__fila {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 8px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-s);
+  background: var(--superficie-alta);
+  cursor: pointer;
+  transition: border-color var(--transicion), background var(--transicion);
+}
+
+.estructura__fila:hover {
+  border-color: var(--linea-viva);
+}
+
+/* Resaltado real: no solo un tinte, también un borde de acento a la
+   izquierda — el mismo lenguaje que ya usa `.tema-control.es-propio` para
+   decir "esto es lo que estás mirando ahora mismo". */
+.estructura__fila.esta-elegida {
+  border-color: var(--marca-linea);
+  background: var(--marca-tenue);
+  box-shadow: inset 2px 0 0 var(--marca);
+}
+
+.estructura__fila.se-arrastra {
+  opacity: 0.4;
+}
+
+.estructura__fila--flotante {
+  box-shadow: var(--sombra);
+  background: var(--superficie-viva);
+  border-color: var(--linea-viva);
+  cursor: grabbing;
+}
+
+.estructura__asa {
+  display: inline-flex;
+  color: var(--texto-tenue);
+  cursor: grab;
+  flex: none;
+  touch-action: none;
+}
+
+.estructura__fila-icono {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radio-s);
+  background: var(--superficie-viva);
+  color: var(--texto-medio);
+}
+
+.estructura__fila-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.estructura__fila-nombre {
+  font-size: 13px;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Discretos: solo aparecen al pasar el mouse o al llegar por teclado, no
+   compiten todo el tiempo con el nombre de la sección. */
+.estructura__fila-acciones {
+  display: flex;
+  gap: 1px;
+  flex: none;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+.estructura__fila:hover .estructura__fila-acciones,
+.estructura__fila:focus-within .estructura__fila-acciones {
+  opacity: 1;
+}
+
+.estructura__fila-acciones .icono-boton {
+  width: 26px;
+  height: 26px;
+}
+
+.estructura__fila-acciones .icono-boton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.estructura__agregar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 9px;
+  border: 1px dashed var(--linea-viva);
+  border-radius: var(--radio-s);
+  background: none;
+  color: var(--texto-medio);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.estructura__agregar:hover {
+  border-color: var(--marca);
+  color: var(--texto);
+  background: var(--marca-tenue);
+}
+
+/* --------------------------------------------- tarjeta de apariencia global */
+.tarjeta-apariencia {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--superficie-alta);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tarjeta-apariencia:hover {
+  border-color: var(--linea-viva);
+  background: var(--superficie-viva);
+}
+
+.tarjeta-apariencia__icono {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radio-s);
+  background: var(--marca-tenue);
+  color: var(--marca-viva);
+}
+
+.tarjeta-apariencia__titulo {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.apariencia-global {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------- zona izquierda: el catálogo */
+.selector-bloques {
+  display: flex;
+  flex-direction: column;
+}
+
+.tarjetas-bloque {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tarjeta-bloque {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-s);
+  background: var(--superficie-alta);
+  color: var(--texto-medio);
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+
+.tarjeta-bloque:hover:not(:disabled) {
+  border-color: var(--marca-linea);
+  background: var(--marca-tenue);
+  color: var(--texto);
+}
+
+.tarjeta-bloque:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tarjeta-bloque__icono {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radio-s);
+  background: var(--superficie-viva);
+  color: inherit;
+}
+
+.tarjeta-bloque__nombre {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.tarjeta-bloque__desc {
+  font-size: 11px;
+  color: var(--texto-tenue);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tarjeta-bloque__agotado {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-tenue);
+}
+
+/* ------------------------------------------------------- zona derecha */
+.panel-ajustes {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: var(--superficie);
+  border-left: 1px solid var(--linea);
+  overflow-y: auto;
+}
+
+.panel-ajustes--vacio {
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-ajustes__cabecera {
+  margin-bottom: 4px;
+}
+
+.panel-ajustes__cuerpo {
+  margin-top: 6px;
+}
+
+.pestanas--ajustes {
+  margin-bottom: 16px;
+}
+
+/* -------------------------------------------------- barra flotante */
+.barra-flotante {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 6px;
+  border: 1px solid var(--linea-viva);
+  border-radius: 999px;
+  background: var(--superficie-viva);
+  box-shadow: var(--sombra);
+  animation: aparecer 120ms ease;
+}
+
+.barra-flotante__nombre {
+  padding: 0 8px 0 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--texto);
+  white-space: nowrap;
+}
+
+.barra-flotante__separador {
+  width: 1px;
+  height: 18px;
+  background: var(--linea);
+  flex: none;
 }
