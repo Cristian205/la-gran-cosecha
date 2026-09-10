@@ -15,7 +15,7 @@ export default function NoEncontrado() {
         La dirección por la que llegaste no corresponde a ninguna tienda activa.
         Comprueba el enlace, o pregúntale al negocio cuál es su dirección.
       </p>
-      <Link className="btn-primario" href="/">
+      <Link className="btn btn-verde" href="/">
         Volver al inicio
       </Link>
     </main>

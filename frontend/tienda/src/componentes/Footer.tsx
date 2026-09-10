@@ -18,11 +18,26 @@ import { ENLACES } from "@/lib/navegacion";
 import type { EnlaceCabecera } from "@/componentes/Navbar";
 import type { Categoria } from "@/lib/tipos";
 import { telHref, whatsappHref } from "@/lib/utiles";
+import { claseDeVariante } from "@/bloques/Seccion";
 import { TikTokIcon } from "@/componentes/icons/TikTokIcon";
 import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
 
 /** Cuántas categorías caben en la columna "Compra" sin volverla un índice. */
 const MAX_CATEGORIAS_FOOTER = 4;
+
+/**
+ * Los dos pies que esta hoja sabe dibujar.
+ *
+ * `columnas` es el de siempre: marca, contacto y dos columnas de enlaces.
+ * `minimo` es una sola fila —marca, menú y aviso legal— y existe porque una
+ * boutique con ocho productos no tiene doce enlaces que poner, y un pie de
+ * cuatro columnas medio vacías se ve peor que uno corto.
+ *
+ * No es CSS que esconde lo que sobra: en `minimo` las columnas NO se pintan.
+ * Ocultarlas dejaría el marcado dentro —peso y ruido para el rastreador— para
+ * enseñar algo que el negocio dijo que no quería.
+ */
+const VARIANTES = ["columnas", "minimo"] as const;
 
 /**
  * Columna del pie: lista abierta en escritorio y acordeón en móvil, donde
@@ -70,6 +85,7 @@ interface Props {
   enlaces?: EnlaceCabecera[];
   mostrar_redes?: boolean;
   nota_legal?: string;
+  variante?: string;
 }
 
 /**
@@ -104,6 +120,7 @@ export function Footer({
   enlaces,
   mostrar_redes = true,
   nota_legal = "",
+  variante,
 }: Props = {}) {
   const { config } = useSiteConfig();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -132,10 +149,15 @@ export function Footer({
       )
     : null;
 
+  const clase = claseDeVariante(variante, VARIANTES, "footer", "columnas");
+  const minimo = clase === "footer--minimo";
+
   return (
-    <footer className="footer">
-      {/* Última oportunidad de conversión antes de cerrar la página. */}
-      {mostrar_cta && (
+    <footer className={`footer ${clase}`}>
+      {/* Última oportunidad de conversión antes de cerrar la página. El pie
+          mínimo no la lleva: si el negocio eligió un pie corto, rematarlo con
+          una franja de conversión lo deja igual de largo que el otro. */}
+      {mostrar_cta && !minimo && (
       <section className="footer-cta">
         <div className="footer-cta-inner">
           <div>
@@ -245,6 +267,7 @@ export function Footer({
         </div>
 
         {/* Solo categorías reales del catálogo: nada de enlaces inventados. */}
+        {!minimo && (
         <ColumnaFooter titulo={compra_titulo}>
           <Link href="/tienda">Todos los productos</Link>
           {mostrar_categorias &&
@@ -255,14 +278,27 @@ export function Footer({
             ))}
           <Link href="/tienda/pedido">Mi pedido</Link>
         </ColumnaFooter>
+        )}
 
-        <ColumnaFooter titulo={navegacion_titulo}>
-          {menu.map((e) => (
-            <Link key={`${e.href}-${e.texto}`} href={e.href}>
-              {e.texto}
-            </Link>
-          ))}
-        </ColumnaFooter>
+        {/* En el pie mínimo el menú no es una columna sino una fila suelta: es
+            lo único que sobrevive del bloque de enlaces. */}
+        {minimo ? (
+          <nav className="footer-menu-min">
+            {menu.map((e) => (
+              <Link key={`${e.href}-${e.texto}`} href={e.href}>
+                {e.texto}
+              </Link>
+            ))}
+          </nav>
+        ) : (
+          <ColumnaFooter titulo={navegacion_titulo}>
+            {menu.map((e) => (
+              <Link key={`${e.href}-${e.texto}`} href={e.href}>
+                {e.texto}
+              </Link>
+            ))}
+          </ColumnaFooter>
+        )}
       </div>
 
       <div className="footer-bottom">

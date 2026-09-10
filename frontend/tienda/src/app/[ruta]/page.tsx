@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { CapaEditor } from "@/bloques/CapaEditor";
 import { Lienzo } from "@/bloques/Lienzo";
 import { composicionDe, datosDeLosBloques, RUTA_LAYOUT } from "@/lib/pagina";
 import { configuracionDeLaTienda } from "@/lib/negocio";
@@ -26,6 +27,7 @@ import { configuracionDeLaTienda } from "@/lib/negocio";
  */
 interface Props {
   params: Promise<{ ruta: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /** Las rutas que existen pero no son páginas que se visiten. */
@@ -56,12 +58,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function PaginaCompuesta({ params }: Props) {
+export default async function PaginaCompuesta({ params, searchParams }: Props) {
   const { ruta } = await params;
   const camino = `/${ruta}`;
   if (esReservada(camino)) notFound();
 
   const pagina = await composicionDe(camino);
+
+  // El editor de plantillas previsualiza rutas que la plantilla PROPONE, no
+  // necesariamente rutas que la tienda de referencia ya tenga publicadas —
+  // "/entrar" puede no existir todavía en el negocio real que presta su
+  // catálogo para la previa. Sin esta rama, `notFound()` caía en el 404 real
+  // del negocio, que se pinta con un `Lienzo` sin `CapaEditor` y por eso nunca
+  // recibía la composición que el panel mandaba por `postMessage`: la previa
+  // se quedaba mostrando el 404 de otro para siempre, sin importar qué se
+  // editara. Mismo criterio que ya usa `/` (`app/page.tsx`): dentro del
+  // editor nunca se hace `notFound()`, se monta la capa vacía y se espera.
+  const parametros = await searchParams;
+  if (parametros.editor === "1") {
+    const datos = await datosDeLosBloques(pagina);
+    return (
+      <div>
+        <CapaEditor
+          inicial={pagina?.bloques ?? []}
+          datos={datos}
+          origenPanel={process.env.NEXT_PUBLIC_PANEL_URL ?? ""}
+        />
+      </div>
+    );
+  }
+
   if (!pagina || pagina.bloques.length === 0) notFound();
 
   const datos = await datosDeLosBloques(pagina);

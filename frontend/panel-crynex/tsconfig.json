@@ -10,7 +10,9 @@
     "skipLibCheck": true,
     "noEmit": true,
     "isolatedModules": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": { "@constructor/*": ["../constructor/src/*"] }
   },
-  "include": ["src"]
+  "include": ["src", "../constructor/src"]
 }

@@ -47,6 +47,7 @@ export const TONO_ESTADO: Record<EstadoNegocio, Tono> = {
 export const ETIQUETA_SUSCRIPCION: Record<EstadoSuscripcion, string> = {
   ACTIVA: "Activa",
   PRUEBA: "En prueba",
+  PAUSADA: "Pausada",
   VENCIDA: "Vencida",
   CANCELADA: "Cancelada",
 };
@@ -54,6 +55,7 @@ export const ETIQUETA_SUSCRIPCION: Record<EstadoSuscripcion, string> = {
 export const TONO_SUSCRIPCION: Record<EstadoSuscripcion, Tono> = {
   ACTIVA: "ok",
   PRUEBA: "info",
+  PAUSADA: "aviso",
   VENCIDA: "malo",
   CANCELADA: "neutro",
 };
@@ -205,12 +207,21 @@ export interface Modulo {
  * Las soluciones de Crynex que una empresa tiene contratadas.
  *
  * Un módulo no es una tabla: es el campo `modulo` con el que el catálogo de
- * permisos ya se agrupa. Una empresa lo tiene activo cuando su plan concede al
- * menos un permiso de ese módulo, que es exactamente la regla que aplica
+ * permisos ya se agrupa. Un permiso cuenta como concedido cuando lo da el
+ * plan o `permisos_extra` de la suscripción, salvo que esté en
+ * `permisos_excluidos` —que manda sobre los dos—, la misma regla que aplica
  * `Subscription.permisos_disponibles()` en el servidor.
  */
-export function modulosDe(permisos: Permiso[], plan: Plan | null): Modulo[] {
-  const concedidos = new Set(plan?.permisos ?? []);
+export function modulosDe(
+  permisos: Permiso[],
+  plan: Plan | null,
+  suscripcion?: Suscripcion | null
+): Modulo[] {
+  const concedidos = new Set(
+    [...(plan?.permisos ?? []), ...(suscripcion?.permisos_extra ?? [])].filter(
+      (c) => !(suscripcion?.permisos_excluidos ?? []).includes(c)
+    )
+  );
   const grupos = new Map<string, Modulo>();
   for (const permiso of permisos) {
     if (!permiso.activo) continue;

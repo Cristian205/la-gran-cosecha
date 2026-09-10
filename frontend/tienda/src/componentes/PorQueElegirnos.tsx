@@ -16,6 +16,17 @@ import { obtenerBeneficios } from "@/lib/datos";
 import type { BeneficioComercial } from "@/lib/tipos";
 import { Seccion, claseDeVariante } from "@/bloques/Seccion";
 
+/**
+ * `rejilla` da a cada beneficio su tarjeta; `lista` los pone en una columna con
+ * el icono al lado del texto. La rejilla luce con cuatro o seis y se desarma
+ * con dos; la lista aguanta cualquier numero y ocupa la mitad de alto, que es
+ * lo que pide un pagina larga donde esto no es el argumento principal.
+ *
+ * El componente ya importaba `claseDeVariante` sin usarlo: declaraba cero
+ * variantes en el catalogo y pintaba siempre lo mismo.
+ */
+const VARIANTES = ["rejilla", "lista"] as const;
+
 const ICONOS: Record<BeneficioComercial["icono"], LucideIcon> = {
   truck: Truck,
   clock: Clock,
@@ -32,6 +43,7 @@ interface Props {
   titulo?: string;
   subtitulo?: string;
   limite?: number;
+  variante?: string;
 }
 
 export function PorQueElegirnos({
@@ -39,6 +51,7 @@ export function PorQueElegirnos({
   titulo = "¿Por qué comprar con nosotros?",
   subtitulo,
   limite,
+  variante,
 }: Props) {
   const [beneficios, setBeneficios] = useState<BeneficioComercial[]>([]);
 
@@ -53,7 +66,7 @@ export function PorQueElegirnos({
 
   return (
     <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo}>
-      <div className="valores-grid">
+      <div className={`valores-grid ${claseDeVariante(variante, VARIANTES, "valores", "rejilla")}`}>
         {visibles.map((b) => {
           const Icono = ICONOS[b.icono] ?? CheckCircle2;
           return (

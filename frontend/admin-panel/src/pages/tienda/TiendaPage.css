@@ -556,3 +556,15 @@
   padding: 2px;
   cursor: pointer;
 }
+
+/* ---------- El diseño de una sección ---------- */
+/* Un color y, al lado, si está heredado del tema o fijado en esta sección. El
+   texto importa tanto como el color: sin él no hay forma de distinguir «blanco
+   elegido» de «blanco porque nadie lo tocó». */
+.diseno-color { display: flex; align-items: center; gap: .5rem; }
+.diseno-color input[type="color"] {
+  width: 2.2rem; height: 2.2rem; padding: 0;
+  border: 1px solid var(--borde); border-radius: 8px;
+  background: none; cursor: pointer;
+}
+.diseno-color .campo-ayuda { margin: 0; }

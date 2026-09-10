@@ -241,6 +241,29 @@ class NegocioSerializer(serializers.ModelSerializer):
         return obj.memberships.filter(activo=True).count()
 
 
+class DomainPlataformaSerializer(serializers.Serializer):
+    """El detalle de un dominio, para la pestaña que hoy solo tiene el nombre."""
+
+    hostname = serializers.CharField()
+    es_primario = serializers.BooleanField()
+    verificado = serializers.BooleanField()
+
+
+class MembershipPlataformaSerializer(serializers.Serializer):
+    """
+    El equipo de un negocio, visto desde la plataforma. Solo lectura: quién
+    trabaja ahí lo administra el propio negocio, no Crynex — esto es lo justo
+    para que `Empresa.tsx` deje de decir «todavía no disponible aquí».
+    """
+
+    nombre = serializers.CharField(source="usuario.nombre_usuario")
+    email = serializers.CharField(source="usuario.email_usuario")
+    rol = serializers.CharField()
+    tiene_acceso_total = serializers.BooleanField()
+    permisos = serializers.ListField(child=serializers.CharField())
+    activo = serializers.BooleanField()
+
+
 class SubscriptionSerializer(serializers.ModelSerializer):
     negocio = serializers.CharField(source="tenant.nombre", read_only=True)
     plan_nombre = serializers.CharField(source="plan.nombre", read_only=True)
@@ -253,7 +276,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             "id", "tenant", "negocio", "plan", "plan_nombre", "estado",
             "fecha_inicio", "fecha_fin", "fecha_fin_prueba", "moneda",
             "periodicidad", "importe_pactado", "importe_mensual",
-            "limites_extra", "limites_efectivos", "notas",
+            "limites_extra", "limites_efectivos", "permisos_extra",
+            "permisos_excluidos", "notas",
         ]
         read_only_fields = ["fecha_inicio"]
 
@@ -295,6 +319,32 @@ class SubscriptionSerializer(serializers.ModelSerializer):
                 f"Estos límites no están en el catálogo: {', '.join(desconocidos)}"
             )
         return valor
+
+    def validate_permisos_extra(self, valor):
+        if not isinstance(valor, list):
+            raise serializers.ValidationError("Debe ser una lista de codenames.")
+        conocidos = set(
+            PermisoDisponible.objects.filter(activo=True).values_list("codename", flat=True)
+        )
+        desconocidos = sorted(set(valor) - conocidos)
+        if desconocidos:
+            raise serializers.ValidationError(
+                f"Estos permisos no existen o están retirados: {', '.join(desconocidos)}"
+            )
+        return sorted(set(valor))
+
+    def validate_permisos_excluidos(self, valor):
+        if not isinstance(valor, list):
+            raise serializers.ValidationError("Debe ser una lista de codenames.")
+        conocidos = set(
+            PermisoDisponible.objects.filter(activo=True).values_list("codename", flat=True)
+        )
+        desconocidos = sorted(set(valor) - conocidos)
+        if desconocidos:
+            raise serializers.ValidationError(
+                f"Estos permisos no existen o están retirados: {', '.join(desconocidos)}"
+            )
+        return sorted(set(valor))
 
     def validate_importe_pactado(self, valor):
         if valor is not None and valor < Decimal("0"):

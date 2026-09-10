@@ -5,9 +5,21 @@ from rest_framework import serializers
 from apps.common.permissions import es_owner_de, permisos_de
 from apps.common.utils import convertir_texto_a_decimal  # noqa: F401 (reservado)
 
-from .permisos import TODOS_LOS_CODENAMES
-
 Usuario = get_user_model()
+
+
+def _codenames_activos():
+    """
+    El catálogo real de permisos, no la lista fija que hubo antes de `billing`.
+
+    `apps.accounts.permisos.TODOS_LOS_CODENAMES` era la única fuente cuando el
+    catálogo vivía en código; ahora vive en `PermisoDisponible`, editable desde
+    el panel de Crynex. Seguir validando contra la lista fija dejaría sin poder
+    repartirse ningún permiso que se cree de aquí en adelante.
+    """
+    from apps.billing.models import PermisoDisponible  # noqa: PLC0415
+
+    return set(PermisoDisponible.objects.filter(activo=True).values_list("codename", flat=True))
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -15,6 +27,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
     es_administrador = serializers.SerializerMethodField()
     permisos = serializers.SerializerMethodField()
+    permisos_del_plan = serializers.SerializerMethodField()
     rol_en_negocio = serializers.SerializerMethodField()
     negocios = serializers.SerializerMethodField()
 
@@ -32,6 +45,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "es_administrador",
             "debe_cambiar_password",
             "permisos",
+            "permisos_del_plan",
             "ultimo_login_exitoso",
             "fecha_creacion",
             "sidebar_layout",
@@ -52,8 +66,27 @@ class UsuarioSerializer(serializers.ModelSerializer):
     def get_permisos(self, obj):
         tenant = self._tenant()
         if es_owner_de(obj, tenant):
-            return sorted(TODOS_LOS_CODENAMES)
+            return sorted(_codenames_activos())
         return sorted(permisos_de(obj, tenant))
+
+    def get_permisos_del_plan(self, obj):
+        """
+        Los codenames que el PLAN de este negocio incluye, sin importar el rol.
+
+        `permisos` dice qué le toca a esta persona dentro de lo que su negocio
+        contrató; esto dice qué contrató el negocio. El dueño de la cuenta se
+        salta la primera comprobación (`get_permisos` le da todos los
+        codenames) pero no tiene por qué saltarse la segunda: un plan que no
+        incluye Reservas no debería mostrarle Reservas al dueño solo porque es
+        el dueño. Por ahora esto solo acota lo que el panel ENSEÑA —el mismo
+        criterio que ya aplicaba `PermisosDisponiblesView` para repartir— y no
+        toca `requiere_permiso`, que sigue sin comprobar el plan.
+        """
+        tenant = self._tenant()
+        suscripcion = getattr(tenant, "suscripcion", None)
+        if suscripcion is None:
+            return []
+        return suscripcion.permisos_disponibles()
 
     def get_rol_en_negocio(self, obj):
         """
@@ -108,7 +141,7 @@ class PermisosUsuarioSerializer(serializers.Serializer):
     permisos = serializers.ListField(child=serializers.CharField(), allow_empty=True)
 
     def validate_permisos(self, value):
-        invalidos = set(value) - TODOS_LOS_CODENAMES
+        invalidos = set(value) - _codenames_activos()
         if invalidos:
             raise serializers.ValidationError(
                 f"Permisos no reconocidos: {', '.join(sorted(invalidos))}"

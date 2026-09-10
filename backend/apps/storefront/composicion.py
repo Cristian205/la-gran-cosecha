@@ -91,6 +91,7 @@ def validar(composicion, *, bloques=None) -> list:
                 "tipo": tipo,
                 "variante": variante,
                 "props": props or {},
+                "estilo": _estilo(bloque, bruto.get("estilo")),
                 # Ausente significa visible: una página escrita a mano no
                 # debería desaparecer por no declarar los tres dispositivos.
                 "visible": {
@@ -99,6 +100,81 @@ def validar(composicion, *, bloques=None) -> list:
             }
         )
 
+    return salida
+
+
+def _estilo(bloque, bruto) -> dict:
+    """
+    El aspecto propio de un bloque colocado, acotado a lo que ese bloque admite.
+
+    Guarda CÓDIGOS de token y no variables CSS, igual que `StoreSettings.tokens`:
+    la traducción a `--variable` la hace `tema.a_variables()` justo antes de
+    escribirla, y hacerla una sola vez es lo que evita que el editor y la tienda
+    acaben con dos vocabularios.
+
+    Lo que NO declara `Bloque.tokens_admitidos` se DESCARTA en silencio, no se
+    rechaza. Es el mismo criterio que `tema.resolver()` con un token retirado, y
+    aquí importa más: retirar un token del catálogo, o quitárselo a un bloque,
+    no puede impedir que se guarde una página que lo tenía puesto de antes. La
+    alternativa —un 400— dejaría al negocio sin poder editar su tienda por una
+    decisión que tomó la plataforma.
+
+    Se descarta también el valor vacío. Una perilla que el editor dejó en blanco
+    significa «que mande el tema del negocio», y guardarla como cadena vacía
+    escribiría `--fondo:` en el HTML, que invalida la declaración entera.
+    """
+    if bruto is None:
+        return {}
+    if not isinstance(bruto, dict):
+        raise serializers.ValidationError(
+            f"El estilo de «{bloque.codigo}» debe ser un objeto."
+        )
+
+    admitidos = set(bloque.tokens_admitidos or [])
+    return {
+        codigo: str(valor)
+        for codigo, valor in bruto.items()
+        if codigo in admitidos and valor not in (None, "")
+    }
+
+
+def para_la_tienda(bloques) -> list:
+    """
+    Una composición lista para pintarse: con lo que sabe el catálogo y con el
+    estilo ya traducido a variables CSS.
+
+    Dos cosas se añaden aquí y no se guardan en el JSON, y por el mismo motivo:
+    son propiedad del CATÁLOGO, no de esta página. Copiarlas a la composición
+    haría que cambiar un bloque de ancho —o darle un token nuevo— obligara a
+    reescribir las mil composiciones que lo usan.
+
+        a_sangre   si sale de los márgenes
+        estilo     los códigos de token, ya como `--variable`
+
+    Existe como función suelta porque hay DOS caminos que sirven una tienda: la
+    página publicada y el enlace de prueba de una plantilla. Hasta ahora solo el
+    primero enriquecía, así que en la previa de una plantilla `a_sangre` llegaba
+    ausente y una portada a sangre se pintaba dentro del contenedor. No daba
+    error: simplemente la plantilla se veía peor de lo que era, justo en la
+    pantalla que existe para juzgarla.
+    """
+    from . import tema as motor  # noqa: PLC0415 — evita el ciclo con models
+
+    catalogo_bloques = {b.codigo: b for b in Bloque.objects.filter(activo=True)}
+    catalogo_tokens = motor.catalogo()
+
+    salida = []
+    for bloque in bloques or []:
+        definicion = catalogo_bloques.get(bloque.get("tipo"))
+        salida.append(
+            {
+                **bloque,
+                "a_sangre": bool(definicion and definicion.a_sangre),
+                "estilo": motor.a_variables(
+                    bloque.get("estilo"), disponibles=catalogo_tokens
+                ),
+            }
+        )
     return salida
 
 

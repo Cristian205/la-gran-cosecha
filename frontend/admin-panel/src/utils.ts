@@ -26,12 +26,19 @@ export function formatoFecha(iso: string | null): string {
 }
 
 /**
- * El dueño (GERENTE/superusuario) siempre puede todo; el resto solo si tiene
- * el permiso puntual asignado. Refleja la misma regla que aplica el backend
- * (`requiere_permiso`), para no mostrar acciones que de todas formas fallarían.
+ * El dueño (GERENTE/superusuario) siempre puede todo dentro de lo que su
+ * negocio contrató; el resto solo si además tiene el permiso puntual
+ * asignado. El plan manda primero y para todos, dueño incluido: un negocio
+ * en el plan Starter no debería ver Reservas en el menú solo porque quien
+ * entró es el dueño de la cuenta.
+ *
+ * Esto solo decide qué ENSEÑA el panel. El backend (`requiere_permiso`)
+ * todavía no comprueba el plan en la propia API — ver el comentario de
+ * `UsuarioSerializer.get_permisos_del_plan` en el backend.
  */
 export function tienePermiso(usuario: Usuario | null, codename: string): boolean {
   if (!usuario) return false;
+  if (!usuario.permisos_del_plan.includes(codename)) return false;
   if (usuario.es_administrador) return true;
   return usuario.permisos.includes(codename);
 }

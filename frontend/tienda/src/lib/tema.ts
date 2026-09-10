@@ -14,7 +14,20 @@
  */
 import type { SiteConfig } from "./tipos";
 
-const ESCALA_VERDE: Record<string, string> = {
+/**
+ * La FORMA de la escala, no su color.
+ *
+ * De aquí solo se usa la diferencia de luminosidad entre pasos: el tono lo
+ * pone el negocio con un único color y `escala()` reconstruye los ocho
+ * conservando esa forma. Que los valores escritos sean verdes es historia —era
+ * la paleta de la primera tienda— y no significa nada para las demás.
+ *
+ * Las constantes se llamaban `ESCALA_VERDE` y `ESCALA_AMBAR`, y emitían
+ * `--verde-*` y `--ambar-*`. Un nombre descriptivo del color acaba siendo
+ * falso en cuanto entra la segunda tienda; el semántico —qué papel cumple—
+ * sigue siendo verdad con cuarenta.
+ */
+const ESCALA_MARCA: Record<string, string> = {
   "900": "#062e1a",
   "800": "#0a3d23",
   "700": "#0f5132",
@@ -25,7 +38,7 @@ const ESCALA_VERDE: Record<string, string> = {
   "100": "#dcfce7",
 };
 
-const ESCALA_AMBAR: Record<string, string> = {
+const ESCALA_ACENTO: Record<string, string> = {
   "600": "#d97706",
   "500": "#f59e0b",
   "400": "#fbbf24",
@@ -165,8 +178,8 @@ export function variablesDelTema(config: SiteConfig | null): string {
   if (!config) return "";
 
   const reglas: string[] = [
-    ...escala("verde", ESCALA_VERDE, config.color_primario, "500"),
-    ...escala("ambar", ESCALA_AMBAR, config.color_secundario, "500"),
+    ...escala("marca", ESCALA_MARCA, config.color_primario, "500"),
+    ...escala("acento", ESCALA_ACENTO, config.color_secundario, "500"),
   ];
 
   const directas: [string, string | null | undefined][] = [
@@ -246,8 +259,8 @@ export function variablesDeAspecto(
   const m = marca ?? {};
 
   for (const regla of [
-    ...escala("verde", ESCALA_VERDE, m.color_primario, "500"),
-    ...escala("ambar", ESCALA_AMBAR, m.color_secundario, "500"),
+    ...escala("marca", ESCALA_MARCA, m.color_primario, "500"),
+    ...escala("acento", ESCALA_ACENTO, m.color_secundario, "500"),
   ]) {
     const corte = regla.indexOf(":");
     salida[regla.slice(0, corte)] = regla.slice(corte + 1);
@@ -280,6 +293,40 @@ export function variablesDeAspecto(
   // el token guarda «playfair» y eso no es un `font-family` valido.
   const clave = (tokens?.["--fuente-titulos"] ?? "").trim();
   if (FUENTES_TITULO[clave]) salida["--fuente-titulos"] = FUENTES_TITULO[clave];
+
+  return salida;
+}
+
+/**
+ * El aspecto propio de UN bloque, listo para el atributo `style`.
+ *
+ * Lo que llega ya son variables CSS: el backend tradujo los códigos de token en
+ * `composicion.para_la_tienda`, que es donde vive esa correspondencia. Aquí solo
+ * se completa lo que el servidor no puede completar sin copiarse la aritmética
+ * de color que ya vive en este archivo.
+ *
+ * Hoy eso es un caso, y es el que hace que la sección de una boutique pueda
+ * tener su propia superficie: `--superficie` viaja como hexadecimal, pero
+ * `.glass` no lo lee — lee `--superficie-rgb`, porque necesita darle opacidad.
+ * Un bloque que fijara solo el primero cambiaría sus tarjetas y dejaría los
+ * paneles de vidrio del color anterior, que es el tipo de fallo a medias que
+ * hace desconfiar de todo el panel.
+ *
+ * La derivación se hace AQUÍ y no en Django por la regla de siempre: el código
+ * que convierte un color en otra cosa hay UNO, y está donde se pinta. Es la
+ * misma decisión que tomó `variablesDeAspecto` con la escala de marca.
+ */
+export function variablesDeBloque(
+  estilo: Record<string, string> | null | undefined
+): Record<string, string> {
+  if (!estilo) return {};
+
+  const salida: Record<string, string> = { ...estilo };
+
+  const superficie = estilo["--superficie"];
+  if (esHexValido(superficie)) {
+    salida["--superficie-rgb"] = hexARgb(superficie).join(", ");
+  }
 
   return salida;
 }

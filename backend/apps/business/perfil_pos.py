@@ -52,8 +52,22 @@ OPCIONES = {
         "consumidor": "panel/modulos/pos: el renglón",
     },
     "panel_lateral": {
-        "nombre": "Panel al lado del carrito",
-        "defecto": None,
+        "nombre": "Paneles al lado del carrito",
+        # Una LISTA, y hasta la fase 12 fue una cadena. El cambio lo forzó el
+        # segundo módulo con panel: un restaurante que atiende mesas y además
+        # reparte a domicilio tenía que elegir cuál de sus dos módulos ver, y
+        # con un solo módulo en el sistema no había forma de notarlo.
+        #
+        # Vale la pena dejarlo escrito porque el modo de fallo se repite: la
+        # primera implementación de un mecanismo extensible casi siempre supone
+        # «uno» en algún sitio —aquí, en el sitio donde el negocio dice cuál
+        # quiere— y quien lo encuentra es el segundo caso, no el primero. El
+        # registro de `pos/paneles.py` sí aguantó sin tocarse.
+        #
+        # `normalizar` sigue aceptando la cadena vieja: hay perfiles guardados
+        # con ella y un negocio no puede perder su panel porque cambiáramos de
+        # opinión sobre la forma del campo.
+        "defecto": [],
         "consumidor": "pos/paneles.py — lo aportan los módulos",
     },
 }
@@ -62,7 +76,15 @@ CLAVES = frozenset(OPCIONES)
 
 
 def por_defecto() -> dict:
-    return {codigo: datos["defecto"] for codigo, datos in OPCIONES.items()}
+    # `list(...)` y no el valor tal cual: un defecto mutable compartido entre
+    # todos los perfiles es una lista que se llena sola en cuanto alguien la
+    # muta, y el fallo aparece en el negocio equivocado.
+    return {
+        codigo: list(datos["defecto"])
+        if isinstance(datos["defecto"], list)
+        else datos["defecto"]
+        for codigo, datos in OPCIONES.items()
+    }
 
 
 def normalizar(valores) -> dict:
@@ -84,9 +106,38 @@ def normalizar(valores) -> dict:
             limpio[codigo] = valor if valor in datos["opciones"] else datos["defecto"]
         elif isinstance(datos["defecto"], bool):
             limpio[codigo] = bool(valor)
+        elif isinstance(datos["defecto"], list):
+            limpio[codigo] = _lista_de_claves(valor)
         else:
             limpio[codigo] = valor or None
     return limpio
+
+
+def _lista_de_claves(valor) -> list:
+    """
+    Deja una lista de cadenas, venga como venga.
+
+    Acepta la CADENA SUELTA a propósito, y no por generosidad: `panel_lateral`
+    fue una cadena hasta la fase 12, hay perfiles guardados así y presets que
+    todavía la escriben. Rechazarla dejaría a esos negocios sin su panel
+    lateral —sin error, solo sin panel—, que es el peor modo de fallar: el que
+    nadie reporta porque no parece roto.
+
+    Lo desconocido se descarta en vez de rechazarse, mismo criterio que el
+    resto de `normalizar`. Un panel cuyo módulo se dio de baja no debe impedir
+    guardar el perfil, y de que no se pinte ya se encarga `pos/paneles.py`
+    filtrando por lo contratado.
+    """
+    if valor is None:
+        return []
+    if isinstance(valor, str):
+        return [valor] if valor else []
+    vistas, salida = set(), []
+    for clave in valor:
+        if isinstance(clave, str) and clave and clave not in vistas:
+            vistas.add(clave)
+            salida.append(clave)
+    return salida
 
 
 def catalogo() -> list:

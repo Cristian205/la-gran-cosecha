@@ -33,6 +33,12 @@ export const composicionDe = cache(
  */
 export const RESUELVE_EN_SERVIDOR: Record<string, string> = {
   "productos-destacados": "/orders/productos-mas-vendidos/",
+  // La primera tanda del catálogo sin filtrar — exactamente lo que
+  // `CatalogoProvider` necesita para sembrar `grid-productos` en modo
+  // interactivo sin que el rastreador vea un esqueleto de carga. Un
+  // `grid-productos` fuera de una página de catálogo (la vitrina fija de
+  // siempre) sencillamente no usa este dato.
+  "grid-productos": "/catalog/products/?page_size=24",
 };
 
 /**
@@ -60,6 +66,15 @@ export async function datosDeLosBloques(
 
 /** La ruta reservada del armazon. Espejo de `Pagina.RUTA_LAYOUT`. */
 export const RUTA_LAYOUT = "/_layout";
+
+/**
+ * La ruta reservada de la página "no encontrada".
+ *
+ * Mismo criterio que `RUTA_LAYOUT`: no es una página que se visite por su
+ * cuenta, es una composición más —editable desde el panel— que
+ * `app/[ruta]/not-found.tsx` pinta cuando una ruta compuesta no existe.
+ */
+export const RUTA_NO_ENCONTRADA = "/_no-encontrada";
 
 /**
  * La cabecera y el pie de esta tienda.

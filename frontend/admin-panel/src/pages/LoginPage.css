@@ -19,13 +19,18 @@
   --texto: #eef2f6;
   --texto-medio: #9aa6b2;
   --texto-tenue: #6b7681;
+  /* El componente los pisa con lo que el negocio eligió para su tienda en
+     Contenido → Apariencia — mismo criterio que --marca, y estos valores de
+     aquí son solo lo que se ve mientras esa petición todavía no llega. */
+  --fuente: "Inter", "Segoe UI", system-ui, sans-serif;
+  --radio-boton: 12px;
 
   display: grid;
   grid-template-columns: 1.05fr 1fr;
   min-height: 100vh;
   background: var(--tinta);
   color: var(--texto);
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--fuente);
 }
 
 /* ====================================================== panel de la marca */
@@ -425,6 +430,8 @@
 }
 
 .acceso__otp input {
+  width: 100%;
+  min-width: 0;
   height: 58px;
   border: 1px solid var(--linea);
   border-radius: 11px;
@@ -523,7 +530,7 @@
   width: 100%;
   height: 58px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radio-boton);
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--marca) 86%, #ffffff),

@@ -13,11 +13,21 @@ import { RepetirPedido } from "@/componentes/RepetirPedido";
 import { Testimonials } from "@/componentes/Testimonials";
 import { TrustBadges } from "@/componentes/TrustBadges";
 import { Acceso } from "./Acceso";
+import { BannerPromocional } from "./BannerPromocional";
+import { Boletin } from "./Boletin";
+import { Galeria } from "./Galeria";
+import { GridProductos } from "./GridProductos";
+import { Marcas } from "./Marcas";
+import { Separador } from "./Separador";
 import { BarraCategorias } from "./BarraCategorias";
 import { ComoFunciona } from "./ComoFunciona";
 import { Portada } from "./Portada";
 import { PublicosObjetivo } from "./PublicosObjetivo";
 import { CtaBanda } from "./CtaBanda";
+import { CatalogHero } from "./CatalogHero";
+import { CategoryNavigation } from "./CategoryNavigation";
+import { CatalogToolbar } from "./CatalogToolbar";
+import { PaginaNoEncontrada } from "./PaginaNoEncontrada";
 
 /**
  * El registro: qué componente pinta cada bloque.
@@ -83,6 +93,30 @@ const REGISTRO: Record<string, Bloque> = {
   "cta-banda": CtaBanda as Bloque,
   "barra-categorias": BarraCategorias as Bloque,
   acceso: Acceso as Bloque,
+
+  // --- la biblioteca que llego con el paso 3 --------------------------------
+  // Ninguno obligo a tocar el lienzo ni el registro mas alla de estas filas:
+  // es la parte del motor que ya funcionaba y que esta fase solo llena.
+  "grid-productos": GridProductos as Bloque,
+  "banner-promocional": BannerPromocional as Bloque,
+  galeria: Galeria as Bloque,
+  marcas: Marcas as Bloque,
+  boletin: Boletin as Bloque,
+  separador: Separador as Bloque,
+
+  // --- el catalogo como bloques del motor ------------------------------------
+  // Genericos y reutilizables por cualquier tienda: la que los coordina entre
+  // si es `CatalogoProvider` (ver `contextos/CatalogoContexto.tsx`), envuelto
+  // alrededor del lienzo en `app/tienda/page.tsx`. Sin ese contexto, cada uno
+  // se apaga solo o cae a un comportamiento suelto — ninguno depende del otro
+  // por fuera de ese canal.
+  "catalogo-hero": CatalogHero as Bloque,
+  "categorias-navegacion": CategoryNavigation as Bloque,
+  "catalogo-toolbar": CatalogToolbar as Bloque,
+
+  // Va en la ruta reservada `/_no-encontrada` (ver `RUTA_NO_ENCONTRADA` en
+  // `lib/pagina.ts`), con el mismo criterio que `cabecera`/`pie` en `/_layout`.
+  "error-404": PaginaNoEncontrada as Bloque,
 };
 
 export function componenteDe(tipo: string): Bloque | null {

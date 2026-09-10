@@ -19,10 +19,12 @@ import {
   LayoutGrid,
   Layers,
   LayoutTemplate,
+  Package,
   Receipt,
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
+import logoCrynex from "../assets/logo-crynex-marca-inverso.png";
 
 interface Destino {
   to: string;
@@ -43,6 +45,7 @@ export const GRUPOS: { titulo: string; destinos: Destino[] }[] = [
   {
     titulo: "Producto",
     destinos: [
+      { to: "/productos", etiqueta: "Productos", icono: Package },
       { to: "/planes", etiqueta: "Planes", icono: Layers },
       { to: "/permisos", etiqueta: "Permisos", icono: ShieldCheck },
       { to: "/plantillas", etiqueta: "Plantillas", icono: LayoutTemplate },
@@ -70,7 +73,7 @@ export function Lateral() {
     <aside className={`lateral ${plegado ? "esta-plegado" : ""}`}>
       <div className="lateral__marca">
         <span className="marca" aria-label="Crynex">
-          <i className="marca__punto" aria-hidden="true" />
+          <img className="marca__logo" src={logoCrynex} alt="" />
           <span className="marca__texto">Crynex</span>
         </span>
       </div>

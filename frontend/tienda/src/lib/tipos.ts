@@ -202,6 +202,15 @@ export interface BloqueColocado {
   visible: { movil: boolean; tablet: boolean; escritorio: boolean };
   /** Lo declara el catálogo, no la página: es propiedad del componente. */
   a_sangre: boolean;
+  /**
+   * El aspecto propio de ESTE bloque, ya como variables CSS.
+   *
+   * Se guarda por código de token y llega traducido: la correspondencia vive en
+   * el backend (`composicion.para_la_tienda`) para que exista una sola. Vacío
+   * —lo normal— significa que el bloque obedece al tema del negocio, que es
+   * como se comportaban todos hasta la fase 12.
+   */
+  estilo: Record<string, string>;
 }
 
 export interface PaginaTienda {

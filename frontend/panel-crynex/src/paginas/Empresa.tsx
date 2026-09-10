@@ -9,7 +9,7 @@
  * Las pestañas son rutas y no estado local para que un aviso pueda enlazar
  * directo a la suscripción de un cliente y para que el botón de atrás funcione.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Navigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -17,9 +17,17 @@ import {
   Globe,
   Layers,
   PlayCircle,
+  ShieldCheck,
   Users,
 } from "lucide-react";
-import type { Negocio, Plan, Suscripcion } from "../api/tipos";
+import type {
+  DominioDetalle,
+  MiembroEquipo,
+  Negocio,
+  Permiso,
+  Plan,
+  Suscripcion,
+} from "../api/tipos";
 import { usarPlataforma } from "../datos/plataforma";
 import {
   ETIQUETA_SUSCRIPCION,
@@ -27,9 +35,10 @@ import {
   alertasDe,
   modulosDe,
   usoDe,
+  type Modulo,
 } from "../datos/derivados";
 import { fechaCorta, moneda, numero, relativo, tamano } from "../datos/formato";
-import { Aviso, Boton, Dato, EstadoVacio, Esqueleto, Tarjeta } from "../ui/basicos";
+import { Aviso, Boton, Dato, EstadoVacio, Esqueleto, Insignia, Tarjeta } from "../ui/basicos";
 import { Menu, OpcionMenu, SeparadorMenu } from "../ui/Menu";
 import { IndicadorUso } from "../ui/Uso";
 import { usarAviso } from "../ui/Notificaciones";
@@ -197,7 +206,7 @@ function Contenido({ pestana, ...ctx }: Contexto & { pestana: string }) {
 function VistaResumen({ negocio, plan, suscripcion }: Contexto) {
   const { planes, permisos, suscripciones } = usarPlataforma();
   const indicadores = usoDe(negocio, plan, suscripcion);
-  const modulos = modulosDe(permisos, plan).filter((m) => m.concedidos.length > 0);
+  const modulos = modulosDe(permisos, plan, suscripcion).filter((m) => m.concedidos.length > 0);
   const alertas = alertasDe([negocio], planes, suscripciones).filter(
     (a) => a.negocioId === negocio.id
   );
@@ -292,12 +301,21 @@ function VistaResumen({ negocio, plan, suscripcion }: Contexto) {
 // -------------------------------------------------------------- suscripción
 
 function VistaSuscripcion({ negocio, plan, suscripcion }: Contexto) {
-  const { guardarSuscripcion } = usarPlataforma();
+  const { tiposLimite, guardarSuscripcion } = usarPlataforma();
   const avisar = usarAviso();
   const [estado, setEstado] = useState(suscripcion?.estado ?? "PRUEBA");
   const [fechaFin, setFechaFin] = useState(suscripcion?.fecha_fin ?? "");
   const [notas, setNotas] = useState(suscripcion?.notas ?? "");
+  const [limitesExtra, setLimitesExtra] = useState<Record<string, string>>(
+    Object.fromEntries(
+      Object.entries(suscripcion?.limites_extra ?? {}).map(([c, v]) => [
+        c,
+        v === null ? "" : String(v),
+      ])
+    )
+  );
   const [guardando, setGuardando] = useState(false);
+  const [guardandoLimites, setGuardandoLimites] = useState(false);
 
   if (!suscripcion || !plan) {
     return (
@@ -327,6 +345,36 @@ function VistaSuscripcion({ negocio, plan, suscripcion }: Contexto) {
       avisar((e as Error).message, "malo");
     } finally {
       setGuardando(false);
+    }
+  }
+
+  const limitesExtraOriginal = Object.fromEntries(
+    Object.entries(suscripcion?.limites_extra ?? {}).map(([c, v]) => [
+      c,
+      v === null ? "" : String(v),
+    ])
+  );
+  const limitesCambiados = JSON.stringify(limitesExtra) !== JSON.stringify(limitesExtraOriginal);
+
+  function fijarLimiteExtra(codigo: string, valor: string) {
+    setLimitesExtra((previos) => ({ ...previos, [codigo]: valor }));
+  }
+
+  async function guardarLimites() {
+    setGuardandoLimites(true);
+    try {
+      const limpios: Record<string, number | null> = {};
+      for (const [codigo, bruto] of Object.entries(limitesExtra)) {
+        if (bruto === "") continue; // vuelve a heredar del plan
+        const n = Number(bruto);
+        limpios[codigo] = Number.isFinite(n) ? n : null;
+      }
+      await guardarSuscripcion(suscripcion!.id, { limites_extra: limpios });
+      avisar("Límites pactados actualizados.");
+    } catch (e) {
+      avisar((e as Error).message, "malo");
+    } finally {
+      setGuardandoLimites(false);
     }
   }
 
@@ -418,24 +466,42 @@ function VistaSuscripcion({ negocio, plan, suscripcion }: Contexto) {
       <Tarjeta
         titulo="Límites pactados"
         pie={
-          <span className="tenue">
-            Concesiones por encima del plan, guardadas en la suscripción. Se editan
-            hoy desde la administración de Django.
-          </span>
+          <>
+            <span className="tenue">
+              Concesiones por encima del plan, solo para esta empresa. Vacío vuelve
+              a heredar el límite del plan.
+            </span>
+            <Boton
+              variante="primario"
+              tamano="pequeno"
+              onClick={guardarLimites}
+              disabled={!limitesCambiados}
+              cargando={guardandoLimites}
+            >
+              Guardar límites
+            </Boton>
+          </>
         }
       >
-        {Object.keys(suscripcion.limites_extra ?? {}).length === 0 ? (
-          <EstadoVacio titulo="Sin excepciones">
-            Esta empresa usa exactamente los límites de su plan.
+        {tiposLimite.length === 0 ? (
+          <EstadoVacio titulo="Sin catálogo de límites">
+            Todavía no hay tipos de límite dados de alta.
           </EstadoVacio>
         ) : (
-          <dl className="datos">
-            {Object.entries(suscripcion.limites_extra).map(([clave, valor]) => (
-              <Dato key={clave} etiqueta={clave.replace(/^max_/, "").replace(/_/g, " ")}>
-                {valor === null ? "sin límite" : numero(valor)}
-              </Dato>
+          <div className="flex flex-col gap-3">
+            {tiposLimite.map((tipo) => (
+              <label key={tipo.codigo} className="campo">
+                <span className="campo__etiqueta">{tipo.nombre}</span>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder={`del plan: ${limiteTexto(plan.limites[tipo.codigo])}`}
+                  value={limitesExtra[tipo.codigo] ?? ""}
+                  onChange={(e) => fijarLimiteExtra(tipo.codigo, e.target.value)}
+                />
+              </label>
             ))}
-          </dl>
+          </div>
         )}
       </Tarjeta>
     </div>
@@ -444,16 +510,75 @@ function VistaSuscripcion({ negocio, plan, suscripcion }: Contexto) {
 
 // ------------------------------------------------------------------ módulos
 
-function VistaModulos({ plan }: Contexto) {
-  const { permisos } = usarPlataforma();
-  const modulos = modulosDe(permisos, plan);
-  const contratados = modulos.filter((m) => m.concedidos.length > 0);
+function VistaModulos({ plan, suscripcion }: Contexto) {
+  const { permisos, guardarSuscripcion } = usarPlataforma();
+  const avisar = usarAviso();
+  const [guardando, setGuardando] = useState<string | null>(null);
+  const modulos = modulosDe(permisos, plan, suscripcion);
+  const delPlan = new Set(plan?.permisos ?? []);
+  const extra = new Set(suscripcion?.permisos_extra ?? []);
+  const excluidos = new Set(suscripcion?.permisos_excluidos ?? []);
 
-  if (contratados.length === 0) {
+  function estaConcedido(codename: string): boolean {
+    return (delPlan.has(codename) || extra.has(codename)) && !excluidos.has(codename);
+  }
+
+  /** Aplica un conjunto de codenames a activar/desactivar en un solo guardado. */
+  async function aplicar(cambios: { codename: string; activar: boolean }[], etiqueta: string) {
+    if (!suscripcion) return;
+    let nuevoExtra = [...(suscripcion.permisos_extra ?? [])];
+    let nuevoExcluidos = [...(suscripcion.permisos_excluidos ?? [])];
+
+    for (const { codename, activar } of cambios) {
+      if (activar) {
+        nuevoExcluidos = nuevoExcluidos.filter((c) => c !== codename);
+        if (!delPlan.has(codename) && !nuevoExtra.includes(codename)) {
+          nuevoExtra = [...nuevoExtra, codename];
+        }
+      } else {
+        nuevoExtra = nuevoExtra.filter((c) => c !== codename);
+        if (delPlan.has(codename) && !nuevoExcluidos.includes(codename)) {
+          nuevoExcluidos = [...nuevoExcluidos, codename];
+        }
+      }
+    }
+
+    setGuardando(etiqueta);
+    try {
+      await guardarSuscripcion(suscripcion.id, {
+        permisos_extra: nuevoExtra,
+        permisos_excluidos: nuevoExcluidos,
+      });
+    } catch (e) {
+      avisar((e as Error).message, "malo");
+    } finally {
+      setGuardando(null);
+    }
+  }
+
+  function alternarPermiso(permiso: Permiso) {
+    aplicar(
+      [{ codename: permiso.codename, activar: !estaConcedido(permiso.codename) }],
+      permiso.codename
+    );
+  }
+
+  function alternarModulo(modulo: Modulo) {
+    // Si no estan todos encendidos, la accion es encenderlos todos; si ya lo
+    // estan, la accion es apagarlos todos — el mismo criterio que un
+    // checkbox «seleccionar todo».
+    const activar = modulo.concedidos.length < modulo.disponibles.length;
+    aplicar(
+      modulo.disponibles.map((p) => ({ codename: p.codename, activar })),
+      `modulo:${modulo.nombre}`
+    );
+  }
+
+  if (modulos.length === 0) {
     return (
       <Tarjeta titulo="Módulos">
-        <EstadoVacio icono={Layers} titulo="Ningún módulo activo">
-          El plan de esta empresa no concede permisos de ningún módulo.
+        <EstadoVacio icono={Layers} titulo="Sin catálogo de permisos">
+          Todavía no hay permisos dados de alta en la plataforma.
         </EstadoVacio>
       </Tarjeta>
     );
@@ -462,37 +587,68 @@ function VistaModulos({ plan }: Contexto) {
   return (
     <>
       <p className="nota-seccion">
-        Las soluciones de Crynex que esta empresa tiene contratadas. Lo decide su
-        plan; lo que cada persona puede hacer dentro lo decide su rol, en el panel
-        de la propia empresa.
+        Lo que esta empresa tiene contratado: lo decide su plan, más lo que se le
+        active o apague aquí para ella en concreto. Los cambios se guardan al
+        pulsar. Lo que cada persona puede hacer dentro lo decide su rol, en el
+        panel de la propia empresa.
       </p>
-      <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
         {modulos.map((modulo) => {
-          const activo = modulo.concedidos.length > 0;
+          const todos = modulo.concedidos.length === modulo.disponibles.length;
+          const ninguno = modulo.concedidos.length === 0;
           return (
-            <article key={modulo.nombre} className={`modulo ${activo ? "" : "esta-inactivo"}`}>
+            <article
+              key={modulo.nombre}
+              className={`modulo ${ninguno ? "esta-inactivo" : ""}`}
+            >
               <header>
                 <h3>{modulo.nombre}</h3>
-                <span className={`insignia insignia--${activo ? "ok" : "neutro"}`}>
-                  <i className="insignia__punto" aria-hidden="true" />
-                  {activo ? "Activo" : "No contratado"}
-                </span>
+                {suscripcion ? (
+                  <button
+                    type="button"
+                    className={`interruptor ${!ninguno ? "esta-activo" : ""}`}
+                    disabled={guardando === `modulo:${modulo.nombre}`}
+                    onClick={() => alternarModulo(modulo)}
+                    title={todos ? "Apagar todo el módulo" : "Encender todo el módulo"}
+                  >
+                    {todos ? "Activo" : ninguno ? "Apagado" : "Parcial"}
+                  </button>
+                ) : (
+                  <span className={`insignia insignia--${!ninguno ? "ok" : "neutro"}`}>
+                    <i className="insignia__punto" aria-hidden="true" />
+                    {!ninguno ? "Activo" : "No contratado"}
+                  </span>
+                )}
               </header>
               <p className="tenue">
                 {modulo.concedidos.length} de {modulo.disponibles.length} permisos
                 concedidos
               </p>
-              <ul className="modulo__permisos">
-                {modulo.disponibles.map((permiso) => (
-                  <li
-                    key={permiso.codename}
-                    className={
-                      modulo.concedidos.includes(permiso) ? "esta-concedido" : undefined
-                    }
-                  >
-                    {permiso.etiqueta}
-                  </li>
-                ))}
+              <ul className={`modulo__permisos ${suscripcion ? "modulo__permisos--editable" : ""}`}>
+                {modulo.disponibles.map((permiso) => {
+                  const concedido = estaConcedido(permiso.codename);
+                  const esExtra = concedido && !delPlan.has(permiso.codename);
+                  const excluidoDelPlan = !concedido && delPlan.has(permiso.codename);
+                  return (
+                    <li key={permiso.codename} className={concedido ? "esta-concedido" : undefined}>
+                      {suscripcion ? (
+                        <label className="flex gap-2 items-center">
+                          <input
+                            type="checkbox"
+                            checked={concedido}
+                            disabled={guardando === permiso.codename}
+                            onChange={() => alternarPermiso(permiso)}
+                          />
+                          {permiso.etiqueta}
+                        </label>
+                      ) : (
+                        permiso.etiqueta
+                      )}
+                      {esExtra && <Insignia tono="info">extra</Insignia>}
+                      {excluidoDelPlan && <Insignia tono="aviso">apagado</Insignia>}
+                    </li>
+                  );
+                })}
               </ul>
             </article>
           );
@@ -505,20 +661,66 @@ function VistaModulos({ plan }: Contexto) {
 // ----------------------------------------------------------------- usuarios
 
 function VistaUsuarios({ negocio, plan, suscripcion }: Contexto) {
+  const { equipoDe } = usarPlataforma();
   const indicador = usoDe(negocio, plan, suscripcion)[0];
+  const [equipo, setEquipo] = useState<MiembroEquipo[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    setEquipo(null);
+    equipoDe(negocio.id)
+      .then((datos) => vigente && setEquipo(datos))
+      .catch((e) => vigente && setError((e as Error).message));
+    return () => {
+      vigente = false;
+    };
+  }, [negocio.id, equipoDe]);
+
   return (
     <div className="grid items-start gap-3 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
       <Tarjeta titulo="Usuarios activos">
         <p className="cifra-grande">{numero(negocio.usuarios)}</p>
         <IndicadorUso indicador={indicador} />
       </Tarjeta>
-      <Tarjeta titulo="Detalle del equipo">
-        <EstadoVacio icono={Users} titulo="Todavía no disponible aquí">
-          La API de la plataforma expone cuántas personas trabajan en esta empresa,
-          pero no quiénes son: las pertenencias se administran desde el panel del
-          propio cliente, que es donde tienen contexto. Esta vista se conectará
-          cuando exista el endpoint.
-        </EstadoVacio>
+      <Tarjeta
+        titulo="Detalle del equipo"
+        pie={
+          <span className="tenue">
+            Solo lectura: las pertenencias se administran desde el panel del propio
+            cliente, que es donde tienen contexto.
+          </span>
+        }
+      >
+        {error ? (
+          <Aviso>{error}</Aviso>
+        ) : equipo === null ? (
+          <Esqueleto alto={80} />
+        ) : equipo.length === 0 ? (
+          <EstadoVacio icono={Users} titulo="Sin nadie activo todavía" />
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {equipo.map((miembro) => (
+              <li key={miembro.email} className="flex items-center justify-between gap-2">
+                <span>
+                  {miembro.nombre}
+                  <span className="tenue text-xs block">{miembro.email}</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <Insignia tono="neutro">{miembro.rol}</Insignia>
+                  {miembro.tiene_acceso_total ? (
+                    <Insignia tono="info">Acceso total</Insignia>
+                  ) : (
+                    <span className="tenue text-xs">
+                      {miembro.permisos.length}{" "}
+                      {miembro.permisos.length === 1 ? "permiso" : "permisos"}
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </Tarjeta>
     </div>
   );
@@ -527,7 +729,38 @@ function VistaUsuarios({ negocio, plan, suscripcion }: Contexto) {
 // ----------------------------------------------------------------- dominios
 
 function VistaDominios({ negocio }: Contexto) {
-  if (negocio.dominios.length === 0) {
+  const { dominiosDe } = usarPlataforma();
+  const [detalle, setDetalle] = useState<DominioDetalle[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    setDetalle(null);
+    dominiosDe(negocio.id)
+      .then((datos) => vigente && setDetalle(datos))
+      .catch((e) => vigente && setError((e as Error).message));
+    return () => {
+      vigente = false;
+    };
+  }, [negocio.id, dominiosDe]);
+
+  if (error) {
+    return (
+      <Tarjeta titulo="Dominios">
+        <Aviso>{error}</Aviso>
+      </Tarjeta>
+    );
+  }
+
+  if (detalle === null) {
+    return (
+      <Tarjeta titulo="Dominios">
+        <Esqueleto alto={80} />
+      </Tarjeta>
+    );
+  }
+
+  if (detalle.length === 0) {
     return (
       <Tarjeta titulo="Dominios">
         <EstadoVacio icono={Globe} titulo="Sin dominios configurados">
@@ -538,24 +771,22 @@ function VistaDominios({ negocio }: Contexto) {
   }
 
   return (
-    <Tarjeta
-      titulo="Dominios"
-      pie={
-        <span className="tenue">
-          El estado de DNS, SSL y verificación se guarda en el modelo pero la API de
-          la plataforma aún no lo expone; esta lista lo mostrará sin tocar el diseño
-          en cuanto lo haga.
-        </span>
-      }
-    >
+    <Tarjeta titulo="Dominios">
       <ul className="dominios">
-        {negocio.dominios.map((dominio, i) => (
-          <li key={dominio}>
+        {detalle.map((dominio) => (
+          <li key={dominio.hostname}>
             <Globe size={15} />
-            <span className="dominios__nombre">{dominio}</span>
-            {i === 0 && <span className="insignia insignia--info">principal</span>}
+            <span className="dominios__nombre">{dominio.hostname}</span>
+            {dominio.es_primario && <span className="insignia insignia--info">principal</span>}
+            {dominio.verificado ? (
+              <span className="insignia insignia--ok">
+                <ShieldCheck size={11} /> verificado
+              </span>
+            ) : (
+              <span className="insignia insignia--aviso">sin verificar</span>
+            )}
             <a
-              href={`https://${dominio}`}
+              href={`https://${dominio.hostname}`}
               target="_blank"
               rel="noreferrer"
               className="enlace-accion"

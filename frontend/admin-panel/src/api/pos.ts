@@ -18,8 +18,13 @@ export interface PerfilPOS {
   muestra_imagenes: boolean;
   pide_atributos_en_linea: boolean;
   permite_nota_por_linea: boolean;
-  /** Qué panel va al lado del carrito. Lo aportan los módulos. */
-  panel_lateral: string | null;
+  /** Qué paneles van al lado del carrito. Los aportan los módulos.
+   *
+   *  Fue una cadena hasta la fase 12: con un solo módulo aportando paneles no
+   *  había con qué chocar, y el primer restaurante con mesas Y domicilios tenía
+   *  que elegir cuál de sus dos ver. El tipo admite las dos formas porque un
+   *  perfil guardado antes del cambio sigue llegando así. */
+  panel_lateral: string[] | string | null;
 }
 
 export interface MedioPago {

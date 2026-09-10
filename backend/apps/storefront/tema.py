@@ -52,16 +52,36 @@ def resolver(config=None, tema=None) -> dict[str, str]:
     return {c: v for c, v in valores.items() if v not in (None, "")}
 
 
-def variables_css(config=None, tema=None) -> dict[str, str]:
-    """Lo mismo, ya con el nombre de la variable y su unidad puesta."""
-    disponibles = catalogo()
+def a_variables(valores, *, disponibles=None) -> dict[str, str]:
+    """
+    Traduce un `{código: valor}` a `{--variable: valor}`.
+
+    Es la única traducción de código a variable del sistema, y por eso está
+    suelta: la usan el tema del negocio (`variables_css`), el aspecto que
+    propone una plantilla y —desde la fase 12— el estilo propio de cada bloque
+    colocado. Tres sitios distintos escribiendo la misma correspondencia serían
+    tres sitios donde olvidarse de poner la unidad.
+
+    Un código que el catálogo ya no tiene se descarta en vez de arrastrarse:
+    mismo criterio que `resolver()`. Si la tienda dejó de consumirlo, escribirlo
+    no haría nada y solo confundiría a quien lo viera en el editor.
+    """
+    disponibles = catalogo() if disponibles is None else disponibles
     salida = {}
-    for codigo, valor in resolver(config, tema).items():
-        datos = disponibles[codigo]
+    for codigo, valor in (valores or {}).items():
+        datos = disponibles.get(codigo)
+        if datos is None or valor in (None, ""):
+            continue
         unidad = datos["unidad"]
         # La unidad se añade solo si falta: guardar "16px" y guardar "16" en un
         # token de píxeles tienen que dar lo mismo.
         if unidad and not str(valor).endswith(unidad):
             valor = f"{valor}{unidad}"
-        salida[datos["variable"]] = valor
+        salida[datos["variable"]] = str(valor)
     return salida
+
+
+def variables_css(config=None, tema=None) -> dict[str, str]:
+    """Lo mismo que `resolver`, ya con el nombre de la variable y su unidad."""
+    disponibles = catalogo()
+    return a_variables(resolver(config, tema), disponibles=disponibles)

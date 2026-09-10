@@ -21,6 +21,11 @@ export interface MarcaNegocio {
   color: string;
   /** Una imagen suya para el panel lateral. */
   fondo: string | null;
+  /** La tipografía y la forma de botón que el negocio ya eligió para su
+   *  tienda — el acceso las hereda igual que hereda el color, para que la
+   *  identidad no cambie de un lado al otro de la puerta. */
+  fuente: string;
+  radioBoton: string;
 }
 
 const POR_DEFECTO: MarcaNegocio = {
@@ -28,6 +33,8 @@ const POR_DEFECTO: MarcaNegocio = {
   logo: null,
   color: "#16a34a",
   fondo: null,
+  fuente: "inter",
+  radioBoton: "suave",
 };
 
 /** Un color solo se acepta si es hexadecimal: va directo a una variable CSS. */
@@ -51,6 +58,8 @@ export async function cargarMarca(): Promise<MarcaNegocio> {
     if (typeof d.nombre_empresa === "string") marca.nombre = d.nombre_empresa;
     if (typeof d.logo_url === "string" && d.logo_url) marca.logo = d.logo_url;
     if (colorValido(d.color_primario)) marca.color = d.color_primario;
+    if (typeof d.fuente === "string" && d.fuente) marca.fuente = d.fuente;
+    if (typeof d.radio_boton === "string" && d.radio_boton) marca.radioBoton = d.radio_boton;
   }
 
   if (banners.status === "fulfilled" && Array.isArray(banners.value.data)) {

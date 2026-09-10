@@ -232,3 +232,18 @@ export async function enviarMensajeContacto(
 ): Promise<void> {
   await enviar("/contact/messages/", datos);
 }
+
+/**
+ * Apuntar un correo a la lista del negocio.
+ *
+ * Va contra `contact.Suscriptor`, que es una tabla propia y no la bandeja de
+ * mensajes: una lista de correo que se guarda como «mensajes de contacto» no se
+ * puede consultar ni exportar, y llena la bandeja de no-mensajes.
+ *
+ * Repetir el mismo correo NO es un error — el servidor responde que si. Quien
+ * no esta seguro de si funciono vuelve a pulsar, y devolverle un fallo le diria
+ * que algo se rompio cuando ya estaba dentro.
+ */
+export async function suscribirAlBoletin(email: string): Promise<void> {
+  await enviar("/contact/subscribers/", { email, origen: "tienda" });
+}

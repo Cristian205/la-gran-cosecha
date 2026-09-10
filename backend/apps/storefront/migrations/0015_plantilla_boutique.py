@@ -13,9 +13,13 @@ codigo y datos, y aqui sale asi:
 
 Ni un color escrito en el CSS. El rosa sale de que la plantilla PROPONE un
 color primario —campo `marca`— y la tienda deriva su escala entera de el; las
-reglas nuevas de `global.css` hablan de `--verde-500`, que es el nombre viejo
-de «el color de este negocio». Si alguna hubiera codificado un rosa, la
-plantilla habria dejado de ser una plantilla para ser el diseno de un cliente.
+reglas nuevas de `global.css` hablan de `--marca-500`, que es «el color de este
+negocio». Si alguna hubiera codificado un rosa, la plantilla habria dejado de
+ser una plantilla para ser el diseno de un cliente.
+
+(Cuando se escribio esto la variable se llamaba `--verde-500` y aqui hubo que
+aclarar que era «el nombre viejo de el color de este negocio». Esa aclaracion
+era la senal de que el nombre estaba mal, y la fase 12 lo renombro.)
 
 # Por que `barra-categorias` es un bloque y no una propiedad de la cabecera
 

@@ -25,14 +25,18 @@ import {
 } from "lucide-react";
 import {
   ETIQUETA_CATEGORIA,
+  actualizar,
   bloqueNuevo,
+  duplicar,
   mover,
-  nuevoId,
+  quitar,
   type Bloque,
   type BloqueColocado,
   type CategoriaBloque,
   type Composicion,
+  type TokenTema,
 } from "../../api/tienda";
+import { Diseno } from "./Diseno";
 import { Propiedades } from "./Propiedades";
 
 const DISPOSITIVOS = [
@@ -43,6 +47,8 @@ const DISPOSITIVOS = [
 
 interface Props {
   catalogo: Bloque[];
+  /** El catalogo de tokens, para la pestaña de diseño de la seccion elegida. */
+  tokens: TokenTema[];
   composicion: Composicion;
   elegido: string | null;
   onCambio: (composicion: Composicion) => void;
@@ -51,6 +57,7 @@ interface Props {
 
 export function PanelSecciones({
   catalogo,
+  tokens,
   composicion,
   elegido,
   onCambio,
@@ -71,14 +78,11 @@ export function PanelSecciones({
       <Ajustes
         bloque={actual}
         definicion={porCodigo.get(actual.tipo) ?? null}
+        tokens={tokens}
         onVolver={() => onElegir(null)}
-        onCambio={(cambios) =>
-          onCambio(
-            composicion.map((b) => (b.id === actual.id ? { ...b, ...cambios } : b))
-          )
-        }
+        onCambio={(cambios) => onCambio(actualizar(composicion, actual.id, cambios))}
         onQuitar={() => {
-          onCambio(composicion.filter((b) => b.id !== actual.id));
+          onCambio(quitar(composicion, actual.id));
           onElegir(null);
         }}
       />
@@ -206,14 +210,11 @@ function Lista({
                     className="btn-icon"
                     aria-label="Duplicar"
                     disabled={def?.unico_por_pagina}
-                    onClick={() => {
-                      const copia = { ...bloque, id: nuevoId(bloque.tipo, composicion) };
-                      onCambio([
-                        ...composicion.slice(0, i + 1),
-                        copia,
-                        ...composicion.slice(i + 1),
-                      ]);
-                    }}
+                    // Duplicar, quitar y actualizar viven en `@constructor`:
+                    // son las mismas operaciones que hace el editor de
+                    // plantillas, y tenerlas escritas dos veces es como
+                    // acabaron siendo dos copias superficiales.
+                    onClick={() => onCambio(duplicar(composicion, bloque.id))}
                   >
                     <Copy size={13} />
                   </button>
@@ -221,7 +222,7 @@ function Lista({
                     type="button"
                     className="btn-icon"
                     aria-label="Quitar"
-                    onClick={() => onCambio(composicion.filter((b) => b.id !== bloque.id))}
+                    onClick={() => onCambio(quitar(composicion, bloque.id))}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -308,12 +309,14 @@ function Catalogo({
 function Ajustes({
   bloque,
   definicion,
+  tokens,
   onVolver,
   onCambio,
   onQuitar,
 }: {
   bloque: BloqueColocado;
   definicion: Bloque | null;
+  tokens: TokenTema[];
   onVolver: () => void;
   onCambio: (cambios: Partial<BloqueColocado>) => void;
   onQuitar: () => void;
@@ -384,6 +387,18 @@ function Ajustes({
         esquema={definicion?.esquema_props}
         valores={bloque.props}
         onCambio={(props) => onCambio({ props })}
+      />
+
+      <hr className="constructor-separador" />
+
+      {/* El diseño de ESTA seccion. Debajo del contenido y no en otra pestaña a
+          proposito: quien esta ajustando una seccion quiere ver lo que dice y
+          como se ve sin cambiar de sitio. */}
+      <Diseno
+        admitidos={definicion?.tokens_admitidos ?? []}
+        tokens={tokens}
+        valores={bloque.estilo ?? {}}
+        onCambio={(estilo) => onCambio({ estilo })}
       />
 
       <hr className="constructor-separador" />

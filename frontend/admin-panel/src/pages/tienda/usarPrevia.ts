@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Composicion } from "../../api/tienda";
+import { composicionParaPrevia, type Composicion, type TokenTema } from "@constructor/index";
 
 /**
  * La conversación con la tienda dentro del iframe.
@@ -21,12 +21,15 @@ interface Opciones {
   /** El origen de la tienda; se usa como destino de cada mensaje. */
   origen: string | null;
   composicion: Composicion;
+  /** El catálogo de tokens, para traducir el estilo de cada bloque antes de
+   *  mandarlo — ver `composicionParaPrevia`. */
+  tokens: TokenTema[];
   elegido: string | null;
   /** Al pulsar una sección dentro de la propia tienda. */
   onSeleccion: (id: string) => void;
 }
 
-export function usarPrevia({ origen, composicion, elegido, onSeleccion }: Opciones) {
+export function usarPrevia({ origen, composicion, tokens, elegido, onSeleccion }: Opciones) {
   const marco = useRef<HTMLIFrameElement>(null);
   const [lista, setLista] = useState(false);
 
@@ -59,8 +62,10 @@ export function usarPrevia({ origen, composicion, elegido, onSeleccion }: Opcion
   // es una llamada local, no una petición, y un temporizador solo añadiría un
   // salto perceptible al escribir un título.
   useEffect(() => {
-    if (lista) enviar({ tipo: "composicion", bloques: composicion });
-  }, [lista, composicion, enviar]);
+    if (lista) {
+      enviar({ tipo: "composicion", bloques: composicionParaPrevia(composicion, tokens) });
+    }
+  }, [lista, composicion, tokens, enviar]);
 
   // La selección va aparte: mueve el desplazamiento de la tienda hasta la
   // sección, que es lo que hace que elegir en la lista sirva para algo.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { obtenerProductos, type OrdenCatalogo } from "@/lib/datos";
 import type { Producto } from "@/lib/tipos";
 
@@ -10,6 +10,18 @@ interface Filtros {
   busqueda: string;
   categoria: number | null;
   orden: OrdenCatalogo;
+}
+
+/**
+ * La primera tanda, ya resuelta por el servidor (mismo criterio que
+ * `MasVendidos`): sin esto, un bloque de catálogo interactivo pintaría un
+ * esqueleto de carga en el HTML que sirve el servidor, y el rastreador vería
+ * eso en vez de productos.
+ */
+export interface SemillaCatalogo {
+  productos: Producto[];
+  total: number;
+  hayMas: boolean;
 }
 
 interface Contexto {
@@ -46,7 +58,14 @@ function claveDe({ busqueda, categoria, orden }: Filtros): string {
  * Acumula las tandas (patrón "Cargar más"), cancela la petición en vuelo al
  * cambiar de filtro y espera a que el usuario deje de teclear antes de buscar.
  */
-export function useCatalogo(filtros: Filtros): EstadoCatalogo {
+export function useCatalogo(filtros: Filtros, semilla?: SemillaCatalogo): EstadoCatalogo {
+  // La semilla solo vale para el catálogo sin filtrar: el servidor siempre
+  // resuelve la primera pagina SIN categoria ni busqueda, así que usarla con
+  // un filtro ya activo (por ejemplo, un enlace directo a "?categoria=5")
+  // pintaría el catálogo entero donde tocaba una categoría.
+  const semillaValida = Boolean(semilla) && !filtros.busqueda && filtros.categoria === null;
+  const semillaUsada = useRef(false);
+
   const [busquedaAplicada, setBusquedaAplicada] = useState(filtros.busqueda);
 
   // Debounce del texto: sin esto la tienda lanzaba una petición por tecla.
@@ -66,10 +85,12 @@ export function useCatalogo(filtros: Filtros): EstadoCatalogo {
   });
   const [intento, setIntento] = useState(0);
 
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [hayMas, setHayMas] = useState(false);
-  const [cargando, setCargando] = useState(true);
+  const [productos, setProductos] = useState<Producto[]>(
+    semillaValida ? semilla!.productos : []
+  );
+  const [total, setTotal] = useState<number | null>(semillaValida ? semilla!.total : null);
+  const [hayMas, setHayMas] = useState(semillaValida ? semilla!.hayMas : false);
+  const [cargando, setCargando] = useState(!semillaValida);
   const [cargandoMas, setCargandoMas] = useState(false);
   const [error, setError] = useState(false);
 
@@ -86,6 +107,13 @@ export function useCatalogo(filtros: Filtros): EstadoCatalogo {
 
   useEffect(() => {
     if (ctx.clave !== clave) return;
+
+    // La primera pasada ya llegó pintada del servidor: no se vuelve a pedir,
+    // igual que `MasVendidos` evita repetir su fetch al hidratar.
+    if (semillaValida && !semillaUsada.current) {
+      semillaUsada.current = true;
+      return;
+    }
 
     const controlador = new AbortController();
     const esPrimeraTanda = ctx.pagina === 1;

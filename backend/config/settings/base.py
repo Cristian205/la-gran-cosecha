@@ -56,6 +56,7 @@ LOCAL_APPS = [
     "apps.orders",
     "apps.pos",
     "apps.reservations",
+    "apps.delivery",
     "apps.contact",
     "apps.content",
     "apps.storefront",
@@ -331,9 +332,33 @@ EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = env(
-    "DEFAULT_FROM_EMAIL",
-    default="Seguridad Crynex <no-reply@crynex.local>",
+def _sin_comillas(valor: str) -> str:
+    """
+    Quita las comillas que envuelven un valor, si las lleva.
+
+    `django-environ` las quita al leer un archivo `.env`, pero NO al leer una
+    variable de entorno de verdad. Y en el panel de Render se escribe
+
+        DEFAULT_FROM_EMAIL="Seguridad Crynex <hola@ejemplo.com>"
+
+    con las comillas puestas, porque es como se escribe en un `.env` y en un
+    shell. Ahi sobreviven, y entonces `parseaddr` interpreta TODA la cadena
+    como la direccion —remitente `Seguridad Crynex <hola@ejemplo.com>`, sin
+    arroba util— y Brevo la rechaza con un 400 que solo aparece en los
+    registros del servidor.
+
+    Se recorta aqui y no se rechaza porque escribirlas es lo natural: el error
+    es de la herramienta, no de quien la usa.
+    """
+    valor = valor.strip()
+    for comilla in ('"', "'"):
+        if len(valor) >= 2 and valor.startswith(comilla) and valor.endswith(comilla):
+            return valor[1:-1].strip()
+    return valor
+
+
+DEFAULT_FROM_EMAIL = _sin_comillas(
+    env("DEFAULT_FROM_EMAIL", default="Seguridad Crynex <no-reply@crynex.local>")
 )
 EMAIL_TIMEOUT = 15
 

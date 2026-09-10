@@ -1,5 +1,16 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
+import { claseDeVariante } from "./Seccion";
+
+/**
+ * Las dos formas de rematar una pagina.
+ *
+ * `banda` es la de siempre: ocupa el ancho y separa dos secciones.
+ * `tarjeta` la mete en una caja con su sombra y su radio, que es lo que pide
+ * una tienda que ya usa tarjetas para todo y donde una franja a sangre corta
+ * el ritmo en vez de rematarlo.
+ */
+const VARIANTES = ["banda", "tarjeta"] as const;
 
 /**
  * La franja final con un botón.
@@ -13,6 +24,7 @@ interface Props {
   texto?: string;
   boton_texto?: string;
   boton_href?: string;
+  variante?: string;
 }
 
 export function CtaBanda({
@@ -20,13 +32,14 @@ export function CtaBanda({
   texto = "",
   boton_texto = "Ir a la tienda",
   boton_href = "/tienda",
+  variante,
 }: Props) {
   if (!titulo && !texto) return null;
 
   const externo = /^https?:\/\//.test(boton_href);
 
   return (
-    <div className="cta-banda">
+    <div className={`cta-banda ${claseDeVariante(variante, VARIANTES, "cta-banda", "banda")}`}>
       <div>
         {titulo && <h3>{titulo}</h3>}
         {texto && <p>{texto}</p>}

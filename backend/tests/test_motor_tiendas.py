@@ -970,3 +970,410 @@ def test_un_testigo_manipulado_no_abre_nada():
 
     assert vista_previa.abrir("no-es-un-testigo", tenant_id=1) is None
     assert vista_previa.abrir("", tenant_id=1) is None
+
+
+# ==========================================================================
+# EL VOCABULARIO DE DISENO NO LLEVA EL NOMBRE DE NINGUN CLIENTE
+# ==========================================================================
+def _reglas_de_la_hoja() -> str:
+    """
+    La hoja de la tienda SIN sus comentarios.
+
+    Mismo motivo que `tests/inspeccion.py` con los docstrings de Python: los
+    dos guardias de aqui abajo buscan patrones que la propia hoja explica en
+    prosa —cuenta por que la escala ya no se llama `--verde-*`— y sin recortar
+    los comentarios se denunciarian a si mismos. Un guardia que denuncia de mas
+    se acaba desactivando, que es peor que no tenerlo.
+    """
+    hoja = (
+        Path(__file__).resolve().parents[2]
+        / "frontend" / "tienda" / "src" / "app" / "global.css"
+    )
+    fuente = hoja.read_text(encoding="utf-8")
+    # CSS solo tiene comentarios de bloque, asi que basta con este recorte.
+    return re.sub(r"/\*.*?\*/", "", fuente, flags=re.S)
+
+
+def test_la_hoja_de_la_tienda_no_nombra_colores_concretos():
+    """
+    El guardia del paso 1 del rediseno del motor.
+
+    Hasta la fase 12 la escala de marca se llamaba `--verde-*` y la secundaria
+    `--ambar-*`, porque la primera tienda del sistema era una empresa agricola.
+    Nada fallaba: el rosa de una boutique se guardaba, se resolvia y se pintaba
+    bien. Pero se guardaba en una variable llamada «verde», y `global.css`
+    tenia que dedicar un parrafo a explicar que ese nombre no significaba lo
+    que decia.
+
+    Un nombre que hay que desmentir con un comentario es un nombre equivocado,
+    y ademas marcaba el rumbo: cada plantilla nueva heredaba el vocabulario de
+    la primera, que es la forma mas sutil del acoplamiento entre tiendas.
+
+    Este test existe porque el fallo es facil de reintroducir sin querer: quien
+    anada `--rosa-500` para la boutique lo hara con la mejor intencion y con el
+    mismo resultado. Los nombres del sistema dicen que PAPEL cumple el color
+    —marca, acento, superficie—, nunca de que color es.
+    """
+    colores = "verde|rojo|azul|amarillo|rosa|naranja|morado|violeta|ambar|turquesa"
+    hallazgos = sorted(
+        set(re.findall(rf"--(?:{colores})-[a-z0-9]+", _reglas_de_la_hoja()))
+    )
+
+    assert not hallazgos, (
+        "Hay variables de tema nombradas por su color en vez de por su papel: "
+        + ", ".join(hallazgos)
+    )
+
+
+def test_la_hoja_de_la_tienda_no_tiene_sombras_de_un_color_escrito():
+    """
+    El mismo defecto un piso mas abajo, y este se habia colado quince veces.
+
+    Las sombras estaban escritas como `rgba(6, 46, 26, ...)` —un verde muy
+    oscuro— en quince sitios, asi que toda tienda del motor proyectaba sombras
+    verdes sin que nadie lo hubiera decidido. Ahora salen de `--sombra-tinte`,
+    que conserva ese mismo valor por defecto: no cambia como se ve ninguna
+    tienda, pero deja de ser una decision inamovible.
+    """
+    reglas = _reglas_de_la_hoja()
+
+    assert "--sombra-tinte" in reglas, "Desaparecio el tinte de sombra configurable."
+    assert "rgba(6, 46, 26" not in reglas, (
+        "Volvio a escribirse el verde de La Gran Cosecha dentro de una sombra."
+    )
+
+
+# ==========================================================================
+# EL ESTILO POR BLOQUE
+# ==========================================================================
+def _bloque_con(tipo, estilo):
+    return [{"id": "b1", "tipo": tipo, "props": {}, "estilo": estilo}]
+
+
+def test_un_bloque_puede_traer_su_propio_aspecto():
+    """
+    Lo que desbloquea el paso 2: hasta la fase 12 el aspecto era una decision
+    de la tienda ENTERA —un unico `:root`— asi que un pie oscuro sobre una
+    pagina clara no era una configuracion, era un despliegue.
+    """
+    salida = servicio.validar(_bloque_con("testimonios", {"bloque-fondo": "#101010"}))
+    assert salida[0]["estilo"] == {"bloque-fondo": "#101010"}
+
+
+def test_un_token_que_el_bloque_no_admite_se_descarta_sin_romper():
+    """
+    Se DESCARTA, no se rechaza. Es el mismo criterio que `tema.resolver()` con
+    un token retirado, y aqui importa mas: quitarle un token a un bloque —o
+    retirarlo del catalogo— no puede impedir guardar una pagina que lo tenia
+    puesto de antes. Un 400 dejaria al negocio sin poder editar su tienda por
+    una decision que tomo la plataforma.
+    """
+    salida = servicio.validar(
+        _bloque_con("testimonios", {"bloque-fondo": "#101010", "caja-columnas": "6"})
+    )
+    assert salida[0]["estilo"] == {"bloque-fondo": "#101010"}
+
+
+def test_un_valor_vacio_significa_heredado_y_no_se_guarda():
+    """
+    Vacio es «que mande el tema del negocio», no «vacio». Guardarlo como cadena
+    escribiria `--bloque-fondo:` en el HTML, que invalida la declaracion entera,
+    y ademas dejaria la seccion clavada sin poder volver a seguir a la tienda.
+    """
+    salida = servicio.validar(_bloque_con("testimonios", {"bloque-fondo": ""}))
+    assert salida[0]["estilo"] == {}
+
+
+def test_los_bloques_de_siempre_siguen_sin_estilo():
+    """Una composicion escrita antes de que esto existiera no cambia de aspecto."""
+    salida = servicio.validar([{"id": "b1", "tipo": "testimonios", "props": {}}])
+    assert salida[0]["estilo"] == {}
+
+
+def test_la_tienda_recibe_el_estilo_ya_como_variables_css():
+    """
+    Se GUARDA por codigo y se SIRVE por variable. La correspondencia vive en un
+    solo sitio —`tema.a_variables`— porque tenerla en el editor y en la tienda
+    a la vez es como acaban hablando dos idiomas.
+    """
+    listos = servicio.para_la_tienda(
+        servicio.validar(_bloque_con("testimonios", {"bloque-fondo": "#101010"}))
+    )
+    assert listos[0]["estilo"] == {"--bloque-fondo": "#101010"}
+
+
+def test_la_unidad_se_pone_al_servir_y_no_al_guardar():
+    """Guardar «3» y guardar «3rem» en una medida tienen que dar lo mismo."""
+    from apps.storefront.models import TokenTema
+
+    token = TokenTema.objects.get(codigo="seccion-espacio")
+    listos = servicio.para_la_tienda(
+        servicio.validar(_bloque_con("testimonios", {"seccion-espacio": "3"}))
+    )
+    esperado = f"3{token.unidad}" if token.unidad else "3"
+    assert listos[0]["estilo"][token.variable_css] == esperado
+
+
+def test_la_previa_de_una_plantilla_tambien_dice_que_va_a_sangre(api, negocio):
+    """
+    Un fallo que llevaba desde el enlace de prueba y que solo se veia mirando.
+
+    La pagina publicada pasaba por el serializer, que anade `a_sangre`; la
+    previa de una plantilla devolvia la composicion EN CRUDO. Asi que en la
+    pantalla que existe para juzgar una plantilla, una portada a sangre se
+    pintaba dentro del contenedor. No daba error: la plantilla simplemente se
+    veia peor de lo que era.
+    """
+    from apps.storefront import vista_previa
+
+    plantilla = Plantilla.objects.filter(slug="belleza").first()
+    assert plantilla is not None
+
+    testigo = vista_previa.firmar(tenant_id=negocio.pk, plantilla_slug="belleza")
+    respuesta = api.get(f"/api/storefront/pagina/?ruta=/&{vista_previa.PARAMETRO}={testigo}")
+
+    assert respuesta.status_code == 200
+    assert respuesta.data["bloques"], "La plantilla «belleza» dejo de componer la home."
+    for bloque in respuesta.data["bloques"]:
+        assert "a_sangre" in bloque, "La previa sigue sirviendo la composicion en crudo."
+        assert "estilo" in bloque
+
+
+# ==========================================================================
+# LA BIBLIOTECA: LOS BLOQUES QUE LLEGARON CON EL PASO 3
+# ==========================================================================
+def test_los_bloques_que_el_encargo_pedia_tienen_dos_formas():
+    """
+    El encargo lo dijo con nombre y apellido: al menos dos variantes en
+    cabecera, portada, carruseles y pie. Los tres primeros las tenian; el pie
+    llevaba CERO desde el principio, asi que toda tienda del motor —incluida la
+    boutique de ocho productos— llevaba el mismo pie de cuatro columnas.
+
+    Se comprueba el numero y no los codigos: que se llamen «minimo» o
+    «compacto» es una decision de diseño que puede cambiar; que haya donde
+    elegir es la promesa.
+    """
+    for codigo in ("cabecera", "portada", "carrusel-promociones", "pie"):
+        bloque = Bloque.objects.get(codigo=codigo)
+        assert len(bloque.variantes) >= 2, f"«{codigo}» sigue teniendo una sola forma"
+
+
+def test_ningun_bloque_importa_el_mecanismo_de_variantes_sin_usarlo():
+    """
+    `estadisticas` y `por-que-elegirnos` IMPORTABAN `claseDeVariante` y no lo
+    llamaban: estaba escrito el mecanismo y no habia ninguna variante que
+    elegir. Es peor que no tenerlo, porque quien lee el componente cree que la
+    pieza es configurable.
+    """
+    sospechosos = []
+    for archivo in (RAIZ_TIENDA / "src").rglob("*.tsx"):
+        fuente = archivo.read_text(encoding="utf-8")
+        if "claseDeVariante" not in fuente:
+            continue
+        # `Seccion.tsx` es quien lo DEFINE, no quien lo consume.
+        if "export function claseDeVariante" in fuente:
+            continue
+        # Importarlo cuenta una vez; usarlo, otra. Con una sola aparicion, se
+        # importo y no se llama.
+        if fuente.count("claseDeVariante") < 2:
+            sospechosos.append(archivo.name)
+
+    assert not sospechosos, (
+        "Importan el mecanismo de variantes y no lo usan: " + ", ".join(sorted(sospechosos))
+    )
+
+
+def test_el_bloque_de_boletin_tiene_donde_guardar_los_correos():
+    """
+    El guardia del unico bloque nuevo que necesito una tabla.
+
+    Se podia haber escrito mandando un mensaje de contacto con el texto
+    «suscripcion», o sin enviar nada: en los dos casos el visitante veria
+    «gracias» y no estaria apuntado en ninguna parte. Un formulario que recoge
+    correos y no los guarda es peor que no tener el formulario.
+    """
+    from apps.contact.models import Suscriptor  # noqa: PLC0415
+
+    assert Bloque.objects.filter(codigo="boletin", activo=True).exists()
+    assert Suscriptor._meta.db_table == "contact_suscriptor"
+
+
+# ==========================================================================
+# LA LISTA DE CORREO
+# ==========================================================================
+def test_cualquiera_puede_suscribirse_desde_la_tienda(api, negocio):
+    respuesta = api.post(
+        "/api/contact/subscribers/", {"email": "ana@ejemplo.test"}, format="json"
+    )
+    assert respuesta.status_code == 201
+    assert respuesta.data["email"] == "ana@ejemplo.test"
+
+
+def test_apuntarse_dos_veces_no_es_un_error(api, negocio):
+    """
+    Quien no esta seguro de si funciono vuelve a pulsar. Devolverle un 400 por
+    correo repetido le dice que algo se rompio cuando en realidad ya estaba
+    dentro, y ademas le revela que ese correo esta en la lista de este negocio.
+    """
+    from apps.contact.models import Suscriptor
+
+    primero = api.post(
+        "/api/contact/subscribers/", {"email": "ana@ejemplo.test"}, format="json"
+    )
+    segundo = api.post(
+        "/api/contact/subscribers/", {"email": "ana@ejemplo.test"}, format="json"
+    )
+
+    assert primero.status_code == 201
+    assert segundo.status_code == 200
+    with usar_tenant(negocio):
+        assert Suscriptor.objects.filter(email="ana@ejemplo.test").count() == 1
+
+
+def test_volver_a_apuntarse_reactiva_la_suscripcion(api, negocio):
+    """Darse de baja es archivar; volver a apuntarse es lo que la persona acaba
+    de pedir, asi que se reactiva en vez de dejarla de baja en silencio."""
+    from apps.contact.models import Suscriptor
+
+    api.post("/api/contact/subscribers/", {"email": "ana@ejemplo.test"}, format="json")
+    with usar_tenant(negocio):
+        Suscriptor.objects.filter(email="ana@ejemplo.test").update(activo=False)
+
+    api.post("/api/contact/subscribers/", {"email": "ana@ejemplo.test"}, format="json")
+    with usar_tenant(negocio):
+        assert Suscriptor.objects.get(email="ana@ejemplo.test").activo is True
+
+
+def test_la_lista_de_correo_no_se_lee_sin_permiso(api, negocio):
+    """
+    Apuntarse es publico; LEER la lista, no. Es lo mas sensible que guarda el
+    motor de tiendas: los correos de los clientes de un negocio.
+    """
+    assert api.get("/api/contact/subscribers/").status_code in (401, 403)
+
+
+def test_la_lista_de_un_negocio_no_se_ve_desde_otro(api, negocio, tenant_b):
+    from apps.contact.models import Suscriptor
+
+    api.post("/api/contact/subscribers/", {"email": "ana@ejemplo.test"}, format="json")
+
+    with usar_tenant(tenant_b):
+        assert Suscriptor.objects.count() == 0
+
+
+def test_la_misma_persona_puede_seguir_a_dos_tiendas(negocio, tenant_b):
+    """
+    Unico POR NEGOCIO y no global. La misma persona puede comprar en dos
+    tiendas de la plataforma, y son dos suscripciones distintas — una de las
+    cuales puede darse de baja sin tocar la otra.
+    """
+    from apps.contact.models import Suscriptor
+
+    with usar_tenant(negocio):
+        Suscriptor.objects.create(email="ana@ejemplo.test")
+    with usar_tenant(tenant_b):
+        Suscriptor.objects.create(email="ana@ejemplo.test")
+
+    assert Suscriptor.all_tenants.filter(email="ana@ejemplo.test").count() == 2
+
+
+# ==========================================================================
+# UN SOLO CONSTRUCTOR
+# ==========================================================================
+RAIZ_FRONT = Path(__file__).resolve().parents[2] / "frontend"
+
+#: Los dos paneles que construyen tiendas. El de Crynex edita plantillas; el del
+#: negocio edita su propia tienda. Manipulan la MISMA estructura.
+PANELES = [
+    RAIZ_FRONT / "panel-crynex" / "src",
+    RAIZ_FRONT / "admin-panel" / "src",
+]
+
+
+def test_los_tipos_de_una_composicion_se_declaran_una_sola_vez():
+    """
+    El guardia del paso 4, y existe porque la duplicacion ya habia divergido.
+
+    Los dos paneles tenian declarados por su cuenta `Bloque`, `BloqueColocado`,
+    `TokenTema` y compania. Ninguno estaba mal —cada uno era correcto por su
+    cuenta— y precisamente por eso se habian separado sin que nada avisara: el
+    del negocio no declaraba `activo`, `id` ni `orden` en `TokenTema`, aunque el
+    servidor los manda, ni `icono` en `Bloque`.
+
+    Esa es la forma peligrosa de la duplicacion. No falla: diverge. Y el dia que
+    alguien arregla algo, lo arregla en uno.
+
+    Ahora viven en `frontend/constructor/src/tipos.ts` y los paneles los
+    REEXPORTAN. Volver a declararlos localmente compilaria igual y volveria a
+    abrir la puerta, asi que se vigila.
+    """
+    compartidos = [
+        "BloqueColocado",
+        "CampoEsquema",
+        "CategoriaBloque",
+        "TokenTema",
+        "GrupoToken",
+    ]
+
+    reincidentes = []
+    for raiz in PANELES:
+        for archivo in raiz.rglob("*.ts"):
+            fuente = archivo.read_text(encoding="utf-8")
+            for nombre in compartidos:
+                # `export interface X {` o `export type X =` es declarar.
+                # `export type { X } from` es reexportar, que es lo correcto.
+                if re.search(rf"^export (interface {nombre} \{{|type {nombre} =)", fuente, re.M):
+                    reincidentes.append(f"{archivo.name}:{nombre}")
+
+    assert not reincidentes, (
+        "Estos tipos vuelven a estar declarados en un panel en vez de venir de "
+        "`@constructor`: " + ", ".join(sorted(reincidentes))
+    )
+
+
+def test_las_operaciones_de_composicion_no_se_reescriben_en_los_paneles():
+    """
+    Duplicar, quitar y actualizar viven en `@constructor`.
+
+    Los dos editores las tenian escritas a mano, y las dos versiones de duplicar
+    hacian una copia SUPERFICIAL —`{ ...bloque, id: nuevo }`—, que comparte el
+    objeto de propiedades con el original. Hoy no rompe nada porque los
+    formularios reemplazan en vez de mutar; el dia que alguien escriba un
+    `push()` en un editor de listas, duplicar una seccion empezaria a editar las
+    dos a la vez.
+
+    Que el MISMO descuido apareciera en los dos sitios es el argumento entero de
+    este paso: no es que uno estuviera mal, es que hay que arreglarlo dos veces.
+    """
+    reincidentes = []
+    for raiz in PANELES:
+        for archivo in raiz.rglob("*.tsx"):
+            fuente = archivo.read_text(encoding="utf-8")
+            if re.search(r"\{ \.\.\.bloque, id: nuevoId\(", fuente):
+                reincidentes.append(archivo.name)
+
+    assert not reincidentes, (
+        "Vuelven a duplicar bloques a mano, con copia superficial: "
+        + ", ".join(sorted(reincidentes))
+    )
+
+
+def test_el_modulo_compartido_no_tiene_pantalla():
+    """
+    En `@constructor` va lo que DECIDE, no lo que se ve.
+
+    Es la linea que hace que compartir no obligue a unificar el diseño: los dos
+    paneles tienen hojas de estilos distintas a proposito, asi que meter JSX
+    aqui significaria imponerle a uno el vocabulario de clases del otro.
+
+    Ademas hay una razon mecanica: el directorio no tiene `node_modules`, asi
+    que React no resuelve desde el. Un `.tsx` aqui no compilaria — pero fallaria
+    con un error de modulo no encontrado, que no explica nada. Este test si.
+    """
+    compartido = RAIZ_FRONT / "constructor" / "src"
+    assert compartido.is_dir(), "Desaparecio el modulo compartido del constructor."
+
+    con_pantalla = [a.name for a in compartido.rglob("*.tsx")]
+    assert not con_pantalla, (
+        "Hay componentes en el modulo compartido: " + ", ".join(sorted(con_pantalla))
+    )
