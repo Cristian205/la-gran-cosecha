@@ -1134,6 +1134,16 @@ h1, h2, h3 {
 }
 .seccion-titulo h2 { font-size: 1.5rem; margin: 0; color: var(--gris-900); }
 .seccion-titulo .linea { color: var(--marca-600); font-size: 1rem; font-weight: 600; }
+
+/* ---------- texto-libre: historia, misión, cualquier prosa ---------- */
+.texto-libre--una-columna { display: grid; gap: 1.5rem; max-width: 760px; }
+.texto-libre--dos-columnas {
+  display: grid;
+  gap: 2.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.texto-libre-bloque h3 { margin: 0 0 0.6rem; font-size: 1.1rem; color: var(--gris-900); }
+.texto-libre-bloque p { margin: 0; color: var(--gris-600); line-height: 1.75; }
 .seccion-kicker {
   display: block;
   text-transform: uppercase;

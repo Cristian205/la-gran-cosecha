@@ -30,6 +30,7 @@ import { CategoryNavigation } from "./CategoryNavigation";
 import { CatalogToolbar } from "./CatalogToolbar";
 import { PaginaNoEncontrada } from "./PaginaNoEncontrada";
 import { Marquesina } from "./Marquesina";
+import { TextoLibre } from "./TextoLibre";
 import { Video } from "./Video";
 
 /**
@@ -109,6 +110,7 @@ const REGISTRO: Record<string, Bloque> = {
   marcas: Marcas as Bloque,
   boletin: Boletin as Bloque,
   separador: Separador as Bloque,
+  "texto-libre": TextoLibre as Bloque,
 
   // --- el catalogo como bloques del motor ------------------------------------
   // Genericos y reutilizables por cualquier tienda: la que los coordina entre
