@@ -33,6 +33,7 @@ export const composicionDe = cache(
  */
 export const RESUELVE_EN_SERVIDOR: Record<string, string> = {
   "productos-destacados": "/orders/productos-mas-vendidos/",
+  "producto-destacado": "/orders/productos-mas-vendidos/",
   // La primera tanda del catálogo sin filtrar — exactamente lo que
   // `CatalogoProvider` necesita para sembrar `grid-productos` en modo
   // interactivo sin que el rastreador vea un esqueleto de carga. Un

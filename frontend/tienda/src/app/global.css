@@ -4249,6 +4249,92 @@ a.footer-contacto-item:hover { background: rgba(255, 255, 255, 0.14); transform:
 }
 
 /* ==========================================================================
+   PRODUCTO DESTACADO — el bloque «producto-destacado»
+   --------------------------------------------------------------------------
+   Mismo lenguaje visual que `.anuncios-carrusel` (blobs, vidrio, dos
+   columnas) pero con un solo producto y su propio botón de compra: es
+   publicidad de catálogo, no una campaña administrable.
+   ========================================================================== */
+.producto-destacado {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  align-items: stretch;
+  min-height: clamp(18rem, 30vw, 22rem);
+  border-radius: var(--radio-lg);
+  overflow: hidden;
+  background:
+    radial-gradient(60% 90% at 15% 15%, var(--marca-100) 0%, transparent 65%),
+    linear-gradient(180deg, #fff 0%, var(--fondo) 100%);
+  box-shadow: var(--sombra-lg);
+  margin: calc(1.2rem * var(--densidad-escala)) 0 calc(var(--seccion-espacio, 2.5rem) * var(--densidad-escala));
+}
+.pd-blob {
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.pd-blob.b1 { width: 260px; height: 260px; background: var(--marca-300); top: -80px; left: -60px; }
+.pd-blob.b2 { width: 220px; height: 220px; background: var(--acento-400); bottom: -70px; left: 30%; opacity: 0.25; }
+
+.pd-contenido {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.8rem, 4vw, 3rem);
+}
+.pd-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--acento-500), var(--acento-600));
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.pd-contenido h2 {
+  margin: 0.9rem 0 0;
+  font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+  line-height: 1.1;
+  color: var(--marca-900);
+  text-wrap: balance;
+}
+.pd-texto { margin: 0.6rem 0 0; max-width: 34ch; font-size: 0.98rem; line-height: 1.55; color: var(--gris-600); }
+.pd-precio { margin: 1rem 0 0; font-size: 0.95rem; color: var(--gris-600); }
+.pd-precio b { font-size: 1.35rem; color: var(--marca-700); }
+.pd-acciones { display: flex; align-items: center; gap: 1.1rem; margin-top: 1.4rem; flex-wrap: wrap; }
+.pd-enlace { font-size: 0.88rem; font-weight: 700; color: var(--marca-700); text-decoration: underline; }
+
+.pd-media {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(70% 100% at 70% 20%, var(--marca-100), transparent 60%),
+    linear-gradient(160deg, #eef8f0, var(--fondo));
+  color: var(--marca-500);
+}
+.pd-media img { width: 100%; height: 100%; object-fit: cover; }
+
+@media (max-width: 780px) {
+  .producto-destacado { grid-template-columns: 1fr; grid-template-rows: 13rem auto; min-height: 0; }
+  .pd-media { order: -1; }
+  .pd-texto { max-width: none; }
+}
+
+/* ==========================================================================
    PUBLICOS OBJETIVO — el bloque «publicos-objetivo»
    ========================================================================== */
 .publicos {
