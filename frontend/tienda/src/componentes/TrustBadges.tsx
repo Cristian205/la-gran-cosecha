@@ -1,16 +1,17 @@
 "use client";
 
-import { Leaf, ShieldCheck, Truck, Users, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { obtenerTrustBadges } from "@/lib/datos";
 import type { TrustBadge } from "@/lib/tipos";
 import { Seccion, claseDeVariante } from "@/bloques/Seccion";
+import { ICONOS as ICONOS_COMUNES } from "@/bloques/iconos";
+import { icono3D, type ComponenteIcono } from "@/bloques/iconos3d";
 
-const ICONOS: Record<TrustBadge["icono"], LucideIcon> = {
-  leaf: Leaf,
-  truck: Truck,
-  users: Users,
-  shield: ShieldCheck,
+const ICONOS: Record<TrustBadge["icono"], ComponenteIcono> = {
+  leaf: ICONOS_COMUNES.hoja,
+  truck: ICONOS_COMUNES.camion,
+  users: icono3D("pqe-usuarios.png"),
+  shield: ICONOS_COMUNES.escudo,
 };
 
 const VARIANTES = ["franja", "tarjetas"] as const;

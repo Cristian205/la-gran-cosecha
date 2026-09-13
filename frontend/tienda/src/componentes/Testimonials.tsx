@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { obtenerTestimonios } from "@/lib/datos";
 import type { Testimonio } from "@/lib/tipos";
 import { Seccion, claseDeVariante } from "@/bloques/Seccion";
+import { Reveal } from "@/componentes/animacion";
 
 function iniciales(nombre: string): string {
   return nombre
@@ -57,8 +58,8 @@ export function Testimonials({
           "rejilla"
         )}`}
       >
-        {visibles.map((t) => (
-          <article className="testi-card glass" key={t.id}>
+        {visibles.map((t, i) => (
+          <Reveal as="article" className="testi-card glass" retraso={Math.min(i, 5) * 0.08} key={t.id}>
             <Quote className="quote-icon" size={26} />
             <div className="estrellas">
               {Array.from({ length: t.estrellas }).map((_, s) => (
@@ -73,7 +74,7 @@ export function Testimonials({
                 <div className="rol">{t.rol}</div>
               </div>
             </div>
-          </article>
+          </Reveal>
         ))}
       </div>
     </Seccion>

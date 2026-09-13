@@ -76,6 +76,22 @@ export const useCart = create<CartState>()(
       totalPrecio: () =>
         get().items.reduce((acc, i) => acc + i.precioUnitario * i.cantidad, 0),
     }),
-    { name: "crynex-carrito" }
+    {
+      name: "crynex-carrito",
+      // El HTML del servidor no puede conocer lo que hay en el `localStorage`
+      // del navegador, asi que siempre sale con el carrito vacio. Sin esto,
+      // `persist` rehidrataba en cuanto este modulo se evaluaba en el
+      // navegador -antes de que React llegara a comparar el marcado- y la
+      // primera pintura del cliente ya mostraba el carrito guardado mientras
+      // el HTML del servidor decia que estaba vacio: un desajuste de
+      // hidratacion en la insignia del carrito, en la barra movil y en
+      // cualquier sitio que leyera `items`/`personalizados` al pintarse.
+      //
+      // Con esto la primera pintura del cliente coincide con el servidor
+      // -vacia- y `CapaCliente` dispara la rehidratacion de verdad despues,
+      // ya como una actualizacion de estado normal y no como parte del
+      // render inicial.
+      skipHydration: true,
+    }
   )
 );

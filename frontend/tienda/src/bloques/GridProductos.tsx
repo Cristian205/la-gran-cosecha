@@ -34,6 +34,9 @@ interface Props {
   titulo?: string;
   subtitulo?: string;
   centrado?: boolean;
+  /** Ancla para enlazar directo a esta rejilla (el CTA del hero del catálogo
+   *  ya apunta a "#catalogo"). */
+  id?: string;
   /** De qué categoría. Sin ella, del catálogo entero. Se ignora en modo
    *  catálogo interactivo: ahí la categoría la decide el contexto. */
   categoria_id?: number | null;
@@ -52,6 +55,7 @@ export function GridProductos({
   titulo,
   subtitulo,
   centrado = false,
+  id,
   categoria_id = null,
   limite = 8,
   orden = "recientes",
@@ -67,6 +71,7 @@ export function GridProductos({
         titulo={titulo}
         subtitulo={subtitulo}
         centrado={centrado}
+        id={id}
         variante={variante}
         tarjetaVariante={tarjeta_variante}
       />
@@ -79,6 +84,7 @@ export function GridProductos({
       titulo={titulo}
       subtitulo={subtitulo}
       centrado={centrado}
+      id={id}
       categoriaId={categoria_id}
       limite={limite}
       orden={orden}
@@ -95,6 +101,7 @@ function Vitrina({
   titulo,
   subtitulo,
   centrado,
+  id,
   categoriaId,
   limite,
   orden,
@@ -105,6 +112,7 @@ function Vitrina({
   titulo?: string;
   subtitulo?: string;
   centrado: boolean;
+  id?: string;
   categoriaId: number | null;
   limite: number;
   orden: "recientes" | "precio_asc" | "precio_desc" | "nombre";
@@ -139,10 +147,10 @@ function Vitrina({
   if (productos.length === 0) return null;
 
   return (
-    <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado}>
+    <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado} id={id}>
       <div className={`grid ${claseDeVariante(variante, VARIANTES, "grid", "rejilla")}`}>
-        {productos.map((p) => (
-          <ProductCard key={p.id} producto={p} variante={tarjetaVariante} />
+        {productos.map((p, i) => (
+          <ProductCard key={p.id} producto={p} variante={tarjetaVariante} indice={i} />
         ))}
       </div>
     </Seccion>
@@ -156,6 +164,7 @@ function CatalogoInteractivo({
   titulo,
   subtitulo,
   centrado,
+  id,
   variante,
   tarjetaVariante,
 }: {
@@ -163,6 +172,7 @@ function CatalogoInteractivo({
   titulo?: string;
   subtitulo?: string;
   centrado: boolean;
+  id?: string;
   variante?: string;
   tarjetaVariante?: string;
 }) {
@@ -183,7 +193,7 @@ function CatalogoInteractivo({
 
   if (catalogo.cargando) {
     return (
-      <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado}>
+      <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado} id={id}>
         <div className="grid">
           {Array.from({ length: 8 }).map((_, i) => (
             <div className="card-skeleton" key={i}>
@@ -223,10 +233,10 @@ function CatalogoInteractivo({
   }
 
   return (
-    <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado}>
+    <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado} id={id}>
       <div className={`grid ${claseDeVariante(variante, VARIANTES, "grid", "rejilla")}`}>
-        {catalogo.productos.map((p) => (
-          <ProductCard key={p.id} producto={p} variante={tarjetaVariante} />
+        {catalogo.productos.map((p, i) => (
+          <ProductCard key={p.id} producto={p} variante={tarjetaVariante} indice={i} />
         ))}
       </div>
 

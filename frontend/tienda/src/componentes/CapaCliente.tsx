@@ -1,10 +1,14 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { MotionConfig } from "motion/react";
+import { BarraPedidoEscritorio } from "./BarraPedidoEscritorio";
 import { CartDrawer } from "./CartDrawer";
 import { MobileCartBar } from "./MobileCartBar";
 import { WhatsAppButton } from "./WhatsAppButton";
 import { BottomNav } from "./BottomNav";
+import { useCart } from "@/estado/carrito";
+import { useUltimoPedido } from "@/estado/ultimoPedido";
 import type { SiteConfig } from "@/lib/tipos";
 
 /**
@@ -65,21 +69,33 @@ export function CapaCliente({
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
 
+  // El carrito y el ultimo pedido se guardan con `skipHydration` (ver
+  // `estado/carrito.ts` y `estado/ultimoPedido.ts`): la primera pintura del
+  // cliente sale igual que el servidor, y aqui -ya montado, fuera del
+  // render- se cargan de verdad desde el `localStorage`.
+  useEffect(() => {
+    useCart.persist.rehydrate();
+    useUltimoPedido.persist.rehydrate();
+  }, []);
+
   return (
-    <ContextoConfig.Provider value={config}>
-      <ContextoEnvoltorio.Provider
-        value={{
-          abrirCarrito: () => setCarritoAbierto(true),
-          busqueda,
-          buscar: setBusqueda,
-        }}
-      >
-        {children}
-        <BottomNav />
-        <WhatsAppButton />
-        <MobileCartBar onAbrir={() => setCarritoAbierto(true)} />
-        {carritoAbierto && <CartDrawer onCerrar={() => setCarritoAbierto(false)} />}
-      </ContextoEnvoltorio.Provider>
-    </ContextoConfig.Provider>
+    <MotionConfig reducedMotion="user">
+      <ContextoConfig.Provider value={config}>
+        <ContextoEnvoltorio.Provider
+          value={{
+            abrirCarrito: () => setCarritoAbierto(true),
+            busqueda,
+            buscar: setBusqueda,
+          }}
+        >
+          {children}
+          <BottomNav />
+          <WhatsAppButton />
+          <MobileCartBar onAbrir={() => setCarritoAbierto(true)} />
+          <BarraPedidoEscritorio onAbrir={() => setCarritoAbierto(true)} />
+          {carritoAbierto && <CartDrawer onCerrar={() => setCarritoAbierto(false)} />}
+        </ContextoEnvoltorio.Provider>
+      </ContextoConfig.Provider>
+    </MotionConfig>
   );
 }

@@ -90,7 +90,7 @@ export function PromoCarousel({ autoplay = true, segundos, variante }: Props) {
 
       <div className="slide-track contenedor">
         <div className="slide-contenido">
-          {slide.etiqueta && <span className="slide-tag glass-dark">{slide.etiqueta}</span>}
+          {slide.etiqueta && <span className="slide-tag">{slide.etiqueta}</span>}
           <h1>{slide.titulo}</h1>
           <p>{slide.texto}</p>
           <div className="slide-acciones">

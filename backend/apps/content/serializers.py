@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.catalog.serializers import PresentacionProductoSerializer
 
-from .models import BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
+from .models import Anuncio, BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
 
 
 class SiteConfigSerializer(serializers.ModelSerializer):
@@ -99,6 +99,32 @@ class PromoBannerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PromoBanner
+        fields = [
+            "id",
+            "imagen",
+            "imagen_url",
+            "etiqueta",
+            "titulo",
+            "texto",
+            "cta_texto",
+            "cta_href",
+            "orden",
+            "activo",
+        ]
+        extra_kwargs = {"imagen": {"write_only": True, "required": False}}
+
+    def get_imagen_url(self, obj):
+        if not obj.imagen:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(obj.imagen.url) if request else obj.imagen.url
+
+
+class AnuncioSerializer(serializers.ModelSerializer):
+    imagen_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Anuncio
         fields = [
             "id",
             "imagen",

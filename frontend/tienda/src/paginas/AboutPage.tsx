@@ -1,22 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowDown,
-  ArrowRight,
-  Heart,
-  Leaf,
-  ShieldCheck,
-  Sprout,
-  Store,
-  Truck,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowDown, ArrowRight } from "lucide-react";
 const heroNosotros = "/img/hero-nosotros.webp";
 const lineaProcesos = "/img/linea-procesos.webp";
 import { useSiteConfig } from "@/componentes/CapaCliente";
 import { useResaltarAlLlegar } from "@/hooks/useResaltarAlLlegar";
+import { ICONOS } from "@/bloques/iconos";
+import { icono3D, type ComponenteIcono } from "@/bloques/iconos3d";
+
+const CORAZON = ICONOS.corazon;
+const USUARIOS = icono3D("pqe-usuarios.png");
 
 const VALORES = [
   {
@@ -47,16 +41,16 @@ const VALORES = [
  * ahí se muestra esta versión en texto, que se lee a cualquier ancho.
  */
 const RUTA = [
-  { icono: Sprout, texto: "Campo" },
-  { icono: Truck, texto: "Logística" },
-  { icono: Store, texto: "Tu negocio" },
+  { icono: ICONOS.hoja, texto: "Campo" },
+  { icono: ICONOS.camion, texto: "Logística" },
+  { icono: ICONOS.tienda, texto: "Tu negocio" },
 ];
 
-const ICONOS: Record<(typeof VALORES)[number]["icono"], LucideIcon> = {
-  leaf: Leaf,
-  truck: Truck,
-  heart: Heart,
-  users: Users,
+const ICONOS_VALORES: Record<(typeof VALORES)[number]["icono"], ComponenteIcono> = {
+  leaf: ICONOS.hoja,
+  truck: ICONOS.camion,
+  heart: CORAZON,
+  users: USUARIOS,
 };
 
 export function AboutPage() {
@@ -81,7 +75,7 @@ export function AboutPage() {
         {/* Tarjeta de vidrio: separa el mensaje del paisaje sin taparlo. */}
         <div className="hero-nosotros-panel">
           <span className="etiqueta glass-dark">
-            <ShieldCheck size={15} /> Garantía de frescura
+            <ICONOS.escudo size={15} /> Garantía de frescura
           </span>
           <h1>
             Del campo colombiano <em>a tu negocio</em>
@@ -145,7 +139,7 @@ export function AboutPage() {
           </div>
           <div className="valores-grid">
             {VALORES.map((v, i) => {
-              const Icono = ICONOS[v.icono];
+              const Icono = ICONOS_VALORES[v.icono];
               return (
                 <article className="valor-card glass" key={i}>
                   <span className="icono">

@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 
+import { AnunciosCarrusel } from "@/componentes/AnunciosCarrusel";
 import { CategoriasDestacadas } from "@/componentes/CategoriasDestacadas";
 import { Footer } from "@/componentes/Footer";
 import { CotizacionRapida } from "@/componentes/CotizacionRapida";
@@ -28,6 +29,8 @@ import { CatalogHero } from "./CatalogHero";
 import { CategoryNavigation } from "./CategoryNavigation";
 import { CatalogToolbar } from "./CatalogToolbar";
 import { PaginaNoEncontrada } from "./PaginaNoEncontrada";
+import { Marquesina } from "./Marquesina";
+import { Video } from "./Video";
 
 /**
  * El registro: qué componente pinta cada bloque.
@@ -93,6 +96,9 @@ const REGISTRO: Record<string, Bloque> = {
   "cta-banda": CtaBanda as Bloque,
   "barra-categorias": BarraCategorias as Bloque,
   acceso: Acceso as Bloque,
+  video: Video as Bloque,
+  "anuncios-carrusel": AnunciosCarrusel as Bloque,
+  marquesina: Marquesina as Bloque,
 
   // --- la biblioteca que llego con el paso 3 --------------------------------
   // Ninguno obligo a tocar el lienzo ni el registro mas alla de estas filas:

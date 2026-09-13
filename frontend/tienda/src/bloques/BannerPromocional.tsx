@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { claseDeVariante } from "./Seccion";
+import { Reveal } from "@/componentes/animacion";
 
 /**
  * Una promoción con su imagen y su botón.
@@ -68,7 +69,7 @@ export function BannerPromocional({
     ) : null;
 
   return (
-    <div
+    <Reveal
       className={`banner ${clase} ${invertido ? "banner--invertido" : ""}`.trim()}
       // El velo viaja como variable y no como clase porque es un valor
       // continuo: con clases habría que inventar «poco», «medio» y «mucho», y
@@ -86,6 +87,6 @@ export function BannerPromocional({
         {texto && <p>{texto}</p>}
         {boton}
       </div>
-    </div>
+    </Reveal>
   );
 }

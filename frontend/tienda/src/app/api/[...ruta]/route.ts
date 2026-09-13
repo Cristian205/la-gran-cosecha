@@ -21,7 +21,7 @@ const CLAVE = process.env.TENANCY_CLAVE_SERVIDOR ?? "";
 // dominio público de la tienda.
 const PERMITIDAS = [
   /^\/catalog\/(products|categories|units)\/$/,
-  /^\/content\/(site-config|banners|testimonials|trust-badges|beneficios|ofertas)\/$/,
+  /^\/content\/(site-config|banners|anuncios|testimonials|trust-badges|beneficios|ofertas)\/$/,
   /^\/orders\/productos-mas-vendidos\/$/,
 ];
 const ESCRITURAS = [/^\/orders\/$/, /^\/contact\/messages\/$/];

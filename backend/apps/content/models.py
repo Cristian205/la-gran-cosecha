@@ -1,7 +1,7 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from apps.tenancy.almacenamiento import ruta_banner, ruta_identidad
+from apps.tenancy.almacenamiento import ruta_anuncio, ruta_banner, ruta_identidad
 from apps.tenancy.models import ModeloConTenant
 
 
@@ -200,6 +200,40 @@ class PromoBanner(ModeloConTenant):
         return self.titulo
 
 
+class Anuncio(ModeloConTenant):
+    """
+    Una pieza del carrusel de anuncios del cuerpo del Home.
+
+    Es del mismo tamaño que `PromoBanner` a propósito: la diferencia no es el
+    dato, es el SITIO. `PromoBanner` es la banderola de cabecera —una por
+    página, `unico_por_pagina`, lo primero que se ve—; esto vive en el bloque
+    `anuncios-carrusel`, más abajo, en el hueco que antes ocupaba una rejilla
+    de productos. Un negocio puede querer rotar una campaña ahí sin tocar la
+    banderola de cabecera, y al revés, así que van en tablas separadas: una
+    fila que se archiva o se reordena en una no mueve nada de la otra.
+    """
+
+    imagen = models.ImageField(upload_to=ruta_anuncio, blank=True, null=True)
+    etiqueta = models.CharField(max_length=60, blank=True)
+    titulo = models.CharField(max_length=150)
+    texto = models.TextField(blank=True)
+    cta_texto = models.CharField(max_length=60, blank=True)
+    cta_href = models.CharField(max_length=255, blank=True)
+
+    orden = models.PositiveIntegerField(default=0)
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "content_anuncio"
+        ordering = ["orden", "-fecha_creacion"]
+        verbose_name = "Anuncio"
+        verbose_name_plural = "Anuncios"
+
+    def __str__(self):
+        return self.titulo
+
+
 class Testimonio(ModeloConTenant):
     nombre = models.CharField(max_length=150)
     rol = models.CharField(max_length=150, blank=True)
@@ -260,6 +294,7 @@ class BeneficioComercial(ModeloConTenant):
         ("check", "Check"),
         ("shield", "Escudo"),
         ("users", "Usuarios"),
+        ("basket", "Canasta"),
     ]
 
     icono = models.CharField(max_length=20, choices=ICONOS, default="check")

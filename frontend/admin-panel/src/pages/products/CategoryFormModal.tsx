@@ -16,6 +16,8 @@ export function CategoryFormModal({ categoria, onCerrar, onGuardado }: Props) {
   const [abreviatura, setAbreviatura] = useState(categoria?.abreviatura ?? "");
   const [orden, setOrden] = useState(categoria?.orden ?? 0);
   const [estado, setEstado] = useState(categoria?.estado_categoria ?? true);
+  const [subtitulo, setSubtitulo] = useState(categoria?.subtitulo ?? "");
+  const [ctaTexto, setCtaTexto] = useState(categoria?.cta_texto ?? "");
   const [imagen, setImagen] = useState<File | null>(null);
 
   const [guardando, setGuardando] = useState(false);
@@ -35,6 +37,8 @@ export function CategoryFormModal({ categoria, onCerrar, onGuardado }: Props) {
       abreviatura: abreviatura.trim(),
       orden,
       estado_categoria: estado,
+      subtitulo: subtitulo.trim(),
+      cta_texto: ctaTexto.trim(),
     };
 
     setGuardando(true);
@@ -103,6 +107,28 @@ export function CategoryFormModal({ categoria, onCerrar, onGuardado }: Props) {
               onChange={(e) => setOrden(Number(e.target.value) || 0)}
             />
           </div>
+        </div>
+
+        <div className="campo">
+          <label>Frase publicitaria (opcional)</label>
+          <input
+            value={subtitulo}
+            onChange={(e) => setSubtitulo(e.target.value)}
+            placeholder="Ej: Directo del campo. Máxima duración, cero mermas."
+            maxLength={160}
+          />
+        </div>
+        <div className="campo">
+          <label>Texto del botón (opcional)</label>
+          <input
+            value={ctaTexto}
+            onChange={(e) => setCtaTexto(e.target.value)}
+            placeholder="Ej: Abastecer mi Frutería"
+            maxLength={60}
+          />
+          <small className="campo-ayuda">
+            Se usan en la variante "vidriera" de categorías de Inicio. Sin ellos, se ve el tile simple de siempre.
+          </small>
         </div>
 
         <label style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>

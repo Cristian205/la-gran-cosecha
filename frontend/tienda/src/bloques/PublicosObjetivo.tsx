@@ -1,5 +1,6 @@
 import { icono } from "./iconos";
 import { claseDeVariante } from "./Seccion";
+import { Reveal } from "@/componentes/animacion";
 
 /**
  * A quién sirve este negocio.
@@ -24,6 +25,8 @@ export interface Publico {
 interface Props {
   titulo?: string;
   publicos?: Publico[];
+  /** Ancla para enlazar directo a esta franja desde el menú. */
+  id?: string;
   variante?: string;
 }
 
@@ -35,7 +38,7 @@ interface Props {
  */
 const VARIANTES = ["franja", "tarjetas"] as const;
 
-export function PublicosObjetivo({ titulo = "", publicos = [], variante }: Props) {
+export function PublicosObjetivo({ titulo = "", publicos = [], id, variante }: Props) {
   // Sin públicos no hay franja: un titular oscuro sobre nada parece un error
   // de carga, y ocupa pantalla sin decir nada.
   if (publicos.length === 0) return null;
@@ -43,14 +46,19 @@ export function PublicosObjetivo({ titulo = "", publicos = [], variante }: Props
   const clase = claseDeVariante(variante, VARIANTES, "publicos", "franja");
 
   return (
-    <section className={`publicos ${clase}`}>
+    <Reveal as="section" id={id} className={`publicos ${clase}`}>
       <div className="contenedor">
         {titulo && <h2>{titulo}</h2>}
         <div className="publicos-grid">
           {publicos.map((p, i) => {
             const Icono = icono(p.icono);
             return (
-              <article key={`${p.titulo}-${i}`}>
+              <Reveal
+                as="article"
+                retraso={Math.min(i, 5) * 0.08}
+                whileHover={{ y: -4 }}
+                key={`${p.titulo}-${i}`}
+              >
                 <span className="icono" aria-hidden="true">
                   <Icono size={26} strokeWidth={1.6} />
                 </span>
@@ -58,11 +66,11 @@ export function PublicosObjetivo({ titulo = "", publicos = [], variante }: Props
                   <h3>{p.titulo}</h3>
                   {p.texto && <p>{p.texto}</p>}
                 </div>
-              </article>
+              </Reveal>
             );
           })}
         </div>
       </div>
-    </section>
+    </Reveal>
   );
 }
