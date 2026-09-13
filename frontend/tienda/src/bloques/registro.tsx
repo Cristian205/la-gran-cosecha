@@ -9,6 +9,7 @@ import { MasVendidos } from "@/componentes/MasVendidos";
 import { Navbar } from "@/componentes/Navbar";
 import { OfertasSemana } from "@/componentes/OfertasSemana";
 import { PorQueElegirnos } from "@/componentes/PorQueElegirnos";
+import { ProductoDestacado } from "@/componentes/ProductoDestacado";
 import { PromoCarousel } from "@/componentes/PromoCarousel";
 import { RepetirPedido } from "@/componentes/RepetirPedido";
 import { Testimonials } from "@/componentes/Testimonials";
@@ -85,6 +86,7 @@ const REGISTRO: Record<string, Bloque> = {
   "insignias-confianza": TrustBadges as Bloque,
   "repetir-pedido": RepetirPedido as Bloque,
   "productos-destacados": MasVendidos as Bloque,
+  "producto-destacado": ProductoDestacado as Bloque,
   "ofertas-semana": OfertasSemana as Bloque,
   "categorias-destacadas": CategoriasDestacadas as Bloque,
   "por-que-elegirnos": PorQueElegirnos as Bloque,
