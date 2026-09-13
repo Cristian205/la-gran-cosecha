@@ -78,11 +78,19 @@ const VACIO: SiteConfig = {
   factura_proveedor: "",
   factura_telefono: "",
   factura_direccion: "",
+  factura_logo_url: null,
+  factura_aplicar_tinte_logo: true,
+  factura_marca_agua_activa: true,
+  factura_marca_agua_texto: "",
+  factura_marca_agua_opacidad: 5,
+  factura_nota_pie: "",
+  factura_chip_secundario: "",
 };
 
 export function GeneralTab() {
   const [config, setConfig] = useState<SiteConfig>(VACIO);
   const [logo, setLogo] = useState<File | null>(null);
+  const [facturaLogo, setFacturaLogo] = useState<File | null>(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +103,7 @@ export function GeneralTab() {
       .finally(() => setCargando(false));
   }, []);
 
-  function campo(nombre: keyof SiteConfig, valor: string) {
+  function campo<K extends keyof SiteConfig>(nombre: K, valor: SiteConfig[K]) {
     setConfig((prev) => ({ ...prev, [nombre]: valor }));
   }
 
@@ -105,11 +113,13 @@ export function GeneralTab() {
     setOk(false);
     setGuardando(true);
     try {
-      const { logo_url, ...cambios } = config;
+      const { logo_url, factura_logo_url, ...cambios } = config;
       void logo_url;
-      const actualizado = await actualizarSiteConfig(cambios, logo);
+      void factura_logo_url;
+      const actualizado = await actualizarSiteConfig(cambios, logo, facturaLogo);
       setConfig(actualizado);
       setLogo(null);
+      setFacturaLogo(null);
       setOk(true);
     } catch (err) {
       setError(extraerMensajeError(err, "No se pudo guardar la configuración."));
@@ -508,9 +518,6 @@ export function GeneralTab() {
           <h2>Datos de factura (PDF de pedidos)</h2>
         </div>
         <div style={{ padding: "1.2rem" }}>
-          <p style={{ color: "var(--gris)", fontSize: ".82rem", marginTop: 0 }}>
-            El logo se toma del panel "Logo del sitio" de más arriba.
-          </p>
           <div className="fila">
             <div className="campo">
               <label>Nombre de la empresa (encabezado de la factura)</label>
@@ -560,6 +567,99 @@ export function GeneralTab() {
               />
             </div>
           </div>
+          <div className="campo">
+            <label>Insignia junto al proveedor (opcional)</label>
+            <input
+              value={config.factura_chip_secundario}
+              onChange={(e) => campo("factura_chip_secundario", e.target.value)}
+              placeholder="Vacío no muestra ninguna"
+            />
+          </div>
+          <div className="campo">
+            <label>Nota al pie de la factura</label>
+            <input
+              value={config.factura_nota_pie}
+              onChange={(e) => campo("factura_nota_pie", e.target.value)}
+              placeholder={`Vacío usa «¡Gracias por preferir la calidad de ${config.nombre_empresa || "tu empresa"}!»`}
+            />
+          </div>
+
+          <div className="modal-seccion">
+            <span>Logo de la factura</span>
+          </div>
+          <MediaField
+            valor={facturaLogo}
+            urlActual={config.factura_logo_url}
+            onCambiar={setFacturaLogo}
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            ayuda="Opcional: si no subes uno, la factura usa el mismo logo del sitio."
+          />
+          <div className="campo-switch" style={{ marginTop: ".9rem" }}>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={config.factura_aplicar_tinte_logo}
+                onChange={(e) => campo("factura_aplicar_tinte_logo", e.target.checked)}
+              />
+              <span className="switch-riel" />
+            </label>
+            <div>
+              <div className="campo-switch-titulo">Aplicar tinte verde institucional</div>
+              <div className="campo-switch-desc">
+                Superpone un verde translúcido sobre el logo para que combine con la
+                factura. Desactívalo si tu logo ya tiene sus propios colores y no quieres
+                que se vean teñidos.
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-seccion">
+            <span>Marca de agua</span>
+          </div>
+          <div className="campo-switch">
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={config.factura_marca_agua_activa}
+                onChange={(e) => campo("factura_marca_agua_activa", e.target.checked)}
+              />
+              <span className="switch-riel" />
+            </label>
+            <div>
+              <div className="campo-switch-titulo">Mostrar marca de agua</div>
+              <div className="campo-switch-desc">
+                El texto de fondo, en diagonal, sobre toda la factura.
+              </div>
+            </div>
+          </div>
+          {config.factura_marca_agua_activa && (
+            <div className="fila" style={{ marginTop: ".9rem" }}>
+              <div className="campo">
+                <label>Texto de la marca de agua</label>
+                <input
+                  value={config.factura_marca_agua_texto}
+                  onChange={(e) => campo("factura_marca_agua_texto", e.target.value)}
+                  placeholder={config.nombre_empresa || "Nombre de la empresa"}
+                />
+              </div>
+              <div className="campo">
+                <label>Opacidad ({config.factura_marca_agua_opacidad}%)</label>
+                <input
+                  type="range"
+                  min={1}
+                  max={40}
+                  step={1}
+                  value={config.factura_marca_agua_opacidad}
+                  onChange={(e) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      factura_marca_agua_opacidad: Number(e.target.value),
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
       </div>

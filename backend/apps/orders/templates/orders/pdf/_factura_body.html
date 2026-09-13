@@ -1,6 +1,8 @@
 {% load humanize %}
 {% load custom_filter %}
-<div class="watermark">{{ nombre_empresa }}</div>
+{% if marca_agua_activa %}
+<div class="watermark" style="--marca-agua-opacidad: {{ marca_agua_opacidad }};">{{ marca_agua_texto }}</div>
+{% endif %}
 
 <div class="header-container">
     <div class="header-left">
@@ -18,7 +20,7 @@
 
         <div class="header-subtitle-row-">
             <h2><strong>Proveedor: </strong>{{ factura_proveedor }}</h2>
-            <span class="tech-brand">TECHRG</span>
+            {% if chip_secundario %}<span class="tech-brand">{{ chip_secundario }}</span>{% endif %}
         </div>
     </div>
 
@@ -134,7 +136,7 @@
 </div>
 <div class="footer-container">
     <div class="legal-notice">
-        <em>¡Gracias por preferir la calidad de La Gran Cosecha!</em>
+        <em>{{ nota_pie }}</em>
     </div>
     <div class="total-card">
         <span class="total-label">Total Pedido</span>

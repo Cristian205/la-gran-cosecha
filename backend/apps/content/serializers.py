@@ -7,6 +7,7 @@ from .models import Anuncio, BeneficioComercial, OfertaProducto, PromoBanner, St
 
 class SiteConfigSerializer(serializers.ModelSerializer):
     logo_url = serializers.SerializerMethodField()
+    factura_logo_url = serializers.SerializerMethodField()
     variables_tema = serializers.SerializerMethodField()
 
     def get_variables_tema(self, obj):
@@ -84,14 +85,31 @@ class SiteConfigSerializer(serializers.ModelSerializer):
             "factura_proveedor",
             "factura_telefono",
             "factura_direccion",
+            "factura_logo",
+            "factura_logo_url",
+            "factura_aplicar_tinte_logo",
+            "factura_marca_agua_activa",
+            "factura_marca_agua_texto",
+            "factura_marca_agua_opacidad",
+            "factura_nota_pie",
+            "factura_chip_secundario",
         ]
-        extra_kwargs = {"logo": {"write_only": True, "required": False}}
+        extra_kwargs = {
+            "logo": {"write_only": True, "required": False},
+            "factura_logo": {"write_only": True, "required": False},
+        }
 
     def get_logo_url(self, obj):
         if not obj.logo:
             return None
         request = self.context.get("request")
         return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
+
+    def get_factura_logo_url(self, obj):
+        if not obj.factura_logo:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(obj.factura_logo.url) if request else obj.factura_logo.url
 
 
 class PromoBannerSerializer(serializers.ModelSerializer):

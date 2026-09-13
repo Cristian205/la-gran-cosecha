@@ -7,7 +7,7 @@
 <body>
     {% for item in pedidos_data %}
     <div class="{% if not forloop.last %}salto-pagina{% endif %}">
-        {% include "orders/pdf/_factura_body.html" with pedido=item.pedido plan=item.plan categorias_especiales=item.categorias_especiales fecha_entrega=item.fecha_entrega logo_data=logo_data nombre_empresa=nombre_empresa factura_eslogan=factura_eslogan factura_nit=factura_nit factura_proveedor=factura_proveedor factura_telefono=factura_telefono factura_direccion=factura_direccion only %}
+        {% include "orders/pdf/_factura_body.html" with pedido=item.pedido plan=item.plan categorias_especiales=item.categorias_especiales fecha_entrega=item.fecha_entrega logo_data=logo_data nombre_empresa=nombre_empresa factura_eslogan=factura_eslogan factura_nit=factura_nit factura_proveedor=factura_proveedor factura_telefono=factura_telefono factura_direccion=factura_direccion marca_agua_activa=marca_agua_activa marca_agua_texto=marca_agua_texto marca_agua_opacidad=marca_agua_opacidad nota_pie=nota_pie chip_secundario=chip_secundario only %}
     </div>
     {% endfor %}
 </body>

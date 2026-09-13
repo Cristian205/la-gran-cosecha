@@ -134,6 +134,43 @@ class StoreSettings(models.Model):
     factura_telefono = models.CharField(max_length=25, blank=True)
     factura_direccion = models.CharField(max_length=255, blank=True)
 
+    # Factura — logo propio y marca de agua. Todos con un valor por defecto
+    # que reproduce el comportamiento de siempre (tinte verde aplicado,
+    # marca de agua encendida al 5%, sin chip ni nota de pie propios): un
+    # negocio que nunca toque estos campos ve exactamente la misma factura
+    # que antes de que existieran.
+    factura_logo = models.ImageField(
+        upload_to=ruta_identidad,
+        blank=True,
+        null=True,
+        help_text="Si no se sube uno, la factura usa el mismo logo del sitio.",
+    )
+    factura_aplicar_tinte_logo = models.BooleanField(
+        default=True,
+        help_text="Superpone un tinte verde institucional sobre el logo de la factura.",
+    )
+    factura_marca_agua_activa = models.BooleanField(default=True)
+    factura_marca_agua_texto = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Vacío usa el nombre de la empresa.",
+    )
+    factura_marca_agua_opacidad = models.PositiveSmallIntegerField(
+        default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(40)],
+        help_text="Porcentaje de opacidad de la marca de agua (1-40).",
+    )
+    factura_nota_pie = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Vacío usa «¡Gracias por preferir la calidad de <tu empresa>!».",
+    )
+    factura_chip_secundario = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text="Insignia corta junto al proveedor, en el encabezado de la factura. Vacío no muestra ninguna.",
+    )
+
     # ------------------------------------------------------------------
     # Aspecto fino: lo que el catálogo de `TokenTema` deja ajustar.
     #
