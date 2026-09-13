@@ -159,8 +159,12 @@ export function Portada({
               y el dominio no se conoce al compilar. Optimizarla exigiría
               declarar los hosts en la configuración de Next, que es lo que
               haría falta tocar cada vez que entra un cliente nuevo. */}
+          {/* Es casi siempre el elemento LCP de la página: sin `fetchPriority`
+              el navegador la descubre a la misma prioridad que cualquier otra
+              imagen, y esta es la que decide cuándo termina de "cargar" la
+              portada a ojos de quien la visita. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imagen} alt={imagen_alt || titulo} />
+          <img src={imagen} alt={imagen_alt || titulo} fetchPriority="high" decoding="async" />
 
           {(tarjeta_titulo || tarjeta_texto) && (
             <div className="portada-tarjeta glass">

@@ -1652,7 +1652,8 @@ h1, h2, h3 {
 }
 .custom-prod-campos input:focus,
 .custom-prod-campos select:focus {
-  outline: none;
+  outline: 2px solid var(--marca-400);
+  outline-offset: 1px;
   border-color: var(--marca-400);
 }
 
