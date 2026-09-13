@@ -4,7 +4,8 @@ import { Lienzo } from "@/bloques/Lienzo";
 import { composicionDe, datosDeLosBloques } from "@/lib/pagina";
 import { configuracionDeLaTienda } from "@/lib/negocio";
 import { CatalogoProvider } from "@/contextos/CatalogoContexto";
-import type { Paginated, Producto } from "@/lib/tipos";
+import { desempaquetar } from "@/lib/datos";
+import type { Categoria, Paginated, Producto } from "@/lib/tipos";
 
 /**
  * El catálogo.
@@ -50,9 +51,18 @@ export default async function Tienda({
     ? (datos[bloqueGrid.id] as Paginated<Producto> | undefined)
     : undefined;
 
+  // Mismo criterio que arriba, para el conteo de categorías del hero y para
+  // que `categorias-navegacion` no dibuje sus píldoras vacías en el HTML que
+  // recibe el rastreador.
+  const bloqueCategorias = bloques.find((b) => b.tipo === "categorias-navegacion");
+  const categoriasBrutas = bloqueCategorias
+    ? (datos[bloqueCategorias.id] as Paginated<Categoria> | Categoria[] | undefined)
+    : undefined;
+  const categoriasIniciales = categoriasBrutas ? desempaquetar(categoriasBrutas) : undefined;
+
   if (parametros.editor === "1") {
     return (
-      <CatalogoProvider datosIniciales={datosIniciales}>
+      <CatalogoProvider datosIniciales={datosIniciales} categoriasIniciales={categoriasIniciales}>
         <CapaEditor
           inicial={bloques}
           datos={datos}
@@ -63,7 +73,7 @@ export default async function Tienda({
   }
 
   return (
-    <CatalogoProvider datosIniciales={datosIniciales}>
+    <CatalogoProvider datosIniciales={datosIniciales} categoriasIniciales={categoriasIniciales}>
       <Lienzo bloques={bloques} datos={datos} />
     </CatalogoProvider>
   );

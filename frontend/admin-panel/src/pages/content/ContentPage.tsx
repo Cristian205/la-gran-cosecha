@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnunciosTab } from "./AnunciosTab";
 import { ArchivosTab } from "./ArchivosTab";
 import { BannersTab } from "./BannersTab";
 import { BeneficiosTab } from "./BeneficiosTab";
@@ -10,6 +11,7 @@ import { TrustBadgesTab } from "./TrustBadgesTab";
 const TABS = [
   { key: "general", label: "General" },
   { key: "banners", label: "Banners" },
+  { key: "anuncios", label: "Anuncios" },
   { key: "ofertas", label: "Ofertas" },
   { key: "beneficios", label: "Beneficios" },
   { key: "testimonios", label: "Testimonios" },
@@ -42,6 +44,7 @@ export function ContentPage() {
 
         {tab === "general" && <GeneralTab />}
         {tab === "banners" && <BannersTab />}
+        {tab === "anuncios" && <AnunciosTab />}
         {tab === "ofertas" && <OfertasTab />}
         {tab === "beneficios" && <BeneficiosTab />}
         {tab === "testimonios" && <TestimoniosTab />}

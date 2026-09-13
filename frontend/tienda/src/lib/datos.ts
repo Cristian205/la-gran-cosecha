@@ -11,6 +11,7 @@
  * dentro) y este busca interactividad (filtrar, buscar, paginar sin recargar).
  */
 import type {
+  Anuncio,
   BeneficioComercial,
   Categoria,
   ItemCarrito,
@@ -57,7 +58,11 @@ async function enviar<T>(ruta: string, cuerpo: unknown): Promise<T> {
   return datos as T;
 }
 
-function desempaquetar<T>(datos: Paginated<T> | T[]): T[] {
+// Exportada: `lib/pagina.ts` la reusa para desempaquetar en el servidor lo
+// mismo que este archivo desempaqueta en el navegador — un dato paginado o no
+// tiene la misma forma sea quien sea que lo pida, y repetir la función en dos
+// sitios daría dos criterios de qué es "la lista" el día que cambie.
+export function desempaquetar<T>(datos: Paginated<T> | T[]): T[] {
   return Array.isArray(datos) ? datos : datos.results;
 }
 
@@ -170,6 +175,10 @@ export async function obtenerSiteConfig(): Promise<SiteConfig> {
 
 export async function obtenerBanners(): Promise<PromoBanner[]> {
   return desempaquetar(await pedir<Paginated<PromoBanner> | PromoBanner[]>("/content/banners/"));
+}
+
+export async function obtenerAnuncios(): Promise<Anuncio[]> {
+  return desempaquetar(await pedir<Paginated<Anuncio> | Anuncio[]>("/content/anuncios/"));
 }
 
 export async function obtenerTestimonios(): Promise<Testimonio[]> {

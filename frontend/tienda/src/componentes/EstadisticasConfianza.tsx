@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { obtenerTrustBadges } from "@/lib/datos";
 import type { TrustBadge } from "@/lib/tipos";
 import { Seccion, claseDeVariante } from "@/bloques/Seccion";
+import { Reveal } from "@/componentes/animacion";
 
 /**
  * `franja` pone las cifras seguidas y separadas por una linea; `tarjetas` le da
@@ -40,11 +41,11 @@ export function EstadisticasConfianza({ kicker, titulo, subtitulo, limite, varia
   return (
     <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo}>
       <div className={`estadisticas-grid ${claseDeVariante(variante, VARIANTES, "estadisticas", "franja")}`}>
-        {visibles.map((s) => (
-          <div className="estadistica-tile" key={s.id}>
+        {visibles.map((s, i) => (
+          <Reveal className="estadistica-tile" retraso={Math.min(i, 5) * 0.08} key={s.id}>
             <span className="estadistica-valor">{s.valor}</span>
             <span className="estadistica-etiqueta">{s.etiqueta}</span>
-          </div>
+          </Reveal>
         ))}
       </div>
     </Seccion>

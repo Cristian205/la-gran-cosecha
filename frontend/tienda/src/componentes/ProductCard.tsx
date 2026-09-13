@@ -1,17 +1,18 @@
 "use client";
 
-import { Sprout } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { useMemo, useState, type CSSProperties } from "react";
 import { useAgregarAlCarrito } from "@/hooks/useAgregarAlCarrito";
 import { useCart } from "@/estado/carrito";
 import type { Producto } from "@/lib/tipos";
-import { ajustarCantidad, colorCategoria, formatoPrecio, pasoCantidad } from "@/lib/utiles";
+import { ajustarCantidad, colorCategoria, formatoPrecio, iconoCategoria, pasoCantidad } from "@/lib/utiles";
 import { TEXTO_PRECIOS_ESTIMADOS } from "@/componentes/AvisoPrecios";
-import { useSiteConfig } from "@/componentes/CapaCliente";
+import { useEnvoltorio, useSiteConfig } from "@/componentes/CapaCliente";
 import { agruparPresentaciones, PresentationSelector } from "@/componentes/PresentationSelector";
 import { QuantityControl } from "@/componentes/QuantityControl";
 import { AddToCartButton } from "@/componentes/AddToCartButton";
 import { claseDeVariante } from "@/bloques/Seccion";
+import { Reveal } from "@/componentes/animacion";
 
 const precio = (p: { precio_unitario: string }) => parseFloat(p.precio_unitario);
 
@@ -27,9 +28,15 @@ const VARIANTES = ["estandar", "compacta"] as const;
 interface Props {
   producto: Producto;
   variante?: string;
+  /** Una cinta comercial ("Más pedido", "Favorito"). Opt-in: la pasa quien
+   *  arma la rejilla (hoy solo `MasVendidos` en el Home), no el catálogo. */
+  etiqueta?: string;
+  /** Su posición dentro de la rejilla, solo para escalonar la entrada — cada
+   *  tarjeta aparece un poco después que la anterior en vez de todas a la vez. */
+  indice?: number;
 }
 
-export function ProductCard({ producto, variante }: Props) {
+export function ProductCard({ producto, variante, etiqueta, indice = 0 }: Props) {
   const { agregar, agregado } = useAgregarAlCarrito();
   const cambiarCantidad = useCart((s) => s.cambiarCantidad);
   const quitar = useCart((s) => s.quitar);
@@ -129,16 +136,18 @@ export function ProductCard({ producto, variante }: Props) {
    * el comportamiento de siempre, nunca hacia la tienda apagada.
    */
   const { config } = useSiteConfig();
+  const { abrirCarrito } = useEnvoltorio();
   const recibePedidos = config.acepta_pedidos_online !== false;
   const noSePuedePedir = agotado || !recibePedidos;
 
   const clase = claseDeVariante(variante, VARIANTES, "producto-card", "estandar");
   const esCompacta = clase.endsWith("compacta");
 
+  const IconoRespaldo = iconoCategoria(producto.categoria_nombre);
   const imagen = producto.imagen_url ? (
     <img src={producto.imagen_url} alt={producto.nombre_producto} loading="lazy" decoding="async" />
   ) : (
-    <Sprout size={esCompacta ? 22 : 38} strokeWidth={1.5} />
+    <IconoRespaldo size={esCompacta ? 22 : 38} />
   );
 
   const controlDeCompra = sinPresentaciones ? null : !recibePedidos ? null : enCarrito ? (
@@ -162,11 +171,17 @@ export function ProductCard({ producto, variante }: Props) {
     />
   );
 
+  const retraso = Math.min(indice, 7) * 0.05;
+
   if (esCompacta) {
     return (
-      <article
+      <Reveal
+        as="article"
         className={`producto-card ${clase} ${agregado ? "pc-agregado" : ""} ${agotado ? "pc-agotado" : ""}`}
         id={`producto-${producto.id}`}
+        retraso={retraso}
+        whileHover={{ y: -6 }}
+        whileTap={{ scale: 0.98 }}
       >
         <div className="pc-media" style={{ "--cat-grad": colorCategoria(producto.categoria) } as CSSProperties}>
           {imagen}
@@ -197,20 +212,25 @@ export function ProductCard({ producto, variante }: Props) {
         )}
 
         {controlDeCompra}
-      </article>
+      </Reveal>
     );
   }
 
   return (
-    <article
+    <Reveal
+      as="article"
       className={`producto-card glass ${agregado ? "pc-agregado" : ""} ${agotado ? "pc-agotado" : ""}`}
       id={`producto-${producto.id}`}
+      retraso={retraso}
+      whileHover={{ y: -6 }}
+      whileTap={{ scale: 0.98 }}
     >
       <div
         className="pc-media"
         style={{ "--cat-grad": colorCategoria(producto.categoria) } as CSSProperties}
       >
         {imagen}
+        {!agotado && etiqueta && <span className="pc-cinta-destacado">{etiqueta}</span>}
         {agotado && <span className="pc-cinta-agotado">Agotado</span>}
       </div>
 
@@ -252,9 +272,18 @@ export function ProductCard({ producto, variante }: Props) {
             />
 
             {controlDeCompra}
+
+            {/* Solo mientras dura el destello de "agregado": un empujoncito
+                hacia el pedido, no un enlace permanente que le reste espacio
+                a la tarjeta el resto del tiempo. */}
+            {agregado && (
+              <button type="button" className="pc-ver-pedido" onClick={abrirCarrito}>
+                <Check size={13} /> Agregado · Ver pedido <ArrowRight size={13} />
+              </button>
+            )}
           </>
         )}
       </div>
-    </article>
+    </Reveal>
   );
 }

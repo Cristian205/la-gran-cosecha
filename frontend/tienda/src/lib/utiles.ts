@@ -1,17 +1,5 @@
-import {
-  Apple,
-  Beef,
-  Candy,
-  Carrot,
-  Egg,
-  Leaf,
-  Milk,
-  Package,
-  Salad,
-  Sprout,
-  Wheat,
-  type LucideIcon,
-} from "lucide-react";
+import { ICONOS } from "@/bloques/iconos";
+import { icono3D, type ComponenteIcono } from "@/bloques/iconos3d";
 
 const formatterCOP = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -63,29 +51,101 @@ export function colorCategoria(id: number): string {
   return PALETA_CATEGORIA[id % PALETA_CATEGORIA.length];
 }
 
+// Tripleta "r, g, b" del tono oscuro de cada entrada de PALETA_CATEGORIA de
+// arriba (mismo orden, mismo id % N), para usarla en un rgba(var(--x), alpha)
+// — el mismo patron que ya usa `--sombra-tinte`. Un degradado no sirve como
+// tinte de scrim porque no se le puede graduar la opacidad por parada.
+const PALETA_CATEGORIA_TINTE = [
+  "4, 120, 87",
+  "29, 78, 216",
+  "180, 83, 9",
+  "190, 24, 93",
+  "109, 40, 217",
+  "14, 116, 144",
+  "185, 28, 28",
+  "15, 118, 110",
+  "77, 124, 15",
+  "190, 18, 60",
+  "3, 105, 161",
+  "147, 51, 234",
+];
+
+export function colorCategoriaTinte(id: number): string {
+  return PALETA_CATEGORIA_TINTE[id % PALETA_CATEGORIA_TINTE.length];
+}
+
 // Icono por palabra clave en el nombre de la categoría, para que cada tile en
 // Inicio se distinga a simple vista en vez de repetir el mismo ícono genérico.
 // El orden importa: gana la primera regla que coincida. Tubérculos va antes
 // que verduras para que no compartan icono cuando se muestran juntas.
-const REGLAS_ICONO_CATEGORIA: [RegExp, LucideIcon][] = [
-  [/frut/, Apple],
-  [/tuberculo|papa|yuca|raiz/, Carrot],
-  [/verdur|hortaliz|vegetal|ensalada/, Salad],
-  [/grano|cereal|legumbre|arroz/, Wheat],
-  [/lacte|leche|queso|salsamentaria/, Milk],
-  [/carne|res|pollo|cerdo|embutido/, Beef],
-  [/huevo/, Egg],
-  [/hierba|aromatic|condiment|especia/, Leaf],
-  [/dulc|confite|golosina/, Candy],
-  [/desechable|empaque|aseo/, Package],
+const APPLE = icono3D("categoria-fruta.png");
+const CARROT = icono3D("categoria-tuberculo.png");
+const SALAD = icono3D("categoria-verdura.png");
+const WHEAT = icono3D("categoria-grano.png");
+const MILK = icono3D("categoria-lacteo.png");
+const BEEF = icono3D("categoria-carne.png");
+const EGG = icono3D("categoria-huevo.png");
+const CANDY = icono3D("categoria-dulce.png");
+const SEEDLING = icono3D("semilla.png");
+
+const REGLAS_ICONO_CATEGORIA: [RegExp, ComponenteIcono][] = [
+  [/frut/, APPLE],
+  [/tuberculo|papa|yuca|raiz/, CARROT],
+  [/verdur|hortaliz|vegetal|ensalada/, SALAD],
+  [/grano|cereal|legumbre|arroz/, WHEAT],
+  [/lacte|leche|queso|salsamentaria/, MILK],
+  [/carne|res|pollo|cerdo|embutido/, BEEF],
+  [/huevo/, EGG],
+  [/hierba|aromatic|condiment|especia/, ICONOS.hoja],
+  [/dulc|confite|golosina/, CANDY],
+  [/desechable|empaque|aseo/, ICONOS.caja],
 ];
 
-export function iconoCategoria(nombre: string): LucideIcon {
+export function iconoCategoria(nombre: string): ComponenteIcono {
   const texto = normalizarTexto(nombre);
   for (const [patron, Icono] of REGLAS_ICONO_CATEGORIA) {
     if (patron.test(texto)) return Icono;
   }
-  return Sprout;
+  return SEEDLING;
+}
+
+// Color por palabra clave (mismas familias que REGLAS_ICONO_CATEGORIA de
+// arriba, para que el icono y el fondo de la vidriera de Inicio se sientan
+// del mismo producto) en vez del color rotativo por id: "Frutas" se ve
+// naranja en cualquier negocio que la llame asi, no del color que le toque
+// por su posicion en la lista. Una categoria que no calza ninguna regla cae
+// al color rotativo de siempre en vez de un gris generico.
+const REGLAS_COLOR_CATEGORIA: [RegExp, string, string][] = [
+  // [patron, fondo (degradado), tinte "r, g, b" del tono oscuro]
+  [/frut/, "linear-gradient(150deg, #e8632f, #c9481f)", "201, 72, 31"],
+  [/tuberculo|papa|yuca|raiz/, "linear-gradient(150deg, #cf8256, #b56a3e)", "181, 106, 62"],
+  [/verdur|hortaliz|vegetal|ensalada/, "linear-gradient(150deg, #4c7a52, #3c6242)", "60, 98, 66"],
+  [/grano|cereal|legumbre|arroz/, "linear-gradient(150deg, #8a6a48, #6f5535)", "111, 85, 53"],
+  [
+    /lacte|leche|queso|salsamentaria|carne|res|pollo|cerdo|embutido/,
+    "linear-gradient(150deg, #7c2c34, #5e2129)",
+    "94, 33, 41",
+  ],
+  [/huevo/, "linear-gradient(150deg, #d9a441, #b9822a)", "185, 130, 42"],
+  [/hierba|aromatic|condiment|especia/, "linear-gradient(150deg, #6f9a4f, #577b3c)", "87, 123, 60"],
+  [/dulc|confite|golosina/, "linear-gradient(150deg, #2f7a6e, #235f56)", "35, 95, 86"],
+  [/desechable|empaque|aseo/, "linear-gradient(150deg, #6fa3ac, #588a94)", "88, 138, 148"],
+];
+
+export function colorCategoriaTematico(nombre: string, id: number): string {
+  const texto = normalizarTexto(nombre);
+  for (const [patron, fondo] of REGLAS_COLOR_CATEGORIA) {
+    if (patron.test(texto)) return fondo;
+  }
+  return colorCategoria(id);
+}
+
+export function colorCategoriaTematicoTinte(nombre: string, id: number): string {
+  const texto = normalizarTexto(nombre);
+  for (const [patron, , tinte] of REGLAS_COLOR_CATEGORIA) {
+    if (patron.test(texto)) return tinte;
+  }
+  return colorCategoriaTinte(id);
 }
 
 /** Incremento mínimo permitido para la cantidad de un producto. */

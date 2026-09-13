@@ -8,6 +8,10 @@ import { Seccion, claseDeVariante } from "@/bloques/Seccion";
 
 const VARIANTES = ["rejilla", "carrusel"] as const;
 
+/** Cintas comerciales para los primeros productos de la rejilla. Solo tres:
+ *  etiquetar la sección entera vaciaría el gesto de "esto destaca". */
+const ETIQUETAS = ["Más pedido", "Favorito", "Alta rotación"];
+
 interface Props {
   /** Lo que el lienzo resolvio en el servidor. Se usa como estado inicial para
    *  que el inicio no parpadee ni vuelva a pedirlo al hidratar. */
@@ -47,11 +51,21 @@ export function MasVendidos({
   const visibles = limite ? productos.slice(0, limite) : productos;
   if (visibles.length === 0) return null;
 
+  const clase = claseDeVariante(variante, VARIANTES, "grid", "rejilla");
+  // Las cintas solo tienen sentido en la rejilla fija: en el carrusel de
+  // "compra rápida" la tarjeta es la compacta, que no las dibuja.
+  const conEtiquetas = clase.endsWith("rejilla");
+
   return (
     <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado}>
-      <div className={`grid ${claseDeVariante(variante, VARIANTES, "grid", "rejilla")}`}>
-        {visibles.map((p) => (
-          <ProductCard key={p.id} producto={p} />
+      <div className={`grid ${clase}`}>
+        {visibles.map((p, i) => (
+          <ProductCard
+            key={p.id}
+            producto={p}
+            etiqueta={conEtiquetas ? ETIQUETAS[i] : undefined}
+            indice={i}
+          />
         ))}
       </div>
     </Seccion>

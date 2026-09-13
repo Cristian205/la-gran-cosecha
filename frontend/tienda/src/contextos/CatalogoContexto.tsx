@@ -34,6 +34,11 @@ interface Props {
    *  `lib/pagina.ts`). Sin esto el catálogo pintaría vacío hasta que el
    *  navegador termine su primera petición. */
   datosIniciales?: Paginated<Producto>;
+  /** Las categorías, resueltas en el mismo momento. Sin esto el total de
+   *  productos llegaba del servidor y las categorías las pedía solo el
+   *  navegador: la primera pintura decía "190 productos · 0 categorías"
+   *  hasta que ese segundo fetch terminara. */
+  categoriasIniciales?: Categoria[];
 }
 
 /**
@@ -54,12 +59,12 @@ interface Props {
  * es lo que deja a `grid-productos` funcionar exactamente igual que hoy
  * cuando se coloca suelto en el Inicio, sin este contexto puesto.
  */
-export function CatalogoProvider({ children, datosIniciales }: Props) {
+export function CatalogoProvider({ children, datosIniciales, categoriasIniciales }: Props) {
   const { busqueda, buscar } = useEnvoltorio();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>(categoriasIniciales ?? []);
   const [orden, setOrden] = useState<OrdenCatalogo>("recomendados");
 
   // La categoría vive en la URL y no en estado local: así un enlace a

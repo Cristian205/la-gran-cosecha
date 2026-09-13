@@ -12,8 +12,9 @@ from apps.common.permissions import EsStaff
 from apps.tenancy.viewsets import ExigeNegocioMixin, TenantScopedMixin
 
 from .aspecto_panel import variables_del_panel
-from .models import BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
+from .models import Anuncio, BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
 from .serializers import (
+    AnuncioSerializer,
     BeneficioComercialSerializer,
     OfertaProductoSerializer,
     PromoBannerSerializer,
@@ -107,6 +108,12 @@ class _ContenidoPublicoOStaffMixin(TenantScopedMixin):
 class PromoBannerViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
     serializer_class = PromoBannerSerializer
     modelo = PromoBanner
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+
+class AnuncioViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
+    serializer_class = AnuncioSerializer
+    modelo = Anuncio
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
 

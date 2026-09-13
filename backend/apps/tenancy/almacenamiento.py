@@ -95,6 +95,11 @@ def ruta_banner(instancia, nombre):
     return ruta_en(instancia, nombre, "banners")
 
 
+def ruta_anuncio(instancia, nombre):
+    """El carrusel de anuncios del cuerpo de la página, no el de cabecera."""
+    return ruta_en(instancia, nombre, "anuncios")
+
+
 def ruta_biblioteca(instancia, nombre):
     """
     Biblioteca de medios, con el año y el mes que ya tenía.

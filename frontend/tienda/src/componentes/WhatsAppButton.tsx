@@ -45,10 +45,10 @@ export function WhatsAppButton() {
       className={`whatsapp-flotante ${enFlujoDeCompra ? "oculto-en-movil" : ""} ${
         pieALaVista ? "oculto" : ""
       }`}
-      href={whatsappHref(config.whatsapp_numero, "Hola, quiero más información sobre sus productos.")}
+      href={whatsappHref(config.whatsapp_numero, "Hola, quiero ayuda para abastecer mi negocio.")}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Escríbenos por WhatsApp"
+      aria-label="Hablar con un asesor por WhatsApp"
       aria-hidden={pieALaVista}
       tabIndex={pieALaVista ? -1 : undefined}
     >

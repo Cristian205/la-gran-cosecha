@@ -52,6 +52,12 @@ class Categoria(ModeloConTenant):
     abreviatura = models.CharField(max_length=50)
     orden = models.PositiveIntegerField(default=0)
     imagen = models.ImageField(upload_to=ruta_categoria, blank=True, null=True)
+    # Copy publicitario opcional para la vidriera de Inicio (ver
+    # CategoriasDestacadas variante "vidriera" en la tienda). Vacío por
+    # defecto: un negocio que no los llena sigue viendo el tile simple de
+    # siempre, no una tarjeta con huecos en blanco.
+    subtitulo = models.CharField(max_length=160, blank=True, default="")
+    cta_texto = models.CharField(max_length=60, blank=True, default="")
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)

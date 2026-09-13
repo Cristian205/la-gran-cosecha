@@ -39,6 +39,23 @@ export const RESUELVE_EN_SERVIDOR: Record<string, string> = {
   // `grid-productos` fuera de una página de catálogo (la vitrina fija de
   // siempre) sencillamente no usa este dato.
   "grid-productos": "/catalog/products/?page_size=24",
+  // Sin esto, `CatalogoProvider` sembraba productos y total desde el servidor
+  // pero categorías las pedía solo el navegador: la primera pintura —y lo que
+  // veía el rastreador— decía "190 productos · 0 categorías" hasta que ese
+  // fetch del cliente terminaba. Mismo criterio que el de arriba: la cuenta
+  // que se le muestra a alguien no puede depender de si su conexión fue lenta.
+  "categorias-navegacion": "/catalog/categories/",
+  // Mismo problema, más visible: sin esto, "Compra por categoría" se pintaba
+  // vacía en el HTML del servidor y solo aparecía al hidratar, así que un
+  // enlace del menú a `#categorias` (su propio ancla) apuntaba a un elemento
+  // que todavía no existía cuando el navegador intentaba saltar a él — el
+  // clic no hacía nada.
+  "categorias-destacadas": "/catalog/categories/",
+  // Mismo problema que arriba: sin esto, "Por qué elegirnos" se pintaba
+  // vacía en el HTML del servidor (sus beneficios solo llegaban al
+  // hidratar), así que un rastreador —o alguien con conexión lenta— veía el
+  // salto del resto de la página directamente a la siguiente sección.
+  "por-que-elegirnos": "/content/beneficios/",
 };
 
 /**

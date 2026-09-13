@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Reveal } from "@/componentes/animacion";
 
 /**
  * El encabezado que comparten todas las secciones de la tienda.
@@ -22,16 +23,19 @@ interface Props {
    *  Es la diferencia entre una sección de catálogo y una de escaparate, y no
    *  es una variante del bloque: el mismo bloque puede querer las dos. */
   centrado?: boolean;
+  /** Ancla para enlazar directo a esta sección (`/tienda#catalogo`, un CTA
+   *  del menú). Opcional: la mayoría de secciones no necesitan una. */
+  id?: string;
   children: ReactNode;
 }
 
-export function Seccion({ kicker, titulo, subtitulo, className = "", centrado = false, children }: Props) {
+export function Seccion({ kicker, titulo, subtitulo, className = "", centrado = false, id, children }: Props) {
   // Sin título ni antetítulo no se dibuja el encabezado: dejar el hueco de un
   // `h2` vacío desplaza la sección y parece que algo falló al cargar.
   const conEncabezado = Boolean(kicker || titulo || subtitulo);
 
   return (
-    <section className={`seccion ${className}`.trim()}>
+    <Reveal as="section" id={id} className={`seccion ${className}`.trim()}>
       {conEncabezado && (
         <div className={`seccion-titulo ${centrado ? "seccion-titulo--centrado" : ""}`}>
           <div>
@@ -42,7 +46,7 @@ export function Seccion({ kicker, titulo, subtitulo, className = "", centrado = 
         </div>
       )}
       {children}
-    </section>
+    </Reveal>
   );
 }
 

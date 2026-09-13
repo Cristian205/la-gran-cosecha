@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { claseDeVariante } from "./Seccion";
+import { Reveal } from "@/componentes/animacion";
 
 /**
  * Las dos formas de rematar una pagina.
@@ -39,7 +40,7 @@ export function CtaBanda({
   const externo = /^https?:\/\//.test(boton_href);
 
   return (
-    <div className={`cta-banda ${claseDeVariante(variante, VARIANTES, "cta-banda", "banda")}`}>
+    <Reveal className={`cta-banda ${claseDeVariante(variante, VARIANTES, "cta-banda", "banda")}`}>
       <div>
         {titulo && <h3>{titulo}</h3>}
         {texto && <p>{texto}</p>}
@@ -55,6 +56,6 @@ export function CtaBanda({
           {boton_texto}
         </Link>
       )}
-    </div>
+    </Reveal>
   );
 }

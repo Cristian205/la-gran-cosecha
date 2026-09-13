@@ -91,8 +91,6 @@ function Pill({
   enContexto: boolean;
   children: React.ReactNode;
 }) {
-  // Mismas clases que ya usaba `FiltrosTienda` para las categorías: son
-  // píldoras genéricas, no algo que este bloque necesite reinventar.
   const clase = `chip ${activa ? "activo" : ""}`;
   const punto = !activa && color ? <span className="chip-punto" style={{ background: color }} /> : null;
 

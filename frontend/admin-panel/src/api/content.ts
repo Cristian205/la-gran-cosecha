@@ -1,4 +1,5 @@
 import type {
+  Anuncio,
   BeneficioComercial,
   OfertaProducto,
   Paginated,
@@ -72,6 +73,45 @@ export async function actualizarBanner(
 
 export async function eliminarBanner(id: number): Promise<void> {
   await api.delete(`/content/banners/${id}/`);
+}
+
+// ---------- Anuncios (carrusel del cuerpo del Home) ----------
+export async function obtenerAnuncios(): Promise<Anuncio[]> {
+  const { data } = await api.get<Paginated<Anuncio>>("/content/anuncios/", {
+    params: { page_size: 100 },
+  });
+  return unwrap(data);
+}
+
+export async function crearAnuncio(
+  payload: Omit<Anuncio, "id" | "imagen_url">,
+  imagen?: File | null
+): Promise<Anuncio> {
+  const form = new FormData();
+  Object.entries(payload).forEach(([key, value]) => form.append(key, String(value)));
+  if (imagen) form.append("imagen", imagen);
+  const { data } = await api.post<Anuncio>("/content/anuncios/", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function actualizarAnuncio(
+  id: number,
+  payload: Omit<Anuncio, "id" | "imagen_url">,
+  imagen?: File | null
+): Promise<Anuncio> {
+  const form = new FormData();
+  Object.entries(payload).forEach(([key, value]) => form.append(key, String(value)));
+  if (imagen) form.append("imagen", imagen);
+  const { data } = await api.patch<Anuncio>(`/content/anuncios/${id}/`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function eliminarAnuncio(id: number): Promise<void> {
+  await api.delete(`/content/anuncios/${id}/`);
 }
 
 // ---------- Testimonios ----------

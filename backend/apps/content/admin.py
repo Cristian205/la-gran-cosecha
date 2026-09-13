@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
+from .models import Anuncio, BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
 
 
 @admin.register(StoreSettings)
@@ -16,6 +16,12 @@ class StoreSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(PromoBanner)
 class PromoBannerAdmin(admin.ModelAdmin):
+    list_display = ("titulo", "orden", "activo")
+    list_editable = ("orden", "activo")
+
+
+@admin.register(Anuncio)
+class AnuncioAdmin(admin.ModelAdmin):
     list_display = ("titulo", "orden", "activo")
     list_editable = ("orden", "activo")
 

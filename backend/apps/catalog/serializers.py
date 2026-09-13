@@ -21,6 +21,8 @@ class CategoriaSerializer(serializers.ModelSerializer):
             "estado_categoria",
             "imagen",
             "imagen_url",
+            "subtitulo",
+            "cta_texto",
         ]
         extra_kwargs = {"imagen": {"write_only": True, "required": False}}
 

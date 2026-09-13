@@ -55,6 +55,9 @@ export interface Categoria {
   orden: number;
   estado_categoria: boolean;
   imagen_url: string | null;
+  /** Copy publicitario opcional para la vidriera de categorías de Inicio. */
+  subtitulo: string;
+  cta_texto: string;
 }
 
 export interface UnidadMedida {
@@ -257,6 +260,20 @@ export interface SiteConfig {
 }
 
 export interface PromoBanner {
+  id: number;
+  imagen_url: string | null;
+  etiqueta: string;
+  titulo: string;
+  texto: string;
+  cta_texto: string;
+  cta_href: string;
+  orden: number;
+  activo: boolean;
+}
+
+/** Una pieza del carrusel de anuncios del cuerpo del Home. Mismo dato que
+ *  `PromoBanner`, tabla aparte: ver el docstring de `content.Anuncio`. */
+export interface Anuncio {
   id: number;
   imagen_url: string | null;
   etiqueta: string;

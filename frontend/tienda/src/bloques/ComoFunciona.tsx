@@ -1,15 +1,9 @@
 "use client";
 
-import {
-  ClipboardList,
-  Package,
-  Search,
-  ShieldCheck,
-  Truck,
-  type LucideIcon,
-} from "lucide-react";
-import { icono } from "./iconos";
+import { icono, ICONOS } from "./iconos";
+import type { ComponenteIcono } from "./iconos3d";
 import { claseDeVariante } from "./Seccion";
+import { Reveal } from "@/componentes/animacion";
 
 /**
  * Los pasos para comprar.
@@ -29,12 +23,12 @@ import { claseDeVariante } from "./Seccion";
  * la base de cada negocio, y renombrarlos dejaria sin icono a quien no vuelva a
  * editar su pagina. Lo que no este aqui se busca en el mapa comun.
  */
-const HEREDADOS: Record<string, LucideIcon> = {
-  search: Search,
-  clipboard: ClipboardList,
-  truck: Truck,
-  package: Package,
-  shield: ShieldCheck,
+const HEREDADOS: Record<string, ComponenteIcono> = {
+  search: ICONOS.buscar,
+  clipboard: ICONOS.lista,
+  truck: ICONOS.camion,
+  package: ICONOS.caja,
+  shield: ICONOS.escudo,
 };
 
 export interface Paso {
@@ -77,8 +71,11 @@ export function ComoFunciona({
   const enLinea = clase.endsWith("linea");
 
   return (
-    <section className="seccion">
-      <div className="seccion-titulo" style={enLinea ? { justifyContent: "center" } : undefined}>
+    <Reveal as="section" className="seccion">
+      <div
+        className={`seccion-titulo ${enLinea ? "seccion-titulo--serif" : ""}`}
+        style={enLinea ? { justifyContent: "center" } : undefined}
+      >
         <div>
           {kicker && !enLinea && <span className="seccion-kicker">{kicker}</span>}
           <h2>{titulo}</h2>
@@ -88,10 +85,11 @@ export function ComoFunciona({
 
       <div className={enLinea ? `pasos ${clase}` : "valores-grid"}>
         {pasos.map((paso, i) => {
-          const Icono = HEREDADOS[paso.icono ?? ""] ?? icono(paso.icono, Search);
+          const Icono = HEREDADOS[paso.icono ?? ""] ?? icono(paso.icono, ICONOS.buscar);
+          const retraso = Math.min(i, 5) * 0.08;
           if (!enLinea) {
             return (
-              <article className="valor-card glass" key={`${paso.titulo}-${i}`}>
+              <Reveal as="article" className="valor-card glass" retraso={retraso} key={`${paso.titulo}-${i}`}>
                 <span className="icono">
                   <Icono size={24} />
                 </span>
@@ -99,25 +97,23 @@ export function ComoFunciona({
                   {i + 1}. {paso.titulo}
                 </h3>
                 <p>{paso.texto}</p>
-              </article>
+              </Reveal>
             );
           }
           return (
-            <article className="paso" key={`${paso.titulo}-${i}`}>
-              <span className="paso-numero" aria-hidden="true">
-                {i + 1}
+            <Reveal as="article" className="paso" retraso={retraso} key={`${paso.titulo}-${i}`}>
+              <span className="paso-burbuja">
+                <Icono size={30} />
+                <span className="paso-numero" aria-hidden="true">
+                  {i + 1}
+                </span>
               </span>
-              <span className="paso-icono" aria-hidden="true">
-                <Icono size={26} strokeWidth={1.6} />
-              </span>
-              <div>
-                <h3>{paso.titulo}</h3>
-                <p>{paso.texto}</p>
-              </div>
-            </article>
+              <h3>{paso.titulo}</h3>
+              <p>{paso.texto}</p>
+            </Reveal>
           );
         })}
       </div>
-    </section>
+    </Reveal>
   );
 }

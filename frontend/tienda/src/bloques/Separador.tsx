@@ -13,8 +13,14 @@ import { claseDeVariante } from "./Seccion";
  * bloque aparte porque son la misma decisión —cuánto respiro va entre estas dos
  * cosas— con o sin línea. Dos bloques distintos para eso obligarían a
  * cambiarlos el uno por el otro cada vez que alguien cambia de opinión.
+ *
+ * `ornamento` es una cinta angosta con un dibujo repetido —una línea con un
+ * pequeño rombo— en vez de un trazo liso. Es CSS puro (una máscara SVG en
+ * `background-color: currentColor`, no una imagen subida): no depende de que
+ * ningún negocio tenga un logo que repetir, así que sirve para cualquier
+ * tienda del motor sin configurar nada.
  */
-const VARIANTES = ["linea", "aire", "punto"] as const;
+const VARIANTES = ["linea", "aire", "punto", "ornamento"] as const;
 
 interface Props {
   /** Cuánto separa, en múltiplos de la escala de densidad. La tienda apretada

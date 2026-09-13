@@ -5,6 +5,9 @@ export interface Categoria {
   orden: number;
   estado_categoria: boolean;
   imagen_url: string | null;
+  /** Copy publicitario opcional, para la variante "vidriera" del bloque de categorías. */
+  subtitulo?: string;
+  cta_texto?: string;
 }
 
 export interface Presentacion {
@@ -143,6 +146,19 @@ export interface PromoBanner {
   orden: number;
 }
 
+/** Una pieza del carrusel de anuncios del cuerpo del Home. Mismo dato que
+ *  `PromoBanner`, tabla aparte: ver el docstring de `content.Anuncio`. */
+export interface Anuncio {
+  id: number;
+  imagen_url: string | null;
+  etiqueta: string;
+  titulo: string;
+  texto: string;
+  cta_texto: string;
+  cta_href: string;
+  orden: number;
+}
+
 export interface Testimonio {
   id: number;
   nombre: string;
@@ -161,7 +177,7 @@ export interface TrustBadge {
 
 export interface BeneficioComercial {
   id: number;
-  icono: "truck" | "clock" | "package" | "wallet" | "headset" | "check" | "shield" | "users";
+  icono: "truck" | "clock" | "package" | "wallet" | "headset" | "check" | "shield" | "users" | "basket";
   titulo: string;
   texto: string;
 }
