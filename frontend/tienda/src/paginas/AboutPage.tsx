@@ -118,13 +118,17 @@ export function AboutPage() {
             {config.historia && (
               <>
                 <h2>Nuestra historia</h2>
-                <p style={{ color: "var(--gris)", lineHeight: 1.75 }}>{config.historia}</p>
+                <p style={{ color: "var(--gris)", lineHeight: 1.75, whiteSpace: "pre-line" }}>
+                  {config.historia}
+                </p>
               </>
             )}
             {config.mision && (
               <>
                 <h2>Nuestra misión</h2>
-                <p style={{ color: "var(--gris)", lineHeight: 1.75 }}>{config.mision}</p>
+                <p style={{ color: "var(--gris)", lineHeight: 1.75, whiteSpace: "pre-line" }}>
+                  {config.mision}
+                </p>
               </>
             )}
             <Link href="/tienda" className="btn btn-verde">
