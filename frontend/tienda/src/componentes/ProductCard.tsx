@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Check } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState, type CSSProperties } from "react";
 import { useAgregarAlCarrito } from "@/hooks/useAgregarAlCarrito";
 import { useCart } from "@/estado/carrito";
@@ -183,14 +184,18 @@ export function ProductCard({ producto, variante, etiqueta, indice = 0 }: Props)
         whileHover={{ y: -6 }}
         whileTap={{ scale: 0.98 }}
       >
-        <div className="pc-media" style={{ "--cat-grad": colorCategoria(producto.categoria) } as CSSProperties}>
+        <Link
+          href={`/productos/${producto.slug}`}
+          className="pc-media"
+          style={{ "--cat-grad": colorCategoria(producto.categoria) } as CSSProperties}
+        >
           {imagen}
           {agotado && <span className="pc-cinta-agotado">Agotado</span>}
-        </div>
+        </Link>
 
         <div className="pc-compacta-info">
           <h3 className="pc-nombre" title={producto.nombre_producto}>
-            {producto.nombre_producto}
+            <Link href={`/productos/${producto.slug}`}>{producto.nombre_producto}</Link>
           </h3>
           {sinPresentaciones ? (
             <span className="pc-vacio">Sin presentaciones</span>
@@ -225,18 +230,19 @@ export function ProductCard({ producto, variante, etiqueta, indice = 0 }: Props)
       whileHover={{ y: -6 }}
       whileTap={{ scale: 0.98 }}
     >
-      <div
+      <Link
+        href={`/productos/${producto.slug}`}
         className="pc-media"
         style={{ "--cat-grad": colorCategoria(producto.categoria) } as CSSProperties}
       >
         {imagen}
         {!agotado && etiqueta && <span className="pc-cinta-destacado">{etiqueta}</span>}
         {agotado && <span className="pc-cinta-agotado">Agotado</span>}
-      </div>
+      </Link>
 
       <div className="pc-body">
         <h3 className="pc-nombre" title={producto.nombre_producto}>
-          {producto.nombre_producto}
+          <Link href={`/productos/${producto.slug}`}>{producto.nombre_producto}</Link>
         </h3>
 
         <span className="pc-cat">

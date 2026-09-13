@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { pedirAlBackend } from "@/lib/api";
+import { desempaquetar } from "@/lib/datos";
 import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
+import type { Paginated, Producto } from "@/lib/tipos";
 
 /**
  * El sitemap de ESTE negocio, no de la plataforma.
@@ -13,6 +15,10 @@ import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
  * de `/storefront/rutas/` — el mismo listado que ya usaba Next para saber qué
  * generar. `/tienda/pedido` queda fuera a propósito: es el checkout, no una
  * página que a nadie le sirva encontrar en un buscador.
+ *
+ * Los productos entran con su propia entrada (`/productos/<slug>`): son 190
+ * páginas indexables que hoy no tenían ninguna URL que un buscador pudiera
+ * encontrar por su cuenta.
  */
 const RUTAS_FIJAS = ["/", "/tienda", "/nosotros", "/contacto"];
 const RUTAS_EXCLUIDAS = new Set([...RUTAS_FIJAS, "/tienda/pedido"]);
@@ -37,8 +43,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/contacto`, lastModified: ahora, changeFrequency: "monthly", priority: 0.5 },
   ];
 
-  const respuesta = await pedirAlBackend<{ rutas: string[] }>("/storefront/rutas/");
-  const propias: MetadataRoute.Sitemap = (respuesta?.rutas ?? [])
+  const [respuestaRutas, productos] = await Promise.all([
+    pedirAlBackend<{ rutas: string[] }>("/storefront/rutas/"),
+    pedirAlBackend<Paginated<Producto> | Producto[]>("/catalog/products/", {
+      params: { page_size: 500, estado: "activos" },
+    }),
+  ]);
+
+  const propias: MetadataRoute.Sitemap = (respuestaRutas?.rutas ?? [])
     .filter((ruta) => !RUTAS_EXCLUIDAS.has(ruta))
     .map((ruta) => ({
       url: `${base}${ruta}`,
@@ -47,5 +59,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     }));
 
-  return [...fijas, ...propias];
+  const fichas: MetadataRoute.Sitemap = (productos ? desempaquetar(productos) : []).map(
+    (producto) => ({
+      url: `${base}/productos/${producto.slug}`,
+      lastModified: ahora,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    })
+  );
+
+  return [...fijas, ...propias, ...fichas];
 }
