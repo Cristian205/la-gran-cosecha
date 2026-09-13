@@ -250,6 +250,13 @@ export interface SiteConfig {
   factura_proveedor: string;
   factura_telefono: string;
   factura_direccion: string;
+  factura_logo_url: string | null;
+  factura_aplicar_tinte_logo: boolean;
+  factura_marca_agua_activa: boolean;
+  factura_marca_agua_texto: string;
+  factura_marca_agua_opacidad: number;
+  factura_nota_pie: string;
+  factura_chip_secundario: string;
   /**
    * Variables del tema del negocio que el panel administrativo sabe usar
    * (`--densidad-escala`, `--sombra-fuerza`) — las mismas que Apariencia ya

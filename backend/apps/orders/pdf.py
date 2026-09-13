@@ -36,25 +36,36 @@ INTENSIDAD_TINTE = 110  # de 255 (~43%): deja ver el dibujo original debajo
 
 def _obtener_logo_base64(tenant=None):
     """
-    Lee el logo configurado en StoreSettings y lo devuelve en base64, con un tinte
-    verde parcial (mismo verde del h1) superpuesto sobre su silueta, dejando
-    ver el dibujo/colores originales por debajo en vez de taparlo del todo.
+    Lee el logo de la factura y lo devuelve en base64.
+
+    `factura_logo` es el logo propio de la factura, si el negocio subió uno;
+    sin él, cae al mismo `logo` del sitio — el comportamiento de siempre. El
+    tinte verde institucional (mismo verde del h1) es OPCIONAL desde
+    `factura_aplicar_tinte_logo`: activo por defecto (reproduce lo que la
+    factura hacía siempre), pero un negocio cuyo logo ya no combine con ese
+    verde puede apagarlo y usarlo tal cual.
     """
     config = StoreSettings.get_para(tenant)
-    if config is None or not config.logo:
+    if config is None:
+        return ""
+    origen = config.factura_logo or config.logo
+    if not origen:
         return ""
     # Igual que en accounts/emails.py: se lee por la API de storage porque con
     # R2 no existe .path. Los bytes van a BytesIO para que Pillow tenga un
     # archivo seekable, que el objeto que devuelve el storage remoto no garantiza.
     try:
-        with config.logo.open("rb") as archivo:
+        with origen.open("rb") as archivo:
             datos_logo = archivo.read()
         with Image.open(io.BytesIO(datos_logo)) as logo:
             base = logo.convert("RGBA")
-            alpha_tinte = base.getchannel("A").point(lambda a: min(a, INTENSIDAD_TINTE))
-            tinte = Image.new("RGBA", base.size, (*COLOR_LOGO_FACTURA, 0))
-            tinte.putalpha(alpha_tinte)
-            resultado = Image.alpha_composite(base, tinte)
+            if config.factura_aplicar_tinte_logo:
+                alpha_tinte = base.getchannel("A").point(lambda a: min(a, INTENSIDAD_TINTE))
+                tinte = Image.new("RGBA", base.size, (*COLOR_LOGO_FACTURA, 0))
+                tinte.putalpha(alpha_tinte)
+                resultado = Image.alpha_composite(base, tinte)
+            else:
+                resultado = base
             buffer = io.BytesIO()
             resultado.save(buffer, format="PNG")
             return base64.b64encode(buffer.getvalue()).decode("utf-8")
@@ -63,14 +74,29 @@ def _obtener_logo_base64(tenant=None):
 
 
 def _datos_emisor(tenant=None):
+    """
+    Todo lo que la factura de este negocio necesita, aparte del pedido en sí:
+    los datos del emisor y la configuración de marca de agua / chip / nota de
+    pie. Cada campo que puede quedar vacío tiene su respaldo aquí y no en la
+    plantilla, para que "sin configurar" y "como estaba siempre" sean el
+    mismo resultado.
+    """
     config = StoreSettings.get_para(tenant) or StoreSettings()
+    nombre_empresa = config.nombre_empresa or "Mi Empresa"
     return {
-        "nombre_empresa": config.nombre_empresa or "Mi Empresa",
+        "nombre_empresa": nombre_empresa,
         "factura_eslogan": config.factura_eslogan,
         "factura_nit": config.factura_nit,
         "factura_proveedor": config.factura_proveedor,
         "factura_telefono": config.factura_telefono,
         "factura_direccion": config.factura_direccion,
+        "marca_agua_activa": config.factura_marca_agua_activa,
+        "marca_agua_texto": config.factura_marca_agua_texto or nombre_empresa,
+        # De porcentaje (1-40) a fracción, que es lo que espera el `rgba()` del CSS.
+        "marca_agua_opacidad": config.factura_marca_agua_opacidad / 100,
+        "nota_pie": config.factura_nota_pie
+        or f"¡Gracias por preferir la calidad de {nombre_empresa}!",
+        "chip_secundario": config.factura_chip_secundario,
     }
 
 

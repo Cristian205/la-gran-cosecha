@@ -22,13 +22,15 @@ export async function obtenerSiteConfig(): Promise<SiteConfig> {
 
 export async function actualizarSiteConfig(
   cambios: Partial<SiteConfig>,
-  logo?: File | null
+  logo?: File | null,
+  facturaLogo?: File | null
 ): Promise<SiteConfig> {
   const form = new FormData();
   Object.entries(cambios).forEach(([key, value]) => {
     if (value !== undefined && value !== null) form.append(key, String(value));
   });
   if (logo) form.append("logo", logo);
+  if (facturaLogo) form.append("factura_logo", facturaLogo);
 
   const { data } = await api.patch<SiteConfig>("/content/site-config/", form, {
     headers: { "Content-Type": "multipart/form-data" },
