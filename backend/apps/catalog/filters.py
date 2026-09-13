@@ -9,10 +9,13 @@ class ProductoFilter(django_filters.FilterSet):
         method="filtrar_estado",
         choices=[("activos", "Activos"), ("inactivos", "Inactivos"), ("todos", "Todos")],
     )
+    # Para la página de producto (/productos/<slug>): un producto por su
+    # slug, sin tener que exponer el pk numérico en la URL pública.
+    slug = django_filters.CharFilter(field_name="slug")
 
     class Meta:
         model = Producto
-        fields = ["categoria", "estado"]
+        fields = ["categoria", "estado", "slug"]
 
     def filtrar_estado(self, queryset, name, value):
         if value == "activos":

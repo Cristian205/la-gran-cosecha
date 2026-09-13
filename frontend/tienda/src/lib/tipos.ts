@@ -24,6 +24,8 @@ export interface Producto {
   id: number;
   codigo_producto: string;
   nombre_producto: string;
+  /** Identificador de URL, único por negocio: /productos/<slug>. */
+  slug: string;
   categoria: number;
   categoria_nombre: string;
   unidad_base: number | null;

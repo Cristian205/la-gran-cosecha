@@ -4,6 +4,7 @@ import { ArmazonPrevia } from "@/componentes/ArmazonPrevia";
 import { CapaCliente } from "@/componentes/CapaCliente";
 import { armazonDeLaTienda } from "@/lib/pagina";
 import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
+import { datosEstructuradosDelNegocio } from "@/lib/jsonld";
 import {
   estiloDeTarjeta,
   fuenteDeGoogle,
@@ -58,6 +59,9 @@ export default async function RootLayout({
   // igual que el backend: es preferible un 404 honesto a una tienda a medias.
   if (!config) notFound();
 
+  const { host } = await negocioDeLaPeticion();
+  const jsonLd = datosEstructuradosDelNegocio(config, host);
+
   // En la vista de prueba manda lo que propone la plantilla, encima del tema
   // del negocio. Va DESPUES en la hoja, que es como gana en CSS.
   const previa = armazon?.aspecto;
@@ -87,6 +91,12 @@ export default async function RootLayout({
         {serifDeLaPrevia && <link rel="stylesheet" href={serifDeLaPrevia} />}
         {reglasDeLaPrevia && (
           <style dangerouslySetInnerHTML={{ __html: `:root{${reglasDeLaPrevia}}` }} />
+        )}
+        {jsonLd && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          />
         )}
       </head>
       <body

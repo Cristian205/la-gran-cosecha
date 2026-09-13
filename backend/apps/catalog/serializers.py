@@ -86,6 +86,7 @@ class ProductoSerializer(serializers.ModelSerializer):
             "id",
             "codigo_producto",
             "nombre_producto",
+            "slug",
             "categoria",
             "categoria_nombre",
             "unidad_base",

@@ -1339,6 +1339,13 @@ h1, h2, h3 {
   gap: calc(0.45rem * var(--densidad-escala));
   flex: 1;
 }
+.pc-nombre a {
+  color: inherit;
+  text-decoration: none;
+}
+.pc-nombre a:hover,
+.pc-nombre a:focus-visible { text-decoration: underline; }
+.pc-media { text-decoration: none; }
 .pc-nombre {
   margin: 0;
   font-weight: 700;
@@ -5253,3 +5260,22 @@ a.footer-contacto-item:hover { background: rgba(255, 255, 255, 0.14); transform:
   -webkit-mask-size: auto 100%;
   mask-size: auto 100%;
 }
+
+/* ==========================================================================
+   La ficha de producto — /productos/<slug>
+   ========================================================================== */
+.pagina-producto { padding: 1.5rem 1.5rem 3rem; }
+.pp-migas {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem;
+  font-size: 0.82rem; font-weight: 600; color: var(--gris-600); margin: 0 0 1.2rem;
+}
+.pp-migas a { color: var(--marca-600); text-decoration: none; }
+.pp-migas a:hover { text-decoration: underline; }
+.pp-migas span[aria-hidden] { color: var(--borde); }
+.pp-migas span[aria-current] { color: var(--gris-900); }
+.pp-titulo { font-size: clamp(1.5rem, 3vw, 2.1rem); color: var(--gris-900); margin: 0 0 1.5rem; }
+.pp-detalle {
+  max-width: 380px;
+  margin: 0 0 1rem;
+}
+.pp-detalle .producto-card { height: auto; }
