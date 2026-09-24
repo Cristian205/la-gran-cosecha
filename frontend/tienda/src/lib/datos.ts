@@ -135,6 +135,7 @@ export async function obtenerUnidades(): Promise<UnidadMedida[]> {
 
 export interface ParamsProductos {
   search?: string;
+  slug?: string;
   categoria?: number;
   page?: number;
   pageSize?: number;
@@ -148,12 +149,13 @@ export interface ParamsProductos {
  * `count`/`next`, que antes se descartaban.
  */
 export async function obtenerProductos(
-  { search, categoria, page, pageSize, orden, signal }: ParamsProductos = {}
+  { search, slug, categoria, page, pageSize, orden, signal }: ParamsProductos = {}
 ): Promise<Paginated<Producto>> {
   return pedir<Paginated<Producto>>(
     "/catalog/products/",
     {
       search: search || undefined,
+      slug: slug || undefined,
       categoria,
       page,
       page_size: pageSize ?? PRODUCTOS_POR_TANDA,

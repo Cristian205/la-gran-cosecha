@@ -43,6 +43,10 @@ interface Props {
   enlaces?: EnlaceCabecera[];
   mostrar_buscador?: boolean;
   cta_texto?: string;
+  /** Un botón de compra junto al carrito, solo en escritorio: en móvil la barra
+   *  inferior ya lleva a la tienda y un segundo botón robaría ancho al logo. */
+  boton_texto?: string;
+  boton_href?: string;
   avisos?: AvisoCabecera[];
   /** El boton que abre el catalogo, a la izquierda del buscador. Sin texto no
    *  se dibuja: es una pieza de las tiendas con muchas categorias, y una
@@ -73,6 +77,8 @@ export function Navbar({
   enlaces,
   mostrar_buscador = true,
   cta_texto = "Carrito",
+  boton_texto = "",
+  boton_href = "/tienda",
   avisos = [],
   categorias_texto = "",
   categorias_href = "/tienda",
@@ -192,6 +198,12 @@ export function Navbar({
       >
         {buscadorMovilAbierto ? <X size={20} /> : <Search size={20} />}
       </button>
+      )}
+
+      {boton_texto && (
+        <Link className="navbar-comprar" href={boton_href || "/tienda"}>
+          {boton_texto}
+        </Link>
       )}
 
       <button className="btn-carrito" onClick={abrirCarrito}>
