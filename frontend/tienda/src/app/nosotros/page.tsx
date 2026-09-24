@@ -5,10 +5,13 @@ import { AboutPage } from "@/paginas/AboutPage";
 import { configuracionDeLaTienda } from "@/lib/negocio";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const config = await configuracionDeLaTienda();
+  // `composicionDe` está memorizada por petición: la página la vuelve a pedir
+  // para pintarse sin una segunda llamada al backend.
+  const [config, pagina] = await Promise.all([configuracionDeLaTienda(), composicionDe("/nosotros")]);
   return {
-    title: "Nosotros",
+    title: pagina?.seo_titulo || "Nosotros",
     description:
+      pagina?.seo_descripcion ||
       config?.historia?.slice(0, 160) ||
       `Conoce ${config?.nombre_empresa ?? "el negocio"} y cómo trabajamos.`,
     alternates: { canonical: "/nosotros" },
