@@ -13,6 +13,7 @@ import {
   variablesDelTema,
 } from "@/lib/tema";
 import "./global.css";
+import "./campanas.css";
 
 /**
  * Los metadatos salen de la configuración del negocio, no del código.

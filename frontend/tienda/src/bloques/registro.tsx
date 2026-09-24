@@ -33,6 +33,15 @@ import { PaginaNoEncontrada } from "./PaginaNoEncontrada";
 import { Marquesina } from "./Marquesina";
 import { TextoLibre } from "./TextoLibre";
 import { Video } from "./Video";
+import { BrandStory } from "./campanas/BrandStory";
+import { BusinessCampaign } from "./campanas/BusinessCampaign";
+import { EditorialCampaign } from "./campanas/EditorialCampaign";
+import { FeaturedCampaign } from "./campanas/FeaturedCampaign";
+import { FinalCTA } from "./campanas/FinalCTA";
+import { HeroCampaign } from "./campanas/HeroCampaign";
+import { ProductSpotlight } from "./campanas/ProductSpotlight";
+import { TestimonialStory } from "./campanas/TestimonialStory";
+import { VideoCampaign } from "./campanas/VideoCampaign";
 
 /**
  * El registro: qué componente pinta cada bloque.
@@ -102,6 +111,17 @@ const REGISTRO: Record<string, Bloque> = {
   video: Video as Bloque,
   "anuncios-carrusel": AnunciosCarrusel as Bloque,
   marquesina: Marquesina as Bloque,
+
+  // --- las campañas del Home: publicidad propia, no catalogo ------------------
+  "hero-campana": HeroCampaign as Bloque,
+  "video-campana": VideoCampaign as Bloque,
+  "campana-destacada": FeaturedCampaign as Bloque,
+  "campana-editorial": EditorialCampaign as Bloque,
+  "producto-spotlight": ProductSpotlight as Bloque,
+  "campana-negocios": BusinessCampaign as Bloque,
+  "historia-marca": BrandStory as Bloque,
+  "testimonios-editorial": TestimonialStory as Bloque,
+  "cierre-cta": FinalCTA as Bloque,
 
   // --- la biblioteca que llego con el paso 3 --------------------------------
   // Ninguno obligo a tocar el lienzo ni el registro mas alla de estas filas:

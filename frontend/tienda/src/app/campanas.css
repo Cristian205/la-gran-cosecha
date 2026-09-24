@@ -1,0 +1,586 @@
+/* ==========================================================================
+   CAMPAÑAS DEL HOME
+   --------------------------------------------------------------------------
+   Publicidad propia, no catálogo. Dirección de arte: verde bosque muy oscuro
+   y crema cálida alternándose como en una revista; titulares gigantes en
+   mayúscula con UNA palabra en serif cursiva ámbar; fotografía a sangre. Todo
+   el movimiento es transform/opacity (nada dispara layout) y se apaga con
+   `prefers-reduced-motion`.
+   ========================================================================== */
+:root {
+  --crema: #f9f5f2;
+  --fuente-editorial: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --ease-cine: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cmp-inner {
+  width: min(100% - 2.4rem, 1240px);
+  margin-inline: auto;
+}
+.cmp-kicker {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+/* ---------- Botones ---------- */
+.cmp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 3.1rem;
+  padding: 0 1.6rem;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-cine), background-color 0.2s, border-color 0.2s,
+    color 0.2s, box-shadow 0.2s;
+}
+.cmp-btn svg { flex: none; transition: transform 0.2s var(--ease-cine); }
+.cmp-btn:hover svg { transform: translateX(4px); }
+.cmp-btn:focus-visible { outline: 2px solid var(--acento-400); outline-offset: 3px; }
+.cmp-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.cmp-btn--ambar {
+  background: var(--acento-500);
+  color: #1b1305;
+  box-shadow: 0 12px 30px -12px rgba(245, 158, 11, 0.75);
+}
+.cmp-btn--ambar:hover { background: var(--acento-400); transform: translateY(-2px); }
+.cmp-btn--fantasma { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.55); }
+.cmp-btn--fantasma:hover { background: rgba(255, 255, 255, 0.12); border-color: #fff; }
+.cmp-btn--oscuro { background: var(--tinta); color: #fff; }
+.cmp-btn--oscuro:hover { background: var(--marca-800); transform: translateY(-2px); }
+
+/* ==========================================================================
+   HERO — HeroCampaign
+   ========================================================================== */
+.hc {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - var(--navbar-alto, 70px));
+  color: #fff;
+  background: var(--tinta);
+  overflow: hidden;
+}
+.hc-media {
+  position: absolute;
+  inset: -2%;
+  z-index: -2;
+  transform-origin: 50% 60%;
+  will-change: transform;
+}
+.hc-img,
+.hc-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--enfoque, 50% 50%);
+}
+.hc-img { animation: hc-zoom 2.6s var(--ease-cine) both; }
+.hc-video { opacity: 0; transition: opacity 0.9s ease; }
+.hc-video.listo { opacity: 1; }
+.hc-velo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(4, 24, 14, 0.8) 0%, rgba(4, 24, 14, 0.48) 32%, rgba(4, 24, 14, 0.05) 60%, rgba(4, 24, 14, 0.4) 100%),
+    linear-gradient(90deg, rgba(4, 24, 14, 0.5) 0%, transparent 60%);
+}
+.hc-contenido {
+  width: min(100% - 2.4rem, 1240px);
+  margin-inline: auto;
+  padding-block: clamp(2.2rem, 7vh, 4.8rem) 6rem;
+}
+.hc h1,
+.fc-texto h2,
+.ps-texto h2,
+.bn-texto h2,
+.fin h2,
+.ec-texto h2 { word-spacing: 0.1em; }
+.hc h1 {
+  max-width: 14ch;
+  margin: 1rem 0 0;
+  font-size: clamp(2.9rem, 8.2vw, 7.2rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.35);
+}
+.hc h1 em {
+  display: block;
+  margin-top: 0.04em;
+  font-family: var(--fuente-editorial);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  text-transform: none;
+  color: var(--acento-400);
+}
+.hc-sub {
+  max-width: 28ch;
+  margin: 1.3rem 0 0;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  font-weight: 500;
+  line-height: 1.3;
+  text-shadow: 0 1px 24px rgba(0, 0, 0, 0.45);
+}
+.hc-acciones { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 1.9rem; }
+.hc-in { animation: hc-in 1s var(--ease-cine) both; animation-delay: calc(0.15s + var(--i, 0) * 0.12s); }
+.hc-scroll {
+  position: absolute;
+  left: 50%;
+  bottom: 1.5rem;
+  width: 1.5px;
+  height: 3.2rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.25);
+  translate: -50% 0;
+}
+.hc-scroll i { position: absolute; inset: 0; background: #fff; animation: hc-scroll 2.2s var(--ease-cine) infinite; }
+@keyframes hc-zoom { from { transform: scale(1.09); } to { transform: scale(1); } }
+@keyframes hc-in { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes hc-scroll { 0% { transform: translateY(-100%); } 60%, 100% { transform: translateY(100%); } }
+
+@media (max-width: 780px) {
+  .hc-img,
+  .hc-video { object-position: var(--enfoque-movil, 50% 50%); }
+  .hc-contenido { padding-block: 1.6rem 5rem; }
+  .hc h1 { font-size: clamp(2.7rem, 14.5vw, 4.4rem); }
+  .hc-acciones .cmp-btn { flex: 1 1 100%; justify-content: space-between; }
+  .hc-scroll { display: none; }
+}
+
+/* ==========================================================================
+   SPOTLIGHT — ProductSpotlight
+   ========================================================================== */
+.ps {
+  position: relative;
+  overflow: hidden;
+  padding-block: clamp(4rem, 10vw, 8rem);
+  color: #fff;
+  background:
+    radial-gradient(70% 90% at 85% 15%, var(--marca-700), transparent 62%),
+    linear-gradient(180deg, var(--marca-900), var(--tinta));
+}
+.ps-gigante {
+  position: absolute;
+  left: -1.5vw;
+  top: 50%;
+  translate: 0 -50%;
+  font-size: clamp(7rem, 26vw, 24rem);
+  font-weight: 800;
+  line-height: 0.8;
+  letter-spacing: -0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.09);
+  pointer-events: none;
+  user-select: none;
+}
+.ps-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: clamp(2rem, 6vw, 6rem);
+  align-items: center;
+}
+.ps-foto {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: clamp(1rem, 2vw, 1.8rem);
+  overflow: hidden;
+  background: var(--marca-800);
+  box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.7);
+}
+.ps-foto-recorte { position: absolute; inset: 0; overflow: hidden; }
+.ps-foto-capa { position: absolute; inset: -8% 0; }
+.ps-foto-capa img { width: 100%; height: 100%; object-fit: cover; }
+.ps-texto { min-width: 0; }
+.ps-texto .cmp-kicker { color: var(--acento-400); }
+.ps-texto h2 {
+  margin: 0.9rem 0 0;
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 800;
+  line-height: 0.88;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.ps-parrafo { max-width: 34ch; margin: 1.2rem 0 0; font-size: 1.1rem; line-height: 1.5; color: rgba(255, 255, 255, 0.78); }
+.ps-precio { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; margin: 1.4rem 0 0; color: rgba(255, 255, 255, 0.7); }
+.ps-precio strong { font-size: clamp(1.9rem, 3.4vw, 2.6rem); font-weight: 800; letter-spacing: -0.03em; color: #fff; }
+.ps-precio em { font-size: 0.78rem; font-style: normal; color: rgba(255, 255, 255, 0.55); }
+.ps-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 1.4rem; margin-top: 1.6rem; }
+.ps-enlace { font-size: 0.92rem; font-weight: 700; color: #fff; text-decoration: underline; text-underline-offset: 0.3em; text-decoration-color: rgba(255, 255, 255, 0.4); }
+.ps-enlace:hover { text-decoration-color: var(--acento-400); }
+.ps-tambien { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.2rem; margin-top: 2.4rem; padding-top: 1.2rem; border-top: 1px solid rgba(255, 255, 255, 0.16); font-size: 0.9rem; color: rgba(255, 255, 255, 0.6); }
+.ps-tambien ul { display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; margin: 0; padding: 0; list-style: none; }
+.ps-tambien a { color: #fff; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
+.ps-tambien a:hover { border-color: var(--acento-400); }
+
+@media (max-width: 780px) {
+  .ps-grid { grid-template-columns: 1fr; }
+  .ps-foto { aspect-ratio: 5 / 6; }
+  .ps-gigante { top: 6%; translate: 0 0; }
+  .ps-acciones .cmp-btn { width: 100%; justify-content: space-between; }
+}
+
+/* ==========================================================================
+   HISTORIA DE MARCA — BrandStory (escenario fijo con capítulos)
+   ========================================================================== */
+.bs {
+  position: relative;
+  height: calc(var(--capitulos, 4) * 90svh);
+  background: var(--tinta);
+}
+.bs-escenario {
+  position: sticky;
+  top: var(--navbar-alto, 70px);
+  height: calc(100svh - var(--navbar-alto, 70px));
+  overflow: hidden;
+  color: #fff;
+}
+.bs-fotos,
+.bs-foto,
+.bs-velo { position: absolute; inset: 0; }
+.bs-foto {
+  opacity: 0;
+  background: radial-gradient(80% 90% at 30% 20%, var(--marca-700), var(--tinta));
+  transition: opacity 0.9s ease;
+}
+.bs-foto.activa { opacity: 1; }
+.bs-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.1);
+  transition: transform 7s linear;
+}
+.bs-foto.activa img { transform: scale(1); }
+.bs-velo {
+  background:
+    linear-gradient(90deg, rgba(4, 24, 14, 0.86) 0%, rgba(4, 24, 14, 0.4) 55%, rgba(4, 24, 14, 0.1) 100%),
+    linear-gradient(0deg, rgba(4, 24, 14, 0.72) 0%, transparent 46%);
+}
+.bs-marco {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  height: 100%;
+  padding-block: clamp(1.4rem, 4vh, 2.8rem);
+}
+.bs-kicker { color: var(--acento-400); }
+.bs-capitulos { display: grid; align-content: center; }
+.bs-capitulo {
+  grid-area: 1 / 1;
+  max-width: 36rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.8s var(--ease-cine), visibility 0s 0.6s;
+}
+.bs-capitulo.activo {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 0.7s ease 0.15s, transform 0.9s var(--ease-cine) 0.15s, visibility 0s;
+}
+.bs-numero {
+  display: block;
+  margin-bottom: 0.6rem;
+  font-family: var(--fuente-editorial);
+  font-size: clamp(5rem, 13vw, 10rem);
+  font-style: italic;
+  line-height: 0.8;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.45);
+}
+.bs-capitulo .cmp-kicker { color: var(--acento-400); }
+.bs-capitulo h2 {
+  margin: 0.7rem 0 0;
+  font-size: clamp(2.3rem, 5.6vw, 4.6rem);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.bs-parrafo { max-width: 32ch; margin: 1.1rem 0 0; font-size: 1.1rem; line-height: 1.5; color: rgba(255, 255, 255, 0.82); }
+.bs-progreso { display: flex; gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
+.bs-progreso li { flex: 1 1 0; max-width: 11rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); transition: color 0.4s; }
+.bs-progreso i { display: block; height: 2px; margin-bottom: 0.6rem; background: rgba(255, 255, 255, 0.22); transition: background-color 0.4s; }
+.bs-progreso li.activo,
+.bs-progreso li.hecho { color: #fff; }
+.bs-progreso li.activo i,
+.bs-progreso li.hecho i { background: var(--acento-400); }
+.bs-cta { margin-top: 1.4rem; opacity: 0; visibility: hidden; transform: translateY(10px); transition: opacity 0.5s ease, transform 0.6s var(--ease-cine), visibility 0s 0.5s; }
+.bs-cta.visible { opacity: 1; visibility: visible; transform: none; transition-delay: 0.3s, 0.3s, 0s; }
+
+.bs--estatico { height: auto; }
+.bs-panel { position: relative; display: flex; align-items: flex-end; min-height: 78svh; overflow: hidden; color: #fff; }
+.bs-panel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bs-panel-velo { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(4, 24, 14, 0.85), rgba(4, 24, 14, 0.15) 70%); }
+.bs-texto-fijo { position: relative; width: min(100% - 2.4rem, 1240px); margin-inline: auto; padding-block: 3rem; }
+.bs-texto-fijo h2 { margin: 0.6rem 0 0; font-size: clamp(2.2rem, 5vw, 4rem); line-height: 1; letter-spacing: -0.04em; max-width: 16ch; }
+.bs-texto-fijo p { max-width: 34ch; }
+.bs-texto-fijo .cmp-kicker { color: var(--acento-400); }
+
+@media (max-width: 780px) {
+  .bs { height: calc(var(--capitulos, 4) * 82svh); }
+  .bs-velo {
+    background:
+      linear-gradient(0deg, rgba(4, 24, 14, 0.94) 0%, rgba(4, 24, 14, 0.55) 55%, rgba(4, 24, 14, 0.2) 100%);
+  }
+  .bs-capitulos { align-content: end; }
+  .bs-numero { font-size: 4.6rem; }
+  .bs-progreso { gap: 0.5rem; margin-right: 4.8rem; }
+  .bs-progreso li span { display: none; }
+}
+
+/* ==========================================================================
+   CAMPAÑA VIDEO — VideoCampaign
+   ========================================================================== */
+.vc { position: relative; color: #fff; background: var(--tinta); }
+.vc-marco { position: relative; overflow: hidden; }
+.vc-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.vc-velo { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(4, 24, 14, 0.86) 0%, transparent 55%); pointer-events: none; }
+.vc-alternar {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+}
+.vc-alternar:focus-visible { outline: 2px solid var(--acento-400); outline-offset: 3px; }
+.vc-texto h2 { margin: 0.7rem 0 0; font-size: clamp(2rem, 5vw, 4.2rem); font-weight: 800; line-height: 0.98; letter-spacing: -0.04em; text-wrap: balance; }
+.vc-texto .cmp-kicker { color: var(--acento-400); }
+.vc-parrafo { max-width: 34ch; margin: 1rem 0 1.4rem; font-size: 1.08rem; line-height: 1.5; color: rgba(255, 255, 255, 0.8); }
+
+.vc--horizontal .vc-marco { aspect-ratio: 16 / 9; max-height: 88svh; }
+.vc--horizontal .vc-texto {
+  position: absolute;
+  inset: auto 0 0 0;
+  width: min(100% - 2.4rem, 1240px);
+  margin-inline: auto;
+  padding-bottom: clamp(1.4rem, 4vw, 3.4rem);
+}
+.vc--vertical {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+  gap: clamp(2rem, 6vw, 5rem);
+  align-items: center;
+  padding: clamp(3rem, 8vw, 6rem) max(1.2rem, calc((100% - 1240px) / 2));
+}
+.vc--vertical .vc-marco { grid-column: 2; grid-row: 1; aspect-ratio: 9 / 16; max-height: 82svh; border-radius: 1.6rem; box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.7); }
+.vc--vertical .vc-texto { grid-column: 1; grid-row: 1; }
+
+@media (max-width: 780px) {
+  .vc--horizontal .vc-texto { position: static; padding: 1.4rem 0 2.4rem; }
+  .vc--vertical { grid-template-columns: 1fr; }
+  .vc--vertical .vc-marco { grid-column: 1; grid-row: 1; width: min(100%, 22rem); margin-inline: auto; }
+  .vc--vertical .vc-texto { grid-column: 1; grid-row: 2; }
+}
+
+/* ==========================================================================
+   CAMPAÑA GIGANTE — FeaturedCampaign
+   ========================================================================== */
+.fc { position: relative; isolation: isolate; display: flex; align-items: flex-end; min-height: min(88svh, 60rem); overflow: hidden; color: #fff; background: var(--tinta); }
+.fc--cinematico { min-height: min(58svh, 34rem); }
+.fc-media { position: absolute; inset: -7% 0; z-index: -2; will-change: transform; }
+.fc-media img { width: 100%; height: 100%; object-fit: cover; object-position: var(--enfoque, 50% 50%); }
+.fc-velo { position: absolute; inset: 0; z-index: -1; background: linear-gradient(0deg, rgba(4, 24, 14, 0.84) 0%, rgba(4, 24, 14, 0.12) 58%, rgba(4, 24, 14, 0.32) 100%); }
+.fc-texto { width: min(100% - 2.4rem, 1240px); margin-inline: auto; padding-block: clamp(3rem, 8vw, 6rem); }
+.fc-texto .cmp-kicker { color: var(--acento-400); }
+.fc-texto h2 { margin: 0.8rem 0 0; font-size: clamp(3rem, 11vw, 9.5rem); font-weight: 800; line-height: 0.86; letter-spacing: -0.05em; text-transform: uppercase; text-wrap: balance; }
+.fc--cinematico .fc-texto h2 { font-size: clamp(2.4rem, 7vw, 6rem); }
+.fc-parrafo { max-width: 32ch; margin: 1.1rem 0 1.5rem; font-size: 1.15rem; line-height: 1.45; color: rgba(255, 255, 255, 0.85); }
+.fc--centro .fc-texto { display: flex; flex-direction: column; align-items: center; text-align: center; }
+@media (max-width: 780px) {
+  .fc { min-height: min(80svh, 44rem); }
+  .fc-media img { object-position: var(--enfoque-movil, 50% 50%); }
+}
+
+/* ==========================================================================
+   CAMPAÑA EDITORIAL — EditorialCampaign
+   ========================================================================== */
+.ec { padding-block: clamp(4rem, 10vw, 8rem); color: var(--tinta); background: var(--crema); }
+.ec-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(2rem, 6vw, 6rem); align-items: center; }
+.ec--imagen-derecha .ec-foto { order: 2; }
+.ec-foto { aspect-ratio: 4 / 5; overflow: hidden; border-radius: clamp(1rem, 2vw, 1.8rem); background: var(--marca-100); }
+.ec-foto { position: relative; }
+.ec-foto-recorte { position: absolute; inset: 0; }
+.ec-foto img,
+.ec-marcador { width: 100%; height: 100%; object-fit: cover; object-position: var(--enfoque, 50% 50%); }
+.ec-marcador { background: linear-gradient(160deg, var(--marca-700), var(--tinta)); }
+.ec-texto { min-width: 0; }
+.ec-texto .cmp-kicker { color: var(--marca-600); }
+.ec-texto h2 { margin: 0.9rem 0 0; font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 800; line-height: 0.94; letter-spacing: -0.045em; text-wrap: balance; }
+.ec-texto h2 em { display: block; font-family: var(--fuente-editorial); font-style: italic; font-weight: 400; letter-spacing: -0.03em; color: var(--acento-600); }
+.ec-parrafo { max-width: 34ch; margin: 1.3rem 0 0; font-size: 1.12rem; line-height: 1.55; color: var(--gris-600); }
+.ec-cierre { display: flex; flex-wrap: wrap; align-items: center; gap: 1.2rem 2rem; margin-top: 1.8rem; }
+.ec-precio { display: flex; flex-direction: column; margin: 0; }
+.ec-precio strong { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 800; letter-spacing: -0.03em; }
+.ec-precio span { font-size: 0.76rem; color: var(--gris-400); }
+@media (max-width: 780px) {
+  .ec-grid { grid-template-columns: 1fr; }
+  .ec--imagen-derecha .ec-foto { order: 0; }
+  .ec-foto { aspect-ratio: 5 / 6; }
+}
+
+/* ==========================================================================
+   NEGOCIOS — BusinessCampaign
+   ========================================================================== */
+.bn {
+  padding-block: clamp(4rem, 10vw, 8rem);
+  color: #fff;
+  background:
+    radial-gradient(60% 80% at 10% 0%, rgba(74, 222, 128, 0.14), transparent 60%),
+    linear-gradient(160deg, var(--marca-800), var(--tinta));
+  scroll-margin-top: var(--navbar-alto, 70px);
+}
+.bn-grid { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(2rem, 6vw, 6rem); align-items: center; }
+.bn-texto { min-width: 0; }
+.bn-texto .cmp-kicker { color: var(--acento-400); }
+.bn-texto h2 { margin: 0.9rem 0 0; font-size: clamp(2.6rem, 6.4vw, 5.6rem); font-weight: 800; line-height: 0.9; letter-spacing: -0.05em; text-transform: uppercase; text-wrap: balance; }
+.bn-texto h2 em { display: block; margin-top: 0.05em; font-family: var(--fuente-editorial); font-style: italic; font-weight: 400; letter-spacing: -0.03em; text-transform: none; color: var(--acento-400); }
+.bn-parrafo { max-width: 38ch; margin: 1.4rem 0 0; font-size: 1.14rem; line-height: 1.55; color: rgba(255, 255, 255, 0.8); }
+.bn-segmentos { margin: 2rem 0 0; padding: 0; list-style: none; }
+.bn-segmentos li { display: grid; grid-template-columns: minmax(8rem, 0.4fr) 1fr; gap: 0.4rem 1.4rem; padding: 0.95rem 0; border-top: 1px solid rgba(255, 255, 255, 0.16); }
+.bn-segmentos li:last-child { border-bottom: 1px solid rgba(255, 255, 255, 0.16); }
+.bn-segmentos strong { font-size: 1rem; font-weight: 700; }
+.bn-segmentos span { font-size: 0.95rem; line-height: 1.45; color: rgba(255, 255, 255, 0.68); }
+.bn-acciones { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 2rem; }
+.bn-dato { margin: 1.2rem 0 0; font-size: 0.9rem; color: rgba(255, 255, 255, 0.6); }
+.bn-dato strong { color: #fff; font-size: 1.05rem; }
+.bn-imagen { padding: clamp(0.6rem, 1.6vw, 1.2rem); border-radius: 1.8rem; background: var(--crema); box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.6); }
+.bn-imagen img { width: 100%; height: auto; border-radius: 1.2rem; }
+@media (max-width: 780px) {
+  .bn-grid { grid-template-columns: 1fr; }
+  .bn-segmentos li { grid-template-columns: 1fr; }
+  .bn-acciones .cmp-btn { width: 100%; justify-content: space-between; }
+  .bn-imagen { order: -1; }
+}
+
+/* ==========================================================================
+   TESTIMONIOS — TestimonialStory
+   ========================================================================== */
+.ts { padding-block: clamp(4rem, 9vw, 7rem); overflow: hidden; color: var(--tinta); background: var(--crema); }
+.ts-cabecera { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1.4rem; }
+.ts-cabecera .cmp-kicker { color: var(--marca-600); }
+.ts-cabecera h2 { margin: 0.7rem 0 0; font-size: clamp(2rem, 4.6vw, 3.6rem); letter-spacing: -0.04em; line-height: 1; }
+.ts-mandos { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; color: var(--gris-600); }
+.ts-mandos span { margin-right: 0.6rem; }
+.ts-mandos button { display: grid; place-items: center; width: 3rem; height: 3rem; border: 1.5px solid rgba(11, 31, 23, 0.2); border-radius: 50%; color: var(--tinta); background: transparent; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+.ts-mandos button:hover { color: #fff; background: var(--tinta); border-color: var(--tinta); }
+.ts-mandos button:focus-visible { outline: 2px solid var(--marca-600); outline-offset: 3px; }
+.ts-pista {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 2.4rem;
+  padding: 0.4rem max(1.2rem, calc((100vw - 1240px) / 2)) 1.4rem;
+  scroll-padding-inline: max(1.2rem, calc((100vw - 1240px) / 2));
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.ts-pista::-webkit-scrollbar { display: none; }
+.ts-pista:focus-visible { outline: 2px solid var(--marca-600); outline-offset: -4px; }
+.ts-panel {
+  position: relative;
+  display: flex;
+  flex: 0 0 min(86vw, 38rem);
+  flex-direction: column;
+  gap: 1.2rem;
+  min-height: 22rem;
+  margin: 0;
+  padding: clamp(1.6rem, 3vw, 2.6rem);
+  border-radius: 1.6rem;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(11, 31, 23, 0.05), 0 26px 50px -32px rgba(6, 46, 26, 0.4);
+  scroll-snap-align: start;
+}
+.ts-panel::before { content: "“"; display: block; height: 3.2rem; font-family: var(--fuente-editorial); font-size: 7rem; line-height: 0.9; color: var(--acento-500); }
+.ts-panel blockquote { flex: 1; margin: 0; }
+.ts-panel blockquote p { margin: 0; font-family: var(--fuente-editorial); font-size: clamp(1.25rem, 2.3vw, 1.65rem); font-style: italic; line-height: 1.38; letter-spacing: -0.01em; }
+.ts-panel figcaption { display: flex; flex-direction: column; gap: 0.2rem; padding-top: 1.2rem; border-top: 1px solid rgba(11, 31, 23, 0.1); }
+.ts-panel figcaption strong { font-size: 1rem; }
+.ts-panel figcaption span { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--marca-600); }
+
+/* ==========================================================================
+   CIERRE — FinalCTA
+   ========================================================================== */
+.fin { position: relative; isolation: isolate; display: grid; place-items: center; min-height: min(82svh, 48rem); overflow: hidden; text-align: center; color: #fff; background: var(--tinta); }
+.fin-media { position: absolute; inset: -7% 0; z-index: -2; will-change: transform; }
+.fin-media img { width: 100%; height: 100%; object-fit: cover; object-position: var(--enfoque, 50% 50%); }
+.fin-velo { position: absolute; inset: 0; z-index: -1; background: radial-gradient(70% 70% at 50% 50%, rgba(4, 24, 14, 0.45), rgba(4, 24, 14, 0.85)); }
+.fin-cuerpo { padding-block: clamp(3.5rem, 9vw, 7rem); }
+.fin-cuerpo .cmp-kicker { color: var(--acento-400); }
+.fin h2 { margin: 0.9rem 0 0; font-size: clamp(3rem, 9vw, 8rem); font-weight: 800; line-height: 0.88; letter-spacing: -0.05em; text-transform: uppercase; text-wrap: balance; }
+.fin h2 em { display: block; margin-top: 0.04em; font-family: var(--fuente-editorial); font-style: italic; font-weight: 400; letter-spacing: -0.03em; text-transform: none; color: var(--acento-400); }
+.fin-parrafo { max-width: 32ch; margin: 1.3rem auto 0; font-size: 1.15rem; line-height: 1.5; color: rgba(255, 255, 255, 0.85); }
+.fin-acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.9rem; margin-top: 2rem; }
+@media (max-width: 780px) {
+  .fin-acciones .cmp-btn { flex: 1 1 100%; justify-content: center; }
+}
+
+/* ---------- Foco visible en enlaces sobre fondo oscuro ---------- */
+.ps a:focus-visible,
+.vc a:focus-visible { outline: 2px solid var(--acento-400); outline-offset: 3px; }
+
+/* ---------- Menos movimiento: la fotografía se queda quieta ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .hc-img,
+  .hc-in,
+  .hc-scroll i { animation: none; }
+  .bs-foto img { transform: none; transition: none; }
+  .bs-capitulo,
+  .bs-capitulo.activo { transition: none; }
+  .cmp-btn,
+  .cmp-btn svg { transition: none; }
+}
+
+/* ---------- Botón "Comprar" de la cabecera (solo escritorio) ---------- */
+.navbar-comprar {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 1.25rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #1b1305;
+  background: var(--acento-500);
+  transition: background-color 0.2s, transform 0.2s var(--ease-cine);
+  white-space: nowrap;
+}
+.navbar-comprar:hover { background: var(--acento-400); transform: translateY(-1px); }
+.navbar-comprar:focus-visible { outline: 2px solid var(--acento-400); outline-offset: 3px; }
+@media (max-width: 900px) {
+  .navbar-comprar { display: none; }
+}
+
+/* Una página que ya termina con `cierre-cta` no necesita el CTA del pie
+   pegado justo debajo: serían dos invitaciones seguidas a lo mismo. */
+body:has(.fin) .footer-cta { display: none; }
