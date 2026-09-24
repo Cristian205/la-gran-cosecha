@@ -10,6 +10,8 @@ from .models import Categoria, HistorialPrecio, PresentacionProducto, Producto, 
 
 class CategoriaSerializer(serializers.ModelSerializer):
     imagen_url = serializers.SerializerMethodField()
+    # Lo anota `CategoriaViewSet`; fuera de esa consulta no existe y sale null.
+    num_productos = serializers.SerializerMethodField()
 
     class Meta:
         model = Categoria
@@ -23,8 +25,12 @@ class CategoriaSerializer(serializers.ModelSerializer):
             "imagen_url",
             "subtitulo",
             "cta_texto",
+            "num_productos",
         ]
         extra_kwargs = {"imagen": {"write_only": True, "required": False}}
+
+    def get_num_productos(self, obj):
+        return getattr(obj, "num_productos", None)
 
     def get_imagen_url(self, obj):
         if not obj.imagen:
@@ -34,9 +40,15 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 
 class UnidadMedidaSerializer(serializers.ModelSerializer):
+    # Solo con `?en_catalogo=1` (ver `UnidadMedidaViewSet`); si no, null.
+    num_productos = serializers.SerializerMethodField()
+
     class Meta:
         model = UnidadMedida
-        fields = ["id", "nombre_unidad", "abreviatura_unidad", "estado_unidad"]
+        fields = ["id", "nombre_unidad", "abreviatura_unidad", "estado_unidad", "num_productos"]
+
+    def get_num_productos(self, obj):
+        return getattr(obj, "num_productos", None)
 
 
 class PresentacionProductoSerializer(serializers.ModelSerializer):
