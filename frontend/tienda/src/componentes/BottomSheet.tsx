@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface Props {
   titulo: string;
@@ -16,6 +17,10 @@ interface Props {
  *
  * Reutiliza `.overlay` del carrito lateral para el fondo, así el oscurecido y
  * el z-index se comportan igual en toda la tienda.
+ *
+ * Se monta en `<body>` (portal) y no donde se declara: quien la abre puede
+ * vivir dentro de algo fijo —la barra del catálogo es `sticky` con su propio
+ * z-index— y ahí la hoja quedaría atrapada debajo de las barras inferiores.
  */
 export function BottomSheet({ titulo, onCerrar, children }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -31,7 +36,7 @@ export function BottomSheet({ titulo, onCerrar, children }: Props) {
     return () => document.removeEventListener("keydown", alPresionar);
   }, [onCerrar]);
 
-  return (
+  return createPortal(
     <>
       <div className="overlay" onClick={onCerrar} />
       <div
@@ -51,6 +56,7 @@ export function BottomSheet({ titulo, onCerrar, children }: Props) {
         </header>
         <div className="hoja-cuerpo">{children}</div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

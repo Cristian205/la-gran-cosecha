@@ -179,3 +179,32 @@ export function formatoCantidad(valor: number, permiteFraccion: boolean): string
   const frac = FRACCIONES[resto] ?? `${resto}/100`;
   return entero > 0 ? `${entero} ${frac}` : frac;
 }
+
+/**
+ * Lo contrario de `formatoCantidad`: lee lo que el cliente escribió en el
+ * campo de cantidad ("50", "1,5", "1.5", "1 1/2", "3/4") y lo ajusta al paso
+ * del producto. Existe para los pedidos grandes: llegar a 50 bultos con el
+ * botón "+" eran 49 clics. Devuelve `null` si no se entiende, para que quien
+ * llama conserve el valor anterior en vez de inventar uno.
+ */
+export function parsearCantidad(texto: string, paso: number): number | null {
+  const limpio = texto.trim().replace(",", ".");
+  if (!limpio) return null;
+  const partes = limpio.split(/\s+/);
+  let total = 0;
+  for (const parte of partes) {
+    const fraccion = parte.match(/^(\d+)\/(\d+)$/);
+    if (fraccion) {
+      const divisor = Number(fraccion[2]);
+      if (!divisor) return null;
+      total += Number(fraccion[1]) / divisor;
+    } else if (/^\d+(\.\d+)?$/.test(parte)) {
+      total += Number(parte);
+    } else {
+      return null;
+    }
+  }
+  if (!(total > 0)) return null;
+  const ajustado = Math.round(total / paso) * paso;
+  return Math.max(paso, Number(ajustado.toFixed(2)));
+}

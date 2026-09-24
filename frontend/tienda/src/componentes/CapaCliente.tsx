@@ -7,7 +7,10 @@ import { CartDrawer } from "./CartDrawer";
 import { MobileCartBar } from "./MobileCartBar";
 import { WhatsAppButton } from "./WhatsAppButton";
 import { BottomNav } from "./BottomNav";
+import { AvisoAgregado } from "./tienda/AvisoAgregado";
+import { ProductQuickView } from "./tienda/ProductQuickView";
 import { useCart } from "@/estado/carrito";
+import { useTienda } from "@/estado/tienda";
 import { useUltimoPedido } from "@/estado/ultimoPedido";
 import type { SiteConfig } from "@/lib/tipos";
 
@@ -83,7 +86,12 @@ export function CapaCliente({
       <ContextoConfig.Provider value={config}>
         <ContextoEnvoltorio.Provider
           value={{
-            abrirCarrito: () => setCarritoAbierto(true),
+            abrirCarrito: () => {
+              // La vista rápida es un <dialog> modal en la capa superior: si
+              // siguiera abierta, taparía el carrito que se acaba de pedir.
+              useTienda.getState().cerrarVistaRapida();
+              setCarritoAbierto(true);
+            },
             busqueda,
             buscar: setBusqueda,
           }}
@@ -93,6 +101,8 @@ export function CapaCliente({
           <WhatsAppButton />
           <MobileCartBar onAbrir={() => setCarritoAbierto(true)} />
           <BarraPedidoEscritorio onAbrir={() => setCarritoAbierto(true)} />
+          <AvisoAgregado />
+          <ProductQuickView />
           {carritoAbierto && <CartDrawer onCerrar={() => setCarritoAbierto(false)} />}
         </ContextoEnvoltorio.Provider>
       </ContextoConfig.Provider>

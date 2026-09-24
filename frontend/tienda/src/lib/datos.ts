@@ -74,6 +74,7 @@ export const PRODUCTOS_POR_TANDA = 24;
 
 export type OrdenCatalogo =
   | "recomendados"
+  | "mas_pedidos"
   | "nombre"
   | "precio_asc"
   | "precio_desc"
@@ -83,11 +84,14 @@ export type OrdenCatalogo =
  * Traducción a `?ordering=` de DRF. Solo criterios que el backend sabe ordenar
  * sobre el catálogo completo (ver `ordering_fields` en ProductoViewSet):
  * ordenar en el cliente solo reordenaría la tanda visible, no el catálogo.
- * "Más vendidos" no está aquí a propósito: existe como sección propia
- * (/orders/productos-mas-vendidos/), no como criterio del listado.
+ * "Más pedidos" usa la misma medida que la sección de favoritos (unidades en
+ * pedidos entregados), anotada por el backend solo cuando se pide; el
+ * desempate por `orden` mantiene estable la paginación entre productos que
+ * todavía no se han vendido.
  */
 const ORDERING: Record<OrdenCatalogo, string | undefined> = {
   recomendados: undefined, // orden natural del catálogo (orden, nombre_producto)
+  mas_pedidos: "-unidades_vendidas,orden,nombre_producto",
   nombre: "nombre_producto",
   precio_asc: "precio_desde",
   precio_desc: "-precio_desde",
@@ -101,12 +105,18 @@ export interface OpcionOrden {
   corta: string;
 }
 
+/**
+ * Las opciones que ofrece la tienda: cinco y no más. `recientes` sigue
+ * existiendo como criterio (lo usa una vitrina fija de `grid-productos`),
+ * pero en un catálogo de abastecimiento "lo último que se dio de alta" no le
+ * ayuda a nadie a comprar.
+ */
 export const OPCIONES_ORDEN: OpcionOrden[] = [
   { valor: "recomendados", etiqueta: "Recomendados", corta: "Ordenar" },
-  { valor: "precio_asc", etiqueta: "Precio: menor a mayor", corta: "$ menor" },
-  { valor: "precio_desc", etiqueta: "Precio: mayor a menor", corta: "$ mayor" },
-  { valor: "nombre", etiqueta: "Nombre (A-Z)", corta: "A-Z" },
-  { valor: "recientes", etiqueta: "Más recientes", corta: "Nuevos" },
+  { valor: "mas_pedidos", etiqueta: "Más pedidos", corta: "Más pedidos" },
+  { valor: "nombre", etiqueta: "Nombre A-Z", corta: "A-Z" },
+  { valor: "precio_asc", etiqueta: "Precio menor", corta: "$ menor" },
+  { valor: "precio_desc", etiqueta: "Precio mayor", corta: "$ mayor" },
 ];
 
 // Las categorías son pocas y prácticamente estáticas, pero las piden la
@@ -127,6 +137,26 @@ export function obtenerCategorias(): Promise<Categoria[]> {
   return cacheCategorias;
 }
 
+/**
+ * Las unidades por las que HOY se vende algo, con cuántos productos cada una
+ * (`?en_catalogo=1`). Es la lista del filtro "Se vende por": se cachea como
+ * las categorías porque cambia igual de poco y la piden el panel lateral y
+ * la hoja de filtros del móvil.
+ */
+let cacheUnidadesEnCatalogo: Promise<UnidadMedida[]> | null = null;
+
+export function obtenerUnidadesEnCatalogo(): Promise<UnidadMedida[]> {
+  if (!cacheUnidadesEnCatalogo) {
+    cacheUnidadesEnCatalogo = pedir<UnidadMedida[]>("/catalog/units/", { en_catalogo: 1 }).catch(
+      (e) => {
+        cacheUnidadesEnCatalogo = null;
+        throw e;
+      }
+    );
+  }
+  return cacheUnidadesEnCatalogo;
+}
+
 export async function obtenerUnidades(): Promise<UnidadMedida[]> {
   return desempaquetar(
     await pedir<Paginated<UnidadMedida> | UnidadMedida[]>("/catalog/units/")
@@ -137,6 +167,8 @@ export interface ParamsProductos {
   search?: string;
   slug?: string;
   categoria?: number;
+  /** "Se vende por": solo productos con una presentación en esta unidad. */
+  unidad?: number;
   page?: number;
   pageSize?: number;
   orden?: OrdenCatalogo;
@@ -149,7 +181,7 @@ export interface ParamsProductos {
  * `count`/`next`, que antes se descartaban.
  */
 export async function obtenerProductos(
-  { search, slug, categoria, page, pageSize, orden, signal }: ParamsProductos = {}
+  { search, slug, categoria, unidad, page, pageSize, orden, signal }: ParamsProductos = {}
 ): Promise<Paginated<Producto>> {
   return pedir<Paginated<Producto>>(
     "/catalog/products/",
@@ -157,6 +189,7 @@ export async function obtenerProductos(
       search: search || undefined,
       slug: slug || undefined,
       categoria,
+      unidad,
       page,
       page_size: pageSize ?? PRODUCTOS_POR_TANDA,
       ordering: orden ? ORDERING[orden] : undefined,
