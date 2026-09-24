@@ -4,10 +4,42 @@ from apps.tenancy.models import ModeloConTenant
 
 
 class MensajeContacto(ModeloConTenant):
+    """
+    Una solicitud que llega desde /contacto.
+
+    # Por qué `motivo`
+
+    La página ya no es un formulario único: el visitante elige primero qué
+    necesita (un pedido, una cotización, un producto que no está en el
+    catálogo o hablar con alguien). Guardarlo aparte deja filtrar la bandeja
+    por lo que vale más —una cotización grande no espera igual que una
+    pregunta— sin tener que leer cada mensaje.
+
+    Los detalles de cada caso (tipo de negocio, cantidad, fecha…) van
+    redactados dentro de `mensaje`: son texto para una persona que va a
+    responder, no datos que el sistema procese. Si algún día se procesan
+    (cotizaciones con estado, por ejemplo), eso es un modelo propio.
+
+    # Por qué el correo es opcional
+
+    Los negocios que compran por mayor se comunican por teléfono y WhatsApp.
+    Exigirles un correo para pedir una cotización es fricción que no aporta:
+    basta con UNA forma de responderles (ver el serializer).
+    """
+
+    class Motivo(models.TextChoices):
+        PEDIDO = "PEDIDO", "Hacer un pedido"
+        COTIZACION = "COTIZACION", "Cotización"
+        PRODUCTO_ESPECIAL = "PRODUCTO_ESPECIAL", "Producto fuera del catálogo"
+        CONSULTA = "CONSULTA", "Consulta"
+
     nombre = models.CharField(max_length=200)
-    email = models.EmailField()
+    email = models.EmailField(blank=True)
     telefono = models.CharField(max_length=25, blank=True)
     mensaje = models.TextField()
+    motivo = models.CharField(
+        max_length=20, choices=Motivo.choices, default=Motivo.CONSULTA
+    )
 
     atendido = models.BooleanField(default=False)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
