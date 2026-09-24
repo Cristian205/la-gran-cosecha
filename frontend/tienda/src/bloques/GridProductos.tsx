@@ -1,12 +1,19 @@
 "use client";
 
-import { Loader2, PackageSearch, RotateCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Loader2, RotateCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { obtenerProductos } from "@/lib/datos";
 import type { Producto } from "@/lib/tipos";
 import { ProductCard } from "@/componentes/ProductCard";
 import { Seccion, claseDeVariante } from "./Seccion";
 import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
+import { FilterPanel } from "@/componentes/tienda/Filtros";
+import {
+  CierreCatalogo,
+  EmptySearch,
+  ErrorCatalogo,
+  EsqueletosCatalogo,
+} from "@/componentes/tienda/EstadosCatalogo";
 
 /**
  * Una rejilla de productos, sin criterio propio.
@@ -22,7 +29,8 @@ import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
  * Con un `CatalogoProvider` alrededor (ver `contextos/CatalogoContexto.tsx`),
  * este bloque deja de decidir su propia categoría/orden/límite —los toma del
  * contexto, que es lo que `categorias-navegacion` y `catalogo-toolbar` están
- * cambiando en la misma pantalla— y gana "cargar más". Sin ese contexto
+ * cambiando en la misma pantalla— y gana el panel de filtros lateral, la
+ * carga progresiva y el cierre hacia el pedido. Sin ese contexto
  * (puesto suelto, como ya se usa en el Inicio) se comporta EXACTAMENTE igual
  * que antes: una vitrina fija, con la categoría y el límite que traiga en sus
  * propiedades. Ninguna tienda que ya lo use nota el cambio.
@@ -48,6 +56,8 @@ interface Props {
   /** El estilo de cada tarjeta — un eje distinto del de esta rejilla, ver
    *  `ProductCard`. `"compacta"` es lo que arma "Compra rápida". */
   tarjeta_variante?: string;
+  /** Modo catálogo: el panel lateral de filtros (solo escritorio). */
+  mostrar_filtros?: boolean;
 }
 
 export function GridProductos({
@@ -61,6 +71,7 @@ export function GridProductos({
   orden = "recientes",
   variante,
   tarjeta_variante,
+  mostrar_filtros = true,
 }: Props) {
   const catalogo = useCatalogoContexto();
 
@@ -74,6 +85,7 @@ export function GridProductos({
         id={id}
         variante={variante}
         tarjetaVariante={tarjeta_variante}
+        mostrarFiltros={mostrar_filtros}
       />
     );
   }
@@ -159,14 +171,19 @@ function Vitrina({
 
 // ------------------------------------------------------ modo catálogo interactivo
 
+/** Cuántas tandas se cargan solas al acercarse al final. Después, un botón:
+ *  el pie de página tiene que poder alcanzarse, y una rejilla que crece sin
+ *  fin lo empuja para siempre. */
+const TANDAS_AUTOMATICAS = 2;
+
 function CatalogoInteractivo({
   kicker,
   titulo,
   subtitulo,
-  centrado,
   id,
   variante,
   tarjetaVariante,
+  mostrarFiltros,
 }: {
   kicker?: string;
   titulo?: string;
@@ -175,100 +192,132 @@ function CatalogoInteractivo({
   id?: string;
   variante?: string;
   tarjetaVariante?: string;
+  mostrarFiltros: boolean;
 }) {
   const catalogo = useCatalogoContexto()!; // ya se comprobó en el padre
+  const centinela = useRef<HTMLDivElement>(null);
+  const [automaticas, setAutomaticas] = useState(0);
+  const { hayMas, cargandoMas, error, cargarMas } = catalogo;
 
+  // Un filtro nuevo es un catálogo nuevo: vuelve a tener sus cargas solas.
+  const claveFiltro = `${catalogo.categoriaActiva}|${catalogo.unidadActiva}|${catalogo.orden}|${catalogo.busqueda}`;
+  useEffect(() => setAutomaticas(0), [claveFiltro]);
+
+  // Carga progresiva: la siguiente tanda se pide ANTES de llegar al final
+  // (800px de margen), para que el cliente casi nunca vea el esqueleto.
+  useEffect(() => {
+    const el = centinela.current;
+    if (!el || !hayMas || cargandoMas || error || automaticas >= TANDAS_AUTOMATICAS) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setAutomaticas((n) => n + 1);
+          cargarMas();
+        }
+      },
+      { rootMargin: "800px 0px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hayMas, cargandoMas, error, automaticas, cargarMas]);
+
+  const conPanel = mostrarFiltros;
+  const claseGrid = `pgrid ${claseDeVariante(variante, VARIANTES, "grid", "rejilla")}`;
+
+  let contenido: React.ReactNode;
   if (catalogo.error && catalogo.productos.length === 0) {
-    return (
-      <div className="vacio-rico">
-        <PackageSearch size={40} strokeWidth={1.5} />
-        <p>No pudimos cargar el catálogo</p>
-        <span>Revisa tu conexión e inténtalo de nuevo.</span>
-        <button type="button" className="btn btn-verde btn-sm" onClick={catalogo.reintentar}>
-          <RotateCw size={15} /> Reintentar
-        </button>
+    contenido = <ErrorCatalogo />;
+  } else if (catalogo.cargando) {
+    contenido = (
+      <div className={claseGrid} aria-busy="true" aria-label="Cargando productos">
+        <EsqueletosCatalogo cantidad={8} />
       </div>
     );
-  }
+  } else if (catalogo.productos.length === 0) {
+    contenido = <EmptySearch />;
+  } else {
+    const restantes = catalogo.total !== null ? catalogo.total - catalogo.productos.length : null;
+    const progreso =
+      catalogo.total && catalogo.total > 0 ? (catalogo.productos.length / catalogo.total) * 100 : 100;
 
-  if (catalogo.cargando) {
-    return (
-      <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado} id={id}>
-        <div className="grid">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div className="card-skeleton" key={i}>
-              <div className="card-skeleton-media" />
-              <div className="card-skeleton-body">
-                <div className="card-skeleton-line" style={{ width: "75%" }} />
-                <div className="card-skeleton-line" style={{ width: "40%" }} />
-                <div
-                  className="card-skeleton-line"
-                  style={{ width: "100%", height: "2.1rem", marginTop: "auto" }}
-                />
-              </div>
-            </div>
+    contenido = (
+      <>
+        <div className={claseGrid} aria-busy={cargandoMas}>
+          {catalogo.productos.map((p, i) => (
+            <ProductCard
+              // La unidad en la clave: cambiar el filtro vuelve a elegir la
+              // presentación inicial de cada tarjeta.
+              key={`${p.id}-${catalogo.unidadActiva ?? ""}`}
+              producto={p}
+              variante={tarjetaVariante}
+              indice={i}
+              unidadPreferida={catalogo.unidadActiva}
+            />
           ))}
+          {cargandoMas && <EsqueletosCatalogo cantidad={4} />}
         </div>
-      </Seccion>
-    );
-  }
 
-  if (catalogo.productos.length === 0) {
-    return (
-      <div className="vacio-rico">
-        <PackageSearch size={40} strokeWidth={1.5} />
-        <p>No encontramos productos</p>
-        <span>
-          {catalogo.categoriaActiva && !catalogo.busqueda.trim()
-            ? "Esta categoría todavía no tiene productos disponibles."
-            : "Prueba buscando otra palabra o cambia de categoría."}
-        </span>
-        {catalogo.hayFiltros && (
-          <button type="button" className="btn btn-verde btn-sm" onClick={catalogo.limpiarFiltros}>
-            Limpiar filtros
-          </button>
+        <div ref={centinela} className="pgrid-centinela" aria-hidden="true" />
+
+        {(hayMas || error) && (
+          <div className="cargar-mas-v2">
+            {catalogo.total !== null && (
+              <div className="cargar-mas-progreso">
+                <span>
+                  Viste <b>{catalogo.productos.length}</b> de <b>{catalogo.total}</b> productos
+                </span>
+                <span className="cargar-mas-barra" aria-hidden="true">
+                  <i style={{ width: `${progreso}%` }} />
+                </span>
+              </div>
+            )}
+            {error && <p className="cargar-mas-error">No pudimos traer más productos.</p>}
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={error ? catalogo.reintentar : cargarMas}
+              disabled={cargandoMas}
+            >
+              {cargandoMas ? (
+                <>
+                  <Loader2 size={16} className="girando" aria-hidden="true" /> Cargando…
+                </>
+              ) : error ? (
+                <>
+                  <RotateCw size={15} aria-hidden="true" /> Reintentar
+                </>
+              ) : (
+                <>
+                  Cargar más{restantes !== null && restantes > 0 ? ` · ${restantes} restantes` : ""}
+                </>
+              )}
+            </button>
+          </div>
         )}
-      </div>
+
+        {!hayMas && !error && <CierreCatalogo />}
+      </>
     );
   }
 
   return (
-    <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado} id={id}>
-      <div className={`grid ${claseDeVariante(variante, VARIANTES, "grid", "rejilla")}`}>
-        {catalogo.productos.map((p, i) => (
-          <ProductCard key={p.id} producto={p} variante={tarjetaVariante} indice={i} />
-        ))}
-      </div>
-
-      {(catalogo.hayMas || catalogo.error) && (
-        <div className="cargar-mas">
-          {catalogo.error && (
-            <span className="cargar-mas-error">No pudimos traer más productos.</span>
-          )}
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={catalogo.error ? catalogo.reintentar : catalogo.cargarMas}
-            disabled={catalogo.cargandoMas}
-          >
-            {catalogo.cargandoMas ? (
-              <>
-                <Loader2 size={16} className="girando" /> Cargando…
-              </>
-            ) : catalogo.error ? (
-              <>
-                <RotateCw size={15} /> Reintentar
-              </>
-            ) : (
-              `Cargar más productos${
-                catalogo.total !== null
-                  ? ` (${catalogo.total - catalogo.productos.length} restantes)`
-                  : ""
-              }`
-            )}
-          </button>
-        </div>
+    <section id={id} className="catalogo" aria-labelledby={titulo ? "catalogo-titulo" : undefined}>
+      {(kicker || titulo || subtitulo) && (
+        <header className="catalogo-cabecera">
+          {kicker && <p className="catalogo-kicker">{kicker}</p>}
+          {titulo && <h2 id="catalogo-titulo">{titulo}</h2>}
+          {subtitulo && <p className="catalogo-subtitulo">{subtitulo}</p>}
+        </header>
       )}
-    </Seccion>
+      <div className={`catalogo-layout ${conPanel ? "catalogo-layout--con-panel" : ""}`}>
+        {conPanel && (
+          <aside className="catalogo-panel" aria-label="Filtros">
+            <FilterPanel />
+          </aside>
+        )}
+        <div className="catalogo-resultados">{contenido}</div>
+      </div>
+    </section>
   );
 }

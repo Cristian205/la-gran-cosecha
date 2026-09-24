@@ -10,13 +10,22 @@ interface Props {
   categorias: Categoria[];
   /** Categoría filtrada en la tienda; si no hay, el cliente la elige aquí. */
   categoriaFija?: Categoria | null;
+  /** Lo que el cliente buscó sin encontrarlo: llega ya escrito en el campo. */
+  nombreInicial?: string;
+  /** El texto del botón que despliega el formulario. */
+  textoBoton?: string;
 }
 
-export function CustomProductForm({ categorias, categoriaFija }: Props) {
+export function CustomProductForm({
+  categorias,
+  categoriaFija,
+  nombreInicial = "",
+  textoBoton = "¿No encuentras tu producto? Escríbelo aquí",
+}: Props) {
   const agregarPersonalizado = useCart((s) => s.agregarPersonalizado);
   const [abierto, setAbierto] = useState(false);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
-  const [nombre, setNombre] = useState("");
+  const [nombre, setNombre] = useState(nombreInicial);
   const [cantidad, setCantidad] = useState(1);
   const [unidadId, setUnidadId] = useState<number | "">("");
   const [categoriaId, setCategoriaId] = useState<number | "">("");
@@ -66,7 +75,7 @@ export function CustomProductForm({ categorias, categoriaFija }: Props) {
         onClick={() => setAbierto(true)}
       >
         <PackagePlus size={16} />
-        ¿No encuentras tu producto? Escríbelo aquí
+        {textoBoton}
       </button>
     );
   }

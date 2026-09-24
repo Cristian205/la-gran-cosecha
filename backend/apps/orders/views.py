@@ -68,6 +68,13 @@ class ProductosMasVendidosView(ExigeNegocioMixin, APIView):
             resultado += list(relleno)
 
         data = ProductoSerializer(resultado, many=True, context={"request": request}).data
+        # Cuáles salen del ranking y cuáles del relleno. Sin esto la tienda no
+        # puede distinguirlos y pondría "Más pedido" sobre un producto que solo
+        # está aquí porque el negocio aún no tiene historial — una etiqueta
+        # que miente. Es un booleano: el volumen vendido no se publica.
+        con_ventas = set(ids_vendidos)
+        for item in data:
+            item["por_ventas"] = item["id"] in con_ventas
         return Response(data)
 
 

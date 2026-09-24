@@ -1,4 +1,5 @@
-from django.db.models import Min, Prefetch, Q
+from django.db.models import Count, DecimalField, Min, OuterRef, Prefetch, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -30,7 +31,16 @@ class CategoriaViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     permission_classes = [SoloLecturaPublicaOStaff]
 
     def get_queryset(self):
-        qs = Categoria.objects.all()  # ya acotado por el manager
+        # `num_productos` es lo que la tienda pinta junto a cada categoría
+        # ("Frutas · 42"): cuántos productos ACTIVOS tiene. Se cuenta aquí y no
+        # en el navegador porque el catálogo se pagina — el cliente solo ve una
+        # tanda y contaría mal.
+        # El `order_by` repite el `Meta.ordering` a propósito: Django lo ignora
+        # en cuanto la consulta agrega (`Count`), y las categorías saldrían en
+        # cualquier orden.
+        qs = Categoria.objects.annotate(  # ya acotado por el manager
+            num_productos=Count("productos", filter=Q(productos__estado_producto=True))
+        ).order_by("orden", "nombre_categoria")
         if not (self.request.user and self.request.user.is_staff):
             qs = qs.filter(estado_categoria=True)
         return qs
@@ -45,6 +55,28 @@ class UnidadMedidaViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     # Catálogo cerrado y pequeño que los <select> del panel consumen entero:
     # paginarlo solo hacía desaparecer las unidades a partir de la número 20.
     pagination_class = None
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # `?en_catalogo=1`: solo las unidades por las que de verdad se vende
+        # algo hoy, con cuántos productos. Es el filtro "Se vende por" de la
+        # tienda: ofrecer "Galón" en una tienda que no vende nada por galón
+        # sería un filtro que siempre devuelve vacío.
+        if self.request.query_params.get("en_catalogo") in ("1", "true"):
+            activas = Q(
+                presentaciones_venta__estado_presentacion=True,
+                presentaciones_venta__producto__estado_producto=True,
+            )
+            qs = (
+                qs.annotate(
+                    num_productos=Count(
+                        "presentaciones_venta__producto", filter=activas, distinct=True
+                    )
+                )
+                .filter(num_productos__gt=0)
+                .order_by("-num_productos", "nombre_unidad")
+            )
+        return qs
 
 
 class ProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
@@ -64,6 +96,8 @@ class ProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         "fecha_creacion",
         "id",
         "precio_desde",
+        # Anotación condicional, ver `_anotar_unidades_vendidas`.
+        "unidades_vendidas",
     ]
 
     def get_permissions(self):
@@ -99,7 +133,41 @@ class ProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         # Los clientes anónimos solo ven productos activos.
         if not (self.request.user and self.request.user.is_staff):
             qs = qs.filter(estado_producto=True)
+        if "unidades_vendidas" in self.request.query_params.get("ordering", ""):
+            qs = self._anotar_unidades_vendidas(qs)
         return qs
+
+    @staticmethod
+    def _anotar_unidades_vendidas(qs):
+        """
+        "Más pedidos" como criterio del listado.
+
+        Mismo criterio que `/orders/productos-mas-vendidos/` —unidades en
+        pedidos ENTREGADOS— para que la sección y el orden no se contradigan.
+        Subconsulta y no `Sum(...)` sobre la unión, por la misma razón que
+        `disponible`: la consulta ya se une a las presentaciones y la suma
+        saldría multiplicada. Solo se anota cuando se pide ese orden: es una
+        subconsulta correlacionada y el listado normal no la necesita.
+
+        El valor no se serializa: la tienda ordena por él, pero el volumen de
+        ventas de un negocio no es un dato público.
+        """
+        from apps.orders.models import DetallePedido
+
+        decimal = DecimalField(max_digits=14, decimal_places=2)
+        vendidas = (
+            DetallePedido.objects.filter(
+                pedido__estado="ENTREGADO", presentacion__producto=OuterRef("pk")
+            )
+            .values("presentacion__producto")
+            .annotate(total=Sum("cantidad"))
+            .values("total")
+        )
+        return qs.annotate(
+            unidades_vendidas=Coalesce(
+                Subquery(vendidas, output_field=decimal), Value(0, output_field=decimal)
+            )
+        )
 
     def get_serializer_class(self):
         if self.action in ("create", "update", "partial_update"):

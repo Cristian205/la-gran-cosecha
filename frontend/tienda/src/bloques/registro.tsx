@@ -14,6 +14,7 @@ import { PromoCarousel } from "@/componentes/PromoCarousel";
 import { RepetirPedido } from "@/componentes/RepetirPedido";
 import { Testimonials } from "@/componentes/Testimonials";
 import { TrustBadges } from "@/componentes/TrustBadges";
+import { FeaturedProducts } from "@/componentes/tienda/FeaturedProducts";
 import { Acceso } from "./Acceso";
 import { BannerPromocional } from "./BannerPromocional";
 import { Boletin } from "./Boletin";
@@ -42,6 +43,16 @@ import { HeroCampaign } from "./campanas/HeroCampaign";
 import { ProductSpotlight } from "./campanas/ProductSpotlight";
 import { TestimonialStory } from "./campanas/TestimonialStory";
 import { VideoCampaign } from "./campanas/VideoCampaign";
+import { AboutHero } from "./nosotros/AboutHero";
+import { BrandStatement } from "./nosotros/BrandStatement";
+import { BusinessTypes } from "./nosotros/BusinessTypes";
+import { Compromisos } from "./nosotros/Compromisos";
+import { HiddenWork } from "./nosotros/HiddenWork";
+import { ProcessStory } from "./nosotros/ProcessStory";
+import { StorySection } from "./nosotros/StorySection";
+import { TeamStory } from "./nosotros/TeamStory";
+import { TimeStory } from "./nosotros/TimeStory";
+import { Transparencia } from "./nosotros/Transparencia";
 
 /**
  * El registro: qué componente pinta cada bloque.
@@ -123,6 +134,20 @@ const REGISTRO: Record<string, Bloque> = {
   "testimonios-editorial": TestimonialStory as Bloque,
   "cierre-cta": FinalCTA as Bloque,
 
+  // --- /nosotros: la historia de por qué existe el negocio -----------------
+  // Cada escena es un espacio de foto/video reemplazable (ver `nosotros/Medio`):
+  // el contenido audiovisual cambia desde el panel sin tocar estos bloques.
+  "nosotros-hero": AboutHero as Bloque,
+  "nosotros-origen": StorySection as Bloque,
+  "nosotros-proceso": ProcessStory as Bloque,
+  "nosotros-invisible": HiddenWork as Bloque,
+  "nosotros-tiempo": TimeStory as Bloque,
+  "nosotros-equipo": TeamStory as Bloque,
+  "nosotros-negocios": BusinessTypes as Bloque,
+  "nosotros-compromisos": Compromisos as Bloque,
+  "nosotros-precio": Transparencia as Bloque,
+  "nosotros-manifiesto": BrandStatement as Bloque,
+
   // --- la biblioteca que llego con el paso 3 --------------------------------
   // Ninguno obligo a tocar el lienzo ni el registro mas alla de estas filas:
   // es la parte del motor que ya funcionaba y que esta fase solo llena.
@@ -143,6 +168,10 @@ const REGISTRO: Record<string, Bloque> = {
   "catalogo-hero": CatalogHero as Bloque,
   "categorias-navegacion": CategoryNavigation as Bloque,
   "catalogo-toolbar": CatalogToolbar as Bloque,
+  // El merchandising del catálogo: un protagonista + "También puedes
+  // pedir…". Sucede a `producto-destacado`, que sigue registrado para las
+  // composiciones que ya lo usan.
+  "favoritos-negocios": FeaturedProducts as Bloque,
 
   // Va en la ruta reservada `/_no-encontrada` (ver `RUTA_NO_ENCONTRADA` en
   // `lib/pagina.ts`), con el mismo criterio que `cabecera`/`pie` en `/_layout`.

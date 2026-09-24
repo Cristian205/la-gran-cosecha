@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { GridProductos } from "@/bloques/GridProductos";
 import { AvisoPrecios } from "@/componentes/AvisoPrecios";
 import { ProductCard } from "@/componentes/ProductCard";
+import { agruparPresentaciones } from "@/componentes/PresentationSelector";
+import { CompraProducto } from "@/componentes/tienda/CompraProducto";
+import { ImagenProducto } from "@/componentes/tienda/ImagenProducto";
 import { pedirAlBackend } from "@/lib/api";
 import { desempaquetar } from "@/lib/datos";
 import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
@@ -35,6 +37,22 @@ async function obtenerProductoPorSlug(slug: string): Promise<Producto | null> {
   if (!pagina) return null;
   const [producto] = desempaquetar(pagina);
   return producto ?? null;
+}
+
+/**
+ * Otros productos de la misma categoría, sin el propio. Se resuelven en el
+ * servidor (salen en el HTML, enlazan entre fichas) y solo se muestran si de
+ * verdad hay alguno: un "También te puede interesar" vacío, o que repite el
+ * producto que se está viendo, es peor que no tenerlo.
+ */
+async function obtenerRelacionados(producto: Producto): Promise<Producto[]> {
+  const pagina = await pedirAlBackend<Paginated<Producto> | Producto[]>("/catalog/products/", {
+    params: { categoria: producto.categoria, page_size: 5 },
+  });
+  if (!pagina) return [];
+  return desempaquetar(pagina)
+    .filter((p) => p.id !== producto.id)
+    .slice(0, 4);
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -72,6 +90,12 @@ export default async function ProductoPage({ params }: Props) {
   ]);
 
   if (!producto) notFound();
+
+  const relacionados = await obtenerRelacionados(producto);
+  const grupos = agruparPresentaciones(producto.presentaciones);
+  const unidades = Array.from(
+    new Set(producto.presentaciones.map((p) => p.unidad_venta_nombre))
+  );
 
   const base = `https://${host}`;
   const urlProducto = `${base}/productos/${producto.slug}`;
@@ -117,7 +141,7 @@ export default async function ProductoPage({ params }: Props) {
   };
 
   return (
-    <div className="pagina-producto contenedor">
+    <div className="ficha contenedor">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdProducto) }}
@@ -137,19 +161,57 @@ export default async function ProductoPage({ params }: Props) {
         <span aria-current="page">{producto.nombre_producto}</span>
       </nav>
 
-      <h1 className="pp-titulo">{producto.nombre_producto}</h1>
+      {/* "Esto es lo que estás comprando": la foto grande a un lado y, al
+          otro, lo que hay que decidir — variedad, unidad con su precio,
+          cantidad — con el mismo panel que la vista rápida del catálogo. */}
+      <div className="ficha-cuerpo">
+        <div className="ficha-media">
+          <ImagenProducto producto={producto} tamanoIcono={200} prioridad />
+        </div>
 
-      <div className="pp-detalle">
-        <ProductCard producto={producto} />
+        <div className="ficha-info">
+          <Link className="ficha-cat" href={`/tienda?categoria=${producto.categoria}`}>
+            {producto.categoria_nombre}
+          </Link>
+          <h1>{producto.nombre_producto}</h1>
+
+          <CompraProducto producto={producto} />
+
+          <dl className="ficha-datos">
+            {unidades.length > 0 && (
+              <div>
+                <dt>Se vende por</dt>
+                <dd>{unidades.join(", ")}</dd>
+              </div>
+            )}
+            {grupos.length > 1 && (
+              <div>
+                <dt>Variedades</dt>
+                <dd>{grupos.map((g) => g.nombre).join(", ")}</dd>
+              </div>
+            )}
+            {producto.codigo_producto && (
+              <div>
+                <dt>Código</dt>
+                <dd>{producto.codigo_producto}</dd>
+              </div>
+            )}
+          </dl>
+
+          <AvisoPrecios compacto />
+        </div>
       </div>
 
-      <AvisoPrecios compacto />
-
-      <GridProductos
-        titulo="También te puede interesar"
-        categoria_id={producto.categoria}
-        limite={4}
-      />
+      {relacionados.length > 0 && (
+        <section className="ficha-relacionados" aria-labelledby="relacionados-titulo">
+          <h2 id="relacionados-titulo">Más de {producto.categoria_nombre}</h2>
+          <div className="pgrid">
+            {relacionados.map((p, i) => (
+              <ProductCard key={p.id} producto={p} indice={i} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

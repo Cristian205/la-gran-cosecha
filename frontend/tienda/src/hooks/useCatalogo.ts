@@ -9,6 +9,8 @@ const DEBOUNCE_MS = 300;
 interface Filtros {
   busqueda: string;
   categoria: number | null;
+  /** "Se vende por": id de la unidad de venta, o null para todas. */
+  unidad: number | null;
   orden: OrdenCatalogo;
 }
 
@@ -46,8 +48,8 @@ export interface EstadoCatalogo {
 
 /** Identidad del filtro. JSON y no concatenación: un "|" tecleado en el
  *  buscador no debe poder partir la clave en pedazos equivocados. */
-function claveDe({ busqueda, categoria, orden }: Filtros): string {
-  return JSON.stringify([busqueda, categoria, orden]);
+function claveDe({ busqueda, categoria, unidad, orden }: Filtros): string {
+  return JSON.stringify([busqueda, categoria, unidad, orden]);
 }
 
 /**
@@ -59,11 +61,16 @@ function claveDe({ busqueda, categoria, orden }: Filtros): string {
  * cambiar de filtro y espera a que el usuario deje de teclear antes de buscar.
  */
 export function useCatalogo(filtros: Filtros, semilla?: SemillaCatalogo): EstadoCatalogo {
-  // La semilla solo vale para el catálogo sin filtrar: el servidor siempre
-  // resuelve la primera pagina SIN categoria ni busqueda, así que usarla con
+  // La semilla solo vale para el catálogo sin filtrar y en su orden natural:
+  // el servidor siempre resuelve la primera pagina así, de modo que usarla con
   // un filtro ya activo (por ejemplo, un enlace directo a "?categoria=5")
   // pintaría el catálogo entero donde tocaba una categoría.
-  const semillaValida = Boolean(semilla) && !filtros.busqueda && filtros.categoria === null;
+  const semillaValida =
+    Boolean(semilla) &&
+    !filtros.busqueda &&
+    filtros.categoria === null &&
+    filtros.unidad === null &&
+    filtros.orden === "recomendados";
   const semillaUsada = useRef(false);
 
   const [busquedaAplicada, setBusquedaAplicada] = useState(filtros.busqueda);
@@ -125,6 +132,7 @@ export function useCatalogo(filtros: Filtros, semilla?: SemillaCatalogo): Estado
     obtenerProductos({
       search: ctx.filtros.busqueda,
       categoria: ctx.filtros.categoria ?? undefined,
+      unidad: ctx.filtros.unidad ?? undefined,
       orden: ctx.filtros.orden,
       page: ctx.pagina,
       signal: controlador.signal,

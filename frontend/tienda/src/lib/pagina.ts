@@ -34,6 +34,7 @@ export const composicionDe = cache(
 export const RESUELVE_EN_SERVIDOR: Record<string, string> = {
   "productos-destacados": "/orders/productos-mas-vendidos/",
   "producto-destacado": "/orders/productos-mas-vendidos/",
+  "favoritos-negocios": "/orders/productos-mas-vendidos/",
   "producto-spotlight": "/orders/productos-mas-vendidos/",
   "testimonios-editorial": "/content/testimonials/",
   // Solo se lee `count`: pedir una fila basta para saber el tamano del catalogo.

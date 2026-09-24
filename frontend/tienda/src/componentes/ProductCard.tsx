@@ -1,28 +1,22 @@
 "use client";
 
-import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState, type CSSProperties } from "react";
-import { useAgregarAlCarrito } from "@/hooks/useAgregarAlCarrito";
-import { useCart } from "@/estado/carrito";
-import type { Producto } from "@/lib/tipos";
-import { ajustarCantidad, colorCategoria, formatoPrecio, iconoCategoria, pasoCantidad } from "@/lib/utiles";
-import { TEXTO_PRECIOS_ESTIMADOS } from "@/componentes/AvisoPrecios";
-import { useEnvoltorio, useSiteConfig } from "@/componentes/CapaCliente";
-import { agruparPresentaciones, PresentationSelector } from "@/componentes/PresentationSelector";
-import { QuantityControl } from "@/componentes/QuantityControl";
-import { AddToCartButton } from "@/componentes/AddToCartButton";
+import type { CSSProperties, MouseEvent } from "react";
 import { claseDeVariante } from "@/bloques/Seccion";
-import { Reveal } from "@/componentes/animacion";
-
-const precio = (p: { precio_unitario: string }) => parseFloat(p.precio_unitario);
+import { useTienda } from "@/estado/tienda";
+import { useSeleccionProducto } from "@/hooks/useSeleccionProducto";
+import type { Producto } from "@/lib/tipos";
+import { colorCategoriaTematicoTinte } from "@/lib/utiles";
+import { ImagenProducto } from "@/componentes/tienda/ImagenProducto";
+import { PrecioProducto } from "@/componentes/tienda/PrecioProducto";
+import { QuickAdd } from "@/componentes/tienda/QuickAdd";
+import { SelectorPresentacion } from "@/componentes/tienda/SelectorPresentacion";
 
 /**
- * `estandar` es la tarjeta de siempre. `compacta` es una fila —imagen chica,
- * nombre y precio en línea, mismo stepper y mismo botón— para donde una
- * tarjeta grande sobra: compra rápida, un carrusel denso, una lista larga.
- * Mismos datos, mismos componentes por dentro (`PresentationSelector`,
- * `QuantityControl`, `AddToCartButton`); solo cambia cómo se acomodan.
+ * `estandar` es la tarjeta del catálogo. `compacta` es una fila —imagen chica,
+ * nombre, precio y el mismo "cantidad + agregar"— para donde una tarjeta
+ * grande sobra: compra rápida, un carrusel denso, una lista larga. Mismos
+ * datos y mismos componentes por dentro; solo cambia cómo se acomodan.
  */
 const VARIANTES = ["estandar", "compacta"] as const;
 
@@ -30,266 +24,103 @@ interface Props {
   producto: Producto;
   variante?: string;
   /** Una cinta comercial ("Más pedido", "Favorito"). Opt-in: la pasa quien
-   *  arma la rejilla (hoy solo `MasVendidos` en el Home), no el catálogo. */
+   *  arma la rejilla, nunca el catálogo por su cuenta. */
   etiqueta?: string;
-  /** Su posición dentro de la rejilla, solo para escalonar la entrada — cada
-   *  tarjeta aparece un poco después que la anterior en vez de todas a la vez. */
+  /** Su posición dentro de la rejilla, solo para escalonar la entrada. */
   indice?: number;
+  /** La unidad del filtro "Se vende por", para arrancar en ella. */
+  unidadPreferida?: number | null;
 }
 
-export function ProductCard({ producto, variante, etiqueta, indice = 0 }: Props) {
-  const { agregar, agregado } = useAgregarAlCarrito();
-  const cambiarCantidad = useCart((s) => s.cambiarCantidad);
-  const quitar = useCart((s) => s.quitar);
-
-  const paso = pasoCantidad(producto.permite_fraccion, producto.tipo_cantidad);
-
-  const grupos = useMemo(
-    () => agruparPresentaciones(producto.presentaciones),
-    [producto.presentaciones]
-  );
-
-  const [nombreSel, setNombreSel] = useState<string | null>(grupos[0]?.nombre ?? null);
-  const [presId, setPresId] = useState<number | null>(grupos[0]?.opciones[0]?.id ?? null);
-
-  const grupoSel = grupos.find((g) => g.nombre === nombreSel) ?? grupos[0] ?? null;
-  const presSeleccionada =
-    grupoSel?.opciones.find((p) => p.id === presId) ?? grupoSel?.opciones[0] ?? null;
-
-  // La cantidad ya no vive en la tarjeta: mientras el producto no está en el
-  // pedido solo hace falta "Agregar", y una vez dentro el stepper edita
-  // directamente la línea del carrito. Cada tarjeta pierde una fila y la
-  // cantidad mostrada no puede desincronizarse de lo que se va a pedir.
-  const enCarrito = useCart((s) =>
-    presSeleccionada
-      ? s.items.find((i) => i.presentacionId === presSeleccionada.id)
-      : undefined
-  );
-
-  const sinPresentaciones = grupos.length === 0;
-  const precioUnitario = presSeleccionada ? precio(presSeleccionada) : 0;
-  const enElMinimo = enCarrito ? enCarrito.cantidad - paso < paso - 1e-6 : false;
-
-  function elegirNombre(nombre: string) {
-    setNombreSel(nombre);
-    // La unidad elegida puede no existir bajo el nuevo nombre, así que caemos a
-    // la más barata del grupo en vez de dejar la tarjeta sin presentación.
-    setPresId(grupos.find((g) => g.nombre === nombre)?.opciones[0]?.id ?? null);
-  }
-
-  function handleAgregar() {
-    if (!presSeleccionada) return;
-    agregar({
-      productoId: producto.id,
-      productoNombre: producto.nombre_producto,
-      imagenUrl: producto.imagen_url,
-      presentacionId: presSeleccionada.id,
-      presentacionNombre: `${presSeleccionada.nombre_presentacion} · ${presSeleccionada.unidad_venta_nombre}`,
-      precioUnitario,
-      cantidad: 1,
-      permiteFraccion: producto.permite_fraccion,
-      tipoCantidad: producto.tipo_cantidad,
-    });
-  }
-
-  function bajarCantidad() {
-    if (!enCarrito || !presSeleccionada) return;
-    // Bajar del mínimo saca la línea del pedido: es lo que el cliente espera y
-    // evita dejar cantidades imposibles como 0.
-    if (enElMinimo) quitar(presSeleccionada.id);
-    else
-      cambiarCantidad(
-        presSeleccionada.id,
-        ajustarCantidad(enCarrito.cantidad, -paso, paso),
-        paso
-      );
-  }
-
-  function subirCantidad() {
-    if (!presSeleccionada) return;
-    if (enCarrito) {
-      cambiarCantidad(
-        presSeleccionada.id,
-        ajustarCantidad(enCarrito.cantidad, paso, paso),
-        paso
-      );
-    } else {
-      handleAgregar();
-    }
-  }
-
-  /**
-   * Si se puede prometer o no.
-   *
-   * Solo cuenta cuando el producto lleva inventario: para todo lo demás
-   * `disponible` no significa nada y tratar su ausencia como «agotado» dejaría
-   * el catálogo entero sin botón de comprar. La comprobación es explícita por
-   * eso, y no un `Number(...) > 0` a secas.
-   */
-  const agotado = producto.controla_stock === true && Number(producto.disponible ?? 0) <= 0;
-
-  /**
-   * Hay negocios cuyo canal es el mostrador y no internet.
-   *
-   * Su tienda sigue siendo un catálogo —se ve, se busca, se comparte—; lo que
-   * no tiene es botón de pedir. El valor por defecto es `true` para que un
-   * negocio cuya configuración aún no ha llegado siga vendiendo: fallar hacia
-   * el comportamiento de siempre, nunca hacia la tienda apagada.
-   */
-  const { config } = useSiteConfig();
-  const { abrirCarrito } = useEnvoltorio();
-  const recibePedidos = config.acepta_pedidos_online !== false;
-  const noSePuedePedir = agotado || !recibePedidos;
+/**
+ * La tarjeta de producto: imagen → qué es → cuánto cuesta → cuánto llevo.
+ *
+ * El orden de lectura es el del encargo (PRODUCTO → INFORMACIÓN → SELECCIÓN →
+ * CANTIDAD → AGREGAR) y cada fila tiene un solo trabajo, para que no parezca
+ * un formulario: la categoría es una línea pequeña, el nombre manda, la
+ * presentación son dos desplegables discretos con nombre ("Por Libra"), el
+ * precio es la cifra grande con "aprox. / Libra" debajo, y abajo del todo,
+ * alineado entre tarjetas vecinas, el control de compra.
+ *
+ * Imagen y nombre abren la vista rápida (más grande, con las unidades y sus
+ * precios a la vista) sin salir del catálogo; siguen siendo un enlace real a
+ * /productos/<slug> —clic central, "abrir en pestaña nueva", rastreadores—.
+ *
+ * Una tarjeta cuyo producto ya está en el pedido lleva un borde de marca: en
+ * un pedido de cuarenta líneas, ver de un vistazo qué ya se agregó importa.
+ */
+export function ProductCard({ producto, variante, etiqueta, indice = 0, unidadPreferida = null }: Props) {
+  const seleccion = useSeleccionProducto(producto, unidadPreferida);
+  const abrirVistaRapida = useTienda((s) => s.abrirVistaRapida);
 
   const clase = claseDeVariante(variante, VARIANTES, "producto-card", "estandar");
   const esCompacta = clase.endsWith("compacta");
+  const href = `/productos/${producto.slug}`;
+  const { presentacion, sinPresentaciones, agotado, enCarrito, agregado } = seleccion;
 
-  const IconoRespaldo = iconoCategoria(producto.categoria_nombre);
-  const imagen = producto.imagen_url ? (
-    <img src={producto.imagen_url} alt={producto.nombre_producto} loading="lazy" decoding="async" />
-  ) : (
-    <IconoRespaldo size={esCompacta ? 22 : 38} />
-  );
-
-  const controlDeCompra = sinPresentaciones ? null : !recibePedidos ? null : enCarrito ? (
-    <QuantityControl
-      cantidad={enCarrito.cantidad}
-      permiteFraccion={producto.permite_fraccion}
-      enElMinimo={enElMinimo}
-      leyenda={esCompacta ? undefined : "en tu pedido"}
-      nombreProducto={producto.nombre_producto}
-      onDisminuir={bajarCantidad}
-      onAumentar={subirCantidad}
-    />
-  ) : (
-    <AddToCartButton
-      disabled={!presSeleccionada || noSePuedePedir}
-      agotado={agotado}
-      nombreProducto={producto.nombre_producto}
-      precioUnitario={precioUnitario}
-      onClick={handleAgregar}
-      compacto={esCompacta}
-    />
-  );
-
-  const retraso = Math.min(indice, 7) * 0.05;
-
-  if (esCompacta) {
-    return (
-      <Reveal
-        as="article"
-        className={`producto-card ${clase} ${agregado ? "pc-agregado" : ""} ${agotado ? "pc-agotado" : ""}`}
-        id={`producto-${producto.id}`}
-        retraso={retraso}
-        whileHover={{ y: -6 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        <Link
-          href={`/productos/${producto.slug}`}
-          className="pc-media"
-          style={{ "--cat-grad": colorCategoria(producto.categoria) } as CSSProperties}
-        >
-          {imagen}
-          {agotado && <span className="pc-cinta-agotado">Agotado</span>}
-        </Link>
-
-        <div className="pc-compacta-info">
-          <h3 className="pc-nombre" title={producto.nombre_producto}>
-            <Link href={`/productos/${producto.slug}`}>{producto.nombre_producto}</Link>
-          </h3>
-          {sinPresentaciones ? (
-            <span className="pc-vacio">Sin presentaciones</span>
-          ) : (
-            <PresentationSelector
-              grupos={grupos}
-              grupoSeleccionado={grupoSel}
-              presentacionSeleccionada={presSeleccionada}
-              productoNombre={producto.nombre_producto}
-              onElegirNombre={elegirNombre}
-              onElegirPresentacion={setPresId}
-              compacto
-            />
-          )}
-        </div>
-
-        {!sinPresentaciones && (
-          <span className="pc-precio-valor pc-precio-compacta">{formatoPrecio(precioUnitario)}</span>
-        )}
-
-        {controlDeCompra}
-      </Reveal>
-    );
+  function abrir(e: MouseEvent<HTMLAnchorElement>) {
+    // Solo el clic "normal": con Ctrl/⌘/Mayús o el botón central el cliente
+    // pidió explícitamente una pestaña nueva, y se respeta.
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    abrirVistaRapida(producto);
   }
 
+  const estilo = {
+    "--cat-tinte": colorCategoriaTematicoTinte(producto.categoria_nombre, producto.categoria),
+    "--retraso": `${Math.min(indice % 24, 11) * 35}ms`,
+  } as CSSProperties;
+
+  const claseEstado = [
+    "pcard",
+    esCompacta ? "pcard--compacta" : "",
+    enCarrito ? "pcard--en-pedido" : "",
+    agregado ? "pcard--agregado" : "",
+    agotado ? "pcard--agotado" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const cinta = agotado ? (
+    <span className="pcard-cinta pcard-cinta--agotado">Agotado</span>
+  ) : etiqueta ? (
+    <span className="pcard-cinta">{etiqueta}</span>
+  ) : null;
+
   return (
-    <Reveal
-      as="article"
-      className={`producto-card glass ${agregado ? "pc-agregado" : ""} ${agotado ? "pc-agotado" : ""}`}
-      id={`producto-${producto.id}`}
-      retraso={retraso}
-      whileHover={{ y: -6 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      <Link
-        href={`/productos/${producto.slug}`}
-        className="pc-media"
-        style={{ "--cat-grad": colorCategoria(producto.categoria) } as CSSProperties}
-      >
-        {imagen}
-        {!agotado && etiqueta && <span className="pc-cinta-destacado">{etiqueta}</span>}
-        {agotado && <span className="pc-cinta-agotado">Agotado</span>}
+    <article className={claseEstado} id={`producto-${producto.id}`} style={estilo}>
+      <Link href={href} className="pcard-media" onClick={abrir} tabIndex={-1} aria-hidden="true">
+        <ImagenProducto producto={producto} tamanoIcono={esCompacta ? 30 : 76} />
+        {!esCompacta && cinta}
       </Link>
 
-      <div className="pc-body">
-        <h3 className="pc-nombre" title={producto.nombre_producto}>
-          <Link href={`/productos/${producto.slug}`}>{producto.nombre_producto}</Link>
+      <div className="pcard-cuerpo">
+        {!esCompacta && <span className="pcard-cat">{producto.categoria_nombre}</span>}
+        <h3 className="pcard-nombre">
+          <Link href={href} onClick={abrir}>
+            {producto.nombre_producto}
+          </Link>
         </h3>
 
-        <span className="pc-cat">
-          <i style={{ background: colorCategoria(producto.categoria) }} />
-          {producto.categoria_nombre}
-        </span>
-
         {sinPresentaciones ? (
-          <div className="pc-vacio">Sin presentaciones disponibles</div>
+          <p className="pcard-vacio">Pronto disponible</p>
         ) : (
           <>
-            <p className="pc-precio">
-              <span className="pc-precio-valor">{formatoPrecio(precioUnitario)}</span>
-              {/* El precio depende del mercado del día; AvisoPrecios explica
-                  el porqué sin repetirlo entero en cada tarjeta. */}
-              <span className="pc-precio-aprox" title={TEXTO_PRECIOS_ESTIMADOS}>
-                aprox.
-              </span>
-              {presSeleccionada && (
-                <span className="pc-precio-unidad">
-                  / {presSeleccionada.unidad_venta_nombre}
-                </span>
-              )}
-            </p>
-
-            <PresentationSelector
-              grupos={grupos}
-              grupoSeleccionado={grupoSel}
-              presentacionSeleccionada={presSeleccionada}
-              productoNombre={producto.nombre_producto}
-              onElegirNombre={elegirNombre}
-              onElegirPresentacion={setPresId}
-            />
-
-            {controlDeCompra}
-
-            {/* Solo mientras dura el destello de "agregado": un empujoncito
-                hacia el pedido, no un enlace permanente que le reste espacio
-                a la tarjeta el resto del tiempo. */}
-            {agregado && (
-              <button type="button" className="pc-ver-pedido" onClick={abrirCarrito}>
-                <Check size={13} /> Agregado · Ver pedido <ArrowRight size={13} />
-              </button>
-            )}
+            <SelectorPresentacion seleccion={seleccion} productoNombre={producto.nombre_producto} />
+            <div className="pcard-compra">
+              <PrecioProducto
+                valor={seleccion.precioUnitario}
+                unidad={presentacion?.unidad_venta_nombre}
+              />
+              <QuickAdd
+                seleccion={seleccion}
+                productoNombre={producto.nombre_producto}
+                permiteFraccion={producto.permite_fraccion}
+              />
+            </div>
           </>
         )}
       </div>
-    </Reveal>
+    </article>
   );
 }

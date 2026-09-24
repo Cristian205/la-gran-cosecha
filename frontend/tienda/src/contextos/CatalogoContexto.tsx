@@ -4,20 +4,36 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEnvoltorio } from "@/componentes/CapaCliente";
 import { useCatalogo } from "@/hooks/useCatalogo";
-import { obtenerCategorias, type OrdenCatalogo } from "@/lib/datos";
-import type { Categoria, Paginated, Producto } from "@/lib/tipos";
+import {
+  OPCIONES_ORDEN,
+  obtenerCategorias,
+  obtenerUnidadesEnCatalogo,
+  type OrdenCatalogo,
+} from "@/lib/datos";
+import type { Categoria, Paginated, Producto, UnidadMedida } from "@/lib/tipos";
 
 interface CatalogoContextoValor {
   categorias: Categoria[];
   categoriaActiva: number | null;
   cambiarCategoria: (id: number | null) => void;
+  /** Las unidades por las que hoy se vende algo (filtro "Se vende por"). */
+  unidades: UnidadMedida[];
+  unidadActiva: number | null;
+  cambiarUnidad: (id: number | null) => void;
   orden: OrdenCatalogo;
   cambiarOrden: (orden: OrdenCatalogo) => void;
   busqueda: string;
+  buscar: (valor: string) => void;
   productos: Producto[];
+  /** Total del filtro ACTUAL. */
   total: number | null;
+  /** Total del catálogo entero, sin filtros: lo que cuenta el encabezado. No
+   *  puede ser `total`, que baja a 12 en cuanto alguien elige "Granos". */
+  totalCatalogo: number | null;
   cargando: boolean;
   cargandoMas: boolean;
+  /** El texto tecleado todavía no llegó al backend (debounce en curso). */
+  esperandoBusqueda: boolean;
   error: boolean;
   hayMas: boolean;
   cargarMas: () => void;
@@ -41,6 +57,14 @@ interface Props {
   categoriasIniciales?: Categoria[];
 }
 
+const ORDENES_VALIDOS = new Set<string>(OPCIONES_ORDEN.map((o) => o.valor));
+
+function numeroDe(valor: string | null): number | null {
+  if (!valor) return null;
+  const n = Number(valor);
+  return Number.isFinite(n) ? n : null;
+}
+
 /**
  * El canal que coordina los bloques de un catálogo interactivo.
  *
@@ -52,6 +76,12 @@ interface Props {
  * ese puente, con el mismo criterio que ya usa `CapaCliente`/`useEnvoltorio`
  * para compartir la búsqueda entre el Navbar y la tienda: nada nuevo, el mismo
  * patrón, un nivel más abajo.
+ *
+ * Categoría, unidad y orden viven en la URL y no en estado local: un enlace a
+ * "/tienda?categoria=5&unidad=3" (desde el Inicio, desde WhatsApp) llega ya
+ * filtrado, y "atrás" desde una ficha de producto vuelve al mismo filtro. La
+ * búsqueda NO va en la URL: es la del Navbar, compartida en `CapaCliente`, y
+ * se escribe letra a letra — reescribir la URL por cada tecla sería ruido.
  *
  * Se envuelve alrededor de la composición de una página `Pagina.Tipo.CATALOGO`
  * (ver `app/tienda/page.tsx`). Un bloque que lo necesite lo pide con
@@ -65,26 +95,30 @@ export function CatalogoProvider({ children, datosIniciales, categoriasIniciales
   const router = useRouter();
   const pathname = usePathname();
   const [categorias, setCategorias] = useState<Categoria[]>(categoriasIniciales ?? []);
-  const [orden, setOrden] = useState<OrdenCatalogo>("recomendados");
+  const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
 
-  // La categoría vive en la URL y no en estado local: así un enlace a
-  // "/tienda?categoria=5" (desde una categoría del Inicio) llega ya filtrado.
-  const categoriaActiva = searchParams.get("categoria")
-    ? Number(searchParams.get("categoria"))
-    : null;
+  const categoriaActiva = numeroDe(searchParams.get("categoria"));
+  const unidadActiva = numeroDe(searchParams.get("unidad"));
+  const ordenUrl = searchParams.get("orden");
+  const orden: OrdenCatalogo =
+    ordenUrl && ORDENES_VALIDOS.has(ordenUrl) ? (ordenUrl as OrdenCatalogo) : "recomendados";
 
-  function cambiarCategoria(id: number | null) {
+  /** Reescribe uno o varios parámetros de la URL; `null` los quita. */
+  function cambiarParametros(cambios: Record<string, string | null>) {
     // `replace` y no `push`: filtrar no debería llenar el historial de
     // entradas que obliguen a pulsar "atrás" varias veces para salir.
     const siguiente = new URLSearchParams(searchParams.toString());
-    if (id === null) siguiente.delete("categoria");
-    else siguiente.set("categoria", String(id));
+    for (const [clave, valor] of Object.entries(cambios)) {
+      if (valor === null) siguiente.delete(clave);
+      else siguiente.set(clave, valor);
+    }
     const cadena = siguiente.toString();
     router.replace(pathname + (cadena ? `?${cadena}` : ""), { scroll: false });
   }
 
   useEffect(() => {
     obtenerCategorias().then(setCategorias).catch(() => undefined);
+    obtenerUnidadesEnCatalogo().then(setUnidades).catch(() => undefined);
   }, []);
 
   const semilla = datosIniciales
@@ -95,43 +129,46 @@ export function CatalogoProvider({ children, datosIniciales, categoriasIniciales
       }
     : undefined;
 
-  const {
-    productos,
-    total,
-    cargando,
-    cargandoMas,
-    error,
-    hayMas,
-    cargarMas,
-    reintentar,
-  } = useCatalogo({ busqueda, categoria: categoriaActiva, orden }, semilla);
+  const estado = useCatalogo(
+    { busqueda, categoria: categoriaActiva, unidad: unidadActiva, orden },
+    semilla
+  );
 
-  const hayFiltros = Boolean(busqueda.trim()) || categoriaActiva !== null;
+  const sumaCategorias = categorias.reduce((acc, c) => acc + (c.num_productos ?? 0), 0);
+  const totalCatalogo = datosIniciales?.count ?? (sumaCategorias > 0 ? sumaCategorias : null);
 
-  function limpiarFiltros() {
-    buscar("");
-    cambiarCategoria(null);
-  }
+  const hayFiltros =
+    Boolean(busqueda.trim()) || categoriaActiva !== null || unidadActiva !== null;
 
   return (
     <Contexto.Provider
       value={{
         categorias,
         categoriaActiva,
-        cambiarCategoria,
+        cambiarCategoria: (id) => cambiarParametros({ categoria: id === null ? null : String(id) }),
+        unidades,
+        unidadActiva,
+        cambiarUnidad: (id) => cambiarParametros({ unidad: id === null ? null : String(id) }),
         orden,
-        cambiarOrden: setOrden,
+        cambiarOrden: (valor) =>
+          cambiarParametros({ orden: valor === "recomendados" ? null : valor }),
         busqueda,
-        productos,
-        total,
-        cargando,
-        cargandoMas,
-        error,
-        hayMas,
-        cargarMas,
-        reintentar,
+        buscar,
+        productos: estado.productos,
+        total: estado.total,
+        totalCatalogo,
+        cargando: estado.cargando,
+        cargandoMas: estado.cargandoMas,
+        esperandoBusqueda: estado.esperandoBusqueda,
+        error: estado.error,
+        hayMas: estado.hayMas,
+        cargarMas: estado.cargarMas,
+        reintentar: estado.reintentar,
         hayFiltros,
-        limpiarFiltros,
+        limpiarFiltros: () => {
+          buscar("");
+          cambiarParametros({ categoria: null, unidad: null });
+        },
       }}
     >
       {children}

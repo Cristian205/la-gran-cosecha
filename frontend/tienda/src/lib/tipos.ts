@@ -8,6 +8,8 @@ export interface Categoria {
   /** Copy publicitario opcional, para la variante "vidriera" del bloque de categorías. */
   subtitulo?: string;
   cta_texto?: string;
+  /** Productos activos en la categoría. Lo anota el backend. */
+  num_productos?: number | null;
 }
 
 export interface Presentacion {
@@ -42,6 +44,10 @@ export interface Producto {
   /** Lo que se puede prometer: existencias menos lo ya reservado. */
   disponible?: string;
   presentaciones: Presentacion[];
+  /** Solo en `/orders/productos-mas-vendidos/`: true si sale del ranking de
+   *  ventas y no del relleno de un negocio sin historial. Es lo único que
+   *  autoriza a llamarlo "Más pedido". */
+  por_ventas?: boolean;
 }
 
 export interface Paginated<T> {
@@ -55,6 +61,8 @@ export interface UnidadMedida {
   id: number;
   nombre_unidad: string;
   abreviatura_unidad: string;
+  /** Solo con `?en_catalogo=1`: cuántos productos se venden por esta unidad. */
+  num_productos?: number | null;
 }
 
 export interface ItemCarrito {

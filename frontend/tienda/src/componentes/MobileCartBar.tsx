@@ -1,8 +1,9 @@
 "use client";
 
 import { ArrowRight, ShoppingBag } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useCart } from "@/estado/carrito";
+import { useRebote } from "@/hooks/useRebote";
 import { formatoPrecio } from "@/lib/utiles";
 
 interface Props {
@@ -13,19 +14,13 @@ interface Props {
  * Barra fija sobre la navegación inferior, solo en móvil: la mayoría de
  * clientes arma su pedido desde el celular y necesita ver, sin volver arriba,
  * cuánto lleva. Compacta a propósito — cada píxel que ocupa es un píxel menos
- * de catálogo.
+ * de catálogo. Salta al cambiar líneas O cantidades (antes solo con líneas
+ * nuevas: subir de 2 a 3 libras no daba ninguna señal).
  */
 export function MobileCartBar({ onAbrir }: Props) {
   const totalLineas = useCart((s) => s.totalLineas());
   const totalPrecio = useCart((s) => s.totalPrecio());
-  const [rebote, setRebote] = useState(false);
-
-  useEffect(() => {
-    if (totalLineas === 0) return;
-    setRebote(true);
-    const t = setTimeout(() => setRebote(false), 320);
-    return () => clearTimeout(t);
-  }, [totalLineas]);
+  const rebote = useRebote(`${totalLineas}|${totalPrecio}`, 320);
 
   useEffect(() => {
     document.body.classList.toggle("con-barra-carrito", totalLineas > 0);
@@ -43,18 +38,22 @@ export function MobileCartBar({ onAbrir }: Props) {
       onClick={onAbrir}
       aria-label={`Ver tu pedido: ${lineas} ${
         lineas === 1 ? "producto" : "productos"
-      }, ${formatoPrecio(totalPrecio)} estimado`}
+      }, ${formatoPrecio(totalPrecio)} aproximado`}
     >
       <span className="barra-carrito-icono">
         <ShoppingBag size={17} />
-        <span className="barra-carrito-contador">{lineas}</span>
+        <span className="barra-carrito-contador" key={lineas}>
+          {lineas}
+        </span>
       </span>
       <span className="barra-carrito-texto">
         {lineas} {lineas === 1 ? "producto" : "productos"}
+        <span className="barra-carrito-total">
+          {formatoPrecio(totalPrecio)} <small>aprox.</small>
+        </span>
       </span>
-      <span className="barra-carrito-total">{formatoPrecio(totalPrecio)}</span>
       <span className="barra-carrito-cta">
-        Ver <ArrowRight size={15} />
+        Ver pedido <ArrowRight size={15} />
       </span>
     </button>
   );
