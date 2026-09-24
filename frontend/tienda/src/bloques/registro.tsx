@@ -53,6 +53,12 @@ import { StorySection } from "./nosotros/StorySection";
 import { TeamStory } from "./nosotros/TeamStory";
 import { TimeStory } from "./nosotros/TimeStory";
 import { Transparencia } from "./nosotros/Transparencia";
+import { ContactHero } from "./contacto/ContactHero";
+import { ContactInfo } from "./contacto/ContactInfo";
+import { ContactIntentSelector } from "./contacto/ContactIntentSelector";
+import { ContactScenarios } from "./contacto/ContactScenarios";
+import { NotInCatalog } from "./contacto/NotInCatalog";
+import { WhatsAppCTA } from "./contacto/WhatsAppCTA";
 
 /**
  * El registro: qué componente pinta cada bloque.
@@ -147,6 +153,16 @@ const REGISTRO: Record<string, Bloque> = {
   "nosotros-compromisos": Compromisos as Bloque,
   "nosotros-precio": Transparencia as Bloque,
   "nosotros-manifiesto": BrandStatement as Bloque,
+
+  // --- /contacto: convertir una necesidad en una conversación o un pedido ---
+  // El selector es el centro: los demás bloques abren sus caminos con enlaces
+  // (`#cotizar`, `#buscar-producto`…, ver `contacto/intenciones.ts`).
+  "contacto-hero": ContactHero as Bloque,
+  "contacto-intenciones": ContactIntentSelector as Bloque,
+  "contacto-especial": NotInCatalog as Bloque,
+  "contacto-escenarios": ContactScenarios as Bloque,
+  "contacto-whatsapp": WhatsAppCTA as Bloque,
+  "contacto-datos": ContactInfo as Bloque,
 
   // --- la biblioteca que llego con el paso 3 --------------------------------
   // Ninguno obligo a tocar el lienzo ni el registro mas alla de estas filas:

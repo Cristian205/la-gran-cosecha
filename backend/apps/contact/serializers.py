@@ -12,10 +12,22 @@ class MensajeContactoSerializer(serializers.ModelSerializer):
             "email",
             "telefono",
             "mensaje",
+            "motivo",
             "atendido",
             "fecha_creacion",
         ]
         read_only_fields = ["id", "atendido", "fecha_creacion"]
+
+    def validate(self, datos):
+        # Sin correo ni teléfono no hay a quién responderle: el mensaje
+        # quedaría en la bandeja como una promesa imposible de cumplir.
+        email = datos.get("email", getattr(self.instance, "email", ""))
+        telefono = (datos.get("telefono") or getattr(self.instance, "telefono", "") or "").strip()
+        if not email and not telefono:
+            raise serializers.ValidationError(
+                {"telefono": "Déjanos un teléfono o un correo para responderte."}
+            )
+        return datos
 
 
 class SuscriptorSerializer(serializers.ModelSerializer):
