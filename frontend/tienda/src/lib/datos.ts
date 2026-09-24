@@ -266,9 +266,12 @@ export async function crearPedido(
 // ---------- contact.ts ----------
 export interface MensajeContactoInput {
   nombre: string;
-  email: string;
+  /** Opcional si hay teléfono: el backend exige al menos uno de los dos. */
+  email?: string;
   telefono?: string;
   mensaje: string;
+  /** PEDIDO, COTIZACION, PRODUCTO_ESPECIAL o CONSULTA (por defecto). */
+  motivo?: string;
 }
 
 export async function enviarMensajeContacto(

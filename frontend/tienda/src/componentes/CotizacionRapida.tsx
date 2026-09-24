@@ -32,7 +32,7 @@ export function CotizacionRapida({ titulo, texto }: Props) {
           <p>{texto || config.cotizacion_texto}</p>
         </div>
         <div className="cotizacion-acciones">
-          <Link className="btn btn-outline" href="/contacto">
+          <Link className="btn btn-outline" href="/contacto#cotizar">
             Solicitar cotización
           </Link>
           {config.whatsapp_numero && (

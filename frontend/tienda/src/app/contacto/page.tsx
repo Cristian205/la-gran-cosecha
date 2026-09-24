@@ -5,12 +5,14 @@ import { ContactPage } from "@/paginas/ContactPage";
 import { configuracionDeLaTienda } from "@/lib/negocio";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const config = await configuracionDeLaTienda();
+  // `composicionDe` está memorizada por petición: la página la vuelve a pedir
+  // para pintarse sin una segunda llamada al backend.
+  const [config, pagina] = await Promise.all([configuracionDeLaTienda(), composicionDe("/contacto")]);
   return {
-    title: "Contacto",
-    description: `Escríbenos o llámanos: ${
-      config?.telefono || config?.email || config?.nombre_empresa || ""
-    }`.trim(),
+    title: pagina?.seo_titulo || "Contacto",
+    description:
+      pagina?.seo_descripcion ||
+      `Escríbenos o llámanos: ${config?.telefono || config?.email || config?.nombre_empresa || ""}`.trim(),
     alternates: { canonical: "/contacto" },
   };
 }
