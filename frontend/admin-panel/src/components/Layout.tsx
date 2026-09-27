@@ -209,7 +209,7 @@ export function Layout() {
                   <User size={16} /> Perfil
                 </button>
                 <button type="button" onClick={() => irA("/configuracion")}>
-                  <Settings size={16} /> Configuración
+                  <Settings size={16} /> Preferencias
                 </button>
                 <div className="menu-usuario-sep" />
                 <button type="button" className="salir" onClick={salir}>

@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute, RequierePermiso } from "./auth/ProtectedRoute";
 import { Layout } from "./components/Layout";
-import { BusinessProfilePage } from "./pages/business/BusinessProfilePage";
 import { ClientsPage } from "./pages/ClientsPage";
 import { ContentPage } from "./pages/content/ContentPage";
 import { TiendaPage } from "./pages/tienda/TiendaPage";
@@ -106,14 +105,10 @@ export default function App() {
               </RequierePermiso>
             }
           />
-          <Route
-            path="/contenido"
-            element={
-              <RequierePermiso permiso="content.view_promobanner">
-                <ContentPage />
-              </RequierePermiso>
-            }
-          />
+          {/* Configuración del negocio y de su tienda. Sin permiso propio:
+              «Tu negocio» lo ve todo el equipo, y cada pestaña de contenido
+              pide el suyo dentro de la página. */}
+          <Route path="/contenido" element={<ContentPage />} />
           <Route
             path="/tienda"
             element={
@@ -122,10 +117,8 @@ export default function App() {
               </RequierePermiso>
             }
           />
-          {/* El perfil del NEGOCIO, no el de la persona. Sin permiso
-              propio: todo el equipo lo ve; solo el dueno lo cambia, y eso
-              lo decide la vista. */}
-          <Route path="/negocio" element={<BusinessProfilePage />} />
+          {/* «Tu negocio» ahora es una pestaña de Configuración. */}
+          <Route path="/negocio" element={<Navigate to="/contenido?pestana=negocio" replace />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/configuracion" element={<SettingsPage />} />
           <Route path="/notificaciones" element={<NotificationsPage />} />

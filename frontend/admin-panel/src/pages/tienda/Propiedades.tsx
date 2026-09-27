@@ -46,7 +46,7 @@ export function Propiedades({ esquema, valores, onCambio }: Props) {
     return (
       <p className="campo-ayuda">
         Este bloque no tiene opciones: se alimenta del contenido que administras
-        en «Contenido de la tienda».
+        en Configuración (banners, anuncios, beneficios, testimonios…).
       </p>
     );
   }

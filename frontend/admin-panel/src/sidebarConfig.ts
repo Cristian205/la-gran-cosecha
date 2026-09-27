@@ -1,15 +1,14 @@
 import {
   Bike,
   Boxes,
-  Building2,
   CalendarClock,
   ClipboardList,
   ScanLine,
-  Image as ImageIcon,
   LayoutTemplate,
   LayoutDashboard,
   Package,
   PackagePlus,
+  Settings2,
   ShieldCheck,
   Users,
   type LucideIcon,
@@ -92,9 +91,12 @@ export const SECCIONES_DISPONIBLES: SeccionDisponible[] = [
   },
   { clave: "clientes", to: "/clientes", label: "Clientes", icon: Users, permiso: "orders.view_cliente" },
   { clave: "usuarios", to: "/usuarios", label: "Usuarios", icon: ShieldCheck, permiso: "accounts.view_usuario" },
-  // Banners, carrusel, testimonios, beneficios, ofertas, datos del negocio.
-  { clave: "contenido", to: "/contenido", label: "Contenido", icon: ImageIcon, permiso: "content.view_promobanner" },
-  { clave: "negocio", to: "/negocio", label: "Tu negocio", icon: Building2 },
+  // Tu negocio, datos generales, páginas y todo el contenido de la tienda.
+  // Sin permiso propio: «Tu negocio» lo ve todo el equipo y cada pestaña de
+  // contenido pide el suyo dentro de la página. (Antes eran «Contenido» y «Tu
+  // negocio» por separado; la clave "negocio" ya no existe y un layout
+  // guardado que la tenga simplemente la descarta.)
+  { clave: "contenido", to: "/contenido", label: "Configuración", icon: Settings2 },
   // El constructor cambia lo que ven los visitantes, asi que pide el mismo
   // permiso que administrar el contenido de la tienda: quien puede cambiar los
   // banners puede cambiar donde van.
@@ -135,13 +137,13 @@ export const LAYOUT_POR_DEFECTO: NodoSidebar[] = [
     tipo: "grupo",
     id: "tienda",
     titulo: "Tienda",
-    items: ["tienda", "contenido"],
+    items: ["tienda"],
   },
   {
     tipo: "grupo",
     id: "administracion",
     titulo: "Configuración",
-    items: ["negocio", "usuarios"],
+    items: ["contenido", "usuarios"],
   },
 ];
 
