@@ -114,9 +114,15 @@ export function GeneralTab() {
     setOk(false);
     setGuardando(true);
     try {
-      const { logo_url, factura_logo_url, ...cambios } = config;
+      // `tokens` (el tema del constructor) llega en la respuesta pero esta
+      // pestaña no lo edita: reenviarlo pisaría lo que se guardó desde
+      // «Páginas y secciones» con la copia que se cargó al abrir.
+      const { logo_url, factura_logo_url, tokens, ...cambios } = config as SiteConfig & {
+        tokens?: unknown;
+      };
       void logo_url;
       void factura_logo_url;
+      void tokens;
       const actualizado = await actualizarSiteConfig(cambios, logo, facturaLogo);
       setConfig(actualizado);
       setLogo(null);

@@ -92,8 +92,12 @@ def _datos_emisor(tenant=None):
         "factura_direccion": config.factura_direccion,
         "marca_agua_activa": config.factura_marca_agua_activa,
         "marca_agua_texto": config.factura_marca_agua_texto or nombre_empresa,
-        # De porcentaje (1-40) a fracción, que es lo que espera el `rgba()` del CSS.
-        "marca_agua_opacidad": config.factura_marca_agua_opacidad / 100,
+        # De porcentaje (1-40) a fracción, que es lo que espera el `rgba()` del
+        # CSS. Va como TEXTO ya formateado: con LANGUAGE_CODE "es-co" la
+        # plantilla localiza un float a "0,05", `rgba(..., 0,05)` es CSS
+        # inválido, WeasyPrint descarta el color y la marca de agua salía
+        # opaca, con el color del texto.
+        "marca_agua_opacidad": f"{config.factura_marca_agua_opacidad / 100:.2f}",
         "nota_pie": config.factura_nota_pie
         or f"¡Gracias por preferir la calidad de {nombre_empresa}!",
         "chip_secundario": config.factura_chip_secundario,

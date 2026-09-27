@@ -1,7 +1,7 @@
 {% load humanize %}
 {% load custom_filter %}
 {% if marca_agua_activa %}
-<div class="watermark" style="--marca-agua-opacidad: {{ marca_agua_opacidad }};">{{ marca_agua_texto }}</div>
+<div class="watermark" style="color: rgba(6, 95, 70, {{ marca_agua_opacidad }});">{{ marca_agua_texto }}</div>
 {% endif %}
 
 <div class="header-container">

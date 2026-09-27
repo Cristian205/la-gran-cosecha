@@ -23,7 +23,9 @@
         left: 50%;
         transform: translate(-50%, -50%) rotate(-45deg);
         font-size: 60pt;
-        color: rgba(6, 95, 70, var(--marca-agua-opacidad, 0.05));
+        /* La opacidad configurada llega en el `style` del propio elemento;
+           esto es solo el respaldo, igual de tenue que el valor por defecto. */
+        color: rgba(6, 95, 70, 0.05);
         font-weight: 900;
         z-index: -1000;
         white-space: nowrap;
