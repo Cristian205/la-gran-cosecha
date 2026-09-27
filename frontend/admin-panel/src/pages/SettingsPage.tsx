@@ -74,7 +74,7 @@ export function SettingsPage() {
   return (
     <>
       <div className="topbar">
-        <h1>Configuración</h1>
+        <h1>Preferencias</h1>
       </div>
 
       <div className="contenido">

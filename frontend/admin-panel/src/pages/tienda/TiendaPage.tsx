@@ -126,7 +126,14 @@ export function TiendaPage() {
         setTokens(catalogoTema);
         setTema(valores);
         setTemaGuardado(valores);
-        const inicial = lista.find((p) => p.ruta === "/") ?? lista[0] ?? null;
+        // `?pagina=<id>` llega desde la pestaña «Páginas» de Configuración,
+        // para seguir editando la misma página con la vista previa.
+        const pedida = Number(new URLSearchParams(window.location.search).get("pagina"));
+        const inicial =
+          lista.find((p) => p.id === pedida) ??
+          lista.find((p) => p.ruta === "/") ??
+          lista[0] ??
+          null;
         if (inicial) void abrir(inicial);
       })
       .catch((e) => alertaError(extraerMensajeError(e, "No se pudo cargar tu tienda.")))

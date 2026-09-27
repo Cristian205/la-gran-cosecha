@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { FUENTES, RADIOS_BOTON, pilaFuente, radioPx } from "../../api/apariencia";
 import { actualizarSiteConfig, obtenerSiteConfig } from "../../api/content";
 import { MediaField } from "../../components/MediaField";
@@ -406,9 +407,13 @@ export function GeneralTab() {
 
       <div className="panel">
         <div className="cabecera">
-          <h2>Sobre nosotros</h2>
+          <h2>Descripción del negocio</h2>
         </div>
         <div style={{ padding: "1.2rem" }}>
+          <p style={{ color: "var(--gris)", fontSize: ".82rem", marginTop: 0 }}>
+            Se usa en Google y en el buscador de la tienda. La historia que ven tus
+            visitantes en «Nosotros» se edita en la pestaña Páginas.
+          </p>
           <div className="campo">
             <label>Historia</label>
             <textarea
@@ -430,86 +435,16 @@ export function GeneralTab() {
 
       <div className="panel panel-ancho">
         <div className="cabecera">
-          <h2>Textos del Home</h2>
+          <h2>Textos de las páginas</h2>
         </div>
         <div style={{ padding: "1.2rem" }}>
-          <div className="modal-seccion">
-            <span>Cómo funciona (3 pasos)</span>
-          </div>
-          <div className="fila">
-            <div className="campo">
-              <label>Paso 1 — Título</label>
-              <input value={config.paso1_titulo} onChange={(e) => campo("paso1_titulo", e.target.value)} />
-            </div>
-            <div className="campo">
-              <label>Paso 1 — Texto</label>
-              <input value={config.paso1_texto} onChange={(e) => campo("paso1_texto", e.target.value)} />
-            </div>
-          </div>
-          <div className="fila">
-            <div className="campo">
-              <label>Paso 2 — Título</label>
-              <input value={config.paso2_titulo} onChange={(e) => campo("paso2_titulo", e.target.value)} />
-            </div>
-            <div className="campo">
-              <label>Paso 2 — Texto</label>
-              <input value={config.paso2_texto} onChange={(e) => campo("paso2_texto", e.target.value)} />
-            </div>
-          </div>
-          <div className="fila">
-            <div className="campo">
-              <label>Paso 3 — Título</label>
-              <input value={config.paso3_titulo} onChange={(e) => campo("paso3_titulo", e.target.value)} />
-            </div>
-            <div className="campo">
-              <label>Paso 3 — Texto</label>
-              <input value={config.paso3_texto} onChange={(e) => campo("paso3_texto", e.target.value)} />
-            </div>
-          </div>
-
-          <div className="modal-seccion">
-            <span>Cotización rápida</span>
-          </div>
-          <div className="fila">
-            <div className="campo">
-              <label>Título</label>
-              <input
-                value={config.cotizacion_titulo}
-                onChange={(e) => campo("cotizacion_titulo", e.target.value)}
-              />
-            </div>
-            <div className="campo">
-              <label>Texto</label>
-              <input
-                value={config.cotizacion_texto}
-                onChange={(e) => campo("cotizacion_texto", e.target.value)}
-              />
-            </div>
-          </div>
-          <p style={{ color: "var(--gris)", fontSize: ".82rem", marginTop: "-.4rem" }}>
-            Los botones usan el WhatsApp configurado arriba en "Contacto" y el formulario de
-            "Contáctanos" — no hace falta repetirlos aquí.
+          <p style={{ color: "var(--gris)", fontSize: ".85rem", margin: 0 }}>
+            Los textos del Inicio, Nosotros, Contacto y la Tienda (pasos, campañas,
+            llamados a la acción…) ahora son de cada sección de la página. Edítalos en la
+            pestaña <Link to="/contenido?pestana=paginas">Páginas</Link> o, con vista
+            previa, en <Link to="/tienda">Páginas y secciones</Link>: los dos editan el
+            mismo borrador.
           </p>
-
-          <div className="modal-seccion">
-            <span>CTA final</span>
-          </div>
-          <div className="fila">
-            <div className="campo">
-              <label>Título</label>
-              <input
-                value={config.cta_final_titulo}
-                onChange={(e) => campo("cta_final_titulo", e.target.value)}
-              />
-            </div>
-            <div className="campo">
-              <label>Texto</label>
-              <input
-                value={config.cta_final_texto}
-                onChange={(e) => campo("cta_final_texto", e.target.value)}
-              />
-            </div>
-          </div>
         </div>
       </div>
 

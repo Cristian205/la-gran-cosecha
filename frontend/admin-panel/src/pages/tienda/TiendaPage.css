@@ -708,3 +708,17 @@
   background: none; cursor: pointer;
 }
 .diseno-color .campo-ayuda { margin: 0; }
+
+/* ---- La pestaña «Páginas» de Configuración: el mismo editor, sin previa ---- */
+.paginas-tab { padding: 1.2rem; }
+.paginas-tab-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+.paginas-tab-barra select { min-width: 260px; max-width: 100%; }
+.paginas-tab-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.paginas-tab-acciones .btn { display: inline-flex; align-items: center; gap: 0.35rem; }
+.paginas-tab-editor { max-width: 760px; }
