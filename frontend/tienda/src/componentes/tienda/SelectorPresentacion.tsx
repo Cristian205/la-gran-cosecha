@@ -34,36 +34,41 @@ export function SelectorPresentacion({ seleccion, productoNombre, modo = "compac
   const variasUnidades = grupo.opciones.length > 1;
 
   if (modo === "amplio") {
+    // Un eje con una sola opción no se elige: es un dato, y va en línea
+    // ("Variedad  Común") para no gastar una fila entera de botones.
     return (
       <div className="selpres selpres--amplio">
-        {(variasVariantes || grupo.nombre) && (
+        {variasVariantes ? (
           <fieldset className="selpres-eje">
             <legend>Variedad</legend>
-            {variasVariantes ? (
-              <div className="selpres-opciones" role="radiogroup" aria-label={`Variedad de ${productoNombre}`}>
-                {grupos.map((g) => (
-                  <button
-                    key={g.nombre}
-                    type="button"
-                    role="radio"
-                    aria-checked={g.nombre === grupo.nombre}
-                    className="selpres-opcion"
-                    onClick={() => elegirVariante(g.nombre)}
-                  >
-                    {g.nombre}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <span className="selpres-fijo">{grupo.nombre}</span>
-            )}
+            <div className="selpres-opciones" role="radiogroup" aria-label={`Variedad de ${productoNombre}`}>
+              {grupos.map((g) => (
+                <button
+                  key={g.nombre}
+                  type="button"
+                  role="radio"
+                  aria-checked={g.nombre === grupo.nombre}
+                  className="selpres-opcion"
+                  onClick={() => elegirVariante(g.nombre)}
+                >
+                  {g.nombre}
+                </button>
+              ))}
+            </div>
           </fieldset>
+        ) : (
+          grupo.nombre && (
+            <p className="selpres-eje selpres-eje--fijo">
+              <span className="selpres-rotulo">Variedad</span>
+              <span className="selpres-fijo">{grupo.nombre}</span>
+            </p>
+          )
         )}
 
-        <fieldset className="selpres-eje">
-          <legend>Se vende por</legend>
-          {variasUnidades ? (
-            <div className="selpres-opciones" role="radiogroup" aria-label={`Unidad de ${productoNombre}`}>
+        {variasUnidades ? (
+          <fieldset className="selpres-eje">
+            <legend>Elige tu presentación</legend>
+            <div className="selpres-opciones" role="radiogroup" aria-label={`Presentación de ${productoNombre}`}>
               {grupo.opciones.map((p) => (
                 <button
                   key={p.id}
@@ -78,10 +83,13 @@ export function SelectorPresentacion({ seleccion, productoNombre, modo = "compac
                 </button>
               ))}
             </div>
-          ) : (
+          </fieldset>
+        ) : (
+          <p className="selpres-eje selpres-eje--fijo">
+            <span className="selpres-rotulo">Presentación</span>
             <span className="selpres-fijo">{presentacion.unidad_venta_nombre}</span>
-          )}
-        </fieldset>
+          </p>
+        )}
       </div>
     );
   }

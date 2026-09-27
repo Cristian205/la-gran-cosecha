@@ -1992,6 +1992,14 @@ h1, h2, h3 {
   animation: pulso-wsp 3.6s ease-in-out infinite;
 }
 .whatsapp-flotante:hover { filter: brightness(1.06); }
+/* Acción secundaria (ficha de producto): no compite con "Agregar al pedido". */
+.whatsapp-flotante.discreto {
+  width: 48px;
+  height: 48px;
+  animation: none;
+  box-shadow: 0 6px 16px rgba(var(--sombra-tinte), 0.16);
+}
+.whatsapp-flotante.discreto svg { width: 24px; height: 24px; }
 /* Se desvanece al llegar al pie, donde el propio footer ofrece WhatsApp. */
 .whatsapp-flotante.oculto {
   opacity: 0;
@@ -5916,46 +5924,52 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
 }
 .selpres-fijo + .selpres-fijo::before { content: "·"; margin-right: 0.35rem; color: var(--gris-400); }
 
-.selpres--amplio { flex-direction: column; align-items: stretch; gap: 1rem; }
+/* Amplio (ficha y vista rápida): chips de una línea, "Caja · $73.000". */
+.selpres--amplio { flex-direction: column; align-items: stretch; gap: 0.95rem; }
 .selpres-eje { min-width: 0; margin: 0; padding: 0; border: 0; }
-.selpres-eje legend {
-  margin-bottom: 0.45rem;
+.selpres-eje legend,
+.selpres-rotulo {
   padding: 0;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--gris-600);
 }
-.selpres-eje .selpres-fijo { font-size: 0.95rem; color: var(--tinta); }
+.selpres-eje legend { margin-bottom: 0.5rem; }
+/* Un eje con una sola opción es un dato: rótulo y valor en la misma línea. */
+.selpres-eje--fijo { display: flex; align-items: baseline; gap: 0.7rem; }
+.selpres-eje--fijo .selpres-fijo { min-height: 0; font-size: 0.92rem; font-weight: 600; color: var(--tinta); }
 .selpres-opciones { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .selpres-opcion {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 2.65rem;
-  padding: 0.4rem 0.9rem;
-  border: 1.5px solid var(--borde);
-  border-radius: 12px;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.4rem;
+  padding: 0.3rem 1rem;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
   background: var(--superficie);
   color: var(--tinta);
   font: inherit;
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.87rem;
+  font-weight: 600;
   line-height: 1.2;
-  transition: border-color var(--t-rapido) ease, background-color var(--t-rapido) ease;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--t-rapido) ease, background-color var(--t-rapido) ease,
+    color var(--t-rapido) ease, box-shadow var(--t-rapido) ease;
 }
-.selpres-opcion small { font-size: 0.75rem; font-weight: 600; color: var(--gris-600); }
-.selpres-opcion:hover { border-color: var(--marca-400); }
+.selpres-opcion small { font-size: 0.8rem; font-weight: 500; color: var(--gris-600); font-variant-numeric: tabular-nums; }
+.selpres-opcion small::before { content: "·"; margin-right: 0.45rem; color: var(--gris-400); }
+.selpres-opcion:hover { border-color: color-mix(in srgb, var(--marca-500) 55%, var(--borde)); box-shadow: 0 2px 8px -4px rgba(var(--sombra-tinte), 0.25); }
 .selpres-opcion:focus-visible { outline: none; box-shadow: var(--t-foco); }
 .selpres-opcion[aria-checked="true"] {
   border-color: var(--marca-600);
-  background: var(--marca-100);
+  background: color-mix(in srgb, var(--marca-100) 60%, var(--superficie));
   color: var(--marca-800);
-  box-shadow: inset 0 0 0 1px var(--marca-600);
 }
-.selpres-opcion[aria-checked="true"] small { color: var(--marca-700); }
+.selpres-opcion[aria-checked="true"] small { color: var(--marca-700); font-weight: 600; }
 
 /* Cantidad + Agregar (QuickAdd). */
 .qadd { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
@@ -6716,16 +6730,19 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
 .cierre-cat .custom-prod-card { flex-basis: 100%; }
 
 /* ---------- Ficha de producto (/productos/<slug>) ---------- */
-.ficha { padding-block: 1.3rem 3rem; }
+/* Compacta: en escritorio foto, nombre, precio, selectores y botón caben en
+   una pantalla. Poco padding vertical, grupos en vez de bloques sueltos y
+   separadores de un pelo. */
+.ficha { padding-block: 0.9rem 3rem; }
+.ficha .migas-ruta { margin-bottom: 0.7rem; }
 .ficha-cuerpo {
   display: grid;
   /* La foto ocupa lo que necesita (ver .galeria) y el panel de compra el
      resto: antes la columna de la foto se estiraba hasta la mitad de la
      pantalla y la imagen cuadrada quedaba más alta que la ventana. */
   grid-template-columns: auto minmax(0, 1fr);
-  gap: clamp(1.8rem, 3.5vw, 3.5rem);
+  gap: clamp(1.8rem, 4.5vw, 4.5rem);
   align-items: start;
-  margin-top: 1rem;
 }
 .ficha-media {
   position: sticky;
@@ -6733,144 +6750,177 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   align-self: start;
 }
 
-/* ---------- Galería: una foto por presentación ---------- */
+/* ---------- Galería: una foto por variedad ---------- */
 /* La foto cabe ENTERA en la pantalla: su lado es el alto disponible (bajo la
-   barra superior, y sin las miniaturas si las hay), con tope en la mitad del
-   ancho del contenido. Nunca se corta abajo ni obliga a hacer scroll para
-   ver el producto completo. */
+   barra superior y las migas, y sin las miniaturas si las hay), con tope en
+   la mitad del ancho del contenido y en 560px — más grande obligaría al panel
+   de la derecha a estirarse para acompañarla. */
 .galeria {
   --galeria-lado: min(
-    calc(100svh - var(--navbar-alto, 62px) - 3rem),
+    calc(100svh - var(--navbar-alto, 62px) - 6rem),
     calc((min(100vw, var(--contenedor-ancho, 1440px)) - 6.5rem) * 0.5),
-    620px
+    560px
   );
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.7rem;
   width: var(--galeria-lado);
   max-width: 100%;
 }
 .galeria--con-miniaturas {
   --galeria-lado: min(
-    calc(100svh - var(--navbar-alto, 62px) - 3rem - 7.4rem),
+    calc(100svh - var(--navbar-alto, 62px) - 6rem - 4.4rem),
     calc((min(100vw, var(--contenedor-ancho, 1440px)) - 6.5rem) * 0.5),
-    620px
+    560px
   );
 }
 .galeria-principal {
   position: relative;
   overflow: hidden;
   aspect-ratio: 1;
-  border-radius: 24px;
-  border: 1px solid var(--borde);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--marca-100) 30%, var(--superficie));
+  box-shadow:
+    0 1px 2px rgba(var(--sombra-tinte), 0.05),
+    0 18px 40px -26px rgba(var(--sombra-tinte), 0.35);
   animation: galeria-entra 0.35s ease both;
 }
 .galeria-principal > .pimg { width: 100%; height: 100%; }
 @keyframes galeria-entra { from { opacity: 0.35; } }
-/* Qué presentación se está viendo, sobre la foto. */
-.galeria-rotulo {
-  position: absolute;
-  left: 0.9rem;
-  bottom: 0.9rem;
-  max-width: calc(100% - 1.8rem);
-  padding: 0.35rem 0.75rem;
-  overflow: hidden;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #fff;
-  background: rgba(var(--sombra-tinte), 0.72);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
 .galeria-miniaturas {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.5rem;
   margin: 0;
-  padding: 0.15rem 0.15rem 0.3rem;
+  padding: 0.15rem;
   overflow-x: auto;
   list-style: none;
   scrollbar-width: thin;
 }
+/* Miniaturas pequeñas, sin texto (va en el tooltip y en la etiqueta
+   accesible): la no elegida se atenúa en vez de llevar otro borde. */
 .galeria-mini {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.3rem;
-  width: 84px;
-  padding: 0.3rem;
-  border: 1.5px solid var(--borde);
-  border-radius: 14px;
-  font: inherit;
-  color: var(--texto-suave, #64748b);
-  background: var(--superficie, #fff);
+  display: block;
+  width: 58px;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  opacity: 0.62;
   cursor: pointer;
-  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  transition: opacity 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
-.galeria-mini img { width: 100%; aspect-ratio: 1; border-radius: 10px; object-fit: cover; }
-/* "Parejo · Caja" entero (hasta dos líneas): la foto es de ESA presentación. */
-.galeria-mini-texto {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 1.2;
-  text-align: center;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-.galeria-mini:hover { border-color: var(--marca-400, #22c55e); transform: translateY(-2px); }
-.galeria-mini.activa {
-  border-color: var(--marca-600, #15803d);
-  color: var(--marca-700, #0f5132);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--marca-500, #16a34a) 18%, transparent);
-}
-.galeria-mini:focus-visible { outline: 2px solid var(--marca-600, #15803d); outline-offset: 2px; }
+.galeria-mini img { display: block; width: 100%; aspect-ratio: 1; border-radius: 9px; object-fit: cover; }
+.galeria-mini:hover { opacity: 1; transform: translateY(-1px); }
+.galeria-mini.activa { opacity: 1; border-color: var(--marca-600, #15803d); }
+.galeria-mini:focus-visible { outline: 2px solid var(--marca-600, #15803d); outline-offset: 2px; opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .galeria-principal { animation: none; }
   .galeria-mini { transition: none; }
   .galeria-mini:hover { transform: none; }
 }
-.ficha-info { display: flex; flex-direction: column; gap: 1.1rem; max-width: 640px; }
+
+/* ---------- Panel: producto → precio → selección → compra ---------- */
+.ficha-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.3rem;
+  max-width: 540px;
+  padding-top: clamp(0rem, 1.5vw, 1rem);
+}
+.ficha-cabeza { display: flex; flex-direction: column; gap: 0.45rem; }
 .ficha-cat {
   align-self: flex-start;
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--marca-700);
 }
-.ficha-cat:hover { text-decoration: underline; }
+.ficha-cat:hover { text-decoration: underline; text-underline-offset: 3px; }
 .ficha-info h1 {
-  margin: -0.5rem 0 0;
-  font-size: calc(clamp(1.9rem, 3.4vw, 2.8rem) * var(--titulo-escala, 1));
-  line-height: 1.04;
-  letter-spacing: -0.025em;
+  margin: 0;
+  font-size: calc(clamp(2rem, 3.3vw, 2.9rem) * var(--titulo-escala, 1));
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.032em;
+  text-wrap: balance;
   color: var(--tinta);
 }
-.ficha-descripcion { margin: 0; color: var(--gris-600); line-height: 1.6; }
-.ficha-datos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.6rem;
-  margin: 0;
-  padding: 1rem 0 0;
-  border-top: 1px solid var(--borde);
+.ficha-cabeza .precio { margin-top: 0.55rem; }
+.ficha-cabeza .precio--grande .precio-valor { font-size: clamp(1.7rem, 2.6vw, 2.15rem); letter-spacing: -0.02em; }
+.ficha-cabeza .precio--grande .precio-meta { margin-top: 0.25rem; font-size: 0.8rem; font-weight: 500; color: var(--gris-400); }
+
+/* Selección: separada del precio por un pelo, no por una caja. */
+.ficha-info .selpres--amplio {
+  padding-top: 1.2rem;
+  border-top: 1px solid color-mix(in srgb, var(--borde) 70%, transparent);
 }
-.ficha-datos div { display: flex; flex-direction: column; gap: 0.1rem; }
-.ficha-datos dt { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gris-600); }
-.ficha-datos dd { margin: 0; font-weight: 700; color: var(--tinta); }
-.ficha-relacionados { margin-top: 3rem; }
-.ficha-relacionados h2 { margin: 0 0 1rem; font-size: clamp(1.25rem, 2vw, 1.55rem); color: var(--tinta); }
+
+/* Compra: − 1 + y el botón como una sola zona. El botón manda, pero no es
+   una franja de lado a lado. */
+.ficha-compra { display: flex; flex-direction: column; gap: 0.5rem; }
+.ficha-compra .qadd { gap: 0.6rem; }
+.ficha-compra .qadd--grande .qty {
+  height: 2.9rem;
+  padding: 0 0.3rem;
+  background: var(--superficie);
+  box-shadow: inset 0 0 0 1px var(--borde);
+}
+.ficha-compra .qadd--grande .qty button { width: 2.3rem; height: 2.3rem; background: transparent; box-shadow: none; }
+.ficha-compra .qadd--grande .qty button:hover:not(:disabled) { background: var(--marca-100); }
+.ficha-compra .qadd--grande .qadd-btn {
+  flex: 1 1 auto;
+  max-width: 20rem;
+  height: 2.9rem;
+  padding: 0 1.5rem;
+  font-size: 0.93rem;
+  letter-spacing: 0.005em;
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--marca-600) 70%, transparent);
+}
+.ficha-compra .qadd--grande .qadd-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.ficha-compra .qadd--grande .qadd-btn--en-pedido,
+.ficha-compra .qadd--grande .qadd-btn:disabled { box-shadow: none; }
+.ficha-compra .compra-subtotal { font-size: 0.84rem; }
+
+/* Lo secundario, en una línea discreta: nota de precio y código. */
+.ficha-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 1.2rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid color-mix(in srgb, var(--borde) 70%, transparent);
+}
+.ficha-meta .aviso-precios.compacto { margin: 0; }
+.ficha-codigo { margin: 0; font-size: 0.72rem; color: var(--gris-400); }
+.ficha-codigo span { margin-left: 0.25rem; font-family: ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: 0.02em; }
+
+.ficha-relacionados { margin-top: clamp(2.5rem, 5vw, 4rem); }
+.ficha-relacionados h2 { margin: 0 0 1rem; font-size: clamp(1.2rem, 1.8vw, 1.45rem); letter-spacing: -0.015em; color: var(--tinta); }
+
+/* Tablet: mismas dos columnas, todo un poco más apretado. */
+@media (max-width: 1080px) and (min-width: 861px) {
+  .ficha-cuerpo { gap: 2rem; }
+  .ficha-info { gap: 1.1rem; padding-top: 0; }
+  .ficha-info h1 { font-size: calc(clamp(1.75rem, 3.2vw, 2.3rem) * var(--titulo-escala, 1)); }
+}
+
+/* Móvil: una columna, mismo orden. La foto no se come la pantalla. */
 @media (max-width: 860px) {
-  .ficha-cuerpo { grid-template-columns: minmax(0, 1fr); gap: 1.3rem; }
+  .ficha { padding-top: 0.6rem; }
+  .ficha-cuerpo { grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
   .ficha-media { position: static; }
   .galeria,
   .galeria--con-miniaturas { width: 100%; }
-  .galeria-principal { aspect-ratio: 4 / 3; border-radius: 20px; }
-  .galeria-mini { width: 72px; }
+  .galeria-principal { aspect-ratio: 4 / 3; max-height: 52svh; border-radius: 18px; }
+  .galeria-mini { width: 52px; }
+  .ficha-info { gap: 1.05rem; max-width: none; padding-top: 0; }
+  .ficha-cabeza { gap: 0.35rem; }
+  .ficha-info h1 { font-size: calc(clamp(1.65rem, 7vw, 2.1rem) * var(--titulo-escala, 1)); }
+  .ficha-cabeza .precio { margin-top: 0.3rem; }
+  .ficha-info .selpres--amplio { padding-top: 1rem; gap: 0.8rem; }
+  .ficha-compra .qadd--grande .qadd-btn { max-width: none; padding: 0 1rem; }
 }
 
 /* ---------- Aspectos de tarjeta (token `estilo-tarjeta`) ----------
