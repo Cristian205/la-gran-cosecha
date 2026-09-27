@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { actualizarBeneficio, crearBeneficio } from "../../api/content";
+import { MediaField } from "../../components/MediaField";
 import { Modal } from "../../components/Modal";
 import type { BeneficioComercial } from "../../types";
 import { extraerMensajeError } from "../../utils";
@@ -36,6 +37,8 @@ export function BeneficioFormModal({ beneficio, onCerrar, onGuardado }: Props) {
   const [texto, setTexto] = useState(beneficio?.texto ?? "");
   const [orden, setOrden] = useState(beneficio?.orden ?? 0);
   const [activo, setActivo] = useState(beneficio?.activo ?? true);
+  const [imagen, setImagen] = useState<File | null>(null);
+  const [quitarImagen, setQuitarImagen] = useState(false);
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +57,9 @@ export function BeneficioFormModal({ beneficio, onCerrar, onGuardado }: Props) {
     setGuardando(true);
     try {
       if (beneficio) {
-        await actualizarBeneficio(beneficio.id, payload);
+        await actualizarBeneficio(beneficio.id, payload, imagen ?? (quitarImagen ? "quitar" : null));
       } else {
-        await crearBeneficio(payload);
+        await crearBeneficio(payload, imagen);
       }
       onGuardado();
     } catch (err) {
@@ -94,6 +97,21 @@ export function BeneficioFormModal({ beneficio, onCerrar, onGuardado }: Props) {
               </option>
             ))}
           </select>
+        </div>
+        <div className="campo">
+          <label>Imagen (opcional)</label>
+          <MediaField
+            valor={imagen}
+            urlActual={beneficio?.imagen_url ?? null}
+            onCambiar={(f) => {
+              setImagen(f);
+              if (f) setQuitarImagen(false);
+            }}
+            quitada={quitarImagen}
+            onQuitarActual={setQuitarImagen}
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            ayuda="Si subes una imagen, la tienda la muestra en lugar del ícono."
+          />
         </div>
         <div className="campo">
           <label>Título *</label>

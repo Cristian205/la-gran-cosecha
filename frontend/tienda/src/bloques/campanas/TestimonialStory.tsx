@@ -97,6 +97,10 @@ export function TestimonialStory({
               <p>{t.texto}</p>
             </blockquote>
             <figcaption>
+              {t.foto_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="ts-foto" src={t.foto_url} alt="" loading="lazy" decoding="async" />
+              )}
               <strong>{t.nombre}</strong>
               {t.rol && <span>{t.rol}</span>}
             </figcaption>

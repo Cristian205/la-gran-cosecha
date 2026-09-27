@@ -87,6 +87,8 @@ export interface Presentacion {
   factor_conversion: string;
   precio_unitario: string;
   estado_presentacion: boolean;
+  /** Foto propia de la presentación; sin ella la tienda usa la del producto. */
+  imagen_url?: string | null;
 }
 
 export interface Producto {
@@ -269,6 +271,11 @@ export interface SiteConfig {
 export interface PromoBanner {
   id: number;
   imagen_url: string | null;
+  /** Versión para pantallas pequeñas; sin ella, la de escritorio. */
+  imagen_movil_url?: string | null;
+  /** Programación: sin fechas se muestra mientras esté activo. ISO o null. */
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
   etiqueta: string;
   titulo: string;
   texto: string;
@@ -283,6 +290,9 @@ export interface PromoBanner {
 export interface Anuncio {
   id: number;
   imagen_url: string | null;
+  imagen_movil_url?: string | null;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
   etiqueta: string;
   titulo: string;
   texto: string;
@@ -298,6 +308,8 @@ export interface Testimonio {
   rol: string;
   texto: string;
   estrellas: number;
+  /** Foto de quien opina; sin ella se muestran sus iniciales. */
+  foto_url?: string | null;
   orden: number;
   activo: boolean;
 }
@@ -317,6 +329,8 @@ export interface BeneficioComercial {
   icono: "truck" | "clock" | "package" | "wallet" | "headset" | "check" | "shield" | "users" | "leaf" | "sprout" | "droplet" | "shopping-bag" | "apple" | "badge-check" | "handshake" | "headphones" | "user-check";
   titulo: string;
   texto: string;
+  /** Si hay imagen, la tienda la muestra en lugar del ícono. */
+  imagen_url?: string | null;
   orden: number;
   activo: boolean;
 }
@@ -348,6 +362,8 @@ export interface Estadisticas {
   ventas_anio: number;
   progreso_meta: number;
   pedidos_pendientes: number;
+  /** Productos escritos a mano por clientes que esperan aprobación. */
+  productos_por_revisar?: number;
   total_clientes: number;
   total_productos: number;
   total_categorias: number;
@@ -387,6 +403,49 @@ export interface ReporteVentas {
   ventas_por_categoria: { categoria: string; total: number }[];
   top_productos: { nombre: string; cantidad: number; total: number }[];
   pedidos: ReportePedidoFila[];
+}
+
+/** Estados reales de `Pedido` (backend/apps/orders/models.py). */
+export type EstadoPedido = "PENDIENTE" | "EDITADO" | "CERRADO" | "IMPRESO" | "ENTREGADO";
+
+/**
+ * `/admin/stats/panel/`: todo lo del dashboard para un período, calculado en
+ * el backend. Venta = pedido ENTREGADO; "anterior" = los mismos días justo
+ * antes del período.
+ */
+export interface PanelEstadisticas {
+  desde: string;
+  hasta: string;
+  anterior: { desde: string; hasta: string };
+  ventas: { total: number; anterior: number };
+  pedidos: { total: number; anterior: number; por_estado: Partial<Record<EstadoPedido, number>> };
+  /** `null` cuando no hubo pedidos entregados: no hay promedio que dar. */
+  ticket: { promedio: number | null; anterior: number | null; entregados: number };
+  clientes: {
+    nuevos: number;
+    nuevos_anterior: number;
+    activos: number;
+    /** Activos del período que ya habían pedido antes. */
+    recurrentes: number;
+    top: { id: number; nombre: string; pedidos: number; total: number }[];
+  };
+  granularidad: "hora" | "dia" | "semana";
+  serie: { inicio: string; total: number; pedidos: number }[];
+  /** En cuántos pedidos del período aparece cada producto. */
+  productos: { nombre: string; pedidos: number; total: number }[];
+  categorias: { categoria: string; total: number }[];
+  operacion: {
+    abiertos: Record<"PENDIENTE" | "EDITADO" | "CERRADO" | "IMPRESO", number>;
+    entregados_hoy: number;
+  };
+  recientes: {
+    id: number;
+    cliente: string;
+    estado: EstadoPedido;
+    fecha: string;
+    total: number;
+    num_items: number;
+  }[];
 }
 
 export interface Archivo {

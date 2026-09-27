@@ -1,0 +1,348 @@
+/* ==========================================================================
+   SIDEBAR — la navegación del panel
+   --------------------------------------------------------------------------
+   Navy de siempre, verde de La Gran Cosecha solo donde significa algo: la
+   sección en la que estás (una línea de 3 px con un halo apenas visible, el
+   ícono en verde) y lo que ya terminó bien. El ámbar marca lo que espera a
+   alguien (pedidos pendientes, productos por revisar). Todo lo demás es gris
+   azulado, para que el ojo vaya a esas dos señales.
+
+   Compacto pero respirable: filas de 38 px, 2 px entre ellas, títulos de
+   sección pequeños y espaciados.
+   ========================================================================== */
+.sb {
+  --sb-ancho: 256px;
+  --sb-ancho-compacto: 72px;
+  --sb-texto: #94a3b8;
+  --sb-icono: #7b8aa3;
+  --sb-tenue: #5b6b82;
+  --sb-linea: rgba(255, 255, 255, 0.06);
+  --sb-hover: rgba(255, 255, 255, 0.045);
+  --sb-activo: color-mix(in srgb, var(--verde-400) 11%, rgba(255, 255, 255, 0.04));
+  --sb-verde: var(--verde-400);
+  --sb-ambar: #fbbf24;
+  --sb-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: var(--sb-ancho);
+  height: 100vh;
+  color: var(--sb-texto);
+  background: linear-gradient(180deg, #0b1220 0%, #0e1627 100%);
+  border-right: 1px solid var(--sb-linea);
+  transition: width 0.2s var(--sb-ease);
+}
+.sb--compacto { width: var(--sb-ancho-compacto); }
+
+.sb-sr,
+.sb--compacto .sb-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Encabezado ---------- */
+.sb-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 72px;
+  padding: 1rem 1rem 0.9rem;
+}
+.sb-logo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  overflow: hidden;
+  border-radius: 11px;
+  color: #fff;
+  background: var(--marca-negocio);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 6px 16px -6px color-mix(in srgb, var(--marca-negocio) 60%, transparent);
+}
+.sb-logo img { width: 100%; height: 100%; object-fit: cover; }
+.sb-marca { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+/* El nombre se lee entero: hasta dos líneas, nunca "La Gran Cosec…". */
+.sb-marca strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: #fff;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.sb-marca small { font-size: 0.7rem; font-weight: 500; color: var(--sb-tenue); letter-spacing: 0.02em; }
+.sb--compacto .sb-cabecera { justify-content: center; padding-inline: 0; }
+.sb--compacto .sb-marca { display: none; }
+.sb-cerrar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 9px;
+  color: var(--sb-texto);
+  background: var(--sb-hover);
+}
+.sb-cerrar:hover { color: #fff; }
+
+.sb--compacto .selector-negocio { padding: 0 0.4rem 0.6rem; }
+.sb--compacto .selector-negocio-btn { justify-content: center; }
+
+/* ---------- Secciones ---------- */
+.sb-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0.35rem 0.7rem 0.9rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+.sb-grupo + .sb-grupo { margin-top: 0.85rem; }
+.sb-grupo-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  height: 28px;
+  padding: 0 0.6rem;
+  border: 0;
+  border-radius: 7px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sb-tenue);
+  background: none;
+  transition: color 0.15s;
+}
+.sb-grupo-titulo:hover { color: var(--sb-texto); }
+.sb-grupo-flecha { margin-left: auto; transition: transform 0.18s var(--sb-ease); }
+.sb-grupo-titulo[aria-expanded="false"] .sb-grupo-flecha { transform: rotate(-90deg); }
+/* Grupo cerrado que esconde la sección actual o algo pendiente. */
+.sb-grupo-aviso { width: 6px; height: 6px; border-radius: 50%; background: var(--sb-verde); }
+.sb-separador { display: block; height: 1px; margin: 0.65rem 0.55rem; background: var(--sb-linea); }
+.sb--compacto .sb-grupo + .sb-grupo { margin-top: 0; }
+
+.sb-lista { display: flex; flex-direction: column; gap: 2px; margin: 0.2rem 0 0; padding: 0; list-style: none; }
+.sb-lista[hidden] { display: none; }
+
+.sb-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  height: 38px;
+  padding: 0 0.65rem;
+  border-radius: 9px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--sb-texto);
+  text-decoration: none;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+.sb-icono {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  color: var(--sb-icono);
+  transition: color 0.16s ease;
+}
+.sb-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-item:hover { color: #fff; background: var(--sb-hover); }
+.sb-item:hover .sb-icono { color: #cbd5e1; }
+.sb-item:focus-visible,
+.sb-grupo-titulo:focus-visible,
+.sb-dock-btn:focus-visible,
+.sb-contraer:focus-visible,
+.sb-cerrar:focus-visible {
+  outline: 2px solid var(--sb-verde);
+  outline-offset: -2px;
+}
+
+/* La sección actual: fondo apenas más claro con un matiz verde, la línea y el ícono. */
+.sb-item.activo { font-weight: 600; color: #fff; background: var(--sb-activo); }
+.sb-item.activo .sb-icono { color: var(--sb-verde); }
+.sb-item.activo::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--sb-verde);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--sb-verde) 55%, transparent);
+  animation: sb-linea 0.22s var(--sb-ease) both;
+}
+@keyframes sb-linea { from { transform: scaleY(0); } }
+
+.sb-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--sb-ambar);
+  background: rgba(245, 158, 11, 0.14);
+  animation: sb-aparece 0.2s ease-out both;
+}
+.sb-punto {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sb-ambar);
+  box-shadow: 0 0 0 2px #0c1423;
+}
+@keyframes sb-aparece { from { opacity: 0; transform: scale(0.8); } }
+
+.sb--compacto .sb-nav { padding-inline: 0.75rem; }
+.sb--compacto .sb-item { justify-content: center; gap: 0; padding: 0; }
+.sb--compacto .sb-badge { display: none; }
+
+/* ---------- Dock de utilidades y contraer ---------- */
+.sb-pie { padding: 0.55rem 0.7rem 0.8rem; border-top: 1px solid var(--sb-linea); }
+.sb-dock { display: flex; justify-content: center; gap: 0.35rem; padding: 0.15rem 0 0.5rem; }
+.sb-dock-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--sb-icono);
+  background: none;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+.sb-dock-btn:hover { color: #fff; background: var(--sb-hover); }
+.sb-dock-btn.activo { color: var(--sb-verde); background: var(--sb-activo); }
+.sb-dock-badge {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  background: var(--rojo);
+  box-shadow: 0 0 0 2px #0c1423;
+}
+.sb--compacto .sb-dock { flex-direction: column; align-items: center; gap: 0.25rem; }
+
+.sb-contraer {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  height: 36px;
+  padding: 0 0.65rem;
+  border: 0;
+  border-radius: 9px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-align: left;
+  color: var(--sb-tenue);
+  background: none;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+.sb-contraer:hover { color: #fff; background: var(--sb-hover); }
+.sb--compacto .sb-contraer { justify-content: center; padding: 0; }
+
+/* ---------- Tooltip (uno solo, fuera del scroll del menú) ---------- */
+.sb-tooltip {
+  position: fixed;
+  z-index: 80;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #f1f5f9;
+  background: #1e293b;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  transform: translateY(-50%);
+  animation: sb-tip 0.12s ease-out both;
+}
+.sb-tooltip--arriba { transform: translate(-50%, -100%); }
+@keyframes sb-tip { from { opacity: 0; } }
+
+/* ---------- Móvil: panel lateral ---------- */
+.sb--movil {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 60;
+  width: min(290px, 86vw);
+  height: 100dvh;
+  transform: translateX(-100%);
+  transition: transform 0.24s var(--sb-ease), box-shadow 0.24s;
+}
+.sb--movil.sb--abierto { transform: none; box-shadow: 16px 0 40px rgba(2, 6, 23, 0.45); }
+.sb-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(2, 6, 23, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.sb-velo--visible { opacity: 1; pointer-events: auto; }
+
+.navbar-menu-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-right: 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  color: var(--dark);
+  background: var(--superficie);
+}
+.navbar-menu-btn:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sb,
+  .sb--movil,
+  .sb-velo,
+  .sb-item,
+  .sb-icono,
+  .sb-grupo-flecha { transition: none; }
+  .sb-item.activo::before,
+  .sb-badge,
+  .sb-tooltip { animation: none; }
+}

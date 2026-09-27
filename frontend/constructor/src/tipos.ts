@@ -66,6 +66,13 @@ export interface CampoEsquema {
   items?: CampoEsquema;
   /** Para `object`. */
   properties?: Record<string, CampoEsquema>;
+  /**
+   * Qué ES el valor, para pintar el control adecuado: una foto se sube o se
+   * elige de la biblioteca con vista previa; un enlace ofrece las rutas de la
+   * tienda; `productos` es una lista de ids elegidos del catálogo. Sin él, un
+   * `string` es un campo de texto.
+   */
+  formato?: "imagen" | "video" | "enlace" | "productos";
 }
 
 export interface Variante {

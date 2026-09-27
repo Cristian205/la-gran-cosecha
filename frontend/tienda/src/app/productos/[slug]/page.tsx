@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { AvisoPrecios } from "@/componentes/AvisoPrecios";
 import { ProductCard } from "@/componentes/ProductCard";
 import { agruparPresentaciones } from "@/componentes/PresentationSelector";
-import { CompraProducto } from "@/componentes/tienda/CompraProducto";
-import { ImagenProducto } from "@/componentes/tienda/ImagenProducto";
+import { FichaCompra } from "@/componentes/tienda/FichaCompra";
+import { Migas } from "@/componentes/tienda/Migas";
 import { pedirAlBackend } from "@/lib/api";
 import { desempaquetar } from "@/lib/datos";
 import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
@@ -101,6 +101,10 @@ export default async function ProductoPage({ params }: Props) {
   const urlProducto = `${base}/productos/${producto.slug}`;
   const precioDesde = producto.precio_desde ? Number(producto.precio_desde) : null;
   const agotado = producto.controla_stock === true && Number(producto.disponible ?? 0) <= 0;
+  // Todas las fotos reales del producto: la general y las de sus presentaciones.
+  const imagenes = Array.from(
+    new Set([producto.imagen_url, ...producto.presentaciones.map((p) => p.imagen_url)].filter(Boolean))
+  ) as string[];
 
   const jsonLdProducto = {
     "@context": "https://schema.org",
@@ -108,7 +112,7 @@ export default async function ProductoPage({ params }: Props) {
     name: producto.nombre_producto,
     category: producto.categoria_nombre,
     url: urlProducto,
-    ...(producto.imagen_url ? { image: [producto.imagen_url] } : {}),
+    ...(imagenes.length > 0 ? { image: imagenes } : {}),
     ...(precioDesde
       ? {
           offers: {
@@ -151,56 +155,55 @@ export default async function ProductoPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdMigas) }}
       />
 
-      <nav aria-label="Migas de pan" className="pp-migas">
-        <Link href="/">Inicio</Link>
-        <span aria-hidden="true">/</span>
-        <Link href="/tienda">Tienda</Link>
-        <span aria-hidden="true">/</span>
-        <Link href={`/tienda?categoria=${producto.categoria}`}>{producto.categoria_nombre}</Link>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">{producto.nombre_producto}</span>
-      </nav>
+      <Migas
+        migas={[
+          { etiqueta: "Inicio", href: "/" },
+          { etiqueta: "Tienda", href: "/tienda" },
+          { etiqueta: producto.categoria_nombre, href: `/tienda?categoria=${producto.categoria}` },
+          { etiqueta: producto.nombre_producto },
+        ]}
+      />
 
-      {/* "Esto es lo que estás comprando": la foto grande a un lado y, al
-          otro, lo que hay que decidir — variedad, unidad con su precio,
-          cantidad — con el mismo panel que la vista rápida del catálogo. */}
-      <div className="ficha-cuerpo">
-        <div className="ficha-media">
-          <ImagenProducto producto={producto} tamanoIcono={200} prioridad />
-        </div>
+      {/* "Esto es lo que estás comprando": la galería a un lado y, al otro,
+          lo que hay que decidir — variedad, unidad con su precio, cantidad —.
+          Comparten la selección: elegir la presentación cambia la foto. */}
+      <FichaCompra
+        producto={producto}
+        cabecera={
+          <>
+            <Link className="ficha-cat" href={`/tienda?categoria=${producto.categoria}`}>
+              {producto.categoria_nombre}
+            </Link>
+            <h1>{producto.nombre_producto}</h1>
+          </>
+        }
+        pie={
+          <>
+            <dl className="ficha-datos">
+              {unidades.length > 0 && (
+                <div>
+                  <dt>Se vende por</dt>
+                  <dd>{unidades.join(", ")}</dd>
+                </div>
+              )}
+              {grupos.length > 1 && (
+                <div>
+                  <dt>Variedades</dt>
+                  <dd>{grupos.map((g) => g.nombre).join(", ")}</dd>
+                </div>
+              )}
+              {producto.codigo_producto && (
+                <div>
+                  <dt>Código</dt>
+                  <dd>{producto.codigo_producto}</dd>
+                </div>
+              )}
+            </dl>
 
-        <div className="ficha-info">
-          <Link className="ficha-cat" href={`/tienda?categoria=${producto.categoria}`}>
-            {producto.categoria_nombre}
-          </Link>
-          <h1>{producto.nombre_producto}</h1>
-
-          <CompraProducto producto={producto} />
-
-          <dl className="ficha-datos">
-            {unidades.length > 0 && (
-              <div>
-                <dt>Se vende por</dt>
-                <dd>{unidades.join(", ")}</dd>
-              </div>
-            )}
-            {grupos.length > 1 && (
-              <div>
-                <dt>Variedades</dt>
-                <dd>{grupos.map((g) => g.nombre).join(", ")}</dd>
-              </div>
-            )}
-            {producto.codigo_producto && (
-              <div>
-                <dt>Código</dt>
-                <dd>{producto.codigo_producto}</dd>
-              </div>
-            )}
-          </dl>
-
-          <AvisoPrecios compacto />
-        </div>
-      </div>
+            <AvisoPrecios compacto />
+          </>
+        }
+      />
 
       {relacionados.length > 0 && (
         <section className="ficha-relacionados" aria-labelledby="relacionados-titulo">

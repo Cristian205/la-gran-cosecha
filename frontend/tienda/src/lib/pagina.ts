@@ -1,6 +1,13 @@
 import { cache } from "react";
 import { pedirAlBackend } from "./api";
-import type { PaginaTienda } from "./tipos";
+import { desempaquetar, idsElegidos, ordenarPorIds } from "./datos";
+import type { Paginated, PaginaTienda, Producto } from "./tipos";
+
+/**
+ * Bloques de productos destacados que el negocio puede llenar A MANO
+ * (`props.productos`). Si eligió productos, se piden esos en vez del ranking.
+ */
+const DESTACADOS_A_MANO = new Set(["producto-spotlight", "favoritos-negocios"]);
 
 /**
  * La composición de una ruta de la tienda, resuelta en el SERVIDOR.
@@ -79,6 +86,13 @@ export async function datosDeLosBloques(
   const pendientes = pagina.bloques
     .filter((b) => RESUELVE_EN_SERVIDOR[b.tipo])
     .map(async (bloque) => {
+      const ids = DESTACADOS_A_MANO.has(bloque.tipo) ? idsElegidos(bloque.props?.productos) : [];
+      if (ids.length > 0) {
+        const pagina = await pedirAlBackend<Paginated<Producto> | Producto[]>(
+          `/catalog/products/?ids=${ids.join(",")}&page_size=${ids.length}`
+        );
+        return [bloque.id, pagina ? ordenarPorIds(desempaquetar(pagina), ids) : null] as const;
+      }
       const datos = await pedirAlBackend<unknown>(RESUELVE_EN_SERVIDOR[bloque.tipo]);
       return [bloque.id, datos ?? null] as const;
     });

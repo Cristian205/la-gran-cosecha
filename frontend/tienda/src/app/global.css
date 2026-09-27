@@ -1771,52 +1771,6 @@ h1, h2, h3 {
   }
 }
 
-/* Stepper reducido usado en el carrito lateral */
-.stepper {
-  display: flex;
-  align-items: stretch;
-  border: 1px solid var(--borde);
-  border-radius: 10px;
-  overflow: hidden;
-  background: white;
-  flex-shrink: 0;
-}
-.stepper button {
-  border: none;
-  background: var(--marca-100);
-  color: var(--marca-700);
-  display: grid;
-  place-items: center;
-  width: 32px;
-  cursor: pointer;
-}
-.stepper button:hover { filter: brightness(0.97); }
-.stepper input[type="number"] {
-  width: 48px;
-  border: none;
-  text-align: center;
-  padding: 0.55rem 0.1rem;
-  font-size: 0.9rem;
-  -moz-appearance: textfield;
-}
-.stepper input[type="number"]::-webkit-inner-spin-button,
-.stepper input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.stepper .qty-valor {
-  min-width: 40px;
-  padding: 0 0.2rem;
-  display: grid;
-  place-items: center;
-  font-size: 0.85rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.stepper.stepper-sm button { width: 26px; }
-.stepper.stepper-sm input[type="number"] { width: 40px; padding: 0.35rem 0.1rem; font-size: 0.85rem; }
-.stepper.stepper-sm .qty-valor { min-width: 34px; font-size: 0.8rem; }
-
 /* ---------- Testimonios ---------- */
 .testimonios { padding: 2.5rem 0; }
 .testi-grid {
@@ -1876,7 +1830,7 @@ h1, h2, h3 {
 .cta-banda p { margin: 0; color: rgba(255, 255, 255, 0.82); max-width: 480px; }
 .cta-banda .btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
 
-/* ---------- Drawer del carrito ---------- */
+/* ---------- Fondo de capas (carrito, hojas, vista rápida) ---------- */
 .overlay {
   position: fixed;
   inset: 0;
@@ -1884,55 +1838,12 @@ h1, h2, h3 {
   backdrop-filter: blur(2px);
   z-index: 50;
 }
-.drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(430px, 100%);
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  z-index: 51;
-  display: flex;
-  flex-direction: column;
-  box-shadow: -20px 0 50px rgba(var(--sombra-tinte), 0.25);
-  border-left: 1px solid rgba(255, 255, 255, 0.5);
-}
-.drawer header {
-  padding: 1.3rem 1.4rem;
-  border-bottom: 1px solid var(--borde);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.drawer header h2 { margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem; }
 .icon-btn {
   border: none; background: transparent; display: grid; place-items: center;
   color: var(--gris-600); border-radius: 8px; padding: 0.3rem;
 }
 .icon-btn:hover { background: var(--marca-100); color: var(--marca-700); }
-
-.drawer .items { flex: 1; overflow-y: auto; padding: 1rem 1.3rem; display: flex; flex-direction: column; gap: 0.8rem; }
-.item {
-  display: flex;
-  gap: 0.7rem;
-  align-items: center;
-  border: 1px solid var(--borde);
-  background: white;
-  border-radius: 14px;
-  padding: 0.7rem;
-}
-.item .info { flex: 1; min-width: 0; }
-.item .info .n { font-weight: 600; font-size: 0.9rem; }
-.item .info .p { color: var(--gris-400); font-size: 0.8rem; }
-.item .info .precio { color: var(--marca-700); font-size: 0.82rem; margin-top: 0.15rem; }
-.item .quitar { border: none; background: transparent; color: #dc2626; display: grid; place-items: center; flex-shrink: 0; }
-
-.drawer footer { padding: 1.3rem 1.4rem; border-top: 1px solid var(--borde); }
-.total-linea { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; margin-bottom: 0.4rem; }
-.total-linea.sub { font-size: 0.85rem; font-weight: 600; color: var(--gris-400); margin-bottom: 0.3rem; }
-.total-linea:not(.sub) { margin-bottom: 1rem; padding-top: 0.4rem; border-top: 1px dashed var(--borde); }
+/* El carrito tiene su sección propia al final de la hoja ("Carrito"). */
 
 /* ---------- Checkout ---------- */
 .checkout {
@@ -5362,14 +5273,79 @@ a.footer-contacto-item:hover { background: rgba(255, 255, 255, 0.14); transform:
    La ficha de producto — /productos/<slug>
    ========================================================================== */
 .pagina-producto { padding: 1.5rem 1.5rem 3rem; }
-.pp-migas {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem;
-  font-size: 0.82rem; font-weight: 600; color: var(--gris-600); margin: 0 0 1.2rem;
+/* Ruta de navegación (componente `Migas`). Una sola línea siempre: en el
+   teléfono los pasos intermedios se colapsan en "…"; desplegada, la línea se
+   desliza de lado en vez de partirse en dos. */
+.migas-ruta { margin: 0 0 1.2rem; min-width: 0; }
+/* El sangrado negativo va en la lista y no en el primer enlace: dentro de la
+   lista con scroll quedaría recortado. */
+.migas-ruta-lista {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0 0 0 -0.45rem;
+  padding: 0;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  min-width: 0;
 }
-.pp-migas a { color: var(--marca-600); text-decoration: none; }
-.pp-migas a:hover { text-decoration: underline; }
-.pp-migas span[aria-hidden] { color: var(--borde); }
-.pp-migas span[aria-current] { color: var(--gris-900); }
+.migas-ruta-item { display: flex; align-items: center; min-width: 0; flex: none; }
+.migas-ruta-item:last-child { flex: 0 1 auto; }
+.migas-ruta-sep { flex: none; margin: 0 0.15rem; color: var(--gris-400); }
+.migas-ruta-enlace,
+.migas-ruta-mas {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.9rem;
+  padding: 0 0.45rem;
+  border-radius: 8px;
+  font-weight: 500;
+  color: var(--gris-600);
+  transition: color var(--t-rapido) ease, background-color var(--t-rapido) ease;
+}
+@media (hover: hover) {
+  .migas-ruta-enlace:hover,
+  .migas-ruta-mas:hover { color: var(--marca-700); background: var(--marca-100); }
+}
+.migas-ruta-enlace:focus-visible,
+.migas-ruta-mas:focus-visible { outline: none; box-shadow: var(--t-foco); }
+.migas-ruta-actual {
+  display: block;
+  min-width: 0;
+  padding: 0 0.45rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--tinta);
+}
+.migas-ruta-colapso { display: none; align-items: center; }
+.migas-ruta-mas {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 640px) {
+  .migas-ruta { margin-bottom: 0.9rem; }
+  .migas-ruta:not(.is-expandida) .migas-ruta-item.is-intermedia { display: none; }
+  .migas-ruta:not(.is-expandida) .migas-ruta-colapso { display: inline-flex; }
+  .migas-ruta.is-expandida .migas-ruta-lista {
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .migas-ruta.is-expandida .migas-ruta-lista::-webkit-scrollbar { display: none; }
+  .migas-ruta.is-expandida .migas-ruta-item:last-child { flex: none; }
+  .migas-ruta.is-expandida .migas-ruta-actual { overflow: visible; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .migas-ruta-lista { scroll-behavior: auto; }
+  .migas-ruta-enlace, .migas-ruta-mas { transition: none; }
+}
 .pp-titulo { font-size: clamp(1.5rem, 3vw, 2.1rem); color: var(--gris-900); margin: 0 0 1.5rem; }
 .pp-detalle {
   max-width: 380px;
@@ -6743,20 +6719,121 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
 .ficha { padding-block: 1.3rem 3rem; }
 .ficha-cuerpo {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-  gap: 2.5rem;
+  /* La foto ocupa lo que necesita (ver .galeria) y el panel de compra el
+     resto: antes la columna de la foto se estiraba hasta la mitad de la
+     pantalla y la imagen cuadrada quedaba más alta que la ventana. */
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: clamp(1.8rem, 3.5vw, 3.5rem);
   align-items: start;
   margin-top: 1rem;
 }
 .ficha-media {
   position: sticky;
   top: calc(var(--navbar-alto, 62px) + 1rem);
+  align-self: start;
+}
+
+/* ---------- Galería: una foto por presentación ---------- */
+/* La foto cabe ENTERA en la pantalla: su lado es el alto disponible (bajo la
+   barra superior, y sin las miniaturas si las hay), con tope en la mitad del
+   ancho del contenido. Nunca se corta abajo ni obliga a hacer scroll para
+   ver el producto completo. */
+.galeria {
+  --galeria-lado: min(
+    calc(100svh - var(--navbar-alto, 62px) - 3rem),
+    calc((min(100vw, var(--contenedor-ancho, 1440px)) - 6.5rem) * 0.5),
+    620px
+  );
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: var(--galeria-lado);
+  max-width: 100%;
+}
+.galeria--con-miniaturas {
+  --galeria-lado: min(
+    calc(100svh - var(--navbar-alto, 62px) - 3rem - 7.4rem),
+    calc((min(100vw, var(--contenedor-ancho, 1440px)) - 6.5rem) * 0.5),
+    620px
+  );
+}
+.galeria-principal {
+  position: relative;
   overflow: hidden;
   aspect-ratio: 1;
   border-radius: 24px;
   border: 1px solid var(--borde);
+  animation: galeria-entra 0.35s ease both;
 }
-.ficha-info { display: flex; flex-direction: column; gap: 1.1rem; }
+.galeria-principal > .pimg { width: 100%; height: 100%; }
+@keyframes galeria-entra { from { opacity: 0.35; } }
+/* Qué presentación se está viendo, sobre la foto. */
+.galeria-rotulo {
+  position: absolute;
+  left: 0.9rem;
+  bottom: 0.9rem;
+  max-width: calc(100% - 1.8rem);
+  padding: 0.35rem 0.75rem;
+  overflow: hidden;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+  background: rgba(var(--sombra-tinte), 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.galeria-miniaturas {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.15rem 0.15rem 0.3rem;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+.galeria-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.3rem;
+  width: 84px;
+  padding: 0.3rem;
+  border: 1.5px solid var(--borde);
+  border-radius: 14px;
+  font: inherit;
+  color: var(--texto-suave, #64748b);
+  background: var(--superficie, #fff);
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.galeria-mini img { width: 100%; aspect-ratio: 1; border-radius: 10px; object-fit: cover; }
+/* "Parejo · Caja" entero (hasta dos líneas): la foto es de ESA presentación. */
+.galeria-mini-texto {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.galeria-mini:hover { border-color: var(--marca-400, #22c55e); transform: translateY(-2px); }
+.galeria-mini.activa {
+  border-color: var(--marca-600, #15803d);
+  color: var(--marca-700, #0f5132);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--marca-500, #16a34a) 18%, transparent);
+}
+.galeria-mini:focus-visible { outline: 2px solid var(--marca-600, #15803d); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .galeria-principal { animation: none; }
+  .galeria-mini { transition: none; }
+  .galeria-mini:hover { transform: none; }
+}
+.ficha-info { display: flex; flex-direction: column; gap: 1.1rem; max-width: 640px; }
 .ficha-cat {
   align-self: flex-start;
   font-size: 0.74rem;
@@ -6789,7 +6866,11 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
 .ficha-relacionados h2 { margin: 0 0 1rem; font-size: clamp(1.25rem, 2vw, 1.55rem); color: var(--tinta); }
 @media (max-width: 860px) {
   .ficha-cuerpo { grid-template-columns: minmax(0, 1fr); gap: 1.3rem; }
-  .ficha-media { position: static; aspect-ratio: 4 / 3; border-radius: 20px; }
+  .ficha-media { position: static; }
+  .galeria,
+  .galeria--con-miniaturas { width: 100%; }
+  .galeria-principal { aspect-ratio: 4 / 3; border-radius: 20px; }
+  .galeria-mini { width: 72px; }
 }
 
 /* ---------- Aspectos de tarjeta (token `estilo-tarjeta`) ----------
@@ -6871,3 +6952,302 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   .favs-principal:hover .pimg img:not(.pimg-icono),
   .favs-principal:hover .pimg-icono { transform: none; }
 }
+
+/* ==========================================================================
+   Carrito
+   Qué llevo, cuánto cuesta y qué hago ahora, en ese orden.
+
+   En móvil es una hoja que sube desde abajo y mide lo que mide su contenido:
+   con un producto no queda un hueco entre la tarjeta y el total. Con muchos,
+   la lista hace scroll y el resumen se queda abajo, al alcance del pulgar.
+   En escritorio es un panel flotante con el mismo criterio.
+
+   Superficies blancas sobre `--fondo`, verde solo en lo que se toca y rojo
+   solo en quitar.
+   ========================================================================== */
+.carrito {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  max-height: 92dvh;
+  overflow: hidden;
+  background: var(--fondo);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -18px 48px rgba(var(--sombra-tinte), calc(0.18 * var(--sombra-fuerza)));
+  animation: carrito-sube 0.32s var(--t-ease);
+}
+.carrito:focus-visible { outline: none; }
+.carrito-asa { flex: none; margin: 0.55rem auto 0; }
+
+.carrito-cab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem 0.55rem;
+}
+.carrito-cab-texto { flex: 1; min-width: 0; }
+.carrito-cab h2 {
+  margin: 0;
+  font-size: 1.12rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--tinta);
+}
+.carrito-cab p { margin: 0.1rem 0 0; font-size: 0.8rem; color: var(--gris-600); }
+.carrito-cab-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gris-600);
+  transition: background-color var(--t-rapido) ease, color var(--t-rapido) ease;
+}
+.carrito-cab-btn:hover { background: var(--marca-100); color: var(--marca-700); }
+.carrito-cab-btn:focus-visible { outline: none; box-shadow: var(--t-foco); }
+/* Una sola forma de salir por pantalla: en la hoja, "volver" a la tienda; en
+   el panel de escritorio, la × de siempre. */
+.carrito-cerrar { display: none; }
+
+.carrito-cuerpo {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.2rem 1rem 0.4rem;
+}
+.carrito-kicker {
+  margin: 0 0.15rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gris-600);
+}
+.carrito-lista { list-style: none; margin: 0; padding: 0; }
+/* El espacio entre tarjetas es padding de la envoltura, no `gap`: así, al
+   quitar una línea, su hueco se cierra junto con ella en vez de saltar. */
+.citem-envoltura { padding-bottom: 0.5rem; overflow: hidden; }
+
+/* Tarjeta de producto */
+.citem {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.6rem 0.65rem;
+  background: var(--superficie);
+  border: 1px solid color-mix(in srgb, var(--borde) 70%, transparent);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(var(--sombra-tinte), calc(0.05 * var(--sombra-fuerza)));
+}
+.citem-img,
+.citem-img.pimg {
+  flex: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.citem-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.citem-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.4rem; }
+/* "Mora Castillo · 1 libra": producto, presentación y cantidad en UNA
+   lectura. La cantidad resalta (es lo que más se revisa) y no se parte:
+   "1 caja y 1/2" siempre va junta. */
+.citem-linea {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+.citem-producto { font-weight: 800; }
+.citem-variante { font-weight: 700; }
+.citem-sep { font-weight: 500; color: var(--gris-600); }
+.citem-cantidad-grupo { white-space: nowrap; }
+.citem-cantidad { font-weight: 800; color: var(--marca-700); }
+/* El total de la línea: el precio que importa. */
+.citem-total {
+  align-self: flex-start;
+  margin: 0.15rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+.citem-unitario { font-size: 0.78rem; font-weight: 600; color: var(--gris-600); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.citem-quitar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -0.45rem -0.4rem -0.45rem 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #dc2626;
+  opacity: 0.75;
+  transition: background-color var(--t-rapido) ease, opacity var(--t-rapido) ease, transform 0.1s ease;
+}
+.citem-quitar:hover { opacity: 1; background: #fef2f2; }
+.citem-quitar:active { transform: scale(0.9); }
+.citem-quitar:focus-visible { outline: none; opacity: 1; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25); }
+.citem-pie {
+  margin-top: auto;
+  padding-top: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.citem-cotizar {
+  align-self: flex-start;
+  margin-top: 0.45rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--acento-400) 18%, var(--superficie));
+  color: color-mix(in srgb, var(--acento-600) 65%, black);
+}
+
+/* La cápsula − cantidad + reutiliza `.qty` de la tienda sobre un verde claro. */
+.qty.qty--carrito {
+  height: 2.25rem;
+  padding: 0 0.22rem;
+  background: color-mix(in srgb, var(--marca-100) 70%, var(--superficie));
+}
+.qty--carrito button { width: 1.9rem; height: 1.9rem; color: var(--marca-700); }
+.qty--carrito .qty-valor { width: 3.1rem; word-spacing: 0.12em; }
+
+/* Resumen */
+.carrito-resumen {
+  flex: none;
+  padding: 1rem 1.1rem calc(1rem + env(safe-area-inset-bottom));
+  background: var(--superficie);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -10px 28px -20px rgba(var(--sombra-tinte), calc(0.45 * var(--sombra-fuerza)));
+}
+.carrito-resumen .carrito-kicker { margin-bottom: 0.4rem; }
+.carrito-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.12rem 0;
+  font-size: 0.88rem;
+  color: var(--gris-600);
+}
+.carrito-cifra { font-variant-numeric: tabular-nums; }
+.carrito-total {
+  margin-top: 0.55rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--borde);
+}
+.carrito-total span { font-size: 0.95rem; font-weight: 700; color: var(--tinta); }
+.carrito-total strong {
+  display: inline-block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--tinta);
+}
+.carrito-resumen .aviso-precios.compacto { margin: 0.3rem 0 0.9rem; color: var(--gris-600); }
+.carrito-cifra--cambia { animation: carrito-cifra 0.3s var(--t-ease); }
+
+.carrito-cta {
+  min-height: 3.3rem;
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.carrito-cta svg { transition: transform var(--t-medio) var(--t-ease); }
+.carrito-cta:hover:not(:disabled) svg { transform: translateX(3px); }
+.carrito-cta:active:not(:disabled) { transform: scale(0.985); }
+.carrito-cta:focus-visible { outline: none; box-shadow: var(--t-foco); }
+
+/* Vacío: la misma identidad, y una salida clara de vuelta a la tienda. */
+.carrito-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.2rem 1.5rem calc(1.8rem + env(safe-area-inset-bottom));
+}
+.carrito-vacio-icono {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 0.9rem;
+  border-radius: 50%;
+  background: var(--marca-100);
+  color: var(--marca-700);
+}
+.carrito-vacio-titulo { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--tinta); }
+.carrito-vacio-texto { margin: 0.35rem 0 1.2rem; max-width: 30ch; font-size: 0.88rem; line-height: 1.5; color: var(--gris-600); }
+.carrito-vacio .carrito-cta { padding-inline: 1.6rem; }
+
+/* Cargando */
+.citem--esqueleto { margin-bottom: 0.6rem; }
+.citem--esqueleto .citem-cuerpo { justify-content: center; gap: 0.55rem; }
+
+@keyframes carrito-sube { from { transform: translateY(100%); } }
+@keyframes carrito-entra { from { opacity: 0; transform: translateX(24px); } }
+@keyframes carrito-cifra { from { opacity: 0.35; transform: translateY(-4px); } }
+
+@media (max-width: 380px) {
+  .citem-img, .citem-img.pimg { width: 54px; height: 54px; }
+  .citem { gap: 0.65rem; }
+}
+/* Sin ancho para una sola línea: la cantidad baja a la suya en vez de
+   achicar la letra. "Mora Castillo" / "1 libra" / "$2.900". */
+@media (max-width: 420px) {
+  .citem-sep { display: none; }
+  .citem-cantidad-grupo { display: block; margin-top: 0.1rem; }
+}
+
+@media (min-width: 781px) {
+  .carrito {
+    left: auto;
+    top: 0.75rem;
+    right: 0.75rem;
+    bottom: auto;
+    width: min(420px, 100% - 1.5rem);
+    max-height: calc(100vh - 1.5rem);
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: 24px;
+    box-shadow: var(--sombra-lg);
+    animation-name: carrito-entra;
+  }
+  .carrito-asa, .carrito-volver { display: none; }
+  .carrito-cerrar { display: grid; }
+  .carrito-cab { padding: 0.9rem 0.75rem 0.6rem 1.25rem; }
+  .carrito-cuerpo { padding-inline: 1.1rem; }
+  .carrito-resumen { border-radius: 0; padding: 1rem 1.25rem 1.2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carrito,
+  .carrito-cifra--cambia { animation: none; }
+  .carrito-cta svg,
+  .citem-quitar { transition: none; }
+}
+
+/* ---------- Fotos del contenido administrable ----------
+   El negocio puede subir la foto real de quien opina y una imagen para
+   cada beneficio; caben en el mismo hueco que las iniciales y el ícono. */
+.testi-avatar { overflow: hidden; }
+.testi-avatar img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+.ts-foto { display: block; width: 44px; height: 44px; margin-bottom: 0.55rem; border-radius: 50%; object-fit: cover; }
+.beneficio-img { width: 100%; height: 100%; border-radius: inherit; object-fit: contain; }

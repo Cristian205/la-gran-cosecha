@@ -327,6 +327,7 @@ def test_la_biblioteca_no_lista_archivos_ajenos(api_tenant_a, tenant_b):
 
 RUTAS_SIN_QUERYSET = [
     "/api/admin/stats/",
+    "/api/admin/stats/panel/",
     "/api/orders/productos-mas-vendidos/",
     "/api/orders-productos-pendientes/",
     "/api/auth/users/",

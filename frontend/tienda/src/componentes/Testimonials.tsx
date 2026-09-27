@@ -68,7 +68,14 @@ export function Testimonials({
             </div>
             <p className="texto">"{t.texto}"</p>
             <div className="testi-autor">
-              <span className="testi-avatar">{iniciales(t.nombre)}</span>
+              <span className="testi-avatar">
+                {t.foto_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={t.foto_url} alt="" loading="lazy" decoding="async" />
+                ) : (
+                  iniciales(t.nombre)
+                )}
+              </span>
               <div>
                 <div className="nombre">{t.nombre}</div>
                 <div className="rol">{t.rol}</div>

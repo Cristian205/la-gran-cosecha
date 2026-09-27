@@ -3,13 +3,13 @@ import {
   Boxes,
   Building2,
   CalendarClock,
+  ClipboardList,
   ScanLine,
   Image as ImageIcon,
   LayoutTemplate,
   LayoutDashboard,
   Package,
   PackagePlus,
-  Receipt,
   ShieldCheck,
   Users,
   type LucideIcon,
@@ -25,7 +25,18 @@ export interface SeccionDisponible {
   end?: boolean;
   /** Codename requerido para ver esta sección; sin permiso, no se muestra. */
   permiso?: string;
+  /**
+   * El contador que acompaña a la sección, si lo tiene: una clave del resumen
+   * que el panel ya consulta (`/admin/stats/`). Solo se pinta cuando es mayor
+   * que cero — un "0" al lado de cada opción es ruido, no información.
+   */
+  badge?: ContadorDeSeccion;
+  /** Cómo se lee el contador ("4 por atender"), para el lector de pantalla y el tooltip. */
+  badgeTexto?: (n: number) => string;
 }
+
+/** Los contadores reales que alimentan los badges del menú. */
+export type ContadorDeSeccion = "pedidos_pendientes" | "productos_por_revisar";
 
 export const SECCIONES_DISPONIBLES: SeccionDisponible[] = [
   { clave: "dashboard", to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -58,22 +69,38 @@ export const SECCIONES_DISPONIBLES: SeccionDisponible[] = [
     icon: Boxes,
     permiso: "inventory.view_existencia",
   },
-  { clave: "pedidos", to: "/pedidos", label: "Pedidos", icon: Receipt, permiso: "orders.view_pedido" },
   {
+    clave: "pedidos",
+    to: "/pedidos",
+    label: "Pedidos",
+    // El mismo ícono que el indicador de Pedidos del dashboard.
+    icon: ClipboardList,
+    permiso: "orders.view_pedido",
+    badge: "pedidos_pendientes",
+    badgeTexto: (n) => `${n} ${n === 1 ? "pendiente" : "pendientes"}`,
+  },
+  {
+    // Productos que los clientes escribieron a mano en un pedido y que esperan
+    // que alguien los apruebe (entran al catálogo) o los rechace.
     clave: "productos_pendientes",
     to: "/productos-pendientes",
     label: "Productos pendientes",
     icon: PackagePlus,
     permiso: "orders.view_pedido",
+    badge: "productos_por_revisar",
+    badgeTexto: (n) => `${n} por revisar`,
   },
   { clave: "clientes", to: "/clientes", label: "Clientes", icon: Users, permiso: "orders.view_cliente" },
   { clave: "usuarios", to: "/usuarios", label: "Usuarios", icon: ShieldCheck, permiso: "accounts.view_usuario" },
+  // Banners, carrusel, testimonios, beneficios, ofertas, datos del negocio.
   { clave: "contenido", to: "/contenido", label: "Contenido", icon: ImageIcon, permiso: "content.view_promobanner" },
   { clave: "negocio", to: "/negocio", label: "Tu negocio", icon: Building2 },
   // El constructor cambia lo que ven los visitantes, asi que pide el mismo
   // permiso que administrar el contenido de la tienda: quien puede cambiar los
   // banners puede cambiar donde van.
-  { clave: "tienda", to: "/tienda", label: "Tu tienda", icon: LayoutTemplate, permiso: "content.view_promobanner" },
+  // Las páginas de la tienda y sus secciones: qué se ve, en qué orden, con
+  // qué textos e imágenes (el constructor, con borrador y publicar).
+  { clave: "tienda", to: "/tienda", label: "Páginas y secciones", icon: LayoutTemplate, permiso: "content.view_promobanner" },
 ];
 
 function puedeVerSeccion(usuario: Usuario | null | undefined, seccion: SeccionDisponible): boolean {
@@ -82,29 +109,39 @@ function puedeVerSeccion(usuario: Usuario | null | undefined, seccion: SeccionDi
 
 const SECCIONES_POR_CLAVE = new Map(SECCIONES_DISPONIBLES.map((s) => [s.clave, s]));
 
-/** Misma agrupación visual que existía antes de que el sidebar fuera personalizable. */
+/**
+ * El menú de quien no lo ha personalizado, agrupado por para qué se entra:
+ * atender la operación del día, cuidar el catálogo, configurar el negocio.
+ * Son las mismas secciones de siempre —solo cambia el orden y el grupo—, y
+ * quien ya guardó su propio `sidebar_layout` lo conserva tal cual.
+ */
 export const LAYOUT_POR_DEFECTO: NodoSidebar[] = [
   {
     tipo: "grupo",
     id: "operacion",
     titulo: "Operación",
-    items: [
-      "dashboard",
-      "caja",
-      "reservas",
-      "domicilios",
-      "catalogo",
-      "inventario",
-      "pedidos",
-      "productos_pendientes",
-      "clientes",
-    ],
+    items: ["dashboard", "pedidos", "clientes", "domicilios", "caja", "reservas"],
+  },
+  {
+    // "Productos pendientes" vive aquí: aprobarlos es decidir qué entra al
+    // catálogo, no atender un pedido.
+    tipo: "grupo",
+    id: "catalogo",
+    titulo: "Catálogo",
+    items: ["catalogo", "productos_pendientes", "inventario"],
+  },
+  {
+    // Todo lo que el cliente ve en la tienda pública, sin tocar código.
+    tipo: "grupo",
+    id: "tienda",
+    titulo: "Tienda",
+    items: ["tienda", "contenido"],
   },
   {
     tipo: "grupo",
     id: "administracion",
-    titulo: "Administración",
-    items: ["usuarios", "contenido", "negocio"],
+    titulo: "Configuración",
+    items: ["negocio", "usuarios"],
   },
 ];
 

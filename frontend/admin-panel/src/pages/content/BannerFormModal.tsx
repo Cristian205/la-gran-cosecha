@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { actualizarBanner, crearBanner } from "../../api/content";
 import { MediaField } from "../../components/MediaField";
+import { Vigencia } from "./Vigencia";
 import { Modal } from "../../components/Modal";
 import type { PromoBanner } from "../../types";
 import { extraerMensajeError } from "../../utils";
@@ -20,6 +21,10 @@ export function BannerFormModal({ banner, onCerrar, onGuardado }: Props) {
   const [orden, setOrden] = useState(banner?.orden ?? 0);
   const [activo, setActivo] = useState(banner?.activo ?? true);
   const [imagen, setImagen] = useState<File | null>(null);
+  const [quitarImagen, setQuitarImagen] = useState(false);
+  const [imagenMovil, setImagenMovil] = useState<File | null>(null);
+  const [quitarMovil, setQuitarMovil] = useState(false);
+  const [vigencia, setVigencia] = useState({ inicio: banner?.fecha_inicio ?? null, fin: banner?.fecha_fin ?? null });
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,14 +46,25 @@ export function BannerFormModal({ banner, onCerrar, onGuardado }: Props) {
       cta_href: ctaHref,
       orden,
       activo,
+      fecha_inicio: vigencia.inicio,
+      fecha_fin: vigencia.fin,
     };
+    const imagenes = {
+      imagen: imagen ?? (quitarImagen ? ("quitar" as const) : null),
+      imagen_movil: imagenMovil ?? (quitarMovil ? ("quitar" as const) : null),
+    };
+
+    if (vigencia.inicio && vigencia.fin && new Date(vigencia.inicio) > new Date(vigencia.fin)) {
+      setError("La fecha de fin es anterior a la de inicio.");
+      return;
+    }
 
     setGuardando(true);
     try {
       if (banner) {
-        await actualizarBanner(banner.id, payload, imagen);
+        await actualizarBanner(banner.id, payload, imagenes);
       } else {
-        await crearBanner(payload, imagen);
+        await crearBanner(payload, imagenes);
       }
       onGuardado();
     } catch (err) {
@@ -82,10 +98,31 @@ export function BannerFormModal({ banner, onCerrar, onGuardado }: Props) {
           <MediaField
             valor={imagen}
             urlActual={banner?.imagen_url ?? null}
-            onCambiar={setImagen}
+            onCambiar={(f) => {
+              setImagen(f);
+              if (f) setQuitarImagen(false);
+            }}
+            quitada={quitarImagen}
+            onQuitarActual={setQuitarImagen}
             accept="image/png,image/jpeg,image/webp"
           />
         </div>
+        <div className="campo">
+          <label>Imagen para móvil (opcional)</label>
+          <MediaField
+            valor={imagenMovil}
+            urlActual={banner?.imagen_movil_url ?? null}
+            onCambiar={(f) => {
+              setImagenMovil(f);
+              if (f) setQuitarMovil(false);
+            }}
+            quitada={quitarMovil}
+            onQuitarActual={setQuitarMovil}
+            accept="image/png,image/jpeg,image/webp"
+            ayuda="Vertical o recortada para celular. Sin ella, se usa la de escritorio."
+          />
+        </div>
+        <Vigencia inicio={vigencia.inicio} fin={vigencia.fin} onCambio={setVigencia} />
         <div className="campo">
           <label>Etiqueta (ej: 🌱 Directo del campo)</label>
           <input value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} />

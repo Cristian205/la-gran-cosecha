@@ -2,7 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { useEnvoltorio } from "@/componentes/CapaCliente";
-import { useSeleccionProducto } from "@/hooks/useSeleccionProducto";
+import { useSeleccionProducto, type SeleccionProducto } from "@/hooks/useSeleccionProducto";
 import type { Producto } from "@/lib/tipos";
 import { formatoCantidad, formatoPrecio } from "@/lib/utiles";
 import { PrecioProducto } from "./PrecioProducto";
@@ -11,6 +11,8 @@ import { SelectorPresentacion } from "./SelectorPresentacion";
 
 interface Props {
   producto: Producto;
+  /** La selección, si la comparte con otra pieza (la galería de la ficha). */
+  seleccion?: SeleccionProducto;
 }
 
 /**
@@ -21,8 +23,20 @@ interface Props {
  * lo que estás comprando". El subtotal solo aparece cuando la cantidad pasa
  * de uno — con una unidad, repetir la misma cifra que el precio es ruido.
  */
-export function CompraProducto({ producto }: Props) {
+export function CompraProducto({ producto, seleccion }: Props) {
+  return seleccion ? (
+    <PanelCompra producto={producto} seleccion={seleccion} />
+  ) : (
+    <CompraConSeleccionPropia producto={producto} />
+  );
+}
+
+function CompraConSeleccionPropia({ producto }: { producto: Producto }) {
   const seleccion = useSeleccionProducto(producto);
+  return <PanelCompra producto={producto} seleccion={seleccion} />;
+}
+
+function PanelCompra({ producto, seleccion }: { producto: Producto; seleccion: SeleccionProducto }) {
   const { abrirCarrito } = useEnvoltorio();
   const { presentacion, precioUnitario, cantidad, enCarrito, sinPresentaciones } = seleccion;
 

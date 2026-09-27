@@ -82,7 +82,10 @@ export function PromoCarousel({ autoplay = true, segundos, variante }: Props) {
     >
       {slide.imagen_url && (
         <div className="slide-bg">
-          <img src={slide.imagen_url} alt="" />
+          <picture>
+            {slide.imagen_movil_url && <source media="(max-width: 700px)" srcSet={slide.imagen_movil_url} />}
+            <img src={slide.imagen_url} alt="" />
+          </picture>
         </div>
       )}
       <span className="blob b1" />

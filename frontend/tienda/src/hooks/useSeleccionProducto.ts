@@ -93,6 +93,17 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
     setPresId(grupos.find((g) => g.nombre === nombre)?.opciones[0]?.id ?? null);
   }
 
+  /** Elige una presentación concreta (variante + unidad) de un golpe: la usa la galería de la ficha. */
+  function elegirPresentacion(id: number) {
+    const grupoDe = grupos.find((g) => g.opciones.some((p) => p.id === id));
+    if (!grupoDe) return;
+    setNombreSel(grupoDe.nombre);
+    setPresId(id);
+  }
+
+  /** La foto de lo elegido: la de la presentación si tiene, si no la del producto. */
+  const imagenUrl = presentacion?.imagen_url || producto.imagen_url;
+
   function fijarCantidad(valor: number) {
     const limpio = Math.max(paso, Number(valor.toFixed(2)));
     if (enCarrito && presentacion) cambiarCantidadCarrito(presentacion.id, limpio, paso);
@@ -117,7 +128,8 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
     agregar({
       productoId: producto.id,
       productoNombre: producto.nombre_producto,
-      imagenUrl: producto.imagen_url,
+      // La línea del pedido muestra lo que se compró: el bulto, no la libra.
+      imagenUrl,
       presentacionId: presentacion.id,
       presentacionNombre: `${presentacion.nombre_presentacion} · ${presentacion.unidad_venta_nombre}`,
       precioUnitario,
@@ -134,6 +146,8 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
     presentacion,
     elegirVariante,
     elegirUnidad: setPresId,
+    elegirPresentacion,
+    imagenUrl,
     precioUnitario,
     sinPresentaciones,
     agotado,

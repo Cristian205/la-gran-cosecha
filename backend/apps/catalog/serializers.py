@@ -55,6 +55,7 @@ class PresentacionProductoSerializer(serializers.ModelSerializer):
     unidad_venta_nombre = serializers.CharField(
         source="unidad_venta.nombre_unidad", read_only=True
     )
+    imagen_url = serializers.SerializerMethodField()
 
     class Meta:
         model = PresentacionProducto
@@ -70,7 +71,15 @@ class PresentacionProductoSerializer(serializers.ModelSerializer):
             # color, empaque. Viaja tal cual porque quien sabe qué ejes tiene
             # este negocio es su perfil, no este serializer.
             "atributos",
+            "imagen_url",
         ]
+
+    def get_imagen_url(self, obj):
+        if not obj.imagen:
+            return None
+        request = self.context.get("request")
+        url = obj.imagen.url
+        return request.build_absolute_uri(url) if request else url
 
 
 class ProductoSerializer(serializers.ModelSerializer):
@@ -125,7 +134,7 @@ class ProductoSerializer(serializers.ModelSerializer):
     def get_presentaciones(self, obj):
         # Solo presentaciones activas; el prefetch se resuelve en la vista.
         activas = [p for p in obj.presentaciones.all() if p.estado_presentacion]
-        return PresentacionProductoSerializer(activas, many=True).data
+        return PresentacionProductoSerializer(activas, many=True, context=self.context).data
 
     def get_precio_desde(self, obj):
         """

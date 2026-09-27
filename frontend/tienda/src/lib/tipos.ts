@@ -20,6 +20,8 @@ export interface Presentacion {
   factor_conversion: string;
   precio_unitario: string;
   estado_presentacion: boolean;
+  /** Foto propia de la presentación (el bulto, la caja…); null = la del producto. */
+  imagen_url?: string | null;
 }
 
 export interface Producto {
@@ -148,6 +150,8 @@ export interface SiteConfig {
 export interface PromoBanner {
   id: number;
   imagen_url: string | null;
+  /** Versión para pantallas pequeñas; sin ella, la de escritorio. */
+  imagen_movil_url?: string | null;
   etiqueta: string;
   titulo: string;
   texto: string;
@@ -161,6 +165,8 @@ export interface PromoBanner {
 export interface Anuncio {
   id: number;
   imagen_url: string | null;
+  /** Versión para pantallas pequeñas; sin ella, la de escritorio. */
+  imagen_movil_url?: string | null;
   etiqueta: string;
   titulo: string;
   texto: string;
@@ -175,6 +181,8 @@ export interface Testimonio {
   rol: string;
   texto: string;
   estrellas: number;
+  /** Foto de quien opina; sin ella, sus iniciales. */
+  foto_url?: string | null;
 }
 
 export interface TrustBadge {
@@ -190,6 +198,8 @@ export interface BeneficioComercial {
   icono: "truck" | "clock" | "package" | "wallet" | "headset" | "check" | "shield" | "users" | "basket";
   titulo: string;
   texto: string;
+  /** Si existe, se muestra en lugar del ícono. */
+  imagen_url?: string | null;
 }
 
 export interface OfertaProducto {

@@ -19,10 +19,17 @@ class ProductoFilter(django_filters.FilterSet):
     # filtra porque `precio_desde` mezcla unidades —una libra y una caja del
     # mismo producto— y un rango sobre eso no significaría nada.
     unidad = django_filters.NumberFilter(method="filtrar_unidad")
+    # Productos concretos, por id ("?ids=4,18,2"): los que el negocio eligió a
+    # mano para una sección de destacados. El orden lo decide quien pide.
+    ids = django_filters.CharFilter(method="filtrar_ids")
 
     class Meta:
         model = Producto
-        fields = ["categoria", "estado", "slug", "unidad"]
+        fields = ["categoria", "estado", "slug", "unidad", "ids"]
+
+    def filtrar_ids(self, queryset, name, value):
+        ids = [int(x) for x in value.split(",") if x.strip().isdigit()][:50]
+        return queryset.filter(id__in=ids)
 
     def filtrar_estado(self, queryset, name, value):
         if value == "activos":

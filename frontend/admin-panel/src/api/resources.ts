@@ -10,6 +10,7 @@ import type {
   Paginated,
   Pedido,
   PedidoDetalle,
+  PanelEstadisticas,
   Producto,
   ProductoPendiente,
   ReporteVentas,
@@ -25,6 +26,12 @@ function unwrap<T>(data: Paginated<T> | T[]): T[] {
 // ---------- Estadísticas ----------
 export async function obtenerEstadisticas(): Promise<Estadisticas> {
   const { data } = await api.get<Estadisticas>("/admin/stats/");
+  return data;
+}
+
+/** Todo el dashboard de un período en una sola petición (ver `PanelEstadisticasView`). */
+export async function obtenerPanel(params: { desde: string; hasta: string }): Promise<PanelEstadisticas> {
+  const { data } = await api.get<PanelEstadisticas>("/admin/stats/panel/", { params });
   return data;
 }
 
@@ -176,6 +183,19 @@ export async function subirImagenProducto(
   await api.post(`/catalog/products/${id}/imagen/`, form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+}
+
+/** La foto de una presentación concreta (el bulto, la libra…). */
+export async function subirImagenPresentacion(id: number, archivo: File): Promise<void> {
+  const form = new FormData();
+  form.append("imagen", archivo);
+  await api.post(`/catalog/presentations/${id}/imagen/`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
+export async function quitarImagenPresentacion(id: number): Promise<void> {
+  await api.delete(`/catalog/presentations/${id}/imagen/`);
 }
 
 // ---------- Pedidos ----------

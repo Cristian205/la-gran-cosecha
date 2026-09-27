@@ -235,12 +235,49 @@ class ProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         )
 
 
+def _validar_imagen(imagen):
+    """El mensaje de error de una imagen subida, o None si sirve."""
+    if not imagen:
+        return "No se envió ninguna imagen."
+    if imagen.content_type not in TIPOS_IMAGEN_VALIDOS:
+        return "Formato no permitido. Usa JPG, PNG o WEBP."
+    if imagen.size > LIMITE_IMAGEN_MB * 1024 * 1024:
+        return f"La imagen supera el límite de {LIMITE_IMAGEN_MB}MB."
+    return None
+
+
 class PresentacionProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     """Presentaciones (staff). El borrado es lógico."""
 
     serializer_class = PresentacionProductoSerializer
     permission_classes = [EsStaff]
     modelo = PresentacionProducto
+
+    def get_permissions(self):
+        # La foto de una presentación es parte del producto: la cambia quien
+        # puede editar productos, igual que la foto principal.
+        if self.action == "imagen":
+            return [requiere_permiso("catalog.change_producto")()]
+        return super().get_permissions()
+
+    @action(detail=True, methods=["post", "delete"], parser_classes=[MultiPartParser, FormParser])
+    def imagen(self, request, pk=None):
+        """Sube (POST, campo `imagen`) o quita (DELETE) la foto de la presentación."""
+        presentacion = self.get_object()
+        if request.method == "DELETE":
+            if presentacion.imagen:
+                presentacion.imagen.delete(save=False)
+            presentacion.imagen = None
+            presentacion.save(update_fields=["imagen"])
+            return Response(self.get_serializer(presentacion).data)
+
+        archivo = request.FILES.get("imagen")
+        error = _validar_imagen(archivo)
+        if error:
+            return Response({"ok": False, "mensaje": error}, status=status.HTTP_400_BAD_REQUEST)
+        presentacion.imagen = archivo
+        presentacion.save(update_fields=["imagen"])
+        return Response(self.get_serializer(presentacion).data)
 
     def get_queryset(self):
         return super().get_queryset().select_related("unidad_venta", "producto")
