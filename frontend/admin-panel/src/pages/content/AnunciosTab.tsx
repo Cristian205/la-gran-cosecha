@@ -1,3 +1,4 @@
+import { estadoDeVigencia } from "./Vigencia";
 import { useEffect, useState } from "react";
 import { eliminarAnuncio, obtenerAnuncios } from "../../api/content";
 import type { Anuncio } from "../../types";
@@ -95,6 +96,11 @@ export function AnunciosTab() {
                     <span className={`badge ${a.activo ? "activo" : "inactivo"}`}>
                       {a.activo ? "Activo" : "Inactivo"}
                     </span>
+                    {a.activo && estadoDeVigencia(a.fecha_inicio, a.fecha_fin) && (
+                      <span className="badge PENDIENTE" style={{ marginLeft: ".35rem" }}>
+                        {estadoDeVigencia(a.fecha_inicio, a.fecha_fin) === "programado" ? "Programado" : "Vencido"}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <div className="acciones">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { actualizarTestimonio, crearTestimonio } from "../../api/content";
+import { MediaField } from "../../components/MediaField";
 import { Modal } from "../../components/Modal";
 import type { Testimonio } from "../../types";
 import { extraerMensajeError } from "../../utils";
@@ -17,6 +18,8 @@ export function TestimonioFormModal({ testimonio, onCerrar, onGuardado }: Props)
   const [estrellas, setEstrellas] = useState(testimonio?.estrellas ?? 5);
   const [orden, setOrden] = useState(testimonio?.orden ?? 0);
   const [activo, setActivo] = useState(testimonio?.activo ?? true);
+  const [foto, setFoto] = useState<File | null>(null);
+  const [quitarFoto, setQuitarFoto] = useState(false);
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +38,9 @@ export function TestimonioFormModal({ testimonio, onCerrar, onGuardado }: Props)
     setGuardando(true);
     try {
       if (testimonio) {
-        await actualizarTestimonio(testimonio.id, payload);
+        await actualizarTestimonio(testimonio.id, payload, foto ?? (quitarFoto ? "quitar" : null));
       } else {
-        await crearTestimonio(payload);
+        await crearTestimonio(payload, foto);
       }
       onGuardado();
     } catch (err) {
@@ -65,6 +68,22 @@ export function TestimonioFormModal({ testimonio, onCerrar, onGuardado }: Props)
     >
       <form onSubmit={guardar}>
         {error && <div className="error-box">{error}</div>}
+
+        <div className="campo">
+          <label>Foto (opcional)</label>
+          <MediaField
+            valor={foto}
+            urlActual={testimonio?.foto_url ?? null}
+            onCambiar={(f) => {
+              setFoto(f);
+              if (f) setQuitarFoto(false);
+            }}
+            quitada={quitarFoto}
+            onQuitarActual={setQuitarFoto}
+            accept="image/png,image/jpeg,image/webp"
+            ayuda="Una foto real de quien opina da confianza. Sin ella se muestran sus iniciales."
+          />
+        </div>
 
         <div className="fila">
           <div className="campo">

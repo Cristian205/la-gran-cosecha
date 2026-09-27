@@ -1,7 +1,7 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from apps.tenancy.almacenamiento import ruta_anuncio, ruta_banner, ruta_identidad
+from apps.tenancy.almacenamiento import ruta_anuncio, ruta_banner, ruta_contenido, ruta_identidad
 from apps.tenancy.models import ModeloConTenant
 
 
@@ -217,6 +217,14 @@ class StoreSettings(models.Model):
 
 class PromoBanner(ModeloConTenant):
     imagen = models.ImageField(upload_to=ruta_banner, blank=True, null=True)
+    # Vertical o recortada para pantallas pequeñas; sin ella, la de escritorio.
+    imagen_movil = models.ImageField(upload_to=ruta_banner, blank=True, null=True)
+
+    # Programar una campaña: sin fechas se muestra mientras esté activa; con
+    # ellas, solo dentro del rango. Así marketing deja lista la promoción del
+    # lunes el viernes, y la de fin de mes se retira sola.
+    fecha_inicio = models.DateTimeField(null=True, blank=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
     etiqueta = models.CharField(max_length=100, blank=True)
     titulo = models.CharField(max_length=200)
     texto = models.TextField(blank=True)
@@ -251,6 +259,13 @@ class Anuncio(ModeloConTenant):
     """
 
     imagen = models.ImageField(upload_to=ruta_anuncio, blank=True, null=True)
+    imagen_movil = models.ImageField(upload_to=ruta_anuncio, blank=True, null=True)
+
+    # Programar una campaña: sin fechas se muestra mientras esté activa; con
+    # ellas, solo dentro del rango. Así marketing deja lista la promoción del
+    # lunes el viernes, y la de fin de mes se retira sola.
+    fecha_inicio = models.DateTimeField(null=True, blank=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
     etiqueta = models.CharField(max_length=60, blank=True)
     titulo = models.CharField(max_length=150)
     texto = models.TextField(blank=True)
@@ -276,6 +291,8 @@ class Testimonio(ModeloConTenant):
     rol = models.CharField(max_length=150, blank=True)
     texto = models.TextField()
     estrellas = models.PositiveSmallIntegerField(default=5)
+    # Foto real de quien opina. Opcional: sin ella se muestran sus iniciales.
+    foto = models.ImageField(upload_to=ruta_contenido, blank=True, null=True)
 
     orden = models.PositiveIntegerField(default=0)
     activo = models.BooleanField(default=True)
@@ -335,6 +352,8 @@ class BeneficioComercial(ModeloConTenant):
     ]
 
     icono = models.CharField(max_length=20, choices=ICONOS, default="check")
+    # Si hay imagen, se muestra en lugar del ícono.
+    imagen = models.ImageField(upload_to=ruta_contenido, blank=True, null=True)
     titulo = models.CharField(max_length=100)
     texto = models.CharField(max_length=200, blank=True)
 

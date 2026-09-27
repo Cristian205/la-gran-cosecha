@@ -6,9 +6,13 @@ import { Tooltip } from "../../components/Tooltip";
 import {
   actualizarProducto,
   crearProducto,
+  quitarImagenPresentacion,
+  subirImagenPresentacion,
   subirImagenProducto,
   type ProductoPayload,
 } from "../../api/resources";
+import { alertaError } from "../../utils/alertas";
+import { FotoPresentacion } from "./FotoPresentacion";
 import type { Categoria, Producto, UnidadMedida } from "../../types";
 import { extraerMensajeError, formatoPrecio } from "../../utils";
 
@@ -18,6 +22,12 @@ interface PresRow {
   unidad_venta: number | "";
   factor_conversion: string;
   precio_unitario: string;
+  /** La foto que ya tiene guardada. */
+  imagen_url?: string | null;
+  /** Foto nueva elegida en este formulario (se sube al guardar). */
+  archivo?: File | null;
+  /** Se pidió quitar la foto guardada. */
+  quitarImagen?: boolean;
 }
 
 interface Props {
@@ -107,6 +117,7 @@ export function ProductFormModal({
             unidad_venta: p.unidad_venta,
             factor_conversion: p.factor_conversion,
             precio_unitario: p.precio_unitario,
+            imagen_url: p.imagen_url ?? null,
           }))
       : [{ ...filaVacia }]
   );
@@ -191,6 +202,34 @@ export function ProductFormModal({
         : await crearProducto(payload);
       if (imagen) {
         await subirImagenProducto(prod.id, imagen);
+      }
+      // Las fotos de las presentaciones van después del producto: una
+      // presentación nueva no tiene id hasta que el producto se guarda. Se
+      // reconoce por nombre y unidad, que son únicos dentro del producto.
+      const fallidas: string[] = [];
+      for (const fila of presValidas) {
+        if (!fila.archivo && !fila.quitarImagen) continue;
+        const nombreFila = fila.nombre_presentacion.trim();
+        const id =
+          fila.id ??
+          prod.presentaciones.find(
+            (g) => g.nombre_presentacion === nombreFila && g.unidad_venta === Number(fila.unidad_venta)
+          )?.id;
+        if (!id) continue;
+        try {
+          if (fila.archivo) await subirImagenPresentacion(id, fila.archivo);
+          else await quitarImagenPresentacion(id);
+        } catch {
+          fallidas.push(nombreFila);
+        }
+      }
+      if (fallidas.length > 0) {
+        // El producto YA se guardó: se avisa y se cierra, porque volver a
+        // guardar este mismo formulario intentaría crear de nuevo las
+        // presentaciones nuevas.
+        await alertaError(
+          `El producto se guardó, pero no se pudo actualizar la foto de: ${fallidas.join(", ")}. Puedes volver a intentarlo editando el producto.`
+        );
       }
       onGuardado();
     } catch (err) {
@@ -458,6 +497,18 @@ export function ProductFormModal({
                   )}
                 </div>
               </div>
+
+              <FotoPresentacion
+                urlActual={p.imagen_url ?? null}
+                archivo={p.archivo ?? null}
+                quitar={Boolean(p.quitarImagen)}
+                nombre={p.nombre_presentacion}
+                onCambiar={({ archivo, quitar }) =>
+                  setPresentaciones((prev) =>
+                    prev.map((fila, idx) => (idx === i ? { ...fila, archivo, quitarImagen: quitar } : fila))
+                  )
+                }
+              />
 
               {incompleta && (
                 <div className="pres-row-alerta">

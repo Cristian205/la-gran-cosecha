@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils.text import slugify
 
-from apps.tenancy.almacenamiento import ruta_categoria, ruta_producto
+from apps.tenancy.almacenamiento import ruta_categoria, ruta_presentacion, ruta_producto
 from apps.tenancy.models import ModeloConTenant
 
 
@@ -274,6 +274,12 @@ class PresentacionProducto(ModeloConTenant):
     # recorrerlos todos para paginar, no. El disparador es esa consulta, no una
     # intuición.
     atributos = models.JSONField(default=dict, blank=True)
+
+    # Cómo se ve ESTA presentación: el bulto no es la libra, y la caja de 20
+    # no es la unidad. Opcional: sin ella, la tienda muestra la foto del
+    # producto. La ficha la usa como galería —elegir la presentación cambia
+    # la foto— y el pedido la guarda en la línea.
+    imagen = models.ImageField(upload_to=ruta_presentacion, blank=True, null=True)
 
     class Meta:
         db_table = "ui_presentacionproducto"

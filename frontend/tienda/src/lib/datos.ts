@@ -202,6 +202,29 @@ export async function obtenerProductosMasVendidos(): Promise<Producto[]> {
   return pedir<Producto[]>("/orders/productos-mas-vendidos/");
 }
 
+/**
+ * Productos concretos, en el orden pedido: los que el negocio eligió a mano
+ * para una sección de destacados. Los que ya no existan o estén apagados
+ * simplemente no vuelven.
+ */
+export async function obtenerProductosPorIds(ids: number[]): Promise<Producto[]> {
+  if (ids.length === 0) return [];
+  const datos = await pedir<Paginated<Producto> | Producto[]>(
+    `/catalog/products/?ids=${ids.join(",")}&page_size=${ids.length}`
+  );
+  return ordenarPorIds(desempaquetar(datos), ids);
+}
+
+export function ordenarPorIds(productos: Producto[], ids: number[]): Producto[] {
+  const porId = new Map(productos.map((p) => [p.id, p]));
+  return ids.map((id) => porId.get(id)).filter((p): p is Producto => Boolean(p));
+}
+
+/** Los ids elegidos a mano en las props de un bloque (vacío = usar el ranking). */
+export function idsElegidos(productos: unknown): number[] {
+  return Array.isArray(productos) ? productos.map(Number).filter((n) => Number.isInteger(n) && n > 0) : [];
+}
+
 // ---------- content.ts ----------
 
 export async function obtenerSiteConfig(): Promise<SiteConfig> {

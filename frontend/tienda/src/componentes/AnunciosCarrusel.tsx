@@ -91,7 +91,10 @@ export function AnunciosCarrusel({ autoplay = true, segundos }: Props) {
           // `img` y no `next/image`: la foto la sube cada negocio a su propio
           // bucket, igual que en `Portada` y `BannerPromocional`.
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={anuncio.id} src={anuncio.imagen_url} alt="" className="anuncios-fade" />
+          <picture key={anuncio.id}>
+            {anuncio.imagen_movil_url && <source media="(max-width: 700px)" srcSet={anuncio.imagen_movil_url} />}
+            <img src={anuncio.imagen_url} alt="" className="anuncios-fade" />
+          </picture>
         ) : (
           <div key={anuncio.id} className="anuncios-marcador anuncios-fade" aria-hidden="true">
             <Sprout size={56} strokeWidth={1.3} />

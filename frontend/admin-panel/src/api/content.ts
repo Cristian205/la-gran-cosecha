@@ -38,6 +38,35 @@ export async function actualizarSiteConfig(
   return data;
 }
 
+/**
+ * Qué hacer con una imagen al guardar: `File` la sube o la reemplaza,
+ * `"quitar"` la borra (el backend lee `quitar_<campo>`), `null`/ausente la
+ * deja como está.
+ */
+export type CambioImagen = File | "quitar" | null | undefined;
+
+/**
+ * El cuerpo multipart de un contenido con imágenes. Los booleanos van SIEMPRE
+ * explícitos: en multipart, DRF lee un booleano ausente como `false` (como
+ * una casilla sin marcar), y un testimonio nuevo quedaría apagado.
+ */
+function formulario(payload: Record<string, unknown>, imagenes: Record<string, CambioImagen> = {}): FormData {
+  const form = new FormData();
+  Object.entries(payload).forEach(([clave, valor]) => {
+    if (valor === undefined) return;
+    form.append(clave, valor === null ? "" : String(valor));
+  });
+  Object.entries(imagenes).forEach(([campo, cambio]) => {
+    if (cambio === "quitar") form.append(`quitar_${campo}`, "true");
+    else if (cambio) form.append(campo, cambio);
+  });
+  return form;
+}
+
+const MULTIPART = { headers: { "Content-Type": "multipart/form-data" } };
+
+type SinLectura<T> = Omit<T, "id" | "imagen_url" | "imagen_movil_url" | "foto_url">;
+
 // ---------- Banners ----------
 export async function obtenerBanners(): Promise<PromoBanner[]> {
   const { data } = await api.get<Paginated<PromoBanner>>("/content/banners/", {
@@ -47,29 +76,19 @@ export async function obtenerBanners(): Promise<PromoBanner[]> {
 }
 
 export async function crearBanner(
-  payload: Omit<PromoBanner, "id" | "imagen_url">,
-  imagen?: File | null
+  payload: SinLectura<PromoBanner>,
+  imagenes: { imagen?: CambioImagen; imagen_movil?: CambioImagen } = {}
 ): Promise<PromoBanner> {
-  const form = new FormData();
-  Object.entries(payload).forEach(([key, value]) => form.append(key, String(value)));
-  if (imagen) form.append("imagen", imagen);
-  const { data } = await api.post<PromoBanner>("/content/banners/", form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const { data } = await api.post<PromoBanner>("/content/banners/", formulario(payload, imagenes), MULTIPART);
   return data;
 }
 
 export async function actualizarBanner(
   id: number,
-  payload: Omit<PromoBanner, "id" | "imagen_url">,
-  imagen?: File | null
+  payload: SinLectura<PromoBanner>,
+  imagenes: { imagen?: CambioImagen; imagen_movil?: CambioImagen } = {}
 ): Promise<PromoBanner> {
-  const form = new FormData();
-  Object.entries(payload).forEach(([key, value]) => form.append(key, String(value)));
-  if (imagen) form.append("imagen", imagen);
-  const { data } = await api.patch<PromoBanner>(`/content/banners/${id}/`, form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const { data } = await api.patch<PromoBanner>(`/content/banners/${id}/`, formulario(payload, imagenes), MULTIPART);
   return data;
 }
 
@@ -86,29 +105,19 @@ export async function obtenerAnuncios(): Promise<Anuncio[]> {
 }
 
 export async function crearAnuncio(
-  payload: Omit<Anuncio, "id" | "imagen_url">,
-  imagen?: File | null
+  payload: SinLectura<Anuncio>,
+  imagenes: { imagen?: CambioImagen; imagen_movil?: CambioImagen } = {}
 ): Promise<Anuncio> {
-  const form = new FormData();
-  Object.entries(payload).forEach(([key, value]) => form.append(key, String(value)));
-  if (imagen) form.append("imagen", imagen);
-  const { data } = await api.post<Anuncio>("/content/anuncios/", form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const { data } = await api.post<Anuncio>("/content/anuncios/", formulario(payload, imagenes), MULTIPART);
   return data;
 }
 
 export async function actualizarAnuncio(
   id: number,
-  payload: Omit<Anuncio, "id" | "imagen_url">,
-  imagen?: File | null
+  payload: SinLectura<Anuncio>,
+  imagenes: { imagen?: CambioImagen; imagen_movil?: CambioImagen } = {}
 ): Promise<Anuncio> {
-  const form = new FormData();
-  Object.entries(payload).forEach(([key, value]) => form.append(key, String(value)));
-  if (imagen) form.append("imagen", imagen);
-  const { data } = await api.patch<Anuncio>(`/content/anuncios/${id}/`, form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const { data } = await api.patch<Anuncio>(`/content/anuncios/${id}/`, formulario(payload, imagenes), MULTIPART);
   return data;
 }
 
@@ -124,16 +133,17 @@ export async function obtenerTestimonios(): Promise<Testimonio[]> {
   return unwrap(data);
 }
 
-export async function crearTestimonio(payload: Omit<Testimonio, "id">): Promise<Testimonio> {
-  const { data } = await api.post<Testimonio>("/content/testimonials/", payload);
+export async function crearTestimonio(payload: SinLectura<Testimonio>, foto?: CambioImagen): Promise<Testimonio> {
+  const { data } = await api.post<Testimonio>("/content/testimonials/", formulario(payload, { foto }), MULTIPART);
   return data;
 }
 
 export async function actualizarTestimonio(
   id: number,
-  payload: Omit<Testimonio, "id">
+  payload: SinLectura<Testimonio>,
+  foto?: CambioImagen
 ): Promise<Testimonio> {
-  const { data } = await api.patch<Testimonio>(`/content/testimonials/${id}/`, payload);
+  const { data } = await api.patch<Testimonio>(`/content/testimonials/${id}/`, formulario(payload, { foto }), MULTIPART);
   return data;
 }
 
@@ -175,17 +185,19 @@ export async function obtenerBeneficios(): Promise<BeneficioComercial[]> {
 }
 
 export async function crearBeneficio(
-  payload: Omit<BeneficioComercial, "id">
+  payload: SinLectura<BeneficioComercial>,
+  imagen?: CambioImagen
 ): Promise<BeneficioComercial> {
-  const { data } = await api.post<BeneficioComercial>("/content/beneficios/", payload);
+  const { data } = await api.post<BeneficioComercial>("/content/beneficios/", formulario(payload, { imagen }), MULTIPART);
   return data;
 }
 
 export async function actualizarBeneficio(
   id: number,
-  payload: Omit<BeneficioComercial, "id">
+  payload: SinLectura<BeneficioComercial>,
+  imagen?: CambioImagen
 ): Promise<BeneficioComercial> {
-  const { data } = await api.patch<BeneficioComercial>(`/content/beneficios/${id}/`, payload);
+  const { data } = await api.patch<BeneficioComercial>(`/content/beneficios/${id}/`, formulario(payload, { imagen }), MULTIPART);
   return data;
 }
 

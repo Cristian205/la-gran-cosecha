@@ -1,0 +1,601 @@
+/* ==========================================================================
+   DASHBOARD — el centro de control de la operación
+   --------------------------------------------------------------------------
+   Menos cajas, más jerarquía: los cuatro indicadores comparten UNA superficie
+   (separados por líneas, no por bordes), las tarjetas tienen un borde muy
+   tenue y sombra mínima, y el color se reserva para lo que significa algo:
+   verde = venta, ámbar = por atender, rojo tenue = baja. Usa los tokens del
+   panel (`--superficie`, `--borde`, `--verde-*`…), así que el tema oscuro sale
+   solo.
+
+   Movimiento: entradas cortas de opacidad/desplazamiento, barras que crecen
+   con transform y la opacidad de "actualizando" al cambiar de período. Nada
+   se mueve en bucle; todo se apaga con `prefers-reduced-motion`.
+   ========================================================================== */
+.db {
+  --db-radio: 14px;
+  --db-borde: color-mix(in srgb, var(--borde) 85%, transparent);
+  --db-sombra: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -18px rgba(15, 23, 42, 0.18);
+  --db-suave: var(--gris);
+  --db-verde: var(--verde-600);
+  --db-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 1540px;
+  margin: 0 auto;
+  padding: 1.6rem 1.75rem 3rem;
+}
+:root[data-tema="oscuro"] .db {
+  --db-verde: var(--verde-400);
+  --db-sombra: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px -20px rgba(0, 0, 0, 0.7);
+}
+
+.db-sr {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+.db-tenue { color: var(--db-suave); }
+.db-fuerte { font-weight: 700; color: var(--dark); }
+.db-num { text-align: right; font-variant-numeric: tabular-nums; }
+.db-sin-salto { white-space: nowrap; }
+
+/* ---------- Cabecera ---------- */
+.db-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+}
+.db-cabecera h1 {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.2vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--dark);
+}
+.db-cabecera p { margin: 0.3rem 0 0; font-size: 0.92rem; color: var(--db-suave); }
+.db-cabecera-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+
+/* ---------- Selector de período ---------- */
+.db-periodo { position: relative; display: flex; align-items: center; gap: 0.75rem; }
+.db-segmentado {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--db-borde);
+  border-radius: 11px;
+  background: var(--gris-claro);
+}
+.db-segmentado button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 32px;
+  padding: 0 0.8rem;
+  border: 0;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--db-suave);
+  background: transparent;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.db-segmentado button:hover { color: var(--dark); }
+.db-segmentado button.activo {
+  color: var(--dark);
+  background: var(--superficie);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 0 0 1px var(--db-borde);
+}
+.db-segmentado button:focus-visible,
+.db-pestanas button:focus-visible,
+.db-boton-sec:focus-visible,
+.db-boton-fila:focus-visible,
+.db-enlace:focus-visible,
+.db-kpi-enlace:focus-visible,
+.db-clientes-top a:focus-visible {
+  outline: 2px solid var(--verde-500);
+  outline-offset: 2px;
+}
+.db-periodo-rango { font-size: 0.8rem; font-weight: 600; color: var(--db-suave); white-space: nowrap; }
+.db-periodo-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  width: 320px;
+  padding: 1rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--db-radio);
+  background: var(--superficie);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+  animation: db-aparece 0.18s var(--db-ease) both;
+}
+.db-periodo-panel label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.75rem; font-weight: 700; color: var(--db-suave); }
+.db-periodo-panel input {
+  min-height: 36px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: var(--dark);
+  background: var(--superficie);
+}
+.db-periodo-error { grid-column: 1 / -1; margin: 0; font-size: 0.8rem; color: var(--rojo-texto); }
+.db-periodo-acciones { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+.db-boton-sec {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--dark);
+  background: var(--superficie);
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.db-boton-sec:hover { border-color: var(--verde-400); }
+.db-exportar { position: relative; }
+.db-exportar-menu { right: 0; left: auto; }
+.db-exportar-aviso { margin: 0.4rem 0.4rem 0.2rem; font-size: 0.8rem; color: var(--db-suave); }
+
+/* ---------- Tarjetas ---------- */
+.db-tarjeta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.15rem 1.25rem 1.2rem;
+  border: 1px solid var(--db-borde);
+  border-radius: var(--db-radio);
+  background: var(--superficie);
+  box-shadow: var(--db-sombra);
+  animation: db-aparece 0.45s var(--db-ease) both;
+}
+.db-tarjeta-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+.db-tarjeta-cabecera h2 { margin: 0; font-size: 0.98rem; font-weight: 700; letter-spacing: -0.01em; color: var(--dark); }
+.db-tarjeta-sub { margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--db-suave); }
+.db-tarjeta-pie { margin-top: auto; padding-top: 0.9rem; }
+.db-enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--verde-texto);
+  white-space: nowrap;
+}
+.db-enlace svg { transition: transform 0.2s var(--db-ease); }
+.db-enlace:hover svg { transform: translateX(3px); }
+
+/* Mientras llega un período nuevo, los datos anteriores quedan a media luz. */
+.db-tarjeta,
+.db-kpis { transition: opacity 0.25s ease; }
+.db-actualizando { opacity: 0.55; pointer-events: none; }
+
+@keyframes db-aparece { from { opacity: 0; transform: translateY(8px); } }
+
+/* ---------- KPIs: una sola superficie, cuatro columnas ---------- */
+.db-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--db-borde);
+  border-radius: var(--db-radio);
+  background: var(--superficie);
+  box-shadow: var(--db-sombra);
+}
+.db-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 1.15rem 1.3rem 1.2rem;
+  animation: db-aparece 0.45s var(--db-ease) both;
+}
+.db-kpi + .db-kpi { border-left: 1px solid var(--db-borde); }
+.db-kpis-error { grid-column: 1 / -1; }
+.db-kpi-cabecera { display: flex; align-items: center; gap: 0.5rem; }
+.db-kpi-cabecera h3 { margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--db-suave); }
+.db-kpi-icono {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  color: var(--verde-texto);
+  background: var(--verde-claro);
+}
+.db-kpi-valor {
+  margin: 0.2rem 0 0;
+  font-size: clamp(1.45rem, 2.1vw, 1.85rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+}
+.db-kpi-valor--vacio { color: var(--db-suave); }
+.db-kpi-detalle { font-size: 0.8rem; color: var(--db-suave); }
+.db-kpi-enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: auto;
+  padding-top: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--verde-texto);
+}
+.db-desglose { display: flex; flex-wrap: wrap; gap: 0.15rem 0.7rem; }
+.db-desglose-parte { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+
+/* Tendencia: un chip pequeño; la baja no es una alarma, es un dato. */
+.db-tendencia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.45rem;
+  margin: 0;
+  font-size: 0.77rem;
+  color: var(--db-suave);
+}
+.db-tendencia-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.db-tendencia--sube .db-tendencia-chip { color: var(--verde-texto); background: var(--verde-claro); }
+.db-tendencia--baja .db-tendencia-chip { color: var(--rojo-texto); background: color-mix(in srgb, var(--rojo-claro) 70%, transparent); }
+.db-tendencia--igual .db-tendencia-chip { color: var(--db-suave); background: var(--gris-claro); }
+.db-tendencia--neutra { font-style: normal; }
+
+/* ---------- Filas de dos columnas ---------- */
+.db-fila { display: grid; gap: 1.25rem; align-items: stretch; }
+.db-fila--ventas { grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr); }
+.db-fila--detalle { grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr); }
+
+/* ---------- Ventas ---------- */
+.db-ventas-resumen { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.8rem; margin: -0.2rem 0 0.8rem; }
+.db-ventas-total {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+}
+.db-grafica { height: 250px; margin: 0 -0.3rem; }
+.db-globo {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--superficie);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+}
+.db-globo p { margin: 0; }
+.db-globo-fecha { font-size: 0.74rem; font-weight: 600; color: var(--db-suave); text-transform: capitalize; }
+.db-globo-valor { margin-top: 0.15rem !important; font-size: 1rem; font-weight: 800; color: var(--dark); }
+.db-globo-sub { font-size: 0.74rem; color: var(--db-suave); }
+
+/* ---------- Estados ---------- */
+.db-vacio {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 170px;
+  padding: 1.5rem 1rem;
+  text-align: center;
+}
+.db-vacio-icono {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 0.3rem;
+  border-radius: 12px;
+  color: var(--db-suave);
+  background: var(--gris-claro);
+}
+.db-vacio-titulo { margin: 0; font-size: 0.92rem; font-weight: 700; color: var(--dark); }
+.db-vacio-texto { max-width: 36ch; margin: 0; font-size: 0.83rem; line-height: 1.5; color: var(--db-suave); }
+.db-vacio--error .db-vacio-icono { color: var(--rojo-texto); background: var(--rojo-claro); }
+.db-vacio--error .db-boton-sec { margin-top: 0.4rem; }
+.db-cargando { display: flex; flex-direction: column; gap: 0.85rem; padding: 0.4rem 0; }
+
+/* ---------- Estados de pedido ---------- */
+.db-tono-ambar { --tono: var(--amber); --tono-fondo: var(--ambar-claro); --tono-texto: var(--ambar-texto); }
+.db-tono-azul { --tono: var(--azul); --tono-fondo: var(--azul-claro); --tono-texto: var(--azul-texto); }
+.db-tono-morado { --tono: #7c3aed; --tono-fondo: var(--morado-claro); --tono-texto: var(--morado-texto); }
+.db-tono-gris { --tono: #94a3b8; --tono-fondo: var(--gris-claro); --tono-texto: var(--gris); }
+.db-tono-verde { --tono: var(--verde-500); --tono-fondo: var(--verde-claro); --tono-texto: var(--verde-texto); }
+.db-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.18rem 0.55rem 0.18rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--tono-texto);
+  background: var(--tono-fondo);
+}
+.db-estado-punto,
+.db-punto { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--tono); }
+
+/* ---------- Operación ---------- */
+.db-operacion-barra {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+  margin-bottom: 0.9rem;
+  overflow: hidden;
+  border-radius: 999px;
+}
+.db-operacion-barra span {
+  min-width: 6px;
+  background: var(--tono);
+  transform-origin: left;
+  animation: db-crece 0.6s var(--db-ease) both;
+}
+@keyframes db-crece { from { transform: scaleX(0); } }
+.db-operacion-lista { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.db-operacion-lista li,
+.db-operacion-hoy {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 42px;
+  font-size: 0.88rem;
+}
+.db-operacion-lista li + li { border-top: 1px solid var(--db-borde); }
+.db-operacion-lista li.db-cero { color: var(--db-suave); }
+.db-operacion-lista li.db-cero .db-punto { opacity: 0.45; }
+.db-operacion-nombre { flex: 1; font-weight: 600; }
+.db-operacion-n { font-size: 1rem; font-weight: 800; color: var(--dark); font-variant-numeric: tabular-nums; }
+.db-cero .db-operacion-n { color: var(--db-suave); font-weight: 600; }
+.db-operacion-hoy {
+  margin-top: 0.6rem;
+  padding: 0 0.75rem;
+  border-radius: 10px;
+  background: var(--verde-claro);
+  color: var(--verde-texto);
+}
+.db-operacion-hoy .db-operacion-n { color: var(--verde-texto); }
+.db-operacion-hoy-icono { display: grid; place-items: center; }
+.db-operacion .db-vacio { min-height: 120px; }
+
+/* ---------- Pedidos recientes ---------- */
+.db-tabla-scroll { overflow-x: auto; margin: 0 -1.25rem -1.2rem; }
+.db-tabla { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.db-tabla th {
+  padding: 0.55rem 0.7rem;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--db-borde);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--db-suave);
+  background: var(--superficie-2);
+}
+/* Las celdas globales (`td` en index.css) no parten líneas y ponen borde
+   arriba de cada fila; aquí manda la tarjeta. */
+.db-tabla td {
+  padding: 0.65rem 0.7rem;
+  border-bottom: 1px solid var(--db-borde);
+  font-size: 0.86rem;
+  white-space: normal;
+  vertical-align: middle;
+}
+.db-tabla th:first-child,
+.db-tabla td:first-child { padding-left: 1.25rem; }
+.db-tabla th:last-child,
+.db-tabla td:last-child { padding-right: 1.25rem; }
+.db-tabla tbody tr { border-top: 0; transition: background-color 0.15s; }
+.db-tabla tbody tr:hover { background: var(--gris-claro); }
+.db-tabla tbody tr:last-child td { border-bottom: 0; }
+.db-tabla th.db-num { text-align: right; }
+.db-pedido-id { font-weight: 700; color: var(--dark); font-variant-numeric: tabular-nums; }
+.db-pedido-cliente { font-weight: 600; color: var(--dark); }
+.db-tabla td.db-pedido-fecha { font-weight: 600; color: var(--dark); white-space: nowrap; }
+.db-pedido-items { display: block; font-size: 0.74rem; font-weight: 500; color: var(--db-suave); }
+.db-accion { width: 1%; text-align: right; }
+.db-boton-fila {
+  min-height: 30px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dark);
+  background: var(--superficie);
+  opacity: 0.8;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.db-tabla tr:hover .db-boton-fila,
+.db-boton-fila:focus-visible { opacity: 1; border-color: var(--verde-400); }
+
+/* ---------- Ranking ---------- */
+.db-pestanas {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--gris-claro);
+}
+.db-pestanas button {
+  min-height: 28px;
+  padding: 0 0.65rem;
+  border: 0;
+  border-radius: 7px;
+  font-size: 0.77rem;
+  font-weight: 600;
+  color: var(--db-suave);
+  background: transparent;
+}
+.db-pestanas button.activo { color: var(--dark); background: var(--superficie); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1); }
+.db-ranking { display: flex; flex-direction: column; gap: 0.2rem; margin: 0; padding: 0; list-style: none; }
+.db-ranking li {
+  display: grid;
+  grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+  grid-template-areas: "pos nombre valor" "pos barra barra";
+  align-items: center;
+  column-gap: 0.4rem;
+  padding: 0.45rem 0.3rem;
+  border-radius: 8px;
+  animation: db-aparece 0.4s var(--db-ease) both;
+  animation-delay: calc(var(--i) * 40ms);
+}
+.db-ranking li:hover { background: var(--gris-claro); }
+.db-ranking-pos { grid-area: pos; font-size: 0.75rem; font-weight: 700; color: var(--db-suave); font-variant-numeric: tabular-nums; }
+.db-ranking-nombre { grid-area: nombre; overflow: hidden; font-size: 0.87rem; font-weight: 600; color: var(--dark); text-overflow: ellipsis; white-space: nowrap; }
+.db-ranking-valor { grid-area: valor; font-size: 0.8rem; font-weight: 700; color: var(--dark); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.db-ranking-barra { grid-area: barra; height: 5px; margin-top: 0.3rem; overflow: hidden; border-radius: 999px; background: var(--gris-claro); }
+.db-ranking-barra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--db-verde);
+  transform-origin: left;
+  transition: transform 0.6s var(--db-ease);
+  animation: db-crece 0.7s var(--db-ease) both;
+}
+.db-ranking li:first-child .db-ranking-barra span { background: var(--verde-700); }
+:root[data-tema="oscuro"] .db-ranking li:first-child .db-ranking-barra span { background: var(--verde-400); }
+
+/* ---------- Clientes ---------- */
+.db-clientes { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.5rem; }
+.db-clientes-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; gap: 0.75rem; margin: 0; }
+.db-clientes-cifras > div { padding: 0.9rem 1rem; border-radius: 12px; background: var(--superficie-2); border: 1px solid var(--db-borde); }
+.db-clientes-cifras dt { font-size: 0.78rem; font-weight: 600; color: var(--db-suave); }
+.db-clientes-cifras dd { margin: 0.25rem 0 0; font-size: 1.55rem; font-weight: 800; color: var(--dark); font-variant-numeric: tabular-nums; }
+.db-clientes-cifras p { margin: 0.1rem 0 0; font-size: 0.74rem; color: var(--db-suave); }
+.db-clientes-top h3 { margin: 0 0 0.4rem; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--db-suave); }
+.db-clientes-top ol { margin: 0; padding: 0; list-style: none; }
+.db-clientes-top li + li { border-top: 1px solid var(--db-borde); }
+.db-clientes-top a,
+.db-clientes-top li > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 46px;
+  padding: 0 0.3rem;
+  border-radius: 8px;
+  font-size: 0.86rem;
+}
+.db-clientes-top a:hover { background: var(--gris-claro); }
+.db-clientes-nombre { overflow: hidden; font-weight: 600; color: var(--dark); text-overflow: ellipsis; white-space: nowrap; }
+.db-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--verde-texto);
+  background: var(--verde-claro);
+}
+.db-clientes-top .db-vacio { min-height: 120px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1180px) {
+  .db-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .db-kpi:nth-child(3) { border-left: 0; }
+  .db-kpi:nth-child(n + 3) { border-top: 1px solid var(--db-borde); }
+  .db-fila--detalle { grid-template-columns: 1fr; }
+  .db-clientes { grid-template-columns: 1fr; }
+}
+@media (max-width: 960px) {
+  .db-fila--ventas { grid-template-columns: 1fr; }
+  .db-cabecera { align-items: flex-start; }
+}
+@media (max-width: 640px) {
+  .db { padding: 1.1rem 0.9rem 2.5rem; gap: 1rem; }
+  .db-cabecera-acciones,
+  .db-periodo { width: 100%; }
+  .db-periodo { flex-wrap: wrap; gap: 0.4rem; }
+  .db-segmentado { width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .db-segmentado::-webkit-scrollbar { display: none; }
+  .db-segmentado button { flex: 1 0 auto; justify-content: center; padding: 0 0.55rem; white-space: nowrap; }
+  .db-solo-ancho { display: none; }
+  .db-periodo-panel { left: 0; right: auto; width: min(320px, 100%); }
+  .db-exportar { position: absolute; top: 1.1rem; right: 0.9rem; }
+  .db-cabecera { position: relative; padding-right: 3.2rem; }
+  .db-kpi { padding: 0.95rem 1rem; }
+  .db-kpi-valor { font-size: 1.3rem; }
+  .db-tarjeta { padding: 1rem; }
+  .db-tarjeta-cabecera { flex-wrap: wrap; }
+  .db-tabla-scroll { margin: 0 -1rem -1rem; }
+  .db-grafica { height: 210px; }
+  .db-clientes-cifras { grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+  .db-clientes-cifras > div { padding: 0.7rem; }
+  .db-clientes-cifras dd { font-size: 1.25rem; }
+  .db-clientes-cifras p { display: none; }
+  /* La tabla se vuelve lista de tres líneas: número, fecha y total;
+     cliente; estado y "Ver". */
+  .db-tabla thead { display: none; }
+  .db-tabla,
+  .db-tabla tbody { display: block; }
+  .db-tabla tbody tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "id fecha total" "cliente cliente cliente" "estado estado ver";
+    align-items: center;
+    gap: 0.3rem 0.6rem;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--db-borde);
+  }
+  .db-tabla td,
+  .db-tabla td:first-child,
+  .db-tabla td:last-child { padding: 0; border: 0; }
+  .db-tabla td:nth-child(1) { grid-area: id; }
+  .db-tabla td:nth-child(2) { grid-area: cliente; }
+  .db-tabla td:nth-child(3) { grid-area: estado; }
+  .db-tabla td:nth-child(4) { grid-area: fecha; }
+  .db-tabla td:nth-child(5) { grid-area: total; }
+  .db-tabla td.db-accion { grid-area: ver; width: auto; }
+  .db-tabla td.db-pedido-fecha { display: flex; gap: 0.3rem; overflow: hidden; font-size: 0.78rem; font-weight: 500; color: var(--db-suave); }
+  /* Sin sitio para la hora completa: el día basta aquí, y cortarla ("8:30 p") engaña. */
+  .db-tabla td.db-pedido-fecha .db-pedido-items { display: none; }
+  .db-pedido-items { display: inline; margin-left: 0.4rem; }
+}
+@media (max-width: 420px) {
+  .db-kpis { grid-template-columns: 1fr; }
+  .db-kpi + .db-kpi { border-left: 0; border-top: 1px solid var(--db-borde); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .db-tarjeta,
+  .db-kpi,
+  .db-ranking li,
+  .db-operacion-barra span,
+  .db-ranking-barra span,
+  .db-periodo-panel { animation: none; }
+  .db-ranking-barra span,
+  .db-tarjeta,
+  .db-kpis,
+  .db-enlace svg,
+  .db-segmentado button { transition: none; }
+}

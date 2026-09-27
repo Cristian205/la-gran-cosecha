@@ -30,7 +30,7 @@ interface PaginaBuscable {
 }
 
 const PAGINAS: PaginaBuscable[] = [
-  { titulo: "Dashboard", ruta: "/", icono: LayoutDashboard, palabras: ["dashboard", "inicio", "resumen"] },
+  { titulo: "Dashboard", ruta: "/", icono: LayoutDashboard, palabras: ["dashboard", "inicio", "resumen", "ventas"] },
   { titulo: "Catálogo", ruta: "/productos", icono: Package, palabras: ["catálogo", "productos"] },
   { titulo: "Pedidos", ruta: "/pedidos", icono: Receipt, palabras: ["pedidos", "órdenes", "ventas"] },
   { titulo: "Clientes", ruta: "/clientes", icono: Users, palabras: ["clientes"] },

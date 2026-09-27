@@ -13,7 +13,7 @@ export const TEXTO_PRECIOS_ESTIMADOS =
   "Los precios son estimados y pueden variar según el mercado del día. " +
   "Confirmamos el valor final antes de despachar tu pedido.";
 
-const TEXTO_COMPACTO = "Precios estimados: pueden variar según el mercado del día.";
+const TEXTO_COMPACTO = "El precio final puede variar según el mercado del día.";
 
 const DETALLE_HOJA = [
   "Trabajamos con productos frescos, cuyo precio de plaza cambia de un día a otro.",

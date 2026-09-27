@@ -2,7 +2,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .pdf import GenerarPdfPedidoView, GenerarPdfPedidosLoteView
-from .stats import ReporteVentasView, ResumenEstadisticasView
+from .stats import PanelEstadisticasView, ReporteVentasView, ResumenEstadisticasView
 from .views import (
     ClienteViewSet,
     LoteViewSet,
@@ -26,6 +26,7 @@ urlpatterns = [
         ReporteVentasView.as_view(),
         name="admin-stats-reporte",
     ),
+    path("admin/stats/panel/", PanelEstadisticasView.as_view(), name="admin-stats-panel"),
     path(
         "orders/productos-mas-vendidos/",
         ProductosMasVendidosView.as_view(),

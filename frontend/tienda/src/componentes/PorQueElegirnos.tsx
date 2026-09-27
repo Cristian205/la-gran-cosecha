@@ -106,7 +106,7 @@ export function PorQueElegirnos({
                 key={b.id}
               >
                 <span className="pqe-marmol-icono">
-                  <Icono size={34} />
+                  {b.imagen_url ? <ImagenBeneficio url={b.imagen_url} /> : <Icono size={34} />}
                 </span>
                 <h3>{b.titulo}</h3>
                 {b.texto && <p>{b.texto}</p>}
@@ -126,7 +126,7 @@ export function PorQueElegirnos({
           return (
             <Reveal as="article" className="valor-card glass" retraso={Math.min(i, 5) * 0.08} key={b.id}>
               <span className="icono">
-                <Icono size={24} />
+                {b.imagen_url ? <ImagenBeneficio url={b.imagen_url} /> : <Icono size={24} />}
               </span>
               <h3>{b.titulo}</h3>
               {b.texto && <p>{b.texto}</p>}
@@ -136,4 +136,10 @@ export function PorQueElegirnos({
       </div>
     </Seccion>
   );
+}
+
+/** La imagen que el negocio subió para un beneficio, en el hueco del ícono. */
+function ImagenBeneficio({ url }: { url: string }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img className="beneficio-img" src={url} alt="" loading="lazy" decoding="async" />;
 }

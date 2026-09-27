@@ -86,6 +86,11 @@ def ruta_producto(instancia, nombre):
     return ruta_en(instancia, nombre, "productos")
 
 
+def ruta_presentacion(instancia, nombre):
+    """La foto de una presentación concreta (el bulto, la caja, la libra)."""
+    return ruta_en(instancia, nombre, "productos/presentaciones")
+
+
 def ruta_identidad(instancia, nombre):
     """Logo y favicon: la identidad visual del negocio."""
     return ruta_en(instancia, nombre, "identidad")
@@ -93,6 +98,11 @@ def ruta_identidad(instancia, nombre):
 
 def ruta_banner(instancia, nombre):
     return ruta_en(instancia, nombre, "banners")
+
+
+def ruta_contenido(instancia, nombre):
+    """Fotos del contenido comercial: testimonios y beneficios."""
+    return ruta_en(instancia, nombre, "contenido")
 
 
 def ruta_anuncio(instancia, nombre):

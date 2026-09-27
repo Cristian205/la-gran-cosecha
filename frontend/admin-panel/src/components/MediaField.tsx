@@ -10,6 +10,9 @@ interface Props {
   onCambiar: (file: File | null) => void;
   ayuda?: string;
   accept?: string;
+  /** Si se pasa, permite quitar la imagen YA guardada (se aplica al guardar). */
+  quitada?: boolean;
+  onQuitarActual?: (quitar: boolean) => void;
 }
 
 const ACCEPT_DEFAULT = "image/png,image/jpeg,image/webp,image/svg+xml";
@@ -20,7 +23,7 @@ const ACCEPT_DEFAULT = "image/png,image/jpeg,image/webp,image/svg+xml";
  * uno ya existente de la biblioteca. El resultado siempre es un `File`
  * normal, así que el formulario que lo use no cambia su flujo de guardado.
  */
-export function MediaField({ valor, urlActual, onCambiar, ayuda, accept = ACCEPT_DEFAULT }: Props) {
+export function MediaField({ valor, urlActual, onCambiar, ayuda, accept = ACCEPT_DEFAULT, quitada = false, onQuitarActual }: Props) {
   const [previewLocal, setPreviewLocal] = useState<string | null>(null);
   const [pickerAbierto, setPickerAbierto] = useState(false);
 
@@ -52,7 +55,7 @@ export function MediaField({ valor, urlActual, onCambiar, ayuda, accept = ACCEPT
     }
   }
 
-  const preview = previewLocal ?? urlActual;
+  const preview = previewLocal ?? (quitada ? null : urlActual);
 
   return (
     <div className="media-field">
@@ -83,8 +86,21 @@ export function MediaField({ valor, urlActual, onCambiar, ayuda, accept = ACCEPT
               <X size={14} />
             </button>
           )}
+          {!valor && urlActual && onQuitarActual && (
+            <button
+              type="button"
+              className="btn secundario sm"
+              onClick={() => onQuitarActual(!quitada)}
+            >
+              {quitada ? "Deshacer" : "Quitar imagen"}
+            </button>
+          )}
         </div>
-        {ayuda && <p className="media-field-ayuda">{ayuda}</p>}
+        {quitada && !valor ? (
+          <p className="media-field-ayuda">La imagen se quitará al guardar.</p>
+        ) : (
+          ayuda && <p className="media-field-ayuda">{ayuda}</p>
+        )}
       </div>
 
       {pickerAbierto && (

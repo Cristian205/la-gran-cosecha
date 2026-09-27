@@ -112,8 +112,37 @@ class SiteConfigSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(obj.factura_logo.url) if request else obj.factura_logo.url
 
 
-class PromoBannerSerializer(serializers.ModelSerializer):
+class _ImagenesMixin:
+    """
+    Subir, reemplazar y QUITAR imágenes desde el panel.
+
+    Subir o reemplazar es mandar el archivo en su campo; quitar es mandar
+    `quitar_<campo>=true`. Se borra también el archivo del bucket: una imagen
+    retirada que sigue ocupando espacio no la puede encontrar nadie.
+    """
+
+    campos_imagen: tuple = ()
+
+    def _quitar_imagenes(self, instance, datos):
+        peticion = self.context.get("request")
+        entrada = getattr(peticion, "data", {}) or {}
+        for campo in self.campos_imagen:
+            if str(entrada.get(f"quitar_{campo}", "")).lower() in ("1", "true", "si", "sí"):
+                archivo = getattr(instance, campo)
+                if archivo:
+                    archivo.delete(save=False)
+                setattr(instance, campo, None)
+                datos.pop(campo, None)
+
+    def update(self, instance, validated_data):
+        self._quitar_imagenes(instance, validated_data)
+        return super().update(instance, validated_data)
+
+
+class PromoBannerSerializer(_ImagenesMixin, serializers.ModelSerializer):
+    campos_imagen = ("imagen", "imagen_movil")
     imagen_url = serializers.SerializerMethodField()
+    imagen_movil_url = serializers.SerializerMethodField()
 
     class Meta:
         model = PromoBanner
@@ -121,6 +150,10 @@ class PromoBannerSerializer(serializers.ModelSerializer):
             "id",
             "imagen",
             "imagen_url",
+            "imagen_movil",
+            "imagen_movil_url",
+            "fecha_inicio",
+            "fecha_fin",
             "etiqueta",
             "titulo",
             "texto",
@@ -129,7 +162,10 @@ class PromoBannerSerializer(serializers.ModelSerializer):
             "orden",
             "activo",
         ]
-        extra_kwargs = {"imagen": {"write_only": True, "required": False}}
+        extra_kwargs = {
+            "imagen": {"write_only": True, "required": False},
+            "imagen_movil": {"write_only": True, "required": False},
+        }
 
     def get_imagen_url(self, obj):
         if not obj.imagen:
@@ -137,9 +173,17 @@ class PromoBannerSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         return request.build_absolute_uri(obj.imagen.url) if request else obj.imagen.url
 
+    def get_imagen_movil_url(self, obj):
+        if not obj.imagen_movil:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(obj.imagen_movil.url) if request else obj.imagen_movil.url
 
-class AnuncioSerializer(serializers.ModelSerializer):
+
+class AnuncioSerializer(_ImagenesMixin, serializers.ModelSerializer):
+    campos_imagen = ("imagen", "imagen_movil")
     imagen_url = serializers.SerializerMethodField()
+    imagen_movil_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Anuncio
@@ -147,6 +191,10 @@ class AnuncioSerializer(serializers.ModelSerializer):
             "id",
             "imagen",
             "imagen_url",
+            "imagen_movil",
+            "imagen_movil_url",
+            "fecha_inicio",
+            "fecha_fin",
             "etiqueta",
             "titulo",
             "texto",
@@ -155,7 +203,10 @@ class AnuncioSerializer(serializers.ModelSerializer):
             "orden",
             "activo",
         ]
-        extra_kwargs = {"imagen": {"write_only": True, "required": False}}
+        extra_kwargs = {
+            "imagen": {"write_only": True, "required": False},
+            "imagen_movil": {"write_only": True, "required": False},
+        }
 
     def get_imagen_url(self, obj):
         if not obj.imagen:
@@ -163,11 +214,30 @@ class AnuncioSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         return request.build_absolute_uri(obj.imagen.url) if request else obj.imagen.url
 
+    def get_imagen_movil_url(self, obj):
+        if not obj.imagen_movil:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(obj.imagen_movil.url) if request else obj.imagen_movil.url
 
-class TestimonioSerializer(serializers.ModelSerializer):
+
+class TestimonioSerializer(_ImagenesMixin, serializers.ModelSerializer):
+    campos_imagen = ("foto",)
+    foto_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Testimonio
-        fields = ["id", "nombre", "rol", "texto", "estrellas", "orden", "activo"]
+        fields = ["id", "nombre", "rol", "texto", "estrellas", "foto", "foto_url", "orden", "activo"]
+        extra_kwargs = {"foto": {"write_only": True, "required": False}}
+
+    def get_foto_url(self, obj):
+        return self._url(obj.foto)
+
+    def _url(self, archivo):
+        if not archivo:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(archivo.url) if request else archivo.url
 
 
 class TrustBadgeSerializer(serializers.ModelSerializer):
@@ -176,10 +246,23 @@ class TrustBadgeSerializer(serializers.ModelSerializer):
         fields = ["id", "tipo", "icono", "valor", "etiqueta", "orden", "activo"]
 
 
-class BeneficioComercialSerializer(serializers.ModelSerializer):
+class BeneficioComercialSerializer(_ImagenesMixin, serializers.ModelSerializer):
+    campos_imagen = ("imagen",)
+    imagen_url = serializers.SerializerMethodField()
+
     class Meta:
         model = BeneficioComercial
-        fields = ["id", "icono", "titulo", "texto", "orden", "activo"]
+        fields = ["id", "icono", "imagen", "imagen_url", "titulo", "texto", "orden", "activo"]
+        extra_kwargs = {"imagen": {"write_only": True, "required": False}}
+
+    def get_imagen_url(self, obj):
+        return self._url(obj.imagen)
+
+    def _url(self, archivo):
+        if not archivo:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(archivo.url) if request else archivo.url
 
 
 class OfertaProductoSerializer(serializers.ModelSerializer):

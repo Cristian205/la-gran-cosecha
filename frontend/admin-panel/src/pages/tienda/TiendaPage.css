@@ -399,15 +399,155 @@
   gap: 0.5rem;
 }
 
-.constructor-lista li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.6rem;
+.constructor-lista > li {
   border: 1px solid var(--borde);
   border-radius: 10px;
   background: var(--gris-claro);
 }
+
+/* Lista de textos simples: número, campo y controles en una fila. */
+.constructor-lista-simple {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+}
+.constructor-lista-simple input { flex: 1; min-width: 0; }
+
+/* Elemento plegable: una línea con número, foto y título; abre sus campos. */
+.constructor-lista-resumen { display: flex; align-items: center; gap: 0.25rem; padding: 0.35rem 0.4rem; }
+.constructor-lista-plegar {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.2rem;
+  border: 0;
+  border-radius: 7px;
+  text-align: left;
+  color: var(--dark);
+  background: none;
+}
+.constructor-lista-plegar:hover { background: var(--superficie); }
+.constructor-lista-plegar img { width: 30px; height: 30px; flex: none; border-radius: 6px; object-fit: cover; }
+.constructor-lista-titulo { flex: 1; min-width: 0; overflow: hidden; font-size: 0.84rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.constructor-lista-flecha { flex: none; color: var(--gris); transition: transform 0.15s ease; }
+.constructor-lista-item.abierto .constructor-lista-flecha { transform: rotate(180deg); }
+.constructor-lista-item > .constructor-lista-campos { padding: 0.3rem 0.7rem 0.7rem; border-top: 1px solid var(--borde); }
+.constructor-lista-controles { display: flex; flex: none; gap: 0.1rem; }
+.constructor-lista-controles .btn-icon { width: 26px; height: 26px; }
+.constructor-lista-controles .btn-icon:disabled { opacity: 0.35; }
+
+/* ---------- Foto / video de un bloque ---------- */
+.campo-medio { display: flex; gap: 0.7rem; align-items: flex-start; }
+.campo-medio-previa {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 84px;
+  height: 64px;
+  padding: 0;
+  overflow: hidden;
+  border: 1.5px dashed var(--borde);
+  border-radius: 10px;
+  color: var(--gris);
+  background: var(--gris-claro);
+}
+.campo-medio.con-valor .campo-medio-previa { border-style: solid; }
+.campo-medio-previa:hover:not(:disabled) { border-color: var(--verde-400); color: var(--verde-texto); }
+.campo-medio-previa img,
+.campo-medio-previa video { width: 100%; height: 100%; object-fit: cover; }
+.campo-medio-subiendo {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.6);
+}
+.campo-medio-acciones { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.campo-medio-acciones > div { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.campo-medio-acciones .campo-ayuda,
+.campo-medio-acciones .campo-error,
+.campo-medio-acciones .campo-aviso { margin: 0; }
+.campo-error { margin: 0.35rem 0 0; font-size: 0.78rem; font-weight: 600; color: var(--rojo-texto); }
+.campo-aviso { margin: 0.35rem 0 0; font-size: 0.78rem; color: var(--ambar-texto); }
+
+/* ---------- Productos elegidos a mano ---------- */
+.campo-productos { display: flex; flex-direction: column; gap: 0.3rem; margin: 0.4rem 0; padding: 0; list-style: none; }
+.campo-productos li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--borde);
+  border-radius: 9px;
+  background: var(--gris-claro);
+}
+.campo-productos-foto {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 7px;
+  font-weight: 700;
+  color: var(--verde-texto);
+  background: var(--verde-claro);
+}
+.campo-productos-foto img { width: 100%; height: 100%; object-fit: cover; }
+.campo-productos-nombre { flex: 1; min-width: 0; overflow: hidden; font-size: 0.84rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.campo-productos li .btn-icon { width: 26px; height: 26px; }
+.campo-productos-buscar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: 9px;
+  color: var(--gris);
+  background: var(--superficie);
+}
+.campo-productos-buscar input { flex: 1; min-height: 36px; border: 0 !important; background: none !important; box-shadow: none !important; }
+.campo-productos-resultados {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 240px;
+  margin: 0;
+  padding: 0.25rem;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--superficie);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+.campo-productos-resultados button {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border: 0;
+  border-radius: 7px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--dark);
+  background: none;
+}
+.campo-productos-resultados button:hover { background: var(--verde-claro); }
+.campo-productos-resultados small { font-size: 0.72rem; font-weight: 500; color: var(--gris); }
 
 .constructor-lista-numero {
   display: grid;

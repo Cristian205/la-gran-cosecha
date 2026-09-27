@@ -233,8 +233,125 @@
 .ps-tambien a { color: #fff; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
 .ps-tambien a:hover { border-color: var(--acento-400); }
 
+/* ---------- Carrusel de los más vendidos ---------- */
+.ps--carrusel { padding-block: clamp(3rem, 7vh, 5.5rem) clamp(2.5rem, 6vh, 4.5rem); }
+.ps--carrusel .ps-grid { touch-action: pan-y; }
+/* Que el carrusel entero —foto, texto y pestañas— quepa en una pantalla. */
+.ps--carrusel .ps-foto { aspect-ratio: auto; height: min(62vh, 600px); min-height: 360px; }
+.ps-kicker-puesto { color: rgba(255, 255, 255, 0.6); }
+.ps-foto-vacia {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(6rem, 16vw, 12rem);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.12);
+  background: var(--marca-800);
+}
+/* El puesto real en el ranking, sobre la esquina de la foto. */
+.ps-puesto {
+  position: absolute;
+  top: clamp(0.8rem, 2vw, 1.3rem);
+  left: clamp(0.8rem, 2vw, 1.3rem);
+  z-index: 1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  padding: 0.35rem 0.8rem 0.4rem;
+  border-radius: 999px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #1b1305;
+  background: var(--acento-400);
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6);
+}
+.ps-puesto small { font-size: 0.7rem; font-weight: 700; }
+
+.ps-controles {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: clamp(2rem, 4vw, 3rem);
+  padding-top: 1.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.ps-pestanas { display: flex; gap: 0.6rem; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.ps-pestanas::-webkit-scrollbar { display: none; }
+.ps-pestana {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.4rem 0.9rem 0.4rem 0.4rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  font: inherit;
+  color: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+}
+.ps-pestana:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+.ps-pestana.activa { color: #fff; border-color: var(--acento-400); background: rgba(255, 255, 255, 0.08); }
+.ps-pestana-foto {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.3rem;
+  height: 2.3rem;
+  overflow: hidden;
+  border-radius: 50%;
+  font-weight: 800;
+  background: var(--marca-800);
+}
+.ps-pestana-foto img { width: 100%; height: 100%; object-fit: cover; }
+.ps-pestana-texto { display: flex; flex-direction: column; align-items: flex-start; font-size: 0.86rem; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+.ps-pestana-texto small { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; color: var(--acento-400); }
+/* Cuánto falta para pasar al siguiente. */
+.ps-pestana-barra {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--acento-400);
+  transform-origin: left;
+  animation: ps-avance var(--duracion, 7s) linear both;
+}
+@keyframes ps-avance { from { transform: scaleX(0); } }
+
+.ps-flechas { display: flex; flex: none; align-items: center; gap: 0.5rem; }
+.ps-flecha {
+  display: grid;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.ps-flecha:hover { background: rgba(255, 255, 255, 0.1); border-color: #fff; }
+.ps-contador { min-width: 4.2rem; font-size: 0.85rem; text-align: center; color: rgba(255, 255, 255, 0.55); font-variant-numeric: tabular-nums; }
+.ps-contador strong { font-size: 1.05rem; color: #fff; }
+.ps-pestana:focus-visible,
+.ps-flecha:focus-visible { outline: 2px solid var(--acento-400); outline-offset: 3px; }
+
 @media (max-width: 780px) {
   .ps-grid { grid-template-columns: 1fr; }
+  .ps--carrusel .ps-foto { aspect-ratio: 5 / 6; height: auto; min-height: 0; }
+  .ps-controles { flex-direction: column-reverse; align-items: stretch; gap: 1rem; }
+  .ps-flechas { justify-content: space-between; }
+  .ps-pestanas { margin-inline: -1.2rem; padding-inline: 1.2rem; }
+  .ps-pestana-texto { font-size: 0.8rem; }
   .ps-foto { aspect-ratio: 5 / 6; }
   .ps-gigante { top: 6%; translate: 0 0; }
   .ps-acciones .cmp-btn { width: 100%; justify-content: space-between; }
@@ -551,6 +668,7 @@
 
 /* ---------- Menos movimiento: la fotografía se queda quieta ---------- */
 @media (prefers-reduced-motion: reduce) {
+  .ps-pestana-barra { animation: none; }
   .hc-img,
   .hc-in,
   .hc-scroll i { animation: none; }

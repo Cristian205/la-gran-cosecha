@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { actualizarAnuncio, crearAnuncio } from "../../api/content";
 import { MediaField } from "../../components/MediaField";
+import { Vigencia } from "./Vigencia";
 import { Modal } from "../../components/Modal";
 import type { Anuncio } from "../../types";
 import { extraerMensajeError } from "../../utils";
@@ -20,6 +21,10 @@ export function AnuncioFormModal({ anuncio, onCerrar, onGuardado }: Props) {
   const [orden, setOrden] = useState(anuncio?.orden ?? 0);
   const [activo, setActivo] = useState(anuncio?.activo ?? true);
   const [imagen, setImagen] = useState<File | null>(null);
+  const [quitarImagen, setQuitarImagen] = useState(false);
+  const [imagenMovil, setImagenMovil] = useState<File | null>(null);
+  const [quitarMovil, setQuitarMovil] = useState(false);
+  const [vigencia, setVigencia] = useState({ inicio: anuncio?.fecha_inicio ?? null, fin: anuncio?.fecha_fin ?? null });
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,14 +46,25 @@ export function AnuncioFormModal({ anuncio, onCerrar, onGuardado }: Props) {
       cta_href: ctaHref,
       orden,
       activo,
+      fecha_inicio: vigencia.inicio,
+      fecha_fin: vigencia.fin,
     };
+    const imagenes = {
+      imagen: imagen ?? (quitarImagen ? ("quitar" as const) : null),
+      imagen_movil: imagenMovil ?? (quitarMovil ? ("quitar" as const) : null),
+    };
+
+    if (vigencia.inicio && vigencia.fin && new Date(vigencia.inicio) > new Date(vigencia.fin)) {
+      setError("La fecha de fin es anterior a la de inicio.");
+      return;
+    }
 
     setGuardando(true);
     try {
       if (anuncio) {
-        await actualizarAnuncio(anuncio.id, payload, imagen);
+        await actualizarAnuncio(anuncio.id, payload, imagenes);
       } else {
-        await crearAnuncio(payload, imagen);
+        await crearAnuncio(payload, imagenes);
       }
       onGuardado();
     } catch (err) {
@@ -82,11 +98,32 @@ export function AnuncioFormModal({ anuncio, onCerrar, onGuardado }: Props) {
           <MediaField
             valor={imagen}
             urlActual={anuncio?.imagen_url ?? null}
-            onCambiar={setImagen}
+            onCambiar={(f) => {
+              setImagen(f);
+              if (f) setQuitarImagen(false);
+            }}
+            quitada={quitarImagen}
+            onQuitarActual={setQuitarImagen}
             accept="image/png,image/jpeg,image/webp"
           />
           <small>Sin imagen, la tienda muestra un marcador de posición de la marca.</small>
         </div>
+        <div className="campo">
+          <label>Imagen para móvil (opcional)</label>
+          <MediaField
+            valor={imagenMovil}
+            urlActual={anuncio?.imagen_movil_url ?? null}
+            onCambiar={(f) => {
+              setImagenMovil(f);
+              if (f) setQuitarMovil(false);
+            }}
+            quitada={quitarMovil}
+            onQuitarActual={setQuitarMovil}
+            accept="image/png,image/jpeg,image/webp"
+            ayuda="Vertical o recortada para celular. Sin ella, se usa la de escritorio."
+          />
+        </div>
+        <Vigencia inicio={vigencia.inicio} fin={vigencia.fin} onCambio={setVigencia} />
         <div className="campo">
           <label>Etiqueta (ej: Oferta especial)</label>
           <input value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} />

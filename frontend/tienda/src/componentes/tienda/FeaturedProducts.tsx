@@ -6,7 +6,7 @@ import { ProductCard } from "@/componentes/ProductCard";
 import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
 import { useTienda } from "@/estado/tienda";
 import { useSeleccionProducto } from "@/hooks/useSeleccionProducto";
-import { obtenerProductosMasVendidos } from "@/lib/datos";
+import { idsElegidos, obtenerProductosMasVendidos, obtenerProductosPorIds } from "@/lib/datos";
 import type { Producto } from "@/lib/tipos";
 import { ImagenProducto } from "./ImagenProducto";
 import { PrecioProducto } from "./PrecioProducto";
@@ -16,6 +16,8 @@ import { SelectorPresentacion } from "./SelectorPresentacion";
 interface Props {
   /** Lo que el lienzo resolvió en el servidor (`RESUELVE_EN_SERVIDOR`). */
   datos?: Producto[];
+  /** Productos elegidos a mano, en orden. Vacío: los más pedidos. */
+  productos?: number[];
   kicker?: string;
   titulo?: string;
   subtitulo?: string;
@@ -64,16 +66,20 @@ export function FeaturedProducts({
   kicker_sin_historial = "Destacado del catálogo",
   titulo_secundarios = "También puedes pedir…",
   secundarios = 4,
+  productos: elegidos,
 }: Props) {
+  const ids = idsElegidos(elegidos);
   const [productos, setProductos] = useState<Producto[]>(datos);
   const catalogo = useCatalogoContexto();
 
   useEffect(() => {
     if (datos.length > 0) return;
-    obtenerProductosMasVendidos()
+    (ids.length > 0 ? obtenerProductosPorIds(ids) : obtenerProductosMasVendidos())
       .then(setProductos)
       .catch(() => setProductos([]));
-  }, [datos.length]);
+    // `ids` se compara por su contenido.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datos.length, ids.join(",")]);
 
   const conPrecio = productos.filter((p) => p.presentaciones.length > 0);
   const [principal, ...resto] = conPrecio;

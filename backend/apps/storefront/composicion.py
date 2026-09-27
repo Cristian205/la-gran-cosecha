@@ -15,6 +15,7 @@ El criterio de qué se rechaza y qué se tolera:
   propiedad en el frontend antes de que su esquema la declare, y bloquear el
   guardado por eso convertiría cada mejora en una migración coordinada.
 """
+from django.db.models import Max
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -182,7 +183,18 @@ def para_la_tienda(bloques) -> list:
 # Operaciones sobre las versiones
 # ==========================================================================
 def siguiente_numero(pagina: Pagina) -> int:
-    ultimo = pagina.versiones.order_by("-numero").values_list("numero", flat=True).first()
+    """
+    El número de la próxima versión: uno más que la MÁS ALTA, archivadas
+    incluidas.
+
+    Se consulta el modelo y no `pagina.versiones`: la vista de páginas
+    precarga las versiones limitadas a borrador y publicada, y el gestor
+    relacionado sirve esa caché. Con él, una archivada con número mayor que la
+    publicada quedaba fuera de la cuenta y el borrador nuevo chocaba con ella
+    (IntegrityError en `storefront_un_numero_por_pagina`): el constructor se
+    abría con la página vacía.
+    """
+    ultimo = VersionPagina.all_tenants.filter(pagina_id=pagina.pk).aggregate(m=Max("numero"))["m"]
     return (ultimo or 0) + 1
 
 

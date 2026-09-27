@@ -105,13 +105,32 @@ class _ContenidoPublicoOStaffMixin(TenantScopedMixin):
         return [EsStaff()]
 
 
-class PromoBannerViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
+def _solo_vigentes(qs):
+    """Activas y dentro de su rango de fechas (las que tengan)."""
+    ahora = timezone.now()
+    return qs.filter(activo=True).filter(
+        Q(fecha_inicio__isnull=True) | Q(fecha_inicio__lte=ahora),
+        Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=ahora),
+    )
+
+
+class _ProgramableMixin:
+    """El visitante solo ve lo vigente; el staff ve también lo programado y lo vencido."""
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if not (self.request.user and self.request.user.is_staff):
+            qs = _solo_vigentes(qs)
+        return qs
+
+
+class PromoBannerViewSet(_ProgramableMixin, _ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
     serializer_class = PromoBannerSerializer
     modelo = PromoBanner
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
 
-class AnuncioViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
+class AnuncioViewSet(_ProgramableMixin, _ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
     serializer_class = AnuncioSerializer
     modelo = Anuncio
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -120,6 +139,7 @@ class AnuncioViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
 class TestimonioViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
     serializer_class = TestimonioSerializer
     modelo = Testimonio
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
 
 class TrustBadgeViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
@@ -130,6 +150,7 @@ class TrustBadgeViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
 class BeneficioComercialViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
     serializer_class = BeneficioComercialSerializer
     modelo = BeneficioComercial
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
 
 class OfertaProductoViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet):
