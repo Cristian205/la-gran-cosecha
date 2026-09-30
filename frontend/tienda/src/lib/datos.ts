@@ -14,6 +14,8 @@ import type {
   Anuncio,
   BeneficioComercial,
   Categoria,
+  ClienteConsultado,
+  HistorialCliente,
   ItemCarrito,
   ItemPersonalizado,
   OfertaProducto,
@@ -258,9 +260,25 @@ export async function obtenerOfertas(): Promise<OfertaProducto[]> {
 // ---------- orders.ts ----------
 
 export interface DatosCliente {
-  nombre: string;
+  nombre?: string;
   telefono?: string;
   direccion?: string;
+  /** Solo en tiendas que identifican por cédula. */
+  cedula?: string;
+  /** El acuerdo de precios; en modo cédula se pide solo en el primer pedido. */
+  acepta_precios?: boolean;
+  /** Otra dirección solo para este pedido. */
+  direccion_entrega?: string;
+}
+
+/** ¿Esta cédula ya pidió antes? (solo tiendas que identifican por cédula) */
+export async function consultarCliente(cedula: string): Promise<ClienteConsultado> {
+  return enviar<ClienteConsultado>("/orders-cliente/consultar/", { cedula });
+}
+
+/** Los últimos pedidos de una cédula, con los precios de hoy, para repetirlos. */
+export async function historialCliente(cedula: string): Promise<HistorialCliente> {
+  return enviar<HistorialCliente>("/orders-cliente/historial/", { cedula });
 }
 
 export async function crearPedido(

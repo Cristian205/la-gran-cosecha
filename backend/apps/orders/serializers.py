@@ -42,9 +42,30 @@ class ClienteSerializer(serializers.ModelSerializer):
             "nombre_cliente",
             "telefono_cliente",
             "direccion_cliente",
+            "documento_cliente",
+            "acepto_precios_en",
             "fecha_registro_cliente",
             "total_pedidos",
         ]
+        read_only_fields = ["acepto_precios_en"]
+
+    def validate_documento_cliente(self, valor):
+        """
+        Desde el panel se puede poner o corregir la cédula —por ejemplo, para
+        que un cliente de antes la use en la tienda—, con las mismas reglas que
+        en la tienda y sin repetir la de otro cliente.
+        """
+        if not (valor or "").strip():
+            return ""
+        from .clientes_tienda import normalizar_documento  # noqa: PLC0415
+
+        documento = normalizar_documento(valor)
+        otros = Cliente.objects.filter(documento_cliente=documento)
+        if self.instance is not None:
+            otros = otros.exclude(pk=self.instance.pk)
+        if otros.exists():
+            raise serializers.ValidationError("Ya hay otro cliente con esta cédula.")
+        return documento
 
 
 # ==========================================================================
@@ -141,7 +162,13 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
             "fecha_pedido",
             "fecha_modificacion",
             "detalles",
+            "direccion_entrega",
+            "direccion_de_entrega",
         ]
+
+    #: A dónde se lleva de verdad: la de este pedido si el cliente pidió otra,
+    #: si no la suya. `direccion_entrega` sola dice si es una dirección puntual.
+    direccion_de_entrega = serializers.CharField(read_only=True)
 
     def get_cliente_nombre(self, obj):
         return obj.cliente.nombre_cliente if obj.cliente else ""
@@ -160,9 +187,17 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
 # CREACIÓN PÚBLICA DE PEDIDO (storefront)
 # ==========================================================================
 class ClienteInputSerializer(serializers.Serializer):
-    nombre = serializers.CharField(max_length=200)
+    # Opcional porque un cliente con cédula y datos guardados no vuelve a
+    # escribir su nombre; `CrearPedidoSerializer.validate` decide cuándo falta.
+    nombre = serializers.CharField(max_length=200, required=False, allow_blank=True)
     telefono = serializers.CharField(max_length=25, required=False, allow_blank=True)
     direccion = serializers.CharField(required=False, allow_blank=True)
+    cedula = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    #: El acuerdo "el precio final se ajusta al mercado del día". En modo
+    #: cédula se exige en el primer pedido y se guarda en el cliente.
+    acepta_precios = serializers.BooleanField(required=False, default=False)
+    #: Solo para este pedido: la dirección guardada del cliente no cambia.
+    direccion_entrega = serializers.CharField(required=False, allow_blank=True)
 
 
 class ItemCatalogoSerializer(serializers.Serializer):
@@ -217,34 +252,109 @@ class CrearPedidoSerializer(serializers.Serializer):
                 "Este negocio no recibe pedidos por internet. Escribenos o "
                 "acercate al punto de venta."
             )
+
+        from .clientes_tienda import buscar_por_documento, normalizar_documento, usa_cedula  # noqa: PLC0415
+
+        datos = attrs["cliente"]
+        if usa_cedula(tenant):
+            try:
+                datos["cedula"] = normalizar_documento(datos.get("cedula"))
+            except serializers.ValidationError as exc:
+                raise serializers.ValidationError({"cliente": {"cedula": exc.detail}})
+            existente = buscar_por_documento(datos["cedula"])
+            # Primer pedido (o uno anterior que quedó a medias): se piden los
+            # datos y el acuerdo de precios UNA vez. Después, ya no.
+            if existente is None or not existente.datos_completos:
+                faltan = {
+                    campo: mensaje
+                    for campo, mensaje in (
+                        ("nombre", "Escribe tu nombre o el de tu negocio."),
+                        ("telefono", "Escribe un teléfono de contacto."),
+                        ("direccion", "Escribe la dirección de entrega."),
+                    )
+                    if not (datos.get(campo) or "").strip()
+                }
+                if not datos.get("acepta_precios"):
+                    faltan["acepta_precios"] = (
+                        "Confirma que aceptas que el precio final se ajuste al mercado del día."
+                    )
+                if faltan:
+                    raise serializers.ValidationError({"cliente": faltan})
+            attrs["_por_cedula"] = True
+            attrs["_cliente_existente"] = existente
+        elif not (datos.get("nombre") or "").strip():
+            raise serializers.ValidationError({"cliente": {"nombre": "Escribe tu nombre."}})
         return attrs
+
+    def _cliente_por_nombre(self, datos):
+        """El comportamiento de siempre: el nombre es la llave."""
+        nombre = datos["nombre"].strip()
+        cliente = Cliente.objects.filter(nombre_cliente=nombre).order_by("id").first()
+        if cliente is None:
+            cliente = Cliente.objects.create(nombre_cliente=nombre)
+        # Actualiza contacto si viene y el cliente aún no lo tenía.
+        actualizar = []
+        if datos.get("telefono") and not cliente.telefono_cliente:
+            cliente.telefono_cliente = datos["telefono"]
+            actualizar.append("telefono_cliente")
+        if datos.get("direccion") and not cliente.direccion_cliente:
+            cliente.direccion_cliente = datos["direccion"]
+            actualizar.append("direccion_cliente")
+        if actualizar:
+            cliente.save(update_fields=actualizar)
+        return cliente
+
+    def _cliente_por_cedula(self, datos, existente):
+        """
+        Con los datos completos, el cliente es quien es: lo que venga en el
+        formulario no pisa lo guardado (quien sepa una cédula ajena no puede
+        cambiarle el teléfono ni la dirección a esa persona).
+        """
+        if existente is not None and existente.datos_completos:
+            return existente
+        from django.utils import timezone  # noqa: PLC0415
+
+        from django.db import IntegrityError  # noqa: PLC0415
+
+        cliente = existente or Cliente(documento_cliente=datos["cedula"])
+        cliente.nombre_cliente = datos["nombre"].strip()
+        cliente.telefono_cliente = datos["telefono"].strip()
+        cliente.direccion_cliente = datos["direccion"].strip()
+        cliente.acepto_precios_en = timezone.now()
+        try:
+            # Punto de guardado propio: si dos primeros pedidos con la misma
+            # cédula llegan a la vez, el segundo choca con la unicidad y se
+            # queda con el cliente que acaba de crear el primero.
+            with transaction.atomic():
+                cliente.save()
+        except IntegrityError:
+            cliente = Cliente.objects.get(documento_cliente=datos["cedula"])
+        return cliente
 
     @transaction.atomic
     def create(self, validated_data):
         datos_cliente = validated_data["cliente"]
         request = self.context.get("request")
 
-        cliente, creado = Cliente.objects.get_or_create(
-            nombre_cliente=datos_cliente["nombre"].strip()
-        )
-        # Actualiza contacto si viene y el cliente aún no lo tenía.
-        actualizar = []
-        if datos_cliente.get("telefono") and not cliente.telefono_cliente:
-            cliente.telefono_cliente = datos_cliente["telefono"]
-            actualizar.append("telefono_cliente")
-        if datos_cliente.get("direccion") and not cliente.direccion_cliente:
-            cliente.direccion_cliente = datos_cliente["direccion"]
-            actualizar.append("direccion_cliente")
-        if actualizar:
-            cliente.save(update_fields=actualizar)
+        if validated_data.get("_por_cedula"):
+            cliente = self._cliente_por_cedula(datos_cliente, validated_data.get("_cliente_existente"))
+        else:
+            cliente = self._cliente_por_nombre(datos_cliente)
 
         usuario = None
         if request and request.user and request.user.is_authenticated:
             usuario = request.user
 
+        # La dirección de un pedido puntual solo se guarda si es otra: igual a
+        # la del cliente, sería un duplicado que después no se sabe cuál manda.
+        direccion_entrega = (datos_cliente.get("direccion_entrega") or "").strip()
+        if direccion_entrega == cliente.direccion_cliente.strip():
+            direccion_entrega = ""
+
         pedido = Pedido.objects.create(
             cliente=cliente, usuario=usuario, estado="PENDIENTE",
             observaciones=validated_data.get("observaciones", ""),
+            direccion_entrega=direccion_entrega,
         )
 
         for item in validated_data.get("items", []):
@@ -277,11 +387,16 @@ class CrearPedidoSerializer(serializers.Serializer):
         return pedido
 
     def to_representation(self, instance):
+        from .clientes_tienda import enmascarar_nombre  # noqa: PLC0415
+
         return {
             "success": True,
             "pedido_id": instance.id,
             "total": instance.total_pedido,
             "estado": instance.estado,
+            # Quien pidió con su cédula no escribió su nombre: la tienda lo
+            # necesita para el saludo y el mensaje de WhatsApp.
+            "cliente_nombre": enmascarar_nombre(instance.cliente.nombre_cliente) if instance.cliente else "",
         }
 
 

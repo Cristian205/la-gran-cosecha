@@ -16,6 +16,7 @@ export function ClientFormModal({ cliente, onCerrar, onGuardado }: Props) {
   const [nombre, setNombre] = useState(cliente?.nombre_cliente ?? "");
   const [telefono, setTelefono] = useState(cliente?.telefono_cliente ?? "");
   const [direccion, setDireccion] = useState(cliente?.direccion_cliente ?? "");
+  const [documento, setDocumento] = useState(cliente?.documento_cliente ?? "");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +33,7 @@ export function ClientFormModal({ cliente, onCerrar, onGuardado }: Props) {
       nombre_cliente: nombre.trim(),
       telefono_cliente: telefono.trim(),
       direccion_cliente: direccion.trim(),
+      documento_cliente: documento.trim(),
     };
 
     setGuardando(true);
@@ -71,6 +73,22 @@ export function ClientFormModal({ cliente, onCerrar, onGuardado }: Props) {
         <div className="campo">
           <label>Nombre del cliente *</label>
           <input value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        </div>
+
+        <div className="campo">
+          <label>Cédula</label>
+          <input
+            value={documento}
+            onChange={(e) => setDocumento(e.target.value)}
+            inputMode="numeric"
+            placeholder="Sin puntos"
+          />
+          <p style={{ color: "var(--gris)", fontSize: ".82rem", marginTop: ".4rem" }}>
+            Con la cédula, el cliente puede pedir y ver sus pedidos en la tienda sin volver a escribir sus datos
+            (si la tienda identifica por cédula).
+            {cliente?.acepto_precios_en &&
+              ` Aceptó el ajuste de precios el ${new Date(cliente.acepto_precios_en).toLocaleDateString("es-CO")}.`}
+          </p>
         </div>
 
         <div className="campo">

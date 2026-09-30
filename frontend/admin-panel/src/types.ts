@@ -164,6 +164,10 @@ export interface PedidoDetalle {
   observaciones: string | null;
   fecha_pedido: string;
   detalles: DetallePedido[];
+  /** Solo si el cliente pidió entregar ESTE pedido en otra dirección. */
+  direccion_entrega?: string;
+  /** A dónde se lleva: la puntual si la hay, si no la del cliente. */
+  direccion_de_entrega?: string;
 }
 
 export interface HistorialDetallePedido {
@@ -200,6 +204,10 @@ export interface Cliente {
   nombre_cliente: string;
   telefono_cliente: string;
   direccion_cliente: string;
+  /** Cédula con la que se identifica en la tienda (solo dígitos; vacía si no tiene). */
+  documento_cliente: string;
+  /** Cuándo aceptó en la tienda que el precio se ajusta al mercado; null si nunca. */
+  acepto_precios_en: string | null;
   fecha_registro_cliente: string;
   total_pedidos: number;
 }
@@ -227,6 +235,8 @@ export interface SiteConfig {
   espaciado_navbar: number;
   whatsapp_numero: string;
   whatsapp_mensaje_pedido: string;
+  /** Cómo se reconoce en la tienda a un cliente que vuelve ("cuenta": aún no disponible). */
+  identificacion_clientes?: "nombre" | "cedula" | "cuenta";
   instagram_url: string;
   facebook_url: string;
   tiktok_url: string;

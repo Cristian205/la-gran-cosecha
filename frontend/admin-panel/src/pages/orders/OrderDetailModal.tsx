@@ -349,6 +349,16 @@ export function OrderDetailModal({
               </button>
             )}
           </p>
+          {pedido.direccion_de_entrega && (
+            <p style={{ marginTop: "-.4rem", fontSize: ".88rem" }}>
+              <strong>Entregar en:</strong> {pedido.direccion_de_entrega}
+              {pedido.direccion_entrega && (
+                <span className="badge EDITADO" style={{ marginLeft: ".5rem" }}>
+                  Dirección solo para este pedido
+                </span>
+              )}
+            </p>
+          )}
 
           {verHistorial && historial.length > 0 && (
             <div className="historial-lista" style={{ marginBottom: "1rem" }}>

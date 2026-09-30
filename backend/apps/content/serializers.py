@@ -93,11 +93,21 @@ class SiteConfigSerializer(serializers.ModelSerializer):
             "factura_marca_agua_opacidad",
             "factura_nota_pie",
             "factura_chip_secundario",
+            "identificacion_clientes",
         ]
         extra_kwargs = {
             "logo": {"write_only": True, "required": False},
             "factura_logo": {"write_only": True, "required": False},
         }
+
+    def validate_identificacion_clientes(self, valor):
+        # "Usuario y contraseña" se enseña en el panel pero todavía no existe:
+        # elegirla dejaría la tienda pidiendo un inicio de sesión que no hay.
+        if valor not in StoreSettings.IDENTIFICACIONES_DISPONIBLES:
+            raise serializers.ValidationError(
+                "El inicio de sesión con usuario y contraseña todavía no está disponible."
+            )
+        return valor
 
     def get_logo_url(self, obj):
         if not obj.logo:

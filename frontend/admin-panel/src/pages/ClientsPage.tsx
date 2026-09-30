@@ -36,6 +36,7 @@ const OPCIONES_SEGMENTO: { valor: Segmento; etiqueta: string }[] = [
 
 const DEFINICIONES_CLIENTES: Record<string, { etiqueta: string; render: (c: Cliente) => ReactNode }> = {
   nombre: { etiqueta: "Nombre", render: (c) => c.nombre_cliente },
+  cedula: { etiqueta: "Cédula", render: (c) => c.documento_cliente || "—" },
   telefono: { etiqueta: "Teléfono", render: (c) => c.telefono_cliente || "—" },
   direccion: { etiqueta: "Dirección", render: (c) => c.direccion_cliente || "—" },
   pedidos: {
@@ -55,6 +56,7 @@ const ETIQUETAS_CLIENTES = Object.fromEntries(
 
 const EXTRACTORES_CLIENTES: ExtractoresOrden<Cliente> = {
   nombre: (c) => c.nombre_cliente,
+  cedula: (c) => c.documento_cliente,
   telefono: (c) => c.telefono_cliente,
   direccion: (c) => c.direccion_cliente,
   pedidos: (c) => c.total_pedidos,

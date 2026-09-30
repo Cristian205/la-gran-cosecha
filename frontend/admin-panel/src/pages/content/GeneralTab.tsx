@@ -38,6 +38,32 @@ function CampoColor({ etiqueta, valor, onCambiar, ayuda }: CampoColorProps) {
   );
 }
 
+const OPCIONES_IDENTIFICACION: {
+  valor: NonNullable<SiteConfig["identificacion_clientes"]>;
+  titulo: string;
+  texto: string;
+  proximamente?: boolean;
+}[] = [
+  {
+    valor: "nombre",
+    titulo: "Solo nombre",
+    texto: "Como hasta ahora: el cliente escribe su nombre, teléfono y dirección en cada pedido.",
+  },
+  {
+    valor: "cedula",
+    titulo: "Cédula",
+    texto:
+      "El cliente se identifica con su cédula. En su primer pedido da teléfono, dirección y acepta el ajuste de precios; " +
+      "después ya no los vuelve a escribir y puede consultar y repetir sus pedidos.",
+  },
+  {
+    valor: "cuenta",
+    titulo: "Usuario y contraseña",
+    texto: "Cada cliente tendrá su cuenta con inicio de sesión. Más seguro; llegará en una próxima versión.",
+    proximamente: true,
+  },
+];
+
 const VACIO: SiteConfig = {
   logo_url: null,
   nombre_empresa: "",
@@ -356,6 +382,44 @@ export function GeneralTab() {
             >
               Así se ve una tarjeta de producto sobre el fondo elegido.
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="cabecera">
+          <h2>Cómo se identifican tus clientes</h2>
+        </div>
+        <div style={{ padding: "1.2rem" }}>
+          <p style={{ color: "var(--gris)", fontSize: ".86rem", marginTop: 0 }}>
+            Define qué pide la tienda para reconocer a un cliente que vuelve a comprar.
+          </p>
+          <div className="ident-opciones" role="radiogroup" aria-label="Cómo se identifican tus clientes">
+            {OPCIONES_IDENTIFICACION.map((op) => {
+              const elegida = (config.identificacion_clientes ?? "nombre") === op.valor;
+              return (
+                <label
+                  key={op.valor}
+                  className={`ident-opcion${elegida ? " is-elegida" : ""}${op.proximamente ? " is-deshabilitada" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="identificacion_clientes"
+                    value={op.valor}
+                    checked={elegida}
+                    disabled={op.proximamente}
+                    onChange={() => campo("identificacion_clientes", op.valor)}
+                  />
+                  <span className="ident-opcion-cuerpo">
+                    <span className="ident-opcion-titulo">
+                      {op.titulo}
+                      {op.proximamente && <span className="ident-opcion-chip">Próximamente</span>}
+                    </span>
+                    <span className="ident-opcion-texto">{op.texto}</span>
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </div>
       </div>

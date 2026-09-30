@@ -12,11 +12,21 @@ from apps.tenancy.models import ModeloConTenant
 # 1. CLIENTE
 # ==========================================================================
 class Cliente(ModeloConTenant):
-    # La unicidad pasa a ser (tenant, nombre): "Juan Pérez" puede ser cliente
-    # de dos negocios distintos sin que uno vea al del otro.
     nombre_cliente = models.CharField(max_length=200)
     telefono_cliente = models.CharField(max_length=25, blank=True)
     direccion_cliente = models.TextField(blank=True)
+
+    #: Cédula (o NIT) con la que el cliente se identifica en la tienda cuando
+    #: el negocio lo pide (`StoreSettings.identificacion_clientes`). Solo
+    #: dígitos. Vacía en los clientes que llegaron antes, o por la caja.
+    #:
+    #: Es la llave del cliente y no el nombre: dos "Juan Pérez" son dos
+    #: personas, y escribir el nombre de otro no debe dar acceso a su historial.
+    documento_cliente = models.CharField(max_length=20, blank=True, default="", db_default="")
+
+    #: Cuándo aceptó que el precio final se ajusta al mercado del día. Se
+    #: pide una sola vez, en su primer pedido, y ya no se vuelve a preguntar.
+    acepto_precios_en = models.DateTimeField(null=True, blank=True)
 
     fecha_registro_cliente = models.DateTimeField(auto_now_add=True)
 
@@ -25,9 +35,16 @@ class Cliente(ModeloConTenant):
         ordering = ["nombre_cliente"]
         constraints = [
             models.UniqueConstraint(
-                fields=["tenant", "nombre_cliente"], name="orders_cliente_unico_por_negocio"
+                fields=["tenant", "documento_cliente"],
+                condition=~models.Q(documento_cliente=""),
+                name="orders_cliente_documento_unico_por_negocio",
             )
         ]
+
+    @property
+    def datos_completos(self) -> bool:
+        """Si ya hizo su primer pedido identificado: no hay nada que volver a pedirle."""
+        return bool(self.telefono_cliente and self.direccion_cliente and self.acepto_precios_en)
 
     def __str__(self):
         return self.nombre_cliente
@@ -66,6 +83,10 @@ class Pedido(ModeloConTenant):
     total_pedido = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     observaciones = models.TextField(blank=True, null=True)
 
+    #: Dirección solo para ESTE pedido, cuando el cliente pidió entregarlo en
+    #: otro sitio. Vacía = la dirección guardada del cliente, que no cambia.
+    direccion_entrega = models.TextField(blank=True, default="", db_default="")
+
     fecha_modificacion = models.DateTimeField(auto_now=True, null=True, blank=True)
     editado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -79,6 +100,13 @@ class Pedido(ModeloConTenant):
         db_table = "ui_pedido"
         ordering = ["fecha_pedido"]
         indexes = [models.Index(fields=["tenant", "estado"], name="ui_pedido_tenant_estado_idx")]
+
+    @property
+    def direccion_de_entrega(self) -> str:
+        """A dónde se lleva: la de este pedido si la hay, si no la del cliente."""
+        if self.direccion_entrega:
+            return self.direccion_entrega
+        return self.cliente.direccion_cliente if self.cliente else ""
 
     def actualizar_total(self):
         total = self.detalles.aggregate(total=Sum("subtotal"))["total"] or Decimal("0.00")

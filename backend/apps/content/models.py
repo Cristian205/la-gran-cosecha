@@ -67,6 +67,31 @@ class StoreSettings(models.Model):
         help_text="Espacio extra (px) entre el logo y las opciones del navbar.",
     )
 
+    # Cómo se reconoce a un cliente que vuelve a pedir.
+    IDENTIFICACION_NOMBRE = "nombre"
+    IDENTIFICACION_CEDULA = "cedula"
+    IDENTIFICACION_CUENTA = "cuenta"
+    IDENTIFICACIONES = [
+        (IDENTIFICACION_NOMBRE, "Solo nombre"),
+        (IDENTIFICACION_CEDULA, "Cédula"),
+        (IDENTIFICACION_CUENTA, "Usuario y contraseña"),
+    ]
+    #: Las que ya funcionan. "Usuario y contraseña" existe como opción para que
+    #: el negocio vea hacia dónde va, pero no se puede elegir hasta que exista.
+    IDENTIFICACIONES_DISPONIBLES = {IDENTIFICACION_NOMBRE, IDENTIFICACION_CEDULA}
+    identificacion_clientes = models.CharField(
+        max_length=10,
+        choices=IDENTIFICACIONES,
+        default=IDENTIFICACION_NOMBRE,
+        # También en la base: un servidor con el código anterior (que no
+        # conoce esta columna) debe poder seguir creando configuraciones.
+        db_default=IDENTIFICACION_NOMBRE,
+        help_text=(
+            "Solo nombre: como siempre. Cédula: el cliente se identifica con su "
+            "cédula, da sus datos una sola vez y puede consultar y repetir sus pedidos."
+        ),
+    )
+
     # Contacto / redes
     whatsapp_numero = models.CharField(
         max_length=20, blank=True, help_text="Formato internacional sin '+', ej: 573001234567"
