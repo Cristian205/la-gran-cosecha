@@ -11,6 +11,8 @@ interface CartState {
   agregarPersonalizado: (item: ItemPersonalizado) => void;
   quitarPersonalizado: (id: string) => void;
   vaciar: () => void;
+  /** Deja en el carrito exactamente estas líneas (repetir un pedido anterior). */
+  reemplazar: (items: ItemCarrito[]) => void;
   totalItems: () => number;
   /** Número de líneas del pedido (productos distintos), no de unidades. */
   totalLineas: () => number;
@@ -63,6 +65,8 @@ export const useCart = create<CartState>()(
         })),
 
       vaciar: () => set({ items: [], personalizados: [] }),
+
+      reemplazar: (items) => set({ items, personalizados: [] }),
 
       totalItems: () =>
         get().items.reduce((acc, i) => acc + i.cantidad, 0) +

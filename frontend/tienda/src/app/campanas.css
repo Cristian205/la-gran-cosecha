@@ -544,7 +544,7 @@
 .ec { padding-block: clamp(4rem, 10vw, 8rem); color: var(--tinta); background: var(--crema); }
 .ec-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(2rem, 6vw, 6rem); align-items: center; }
 .ec--imagen-derecha .ec-foto { order: 2; }
-.ec-foto { aspect-ratio: 4 / 5; overflow: hidden; border-radius: clamp(1rem, 2vw, 1.8rem); background: var(--marca-100); }
+.ec-foto { aspect-ratio: 5 / 4; max-height: 34rem; overflow: hidden; border-radius: clamp(1rem, 2vw, 1.8rem); background: var(--marca-100); }
 .ec-foto { position: relative; }
 .ec-foto-recorte { position: absolute; inset: 0; }
 .ec-foto img,
@@ -562,7 +562,7 @@
 @media (max-width: 780px) {
   .ec-grid { grid-template-columns: 1fr; }
   .ec--imagen-derecha .ec-foto { order: 0; }
-  .ec-foto { aspect-ratio: 5 / 6; }
+  .ec-foto { aspect-ratio: 4 / 3; max-height: none; }
 }
 
 /* ==========================================================================

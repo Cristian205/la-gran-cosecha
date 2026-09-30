@@ -238,6 +238,11 @@ TENANCY_ACEPTA_CABECERA = env.bool("TENANCY_ACEPTA_CABECERA", default=False)
 # navegador. Vacia = desactivada. NUNCA debe llegar al cliente.
 TENANCY_CLAVE_SERVIDOR = env("TENANCY_CLAVE_SERVIDOR", default="")
 
+#: Cuántas cédulas puede consultar un visitante de la tienda por minuto (ver
+#: `orders.vistas_tienda.ConsultaClienteThrottle`). Quien busca su propio
+#: historial usa dos o tres; quien prueba cédulas ajenas, cientos.
+TASA_CONSULTA_CLIENTE = env("TASA_CONSULTA_CLIENTE", default="10/min")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ==========================================================================

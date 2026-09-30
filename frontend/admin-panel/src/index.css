@@ -1461,3 +1461,34 @@ td .input:focus, td select:focus {
 .envio-tarjeta .acciones { margin-top: .4rem; flex-wrap: wrap; }
 /* La unica alarma de la pantalla, y por eso no compite con nada mas. */
 .envio-tarde { margin: .35rem 0 0; font-size: .78rem; color: var(--rojo); font-weight: 600; }
+
+/* Configuración > Cómo se identifican tus clientes */
+.ident-opciones { display: grid; gap: 0.6rem; }
+.ident-opcion {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.85rem 1rem;
+  border: 1.5px solid var(--borde);
+  border-radius: 12px;
+  background: var(--superficie);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.ident-opcion input { width: auto; margin: 0.2rem 0 0; accent-color: var(--verde); flex: none; }
+.ident-opcion:hover:not(.is-deshabilitada) { border-color: var(--verde-400); }
+.ident-opcion.is-elegida { border-color: var(--verde); background: var(--verde-claro); }
+.ident-opcion.is-deshabilitada { cursor: not-allowed; opacity: 0.6; }
+.ident-opcion-cuerpo { display: grid; gap: 0.2rem; }
+.ident-opcion-titulo { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; }
+.ident-opcion-texto { font-size: 0.84rem; color: var(--gris); line-height: 1.45; }
+.ident-opcion.is-elegida .ident-opcion-texto { color: var(--verde-texto); }
+.ident-opcion-chip {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  color: var(--gris);
+}

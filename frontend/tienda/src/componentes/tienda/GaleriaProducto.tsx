@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { SeleccionProducto } from "@/hooks/useSeleccionProducto";
+import { imagenDeGrupo, type SeleccionProducto } from "@/hooks/useSeleccionProducto";
 import type { Producto } from "@/lib/tipos";
 import { ImagenProducto } from "./ImagenProducto";
 
@@ -21,12 +21,17 @@ interface Elemento {
   clave: string;
   url: string;
   etiqueta: string;
-  /** La presentación que representa; null = la foto general del producto. */
-  presentacionId: number | null;
+  /** La variante (nombre de presentación) que representa; null = la foto general del producto. */
+  variante: string | null;
 }
 
+/**
+ * Las miniaturas van por variante, no por presentación: "Bulto" por kilo y
+ * "Bulto" por arroba son el mismo bulto con otra unidad de cobro, así que es
+ * una sola foto. La unidad se elige en el panel de compra.
+ */
 export function GaleriaProducto({ producto, seleccion }: { producto: Producto; seleccion: SeleccionProducto }) {
-  const { presentacion, imagenUrl, elegirPresentacion } = seleccion;
+  const { grupos, grupo, presentacion, imagenUrl, elegirVariante } = seleccion;
   // Ver la foto general a propósito, aunque la presentación elegida tenga la suya.
   const [verGeneral, setVerGeneral] = useState(false);
 
@@ -36,35 +41,29 @@ export function GaleriaProducto({ producto, seleccion }: { producto: Producto; s
     const lista: Elemento[] = [];
     const vistas = new Set<string>();
     if (producto.imagen_url) {
-      lista.push({ clave: "general", url: producto.imagen_url, etiqueta: "Vista general", presentacionId: null });
+      lista.push({ clave: "general", url: producto.imagen_url, etiqueta: "Vista general", variante: null });
       vistas.add(producto.imagen_url);
     }
-    for (const p of producto.presentaciones) {
-      if (!p.estado_presentacion || !p.imagen_url || vistas.has(p.imagen_url)) continue;
-      vistas.add(p.imagen_url);
-      lista.push({
-        clave: `p-${p.id}`,
-        url: p.imagen_url,
-        etiqueta: `${p.nombre_presentacion} · ${p.unidad_venta_nombre}`,
-        presentacionId: p.id,
-      });
+    for (const g of grupos) {
+      const url = imagenDeGrupo(g.opciones);
+      if (!url || vistas.has(url)) continue;
+      vistas.add(url);
+      lista.push({ clave: `v-${g.nombre}`, url, etiqueta: g.nombre, variante: g.nombre });
     }
     return lista;
-  }, [producto]);
+  }, [producto.imagen_url, grupos]);
 
   const principal = verGeneral && producto.imagen_url ? producto.imagen_url : imagenUrl;
-  const activa = elementos.find((e) => e.url === principal) ?? null;
-  const conFotoPropia = Boolean(presentacion?.imagen_url) && !verGeneral;
-
+  const activa = verGeneral
+    ? elementos.find((e) => e.variante === null) ?? null
+    : elementos.find((e) => e.variante !== null && e.variante === grupo?.nombre) ??
+      elementos.find((e) => e.url === principal) ??
+      null;
   return (
     <div className={`galeria ${elementos.length > 1 ? "galeria--con-miniaturas" : ""}`}>
       <div className="galeria-principal" key={principal ?? "sin-foto"}>
+        {/* Sin rótulo encima: qué se eligió ya lo dice el panel de compra. */}
         <ImagenProducto producto={{ ...producto, imagen_url: principal ?? null }} tamanoIcono={200} prioridad />
-        {conFotoPropia && presentacion && (
-          <span className="galeria-rotulo">
-            {presentacion.nombre_presentacion} · {presentacion.unidad_venta_nombre}
-          </span>
-        )}
       </div>
 
       {elementos.length > 1 && (
@@ -77,19 +76,19 @@ export function GaleriaProducto({ producto, seleccion }: { producto: Producto; s
                   type="button"
                   className={`galeria-mini ${seleccionada ? "activa" : ""}`}
                   aria-pressed={seleccionada}
-                  aria-label={e.presentacionId === null ? "Ver la foto general" : `Elegir ${e.etiqueta}`}
+                  aria-label={e.variante === null ? "Ver la foto general" : `Elegir ${e.etiqueta}`}
                   title={e.etiqueta}
                   onClick={() => {
-                    if (e.presentacionId === null) setVerGeneral(true);
+                    if (e.variante === null) setVerGeneral(true);
                     else {
                       setVerGeneral(false);
-                      elegirPresentacion(e.presentacionId);
+                      // Si ya está en esa variante, se respeta la unidad elegida.
+                      if (e.variante !== grupo?.nombre) elegirVariante(e.variante);
                     }
                   }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={e.url} alt="" width={96} height={96} loading="lazy" decoding="async" />
-                  <span className="galeria-mini-texto">{e.presentacionId === null ? "General" : e.etiqueta}</span>
+                  <img src={e.url} alt="" width={64} height={64} loading="lazy" decoding="async" />
                 </button>
               </li>
             );

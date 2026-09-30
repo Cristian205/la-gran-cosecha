@@ -24,7 +24,22 @@ const PERMITIDAS = [
   /^\/content\/(site-config|banners|anuncios|testimonials|trust-badges|beneficios|ofertas)\/$/,
   /^\/orders\/productos-mas-vendidos\/$/,
 ];
-const ESCRITURAS = [/^\/orders\/$/, /^\/contact\/messages\/$/];
+const ESCRITURAS = [
+  /^\/orders\/$/,
+  /^\/contact\/messages\/$/,
+  /^\/orders-cliente\/(consultar|historial)\/$/,
+];
+
+/**
+ * La IP de quien visita la tienda. Django ve siempre la de este servidor, así
+ * que sin reenviarla no podría limitar las consultas de cédulas por persona
+ * (las frenaría para todos a la vez). Django solo la cree si llega con la
+ * clave del servidor: desde fuera no se puede inventar.
+ */
+function ipDelVisitante(peticion: NextRequest): string {
+  const reenviada = peticion.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return reenviada || peticion.headers.get("x-real-ip") || "";
+}
 
 function permitida(ruta: string, metodo: string): boolean {
   const lista = metodo === "POST" ? ESCRITURAS : PERMITIDAS;
@@ -47,6 +62,8 @@ async function reenviar(peticion: NextRequest, partes: string[]) {
     cabeceras["X-Tenant-Key"] = CLAVE;
     if (slug) cabeceras["X-Tenant"] = slug;
     else cabeceras["X-Tenant-Host"] = host;
+    const ip = ipDelVisitante(peticion);
+    if (ip) cabeceras["X-Visitante-IP"] = ip;
   }
   if (peticion.method === "POST") cabeceras["Content-Type"] = "application/json";
 

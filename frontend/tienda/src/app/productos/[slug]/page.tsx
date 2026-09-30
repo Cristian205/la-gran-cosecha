@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AvisoPrecios } from "@/componentes/AvisoPrecios";
 import { ProductCard } from "@/componentes/ProductCard";
-import { agruparPresentaciones } from "@/componentes/PresentationSelector";
 import { FichaCompra } from "@/componentes/tienda/FichaCompra";
 import { Migas } from "@/componentes/tienda/Migas";
 import { pedirAlBackend } from "@/lib/api";
@@ -92,10 +91,6 @@ export default async function ProductoPage({ params }: Props) {
   if (!producto) notFound();
 
   const relacionados = await obtenerRelacionados(producto);
-  const grupos = agruparPresentaciones(producto.presentaciones);
-  const unidades = Array.from(
-    new Set(producto.presentaciones.map((p) => p.unidad_venta_nombre))
-  );
 
   const base = `https://${host}`;
   const urlProducto = `${base}/productos/${producto.slug}`;
@@ -177,31 +172,17 @@ export default async function ProductoPage({ params }: Props) {
             <h1>{producto.nombre_producto}</h1>
           </>
         }
+        // Solo lo que no está ya arriba: variedades, presentaciones y
+        // categoría ya se ven en el panel — una información, un lugar.
         pie={
-          <>
-            <dl className="ficha-datos">
-              {unidades.length > 0 && (
-                <div>
-                  <dt>Se vende por</dt>
-                  <dd>{unidades.join(", ")}</dd>
-                </div>
-              )}
-              {grupos.length > 1 && (
-                <div>
-                  <dt>Variedades</dt>
-                  <dd>{grupos.map((g) => g.nombre).join(", ")}</dd>
-                </div>
-              )}
-              {producto.codigo_producto && (
-                <div>
-                  <dt>Código</dt>
-                  <dd>{producto.codigo_producto}</dd>
-                </div>
-              )}
-            </dl>
-
+          <div className="ficha-meta">
             <AvisoPrecios compacto />
-          </>
+            {producto.codigo_producto && (
+              <p className="ficha-codigo">
+                Código <span>{producto.codigo_producto}</span>
+              </p>
+            )}
+          </div>
         }
       />
 

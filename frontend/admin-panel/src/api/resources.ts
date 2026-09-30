@@ -306,6 +306,7 @@ export interface ClientePayload {
   nombre_cliente: string;
   telefono_cliente?: string;
   direccion_cliente?: string;
+  documento_cliente?: string;
 }
 
 export async function crearCliente(payload: ClientePayload): Promise<Cliente> {

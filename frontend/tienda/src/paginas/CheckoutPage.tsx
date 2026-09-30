@@ -4,11 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ClipboardList, Lock } from "lucide-react";
 import { useState } from "react";
-import { crearPedido } from "@/lib/datos";
+import { crearPedido, type DatosCliente } from "@/lib/datos";
+import type { ClienteConsultado } from "@/lib/tipos";
 import { AvisoPrecios } from "@/componentes/AvisoPrecios";
 import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
 import { useSiteConfig } from "@/componentes/CapaCliente";
+import { IdentificacionCedula } from "@/componentes/tienda/IdentificacionCedula";
 import { useCart } from "@/estado/carrito";
+import { useClienteTienda } from "@/estado/clienteTienda";
 import { useUltimoPedido } from "@/estado/ultimoPedido";
 import { formatoCantidad, formatoPrecio, whatsappHref } from "@/lib/utiles";
 
@@ -28,10 +31,22 @@ const NOTA_ACUERDO_PRECIOS =
   "El cliente confirma que los precios son estimados y acepta que se ajusten " +
   "según la cotización del día de la cosecha al procesarse en el sistema.";
 
+/** El primer mensaje que el servidor dio para los datos del cliente, si dio uno. */
+function mensajeDelServidor(error: unknown): string | null {
+  const detalle = (error as { detalle?: { cliente?: Record<string, unknown> } })?.detalle;
+  for (const valor of Object.values(detalle?.cliente ?? {})) {
+    if (Array.isArray(valor) && typeof valor[0] === "string") return valor[0];
+    if (typeof valor === "string") return valor;
+  }
+  return null;
+}
+
 export function CheckoutPage() {
   const { items, personalizados, vaciar, totalPrecio, totalLineas } = useCart();
   const router = useRouter();
   const { config } = useSiteConfig();
+  const porCedula = config.identificacion_clientes === "cedula";
+  const recordarCliente = useClienteTienda((s) => s.recordar);
 
   const [nombre, setNombre] = useState("");
   const [codigoPais, setCodigoPais] = useState(CODIGOS_PAIS[0].valor);
@@ -41,53 +56,84 @@ export function CheckoutPage() {
   const [acepta, setAcepta] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pedidoOk, setPedidoOk] = useState<{ id: number; total: number } | null>(null);
+  const [pedidoOk, setPedidoOk] = useState<{ id: number; total: number; nombre: string } | null>(null);
+
+  // Solo en modo cédula.
+  const [cedula, setCedula] = useState("");
+  const [consulta, setConsulta] = useState<ClienteConsultado | null>(null);
+  const [otraDireccion, setOtraDireccion] = useState(false);
+  const [direccionEntrega, setDireccionEntrega] = useState("");
+
+  // Cliente conocido: ya dio sus datos y aceptó el acuerdo en su primer pedido.
+  const conocido = porCedula && consulta !== null && consulta.existe && !consulta.requiere_datos;
+  // Los campos de contacto y el acuerdo: siempre por nombre; por cédula, solo
+  // la primera vez y después de que la cédula se haya consultado.
+  const pideDatos = porCedula ? consulta !== null && !conocido : true;
+  const listoParaEnviar = !enviando && (porCedula ? consulta !== null : true) && (!pideDatos || acepta);
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (!nombre.trim()) {
-      setError("Por favor escribe tu nombre o el de tu negocio.");
+    if (porCedula && consulta === null) {
+      setError("Escribe tu cédula y pulsa Continuar.");
       return;
     }
-    if (!telefono.trim()) {
-      setError("Por favor escribe un teléfono de contacto.");
-      return;
+    if (pideDatos) {
+      if (!nombre.trim()) {
+        setError("Por favor escribe tu nombre o el de tu negocio.");
+        return;
+      }
+      if (!telefono.trim()) {
+        setError("Por favor escribe un teléfono de contacto.");
+        return;
+      }
+      if (!direccion.trim()) {
+        setError("Por favor escribe la dirección de entrega.");
+        return;
+      }
+      if (!acepta) {
+        setError("Confirma que entiendes que los precios pueden ajustarse antes de continuar.");
+        return;
+      }
     }
-    if (!direccion.trim()) {
-      setError("Por favor escribe la dirección de entrega.");
+    if (conocido && otraDireccion && !direccionEntrega.trim()) {
+      setError("Escribe la dirección de entrega para este pedido.");
       return;
     }
     if (items.length === 0 && personalizados.length === 0) {
       setError("Tu carrito está vacío.");
       return;
     }
-    if (!acepta) {
-      setError("Confirma que entiendes que los precios pueden ajustarse antes de continuar.");
-      return;
-    }
 
-    // El acuerdo sobre el precio del día queda escrito en el propio pedido:
-    // sin tocar el contrato del backend (`observaciones` ya es texto libre),
-    // deja un rastro de que el cliente lo aceptó al momento de comprar.
-    const observacionesConAcuerdo = [observaciones.trim(), NOTA_ACUERDO_PRECIOS]
-      .filter(Boolean)
-      .join("\n\n");
+    const datosContacto: DatosCliente = pideDatos
+      ? { nombre: nombre.trim(), telefono: `${codigoPais} ${telefono.trim()}`, direccion: direccion.trim() }
+      : {};
+    const cliente: DatosCliente = porCedula
+      ? {
+          ...datosContacto,
+          cedula,
+          acepta_precios: pideDatos ? acepta : undefined,
+          direccion_entrega: conocido && otraDireccion ? direccionEntrega.trim() : undefined,
+        }
+      : datosContacto;
+
+    // Por nombre, el acuerdo sobre el precio del día queda escrito en cada
+    // pedido. Por cédula se guarda una vez en el cliente, con su fecha: no
+    // hace falta repetirlo en las observaciones.
+    const observacionesFinales = porCedula
+      ? observaciones.trim()
+      : [observaciones.trim(), NOTA_ACUERDO_PRECIOS].filter(Boolean).join("\n\n");
 
     setEnviando(true);
     try {
-      const resp = await crearPedido(
-        { nombre: nombre.trim(), telefono: `${codigoPais} ${telefono.trim()}`, direccion: direccion.trim() },
-        items,
-        observacionesConAcuerdo,
-        personalizados
-      );
+      const resp = await crearPedido(cliente, items, observacionesFinales, personalizados);
       useUltimoPedido.getState().guardar(items);
+      if (porCedula) recordarCliente(cedula, resp.cliente_nombre ?? null);
       vaciar();
-      setPedidoOk({ id: resp.pedido_id, total: resp.total });
-    } catch {
-      setError("No pudimos registrar tu pedido. Intenta nuevamente.");
+      setPedidoOk({ id: resp.pedido_id, total: resp.total, nombre: resp.cliente_nombre || nombre.trim() });
+    } catch (e) {
+      setError(mensajeDelServidor(e) ?? "No pudimos registrar tu pedido. Intenta nuevamente.");
     } finally {
       setEnviando(false);
     }
@@ -95,7 +141,7 @@ export function CheckoutPage() {
 
   if (pedidoOk !== null) {
     const mensajeWhatsapp = (config.whatsapp_mensaje_pedido || "")
-      .replace("{nombre}", nombre.trim())
+      .replace("{nombre}", pedidoOk.nombre)
       .replace("{pedido_id}", String(pedidoOk.id))
       .replace("{total}", formatoPrecio(pedidoOk.total));
 
@@ -124,6 +170,11 @@ export function CheckoutPage() {
             <button className="btn btn-verde" onClick={() => router.push("/tienda")}>
               Volver a la tienda
             </button>
+            {porCedula && (
+              <Link className="btn btn-outline" href="/tienda/mis-pedidos">
+                Ver mis pedidos
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -192,6 +243,21 @@ export function CheckoutPage() {
               <AvisoPrecios compacto />
             </div>
 
+            {porCedula && (
+              <IdentificacionCedula
+                cedula={cedula}
+                onCedula={setCedula}
+                consulta={consulta}
+                onConsulta={setConsulta}
+                otraDireccion={otraDireccion}
+                onOtraDireccion={setOtraDireccion}
+                direccionEntrega={direccionEntrega}
+                onDireccionEntrega={setDireccionEntrega}
+              />
+            )}
+
+            {pideDatos && (
+            <>
             <div className="campo">
               <label>Nombre o negocio *</label>
               <input
@@ -233,6 +299,10 @@ export function CheckoutPage() {
                 required
               />
             </div>
+            </>
+            )}
+
+            {(!porCedula || consulta !== null) && (
             <div className="campo">
               <label>Observaciones</label>
               <textarea
@@ -242,7 +312,9 @@ export function CheckoutPage() {
                 placeholder="¿Algo que debamos saber sobre tu pedido?"
               />
             </div>
+            )}
 
+            {pideDatos && (
             <label className="checkout-acuerdo">
               <input
                 type="checkbox"
@@ -254,8 +326,10 @@ export function CheckoutPage() {
                 Confirmo que comprendo que los precios son estimados y estoy de acuerdo
                 con que se ajusten según la cotización del día de la cosecha al
                 procesarse en el sistema.
+                {porCedula && " Solo te lo preguntamos esta vez."}
               </span>
             </label>
+            )}
 
             <p className="checkout-seguridad">
               <Lock size={13} /> Orden encriptada y directa para procesamiento interno
@@ -264,7 +338,7 @@ export function CheckoutPage() {
             <button
               className="btn btn-verde btn-block"
               type="submit"
-              disabled={enviando || !acepta}
+              disabled={!listoParaEnviar}
             >
               {enviando ? "Enviando…" : "Enviar orden de compra"}
             </button>

@@ -27,7 +27,11 @@ export async function actualizarSiteConfig(
 ): Promise<SiteConfig> {
   const form = new FormData();
   Object.entries(cambios).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) form.append(key, String(value));
+    if (value === undefined || value === null) return;
+    // Un objeto (p. ej. `tokens`, que es un JSONField) va como JSON: con
+    // `String()` llegaba "[object Object]" y el backend respondía «Value must
+    // be valid JSON».
+    form.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
   });
   if (logo) form.append("logo", logo);
   if (facturaLogo) form.append("factura_logo", facturaLogo);

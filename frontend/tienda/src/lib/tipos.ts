@@ -94,6 +94,46 @@ export interface RespuestaPedido {
   pedido_id: number;
   total: number;
   estado: string;
+  /** Enmascarado ("Juan P."): quien pidió con cédula no escribió su nombre. */
+  cliente_nombre?: string;
+}
+
+/** Lo que la tienda puede saber de una cédula: lo justo para reconocerse. */
+export interface ClienteConsultado {
+  existe: boolean;
+  nombre?: string;
+  /** "•••• 4567" */
+  telefono?: string;
+  /** "Cra 12…" */
+  direccion?: string;
+  /** Aún no completó su primer pedido: hay que pedirle datos y el acuerdo. */
+  requiere_datos?: boolean;
+}
+
+export interface LineaHistorial {
+  producto_id: number;
+  producto_nombre: string;
+  presentacion_id: number;
+  presentacion_nombre: string;
+  imagen_url: string | null;
+  cantidad: string;
+  precio_actual: string;
+  permite_fraccion: boolean;
+  tipo_cantidad: string;
+  disponible: boolean;
+}
+
+export interface PedidoHistorial {
+  id: number;
+  fecha: string;
+  estado: string;
+  total: string;
+  lineas: LineaHistorial[];
+  personalizados: { nombre: string; cantidad: string; unidad: string }[];
+}
+
+export interface HistorialCliente extends ClienteConsultado {
+  pedidos: PedidoHistorial[];
 }
 
 export interface SiteConfig {
@@ -109,6 +149,12 @@ export interface SiteConfig {
    * verdad rechaza el pedido es el servidor.
    */
   acepta_pedidos_online?: boolean;
+  /**
+   * Cómo se reconoce a un cliente que vuelve. "nombre": como siempre.
+   * "cedula": se identifica con su cédula, da sus datos una sola vez y puede
+   * ver y repetir sus pedidos. ("cuenta" todavía no se puede elegir.)
+   */
+  identificacion_clientes?: "nombre" | "cedula" | "cuenta";
   /** El nombre del negocio. Lo devuelve el backend desde StoreSettings. */
   nombre_empresa: string;
   logo_url: string | null;

@@ -101,8 +101,13 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
     setPresId(id);
   }
 
-  /** La foto de lo elegido: la de la presentación si tiene, si no la del producto. */
-  const imagenUrl = presentacion?.imagen_url || producto.imagen_url;
+  /**
+   * La foto de lo elegido: la de la presentación si tiene; si no, la de su
+   * variante (el "Bulto" por kilo y por arroba es el mismo bulto); si no, la
+   * del producto.
+   */
+  const imagenUrl =
+    presentacion?.imagen_url || imagenDeGrupo(grupo?.opciones ?? []) || producto.imagen_url;
 
   function fijarCantidad(valor: number) {
     const limpio = Math.max(paso, Number(valor.toFixed(2)));
@@ -166,3 +171,8 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
 }
 
 export type SeleccionProducto = ReturnType<typeof useSeleccionProducto>;
+
+/** La primera foto entre las unidades activas de una variante, si alguna tiene. */
+export function imagenDeGrupo(opciones: Producto["presentaciones"]): string | null {
+  return opciones.find((p) => p.estado_presentacion && p.imagen_url)?.imagen_url ?? null;
+}

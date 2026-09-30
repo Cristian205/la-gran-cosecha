@@ -39,11 +39,14 @@ export function WhatsAppButton() {
   // "Agregar" de la tarjeta derecha, tapando la acción principal. Ahí se retira:
   // WhatsApp sigue a un toque desde la pestaña Contacto y desde el pie.
   // En /contacto lo reemplaza la barra [Pedido] [WhatsApp] de la página.
-  const enFlujoDeCompra = pathname.startsWith("/tienda") || pathname.startsWith("/contacto");
+  // En la ficha de producto la acción principal es "Agregar al pedido": ahí
+  // WhatsApp baja a secundario (más pequeño, sin pulso) y en móvil se retira.
+  const enFicha = pathname.startsWith("/productos/");
+  const enFlujoDeCompra = enFicha || pathname.startsWith("/tienda") || pathname.startsWith("/contacto");
 
   return (
     <a
-      className={`whatsapp-flotante ${enFlujoDeCompra ? "oculto-en-movil" : ""} ${
+      className={`whatsapp-flotante ${enFlujoDeCompra ? "oculto-en-movil" : ""} ${enFicha ? "discreto" : ""} ${
         pieALaVista ? "oculto" : ""
       }`}
       href={whatsappHref(config.whatsapp_numero, "Hola, quiero ayuda para abastecer mi negocio.")}

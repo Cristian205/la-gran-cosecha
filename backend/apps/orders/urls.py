@@ -10,6 +10,7 @@ from .views import (
     ProductoPendienteViewSet,
     ProductosMasVendidosView,
 )
+from .vistas_tienda import ConsultarClienteView, HistorialClienteView
 
 router = DefaultRouter()
 router.register(r"orders", PedidoViewSet, basename="pedidos")
@@ -33,6 +34,9 @@ urlpatterns = [
         name="productos-mas-vendidos",
     ),
     path("orders/pdf-lote/", GenerarPdfPedidosLoteView.as_view(), name="pedidos-pdf-lote"),
+    # La tienda pública, para el cliente que se identifica con su cédula.
+    path("orders-cliente/consultar/", ConsultarClienteView.as_view(), name="cliente-tienda-consultar"),
+    path("orders-cliente/historial/", HistorialClienteView.as_view(), name="cliente-tienda-historial"),
     path("orders/<int:pk>/pdf/", GenerarPdfPedidoView.as_view(), name="pedido-pdf"),
 ]
 

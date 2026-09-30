@@ -10,6 +10,7 @@ import { BottomNav } from "./BottomNav";
 import { AvisoAgregado } from "./tienda/AvisoAgregado";
 import { ProductQuickView } from "./tienda/ProductQuickView";
 import { useCart } from "@/estado/carrito";
+import { useClienteTienda } from "@/estado/clienteTienda";
 import { useTienda } from "@/estado/tienda";
 import { useUltimoPedido } from "@/estado/ultimoPedido";
 import type { SiteConfig } from "@/lib/tipos";
@@ -79,6 +80,7 @@ export function CapaCliente({
   useEffect(() => {
     useCart.persist.rehydrate();
     useUltimoPedido.persist.rehydrate();
+    useClienteTienda.persist.rehydrate();
   }, []);
 
   return (
