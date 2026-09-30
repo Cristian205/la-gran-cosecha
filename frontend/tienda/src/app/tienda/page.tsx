@@ -72,9 +72,14 @@ export default async function Tienda({
     );
   }
 
+  // `vista-tienda` acota los ajustes móviles del catálogo (ver "Tienda en el
+  // móvil" en global.css) a esta ruta: las tarjetas y los bloques también
+  // viven en otras páginas, que no deben cambiar.
   return (
     <CatalogoProvider datosIniciales={datosIniciales} categoriasIniciales={categoriasIniciales}>
-      <Lienzo bloques={bloques} datos={datos} />
+      <div className="vista-tienda">
+        <Lienzo bloques={bloques} datos={datos} />
+      </div>
     </CatalogoProvider>
   );
 }
