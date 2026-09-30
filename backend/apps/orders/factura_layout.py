@@ -13,19 +13,32 @@ Cuando sobra sitio se añaden hasta `FILAS_VACIAS_POR_CATEGORIA` renglones en
 blanco al final de cada categoría, para anotar a mano productos de última hora.
 """
 from dataclasses import dataclass
+from fractions import Fraction
 from math import floor
 
 # --------------------------------------------------------------------------
 # Geometría de la hoja
 # --------------------------------------------------------------------------
-# Hoja carta con márgenes de 1cm. Medido sobre el PDF ya renderizado, las
-# columnas de productos empiezan a 214,5pt del borde y el pie con el total
-# arranca en 702pt: quedan 487,5pt. Se reserva un colchón para no pegarse al
+# Formato "Ejecutivo" (7,25 × 10,5 in) con los márgenes amplios que explica el
+# @page de `_factura_styles.html` (se imprime sobre papel de 17 × 24,5 cm).
+# Medido sobre el PDF ya renderizado con el encabezado MÁS ALTO posible (logo,
+# chip secundario y dirección en dos líneas; la hoja de estilos le pone tope),
+# las columnas de productos empiezan a 182,2pt del borde y el pie con el total
+# arranca en 636,2pt: quedan 454,0pt. Se reserva un colchón para no pegarse al
 # pie (el modelo predice bien, pero un redondeo no debe pisar el total).
-ALTO_UTIL_PT = 470.0
+ALTO_UTIL_PT = 436.5
 
-# Ancho útil de la fila de columnas (~19.4cm), para repartirlo entre columnas.
-ANCHO_UTIL_PT = 550.0
+# Ancho útil de la fila de columnas (~16cm), para repartirlo entre columnas.
+ANCHO_UTIL_PT = 450.0
+
+# Cuando el pedido no cabe en una hoja se reparte en varias (ver
+# `_plan_varias_hojas`). Ahí el pie con el total deja de ir anclado abajo y
+# fluye tras el último producto, así que cada hoja solo descuenta lo que de
+# verdad lleva: la primera, el encabezado (139,7pt en el peor caso); las siguientes,
+# nada. Mismo colchón que arriba.
+ALTO_CONTENIDO_HOJA_PT = 639.7  # 10,5in menos los márgenes de 1,5 y 2,6cm
+ALTO_PRIMERA_HOJA_PT = ALTO_CONTENIDO_HOJA_PT - 139.7 - 17.5
+ALTO_HOJA_SIGUIENTE_PT = ALTO_CONTENIDO_HOJA_PT - 17.5
 
 # Renglones en blanco que se le dejan a cada categoría cuando hay espacio.
 FILAS_VACIAS_POR_CATEGORIA = 2
@@ -56,6 +69,16 @@ ANCHO_CELDA_ARTICULO = 0.50
 PAD_CELDA_PT = 9.0
 EM_NEGRITA = 0.52
 EM_REDONDA = 0.50
+
+# Las otras dos celdas (19% y 31% en la hoja de estilos). Las cifras de
+# Helvetica miden 0,556 em; "$", "." y "/" algo menos, así que 0,56 queda del
+# lado seguro. La unidad va en una píldora con 5px de padding a cada lado y
+# 4px de margen: 10,5pt que no dependen de la letra.
+ANCHO_CELDA_CANTIDAD = 0.19
+ANCHO_CELDA_PRECIO = 0.31
+EM_CIFRA = 0.56
+EM_CIFRA_NEGRITA = 0.58
+PILL_EXTRA_PT = 10.5
 
 # Solo se cuentan como recorte los nombres que se pasan de largo más de un
 # 15%: perder un par de letras del final no estorba, y ser estricto obligaba a
@@ -180,6 +203,17 @@ class Plan:
     alto_disponible_pt: float
     cabe_en_una_hoja: bool
     pad_extra_px: float = 0.0
+    # Solo cuando no cabe en una: las columnas de cada hoja, en orden.
+    hojas: list | None = None
+
+    @property
+    def paginas(self) -> list:
+        """Las filas de columnas a pintar, una por hoja (casi siempre, una)."""
+        return self.hojas or [self.columnas]
+
+    @property
+    def varias_hojas(self) -> bool:
+        return bool(self.hojas) and len(self.hojas) > 1
 
     @property
     def pad_v_px(self) -> float:
@@ -232,6 +266,48 @@ def _contar_recortes(bloques, n_columnas: int, densidad: Densidad) -> int:
             if ancho > disponible * TOLERANCIA_RECORTE:
                 recortes += 1
     return recortes
+
+
+def _cifras_caben(bloques, n_columnas: int, densidad: Densidad) -> bool:
+    """
+    Si la cantidad (con su unidad) y el precio de TODOS los artículos caben
+    enteros en sus celdas con este número de columnas.
+
+    Un nombre recortado se entiende; un precio "$ 12.…" no. En una hoja
+    angosta, cuatro o cinco columnas dejan la celda del precio por debajo de lo
+    que ocupa "$ 12.500", así que esos repartos se descartan.
+    """
+    ancho_columna = ANCHO_UTIL_PT / n_columnas
+    ancho_cant = ancho_columna * ANCHO_CELDA_CANTIDAD - PAD_CELDA_PT
+    ancho_precio = ancho_columna * ANCHO_CELDA_PRECIO - PAD_CELDA_PT
+    pill = densidad.fuente_pt * 0.85  # la unidad va en letra al 85%
+    for _, items in bloques:
+        for it in items:
+            precio = f"$ {int(it.get('subtotal') or 0):,}"
+            if len(precio) * EM_CIFRA_NEGRITA * densidad.fuente_pt > ancho_precio:
+                return False
+            cantidad = _texto_cantidad(it.get("cant"))
+            unidad = str(it.get("unidad") or "")
+            ocupa = (
+                len(cantidad) * EM_CIFRA * densidad.fuente_pt
+                + len(unidad) * EM_NEGRITA * pill
+                + PILL_EXTRA_PT
+            )
+            if ocupa > ancho_cant:
+                return False
+    return True
+
+
+def _texto_cantidad(valor) -> str:
+    """La cantidad como la escribe el filtro `fraction` de la plantilla."""
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError):
+        return str(valor or "")
+    if numero.is_integer():
+        return str(int(numero))
+    fraccion = Fraction(numero).limit_denominator()
+    return f"{fraccion.numerator}/{fraccion.denominator}"
 
 
 def _alto_especiales(categorias_especiales, densidad: Densidad) -> float:
@@ -413,6 +489,9 @@ def planificar(categorias_normales, categorias_especiales) -> Plan:
                 if n_columnas == 1 and len(bloques) > 1:
                     continue
 
+                if not _cifras_caben(bloques, n_columnas, densidad):
+                    continue  # el precio o la cantidad saldrían cortados
+
                 if n_columnas > len(bloques):
                     # Más columnas que categorías solo tiene sentido si alguna
                     # se va a partir por no caber entera en una columna.
@@ -462,7 +541,100 @@ def planificar(categorias_normales, categorias_especiales) -> Plan:
         # Cabe en una hoja, aunque algún nombre largo salga recortado.
         return _estirar(mejor, bool(categorias_especiales))
 
-    # Ni con la letra más pequeña cabe: se devuelve el reparto más ajustado y
-    # la factura se irá a una segunda hoja, que es lo correcto antes que
-    # dejarse artículos fuera.
-    return respaldo
+    # No cabe en una hoja con letra legible: mejor varias hojas bien
+    # maquetadas que una ilegible o una fila de columnas que se sale de la
+    # página (WeasyPrint no puede partir una fila flex entre hojas).
+    return _plan_varias_hojas(bloques, respaldo)
+
+
+def _llenar_hojas(bloques, n_columnas, densidad):
+    """
+    Reparte las categorías en hojas de `n_columnas`, llenando columna a
+    columna en el orden de lectura. La primera hoja tiene menos alto (lleva el
+    encabezado). Aquí sí se parten las categorías siempre que en el hueco
+    entren al menos `MIN_FILAS_AL_PARTIR` filas: con varias hojas, dejar media
+    columna en blanco por no partir una categoría es gastar papel.
+    """
+    hojas = []
+    columnas, alturas, i = None, None, n_columnas  # fuerza abrir la primera hoja
+
+    def alto_hoja():
+        return ALTO_PRIMERA_HOJA_PT if len(hojas) <= 1 else ALTO_HOJA_SIGUIENTE_PT
+
+    def siguiente_columna():
+        nonlocal columnas, alturas, i
+        i += 1
+        if i >= n_columnas:
+            columnas = [[] for _ in range(n_columnas)]
+            alturas = [0.0] * n_columnas
+            hojas.append(columnas)
+            i = 0
+
+    siguiente_columna()
+    for categoria, items in bloques:
+        pendientes = list(items)
+        continuacion = False
+        while pendientes:
+            alto = alto_hoja()
+            caben = densidad.filas_que_caben(alto - alturas[i])
+            if caben < len(pendientes) and alturas[i] > 0 and caben < MIN_FILAS_AL_PARTIR:
+                siguiente_columna()  # el hueco no da ni para un trozo digno
+                continue
+            # Columna vacía y ni así cabe una fila: se coloca igual para no
+            # entrar en un bucle; nunca pasa con las densidades definidas.
+            n = max(caben, 1) if alturas[i] == 0 else caben
+            trozo, pendientes = pendientes[:n], pendientes[n:]
+            columnas[i].append(
+                Seccion(
+                    categoria=categoria,
+                    items=trozo,
+                    filas_vacias=0,
+                    continuacion=continuacion,
+                    continua=bool(pendientes),
+                )
+            )
+            alturas[i] += densidad.alto_categoria(len(trozo))
+            continuacion = True
+            if pendientes:
+                siguiente_columna()
+
+    # Una hoja final sin nada (la categoría anterior cerró justo en la última
+    # columna) no se imprime.
+    return [h for h in hojas if any(h)]
+
+
+def _plan_varias_hojas(bloques, respaldo) -> Plan:
+    """
+    El pedido no cabe en una hoja: se reparte en varias con la densidad
+    legible más apretada (`FUENTE_MINIMA_COMODA`). Entre 2 y 5 columnas se
+    elige la que menos nombres recorta y, a igualdad, la que usa menos hojas.
+    """
+    densidad = next(
+        (d for d in reversed(DENSIDADES) if d.fuente_pt >= FUENTE_MINIMA_COMODA),
+        DENSIDADES[-1],
+    )
+    candidatas = [n for n in COLUMNAS_CANDIDATAS if not (n == 1 and len(bloques) > 1)]
+    # Nunca con el precio cortado; si ni con la que menos columnas usa cabe
+    # (un subtotal enorme), se queda esa: es la de celdas más anchas.
+    candidatas = [n for n in candidatas if _cifras_caben(bloques, n, densidad)] or candidatas[:1]
+
+    mejor, mejor_clave = None, None
+    for n_columnas in candidatas:
+        hojas = _llenar_hojas(bloques, n_columnas, densidad)
+        clave = (_contar_recortes(bloques, n_columnas, densidad), len(hojas), -n_columnas)
+        if mejor_clave is None or clave < mejor_clave:
+            mejor, mejor_clave = (n_columnas, hojas), clave
+
+    if mejor is None:
+        return respaldo
+    n_columnas, hojas = mejor
+    return Plan(
+        columnas=hojas[0],
+        densidad=densidad,
+        n_columnas=n_columnas,
+        filas_vacias=0,
+        alto_maximo_pt=0.0,
+        alto_disponible_pt=ALTO_HOJA_SIGUIENTE_PT,
+        cabe_en_una_hoja=False,
+        hojas=hojas,
+    )

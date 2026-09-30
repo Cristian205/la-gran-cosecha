@@ -59,8 +59,14 @@
 </div>
 
 <div class="columns-wrapper" style="{{ plan.variables_css }}">
-    <div class="main-columns-container">
-        {% for columna in plan.columnas %}
+    {% comment %}
+    Una fila de columnas por hoja: casi siempre una. Una fila flex no se
+    puede partir entre páginas, así que si el pedido no cabe el plan ya viene
+    repartido en hojas (ver factura_layout).
+    {% endcomment %}
+    {% for columnas in plan.paginas %}
+    <div class="main-columns-container{% if not forloop.last %} salto-pagina{% endif %}">
+        {% for columna in columnas %}
         <div class="column">
             {% for seccion in columna %}
             <div class="category-section">
@@ -102,6 +108,7 @@
         </div>
         {% endfor %}
     </div>
+    {% endfor %}
 
     {% if categorias_especiales %}
     <div class="category-section" style="margin-top: 10px; width: 100%;">
@@ -134,7 +141,7 @@
     </div>
     {% endif %}
 </div>
-<div class="footer-container">
+<div class="footer-container{% if plan.varias_hojas %} footer-container--al-final{% endif %}">
     <div class="legal-notice">
         <em>{{ nota_pie }}</em>
     </div>
