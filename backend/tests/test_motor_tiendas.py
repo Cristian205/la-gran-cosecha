@@ -64,7 +64,7 @@ def test_los_textos_de_la_home_viven_en_los_bloques(home):
     un elemento en una lista y no una migración.
 
     Este negocio nace de la plantilla, así que trae los textos por defecto de
-    Crynex. Los negocios que ya existían al migrar reciben los SUYOS: la 0002
+    Kryon X. Los negocios que ya existían al migrar reciben los SUYOS: la 0002
     los copia de su configuración a las propiedades de sus bloques.
     """
     bloques = {b["tipo"]: b for b in home.publicada.composicion}
@@ -350,7 +350,7 @@ def test_el_staff_de_un_negocio_no_alcanza_las_paginas_de_otro(api_staff):
     assert api_staff.get(f"/api/content/paginas/{ajena.id}/").status_code == 404
 
 
-def test_administrar_una_tienda_no_da_acceso_al_catalogo_de_crynex(api_staff):
+def test_administrar_una_tienda_no_da_acceso_al_catalogo_de_kryonx(api_staff):
     """Los bloques y las plantillas son de la plataforma, no de un cliente."""
     for ruta in ("blocks", "themes", "templates"):
         assert api_staff.get(f"/api/platform/{ruta}/").status_code == 403
@@ -360,10 +360,10 @@ def test_administrar_una_tienda_no_da_acceso_al_catalogo_de_crynex(api_staff):
 # EL ALTA DE UN CLIENTE, DESDE EL CONTROL CENTER
 # ==========================================================================
 @pytest.fixture
-def api_crynex(negocio):
+def api_kryonx(negocio):
     usuario = get_user_model().objects.create_user(
         email_usuario="alta@ejemplo.test",
-        nombre_usuario="Equipo Crynex",
+        nombre_usuario="Equipo Kryon X",
         password="clave-de-prueba-123",
         is_staff=True,
     )
@@ -374,7 +374,7 @@ def api_crynex(negocio):
     return cliente
 
 
-def test_dar_de_alta_una_empresa_la_deja_lista_para_vender(api_crynex):
+def test_dar_de_alta_una_empresa_la_deja_lista_para_vender(api_kryonx):
     """
     Un cliente nuevo nace entero: con dominio, plan y tienda publicada.
 
@@ -383,7 +383,7 @@ def test_dar_de_alta_una_empresa_la_deja_lista_para_vender(api_crynex):
     empresa con plan pero sin tienda, o con tienda pero sin dominio, es peor que
     no haberla creado.
     """
-    respuesta = api_crynex.post(
+    respuesta = api_kryonx.post(
         "/api/platform/tenants/",
         {
             "nombre": "Perfumería Luna",
@@ -407,9 +407,9 @@ def test_dar_de_alta_una_empresa_la_deja_lista_para_vender(api_crynex):
 
 
 def test_no_se_pueden_dar_de_alta_dos_empresas_con_el_mismo_identificador(
-    api_crynex, negocio
+    api_kryonx, negocio
 ):
-    respuesta = api_crynex.post(
+    respuesta = api_kryonx.post(
         "/api/platform/tenants/",
         {"nombre": "Otra", "slug": negocio.slug},
         format="json",
@@ -418,9 +418,9 @@ def test_no_se_pueden_dar_de_alta_dos_empresas_con_el_mismo_identificador(
     assert "identificador" in str(respuesta.json())
 
 
-def test_un_dominio_no_puede_apuntar_a_dos_empresas(api_crynex, negocio):
+def test_un_dominio_no_puede_apuntar_a_dos_empresas(api_kryonx, negocio):
     """Dos negocios en el mismo host harían imposible resolver cuál atiende."""
-    respuesta = api_crynex.post(
+    respuesta = api_kryonx.post(
         "/api/platform/tenants/",
         {"nombre": "Otra", "slug": "otra", "dominio": "testserver"},
         format="json",
@@ -429,19 +429,19 @@ def test_un_dominio_no_puede_apuntar_a_dos_empresas(api_crynex, negocio):
     assert "dominio" in str(respuesta.json()).lower()
 
 
-def test_el_alta_es_atomica(api_crynex):
+def test_el_alta_es_atomica(api_kryonx):
     """
     Un dominio repetido no puede dejar la empresa a medias.
 
     Sin la transacción, el `Tenant` quedaría creado —con sus señales ya
     disparadas— y el alta habría fallado: un cliente fantasma en la lista.
     """
-    api_crynex.post(
+    api_kryonx.post(
         "/api/platform/tenants/",
         {"nombre": "Primera", "slug": "primera", "dominio": "repetido.test"},
         format="json",
     )
-    respuesta = api_crynex.post(
+    respuesta = api_kryonx.post(
         "/api/platform/tenants/",
         {"nombre": "Segunda", "slug": "segunda", "dominio": "repetido.test"},
         format="json",
@@ -451,14 +451,14 @@ def test_el_alta_es_atomica(api_crynex):
         assert not Tenant.objects.filter(slug="segunda").exists()
 
 
-def test_crynex_puede_asignar_una_plantilla_a_un_cliente(api_crynex, home):
+def test_kryonx_puede_asignar_una_plantilla_a_un_cliente(api_kryonx, home):
     """
     La misma operación que hace el cliente desde su panel, pero por él.
 
     Por defecto no publica: deja el borrador para que alguien lo revise antes
     de que lo vean los visitantes.
     """
-    respuesta = api_crynex.post(
+    respuesta = api_kryonx.post(
         f"/api/platform/tenants/{home.tenant_id}/aplicar-plantilla/",
         {"plantilla": "mercado", "publicar": False},
         format="json",
@@ -469,7 +469,7 @@ def test_crynex_puede_asignar_una_plantilla_a_un_cliente(api_crynex, home):
 
 
 def test_administrar_un_negocio_no_permite_dar_de_alta_empresas(api_staff):
-    """Crear clientes es de Crynex, no de un cliente."""
+    """Crear clientes es de Kryon X, no de un cliente."""
     respuesta = api_staff.post(
         "/api/platform/tenants/",
         {"nombre": "Colada", "slug": "colada"},
@@ -498,7 +498,7 @@ def test_adoptar_una_plantilla_no_pisa_lo_publicado(negocio, home):
 
 def test_la_plantilla_se_copia_y_no_se_referencia(negocio, home):
     """
-    Si la página apuntara a la plantilla, que Crynex retocara «Mercado»
+    Si la página apuntara a la plantilla, que Kryon X retocara «Mercado»
     reescribiría la tienda publicada de todos los clientes que la usan.
     """
     plantilla = Plantilla.objects.get(slug="mercado")
@@ -796,7 +796,7 @@ def test_el_negocio_elige_el_aspecto_de_sus_tarjetas(api_staff, negocio):
     El eslabon que faltaba.
 
     El token existia, la hoja lo dibujaba y el endpoint mandaba el catalogo,
-    pero el panel del negocio no tenia donde elegirlo: solo Crynex podia, y
+    pero el panel del negocio no tenia donde elegirlo: solo Kryon X podia, y
     solo desde una plantilla. Una opcion a la que nadie llega no esta entregada.
     """
     from apps.content.models import StoreSettings
@@ -933,7 +933,7 @@ def test_el_enlace_de_prueba_no_escribe_nada_en_el_negocio(negocio):
     la "optimice" asignando la plantilla para poder mirarla.
 
     Ensenar algo no puede costar modificarlo: si la previa escribiera, cada vez
-    que Crynex quisiera ensenarle una plantilla a un cliente le crearia
+    que Kryon X quisiera ensenarle una plantilla a un cliente le crearia
     borradores en cada ruta y le cambiaria el color de marca, y deshacerlo
     despues no devuelve el estado anterior.
     """
@@ -1282,10 +1282,10 @@ def test_la_misma_persona_puede_seguir_a_dos_tiendas(negocio, tenant_b):
 # ==========================================================================
 RAIZ_FRONT = Path(__file__).resolve().parents[2] / "frontend"
 
-#: Los dos paneles que construyen tiendas. El de Crynex edita plantillas; el del
+#: Los dos paneles que construyen tiendas. El de Kryon X edita plantillas; el del
 #: negocio edita su propia tienda. Manipulan la MISMA estructura.
 PANELES = [
-    RAIZ_FRONT / "panel-crynex" / "src",
+    RAIZ_FRONT / "panel-kryonx" / "src",
     RAIZ_FRONT / "admin-panel" / "src",
 ]
 
@@ -1377,3 +1377,126 @@ def test_el_modulo_compartido_no_tiene_pantalla():
     assert not con_pantalla, (
         "Hay componentes en el modulo compartido: " + ", ".join(sorted(con_pantalla))
     )
+
+
+# ==========================================================================
+# ADOPTAR PLANTILLA DESDE EL PANEL (centro de configuración)
+# ==========================================================================
+def _plantilla_de_prueba():
+    from apps.storefront.models import Plantilla
+
+    return Plantilla.objects.create(
+        slug="prueba-centro", nombre="Prueba", activa=True,
+        paginas={"/": []}, marca={"color_primario": "#123456"},
+    )
+
+
+def test_adoptar_sin_aspecto_no_toca_los_colores_en_vivo(api_staff, negocio):
+    from apps.content.models import StoreSettings
+
+    ajustes = StoreSettings.get_para(negocio)
+    ajustes.color_primario = "#16a34a"
+    ajustes.save()
+    plantilla = _plantilla_de_prueba()
+    r = api_staff.post(
+        "/api/content/adoptar-plantilla/",
+        {"plantilla": plantilla.slug, "aplicar_aspecto": False},
+        format="json",
+    )
+    assert r.status_code == 201, r.data
+    ajustes.refresh_from_db()
+    assert ajustes.color_primario == "#16a34a"
+
+
+def test_adoptar_plantilla_exige_permiso_de_contenido(negocio):
+    # El `api_staff` de este archivo es dueño; aquí hace falta alguien del
+    # equipo SIN el permiso de contenido.
+    usuario = get_user_model().objects.create_user(
+        email_usuario="sin-permiso@ejemplo.test", nombre_usuario="Sin permiso",
+        password="clave-de-prueba-123", is_staff=True,
+    )
+    Membership.objects.create(usuario=usuario, tenant=negocio, rol="STAFF", activo=True, permisos=[])
+    cliente = APIClient()
+    cliente.force_authenticate(user=usuario)
+    plantilla = _plantilla_de_prueba()
+    r = cliente.post("/api/content/adoptar-plantilla/", {"plantilla": plantilla.slug}, format="json")
+    assert r.status_code == 403
+
+
+# ==========================================================================
+# MENÚ SIN «PARA NEGOCIOS» (storefront 0053)
+# ==========================================================================
+def _migracion_0053():
+    import importlib
+
+    return importlib.import_module("apps.storefront.migrations.0053_menu_sin_para_negocios")
+
+
+def test_0053_quita_solo_ese_enlace_de_la_cabecera():
+    m = _migracion_0053()
+    composicion = [
+        {"tipo": "cabecera", "props": {"enlaces": [
+            {"href": "/", "texto": "Inicio"},
+            {"href": "/tienda", "texto": "Tienda"},
+            {"href": "/#negocios", "texto": "Para negocios"},
+            {"href": "/contacto", "texto": "Contacto"},
+        ]}},
+        {"tipo": "pie", "props": {"enlaces": [{"href": "/#negocios", "texto": "Para negocios"}]}},
+    ]
+    nueva = m._sin_enlace(composicion)
+    assert [e["texto"] for e in nueva[0]["props"]["enlaces"]] == ["Inicio", "Tienda", "Contacto"]
+    # El pie conserva el suyo.
+    assert nueva[1]["props"]["enlaces"][0]["texto"] == "Para negocios"
+    # Sin el enlace no hay nada que cambiar.
+    assert m._sin_enlace(nueva) is None
+    # Revertir lo devuelve tras «Tienda».
+    vuelta = m._con_enlace(nueva)
+    assert [e["texto"] for e in vuelta[0]["props"]["enlaces"]] == ["Inicio", "Tienda", "Para negocios", "Contacto"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_0053_corrige_lo_publicado_y_respeta_el_borrador():
+    from django.db import connection
+    from django.db.migrations.executor import MigrationExecutor
+
+    from apps.tenancy.models import Tenant
+
+    antes = [("storefront", "0052_pie_firma_y_grupos_legales")]
+    despues = [("storefront", "0053_menu_sin_para_negocios")]
+    executor = MigrationExecutor(connection)
+    executor.migrate(antes)
+    viejas = executor.loader.project_state(antes).apps
+    Pagina = viejas.get_model("storefront", "Pagina")
+    Version = viejas.get_model("storefront", "VersionPagina")
+
+    tenant, _ = Tenant.objects.get_or_create(slug="la-gran-cosecha", defaults={"nombre": "La Gran Cosecha", "estado": "ACTIVO"})
+    menu = [{"tipo": "cabecera", "props": {"enlaces": [
+        {"href": "/", "texto": "Inicio"}, {"href": "/#negocios", "texto": "Para negocios"},
+    ]}}]
+    layout, _ = Pagina.objects.get_or_create(tenant_id=tenant.id, ruta="/_layout", defaults={"titulo": "Armazón", "tipo": "LAYOUT"})
+    layout.versiones.all().delete()
+    Version.objects.create(tenant_id=tenant.id, pagina=layout, numero=1, estado="PUBLICADA", composicion=menu)
+    borrador = Version.objects.create(
+        tenant_id=tenant.id, pagina=layout, numero=2, estado="BORRADOR",
+        composicion=[*menu, {"tipo": "texto", "props": {"titulo": "trabajo a medias"}}],
+    )
+
+    executor = MigrationExecutor(connection)
+    executor.loader.build_graph()
+    executor.migrate(despues)
+    nuevas = executor.loader.project_state(despues).apps
+    Version = nuevas.get_model("storefront", "VersionPagina")
+
+    publicada = Version.objects.get(pagina_id=layout.id, estado="PUBLICADA")
+    assert [e["texto"] for e in publicada.composicion[0]["props"]["enlaces"]] == ["Inicio"]
+    assert Version.objects.filter(pagina_id=layout.id, estado="ARCHIVADA").count() == 1
+    b = Version.objects.get(pk=borrador.pk)
+    assert b.estado == "BORRADOR"
+    assert b.composicion[1]["props"]["titulo"] == "trabajo a medias"
+    assert [e["texto"] for e in b.composicion[0]["props"]["enlaces"]] == ["Inicio"]
+
+    Plantilla = nuevas.get_model("storefront", "Plantilla")
+    for p in Plantilla.objects.filter(slug="la-gran-cosecha"):
+        cabeceras = [b for b in (p.paginas or {}).get("/_layout", []) if b.get("tipo") == "cabecera"]
+        for c in cabeceras:
+            assert all(e.get("texto") != "Para negocios" for e in c.get("props", {}).get("enlaces", []))

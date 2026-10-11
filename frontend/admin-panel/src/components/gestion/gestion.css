@@ -1,0 +1,657 @@
+/* ==========================================================================
+   GESTIÓN — piezas compartidas por las vistas de gestión del panel
+   (Pedidos, Clientes): encabezado, indicadores, módulo con pestañas,
+   barra de filtros, barra de selección, tabla, estados vacíos y menú de fila.
+   --------------------------------------------------------------------------
+   Todo va acotado a `.gestion-*` (y `.kpi-gestion`, `.menu-fila`,
+   `.pastilla`, `.celda-*`) para no tocar las demás vistas, y usa los
+   tokens de `index.css`: el modo claro y el oscuro salen de los mismos valores.
+
+   Escala tipográfica:
+     título de página 1.35rem/800 · títulos de módulo .95rem/700 ·
+     etiqueta KPI .74rem/600 · cifra KPI 1.4rem/800 ·
+     encabezado de tabla .7rem/700 mayúsculas · celdas .875rem ·
+     pastillas .74rem/700 · texto auxiliar .8rem
+   ========================================================================== */
+
+.gestion-vista,
+.gestion-topbar,
+.menu-fila {
+  --p-linea: color-mix(in srgb, var(--borde) 72%, transparent);
+  --p-linea-suave: color-mix(in srgb, var(--borde) 48%, transparent);
+  --p-hover: color-mix(in srgb, var(--gris-claro) 55%, var(--superficie));
+  --p-seleccion: color-mix(in srgb, var(--verde-500) 7%, var(--superficie));
+  --p-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --p-dur: 0.18s;
+  --p-radio: 13px;
+  --p-violeta: #7c3aed;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.girando { animation: gestion-girar 0.9s linear infinite; }
+@keyframes gestion-girar { to { transform: rotate(360deg); } }
+
+.gestion-vista .btn,
+.gestion-topbar .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: background var(--p-dur) ease, color var(--p-dur) ease, opacity var(--p-dur) ease;
+}
+.gestion-vista .btn.sm,
+.gestion-topbar .btn.sm { min-height: 34px; padding: 0.4rem 0.8rem; }
+.gestion-vista .btn.secundario:hover:not(:disabled),
+.gestion-topbar .btn.secundario:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--gris-claro) 70%, var(--borde));
+}
+
+/* ---------- 1. Encabezado ---------- */
+.gestion-topbar {
+  gap: 1rem;
+  padding: 1.1rem 1.5rem;
+  border-bottom-color: var(--p-linea);
+}
+.gestion-titulo { min-width: 0; }
+.gestion-titulo h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.gestion-titulo p {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: var(--gris);
+}
+.gestion-actualizar { flex: none; }
+.gestion-topbar-acciones { display: flex; align-items: center; gap: 0.5rem; flex: none; }
+.gestion-actualizar-icono { width: 38px; height: 38px; }
+.gestion-actualizar-icono:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 2px; }
+
+/* Rejilla de una columna con `minmax(0, 1fr)`: la tabla ancha se desplaza en
+   su carril en vez de ensanchar la página entera. */
+.gestion-vista { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 1.25rem; }
+.gestion-vista > .panel { margin-bottom: 0; }
+
+/* ---------- 2. Indicadores ---------- */
+.kpis-gestion {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+.kpi-gestion {
+  --kpi-acento: var(--gris);
+  --kpi-fondo: var(--gris-claro);
+  --kpi-texto: var(--dark);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+  padding: 0.85rem 0.9rem 0.85rem 0.95rem;
+  border: 1px solid var(--p-linea);
+  border-radius: var(--p-radio);
+  background: var(--superficie);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition:
+    border-color var(--p-dur) ease,
+    background var(--p-dur) ease,
+    box-shadow var(--p-dur) ease,
+    transform var(--p-dur) var(--p-ease);
+}
+.kpi-gestion.ambar { --kpi-acento: var(--amber); --kpi-fondo: var(--ambar-claro); --kpi-texto: var(--ambar-texto); }
+.kpi-gestion.verde { --kpi-acento: var(--verde-500); --kpi-fondo: var(--verde-claro); --kpi-texto: var(--verde-texto); }
+.kpi-gestion.azul { --kpi-acento: var(--azul); --kpi-fondo: var(--azul-claro); --kpi-texto: var(--azul-texto); }
+.kpi-gestion.violeta { --kpi-acento: var(--p-violeta); --kpi-fondo: var(--morado-claro); --kpi-texto: var(--morado-texto); }
+.kpi-gestion-icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--kpi-fondo);
+  color: var(--kpi-texto);
+}
+.kpi-gestion-texto { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
+.kpi-gestion-etiqueta {
+  padding-right: 1rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--gris);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kpi-gestion-valor {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kpi-cargando {
+  display: block;
+  width: 3.2rem;
+  height: 1.1rem;
+  margin: 0.2rem 0 0.15rem;
+  border-radius: 6px;
+  background: var(--gris-claro);
+}
+/* La flecha flota en la esquina: en el flujo le robaba ancho a la cifra. */
+.kpi-gestion-flecha {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.55rem;
+  color: var(--gris);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity var(--p-dur) ease, transform var(--p-dur) var(--p-ease);
+}
+.kpi-gestion:hover {
+  border-color: color-mix(in srgb, var(--kpi-acento) 40%, var(--borde));
+  transform: translateY(-1px);
+}
+.kpi-gestion:hover .kpi-gestion-flecha { opacity: 0.8; transform: translateX(0); }
+.kpi-gestion:focus-visible {
+  outline: 2px solid var(--verde-500);
+  outline-offset: 2px;
+}
+/* Activa: el filtro que tiene puesta la tabla. Acento en el borde y un tinte
+   muy leve; la tarjeta no se vuelve una superficie de color. */
+.kpi-gestion.activa {
+  border-color: color-mix(in srgb, var(--kpi-acento) 65%, transparent);
+  background: color-mix(in srgb, var(--kpi-acento) 6%, var(--superficie));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kpi-acento) 35%, transparent);
+}
+.kpi-gestion.activa .kpi-gestion-flecha { opacity: 1; transform: none; color: var(--kpi-texto); }
+/* Cifras largas (millones en "Facturado hoy") bajan un punto antes de cortarse. */
+.kpi-gestion-valor.larga { font-size: 1.15rem; }
+/* Dato secundario real bajo la cifra (p. ej. la comparación con el mes pasado). */
+.kpi-gestion-pie {
+  font-size: 0.72rem;
+  color: var(--gris);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kpi-gestion-pie .sube { color: var(--verde-texto); font-weight: 700; }
+.kpi-gestion-pie .baja { color: var(--rojo-texto); font-weight: 700; }
+
+/* ---------- 3. Módulo: pestañas, filtros, selección y tabla ---------- */
+.panel.gestion-modulo,
+.panel.gestion-panel {
+  border-color: var(--p-linea);
+  border-radius: var(--p-radio);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, calc(0.05 * var(--sombra-fuerza, 1)));
+}
+/* Sin recorte: el menú de columnas se despliega por fuera del panel. Las
+   esquinas de abajo las redondea el propio carril de la tabla. */
+.panel.gestion-modulo { overflow: visible; }
+.gestion-modulo > :last-child { border-radius: 0 0 var(--p-radio) var(--p-radio); }
+.gestion-modulo-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 1.1rem 0;
+}
+.gestion-tabs {
+  display: inline-flex;
+  gap: 0.2rem;
+  padding: 0.22rem;
+  border-radius: 11px;
+  background: var(--gris-claro);
+}
+.gestion-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 34px;
+  padding: 0.35rem 0.95rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gris);
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: background var(--p-dur) ease, color var(--p-dur) ease, box-shadow var(--p-dur) ease;
+}
+.gestion-tabs button:hover { color: var(--dark); }
+.gestion-tabs button.activo {
+  background: var(--superficie);
+  color: var(--dark);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12), 0 0 0 1px var(--p-linea-suave);
+}
+.gestion-tabs button.activo svg { color: var(--verde-texto); }
+.gestion-tabs button:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 1px; }
+.gestion-tab-num {
+  min-width: 1.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gris) 16%, transparent);
+  color: var(--gris);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.gestion-tabs button.activo .gestion-tab-num { background: var(--morado-claro); color: var(--morado-texto); }
+.gestion-meta { margin: 0; font-size: 0.8rem; color: var(--gris); }
+.gestion-meta strong { color: var(--dark); font-weight: 700; }
+
+/* Barra de herramientas: una línea en escritorio, filas en pantallas menores. */
+.gestion-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 1.1rem;
+}
+.gestion-buscador { flex: 1 1 280px; min-width: 220px; }
+.gestion-buscador input {
+  min-height: 38px;
+  padding-right: 2.2rem;
+  border-color: var(--p-linea);
+  transition: border-color var(--p-dur) ease, box-shadow var(--p-dur) ease;
+}
+.gestion-buscador input::-webkit-search-cancel-button { display: none; }
+.gestion-buscador input:focus {
+  outline: none;
+  border-color: var(--verde-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--verde-500) 18%, transparent);
+}
+.gestion-buscador-fin {
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  margin-top: -0.5rem;
+  color: var(--gris);
+}
+.buscador .gestion-buscador-fin { left: auto; transform: none; }
+.gestion-buscador-limpiar {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-top: -0.7rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+}
+.gestion-buscador-limpiar:hover { background: var(--gris-claro); color: var(--dark); }
+.buscador .gestion-buscador-limpiar svg { position: static; left: auto; transform: none; }
+.gestion-toolbar .select-filtro {
+  min-height: 38px;
+  min-width: 160px;
+  border-color: var(--p-linea);
+  transition: border-color var(--p-dur) ease;
+}
+.gestion-toolbar .select-filtro:hover { border-color: var(--borde); }
+/* Un filtro con valor distinto al de partida se nota de un vistazo. */
+.gestion-toolbar .select-filtro.con-valor {
+  border-color: color-mix(in srgb, var(--verde-500) 55%, transparent);
+  background-color: color-mix(in srgb, var(--verde-500) 6%, var(--superficie));
+}
+.gestion-rango {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--gris);
+}
+.gestion-rango input {
+  min-height: 38px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--p-linea);
+  border-radius: 10px;
+  background: var(--superficie);
+  color: var(--dark);
+  font-size: 0.85rem;
+}
+.gestion-toolbar .btn-limpiar { min-height: 38px; }
+.gestion-toolbar .columnas-picker .btn { min-height: 38px; }
+
+/* ---------- 4. Barra de selección ---------- */
+.gestion-seleccion-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.2s var(--p-ease), opacity 0.16s ease;
+}
+.gestion-seleccion-wrap.visible { grid-template-rows: 1fr; opacity: 1; }
+.gestion-seleccion-wrap > div { min-height: 0; overflow: hidden; }
+.gestion-seleccion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  flex-wrap: wrap;
+  margin: 0 1.1rem 0.85rem;
+  padding: 0.4rem 0.45rem 0.4rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--verde-500) 30%, var(--borde));
+  border-left: 3px solid var(--verde-500);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--verde-500) 5%, var(--superficie));
+  font-size: 0.85rem;
+  color: var(--dark);
+}
+.gestion-seleccion-info { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.gestion-seleccion-info strong { font-weight: 800; }
+.gestion-seleccion-check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--verde-500);
+  color: white;
+}
+.gestion-seleccion-quitar {
+  padding: 0.2rem 0.35rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--gris);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.gestion-seleccion-quitar:hover { color: var(--dark); background: var(--gris-claro); }
+.gestion-seleccion-acciones { display: flex; gap: 0.4rem; }
+
+/* ---------- 5. Tabla ---------- */
+.gestion-tabla-scroll {
+  border-top: 1px solid var(--p-linea);
+  transition: opacity var(--p-dur) ease;
+}
+.gestion-tabla-scroll.actualizando { opacity: 0.6; }
+.gestion-tabla { min-width: 760px; }
+.gestion-tabla.sin-filas { min-width: 0; }
+.gestion-tabla th,
+.gestion-tabla td { padding: 0.7rem 0.8rem; font-size: 0.875rem; vertical-align: middle; }
+.gestion-tabla thead th {
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+  background: color-mix(in srgb, var(--gris-claro) 45%, var(--superficie));
+  border-bottom: 1px solid var(--p-linea);
+  color: var(--gris);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.gestion-tabla thead th.th-ordenable:hover { color: var(--dark); }
+.gestion-tabla tbody tr { border-top: 1px solid var(--p-linea-suave); transition: background var(--p-dur) ease; }
+.gestion-tabla tbody tr:first-child { border-top: 0; }
+.gestion-tabla tbody tr:hover { background: var(--p-hover); }
+.gestion-tabla tbody tr.seleccionada { background: var(--p-seleccion); }
+.gestion-tabla tbody tr.fila-vacia:hover,
+.gestion-tabla tbody tr.fila-esqueleto:hover { background: none; }
+.gestion-tabla tbody tr.fila-esqueleto td { padding-top: 1.05rem; padding-bottom: 1.05rem; }
+
+/* La casilla: un área táctil de 40px aunque el control mida 16. */
+.gestion-tabla .col-check { width: 1%; padding: 0 0 0 0.6rem; }
+.check-area {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+.check-area input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--verde-500);
+  cursor: pointer;
+}
+.check-area input:disabled { cursor: default; }
+
+/* `relative` ancla el texto oculto del encabezado dentro del carril de la
+   tabla; sin él se posicionaba contra la página y la ensanchaba en móvil. */
+.gestion-tabla .col-acciones { position: relative; width: 1%; text-align: right; }
+.gestion-tabla .col-acciones .acciones { justify-content: flex-end; gap: 0.3rem; }
+.gestion-tabla .btn-icon {
+  width: 32px;
+  height: 32px;
+  border-color: transparent;
+  background: transparent;
+}
+.gestion-tabla tr:hover .btn-icon,
+.gestion-tabla .btn-icon:focus-visible,
+.gestion-tabla .btn-icon.abierto { border-color: var(--p-linea); background: var(--superficie); }
+.gestion-tabla .btn-icon:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 1px; }
+
+.celda-id {
+  font-weight: 700;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+}
+.celda-nombre {
+  display: inline-block;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  font-weight: 600;
+  color: var(--dark);
+}
+.celda-tenue { color: var(--gris); }
+.celda-fecha { color: var(--gris); font-variant-numeric: tabular-nums; }
+.celda-cifra-suave { color: var(--dark); font-variant-numeric: tabular-nums; }
+.celda-texto-largo {
+  display: inline-block;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  color: var(--dark);
+}
+.celda-cifra { font-weight: 700; color: var(--dark); font-variant-numeric: tabular-nums; }
+/* Pastilla: punto + texto sobre fondo suave. Tonos semánticos, nunca uno
+   distinto por elemento sin razón. */
+.pastilla {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: var(--gris-claro);
+  color: var(--gris);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.pastilla::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.pastilla.ambar { background: var(--ambar-claro); color: var(--ambar-texto); }
+.pastilla.azul { background: var(--azul-claro); color: var(--azul-texto); }
+.pastilla.violeta { background: var(--morado-claro); color: var(--morado-texto); }
+.pastilla.verde { background: var(--verde-claro); color: var(--verde-texto); }
+
+.gestion-tabla th.num,
+.gestion-tabla td.num { text-align: right; }
+.gestion-tabla th.num span { justify-content: flex-end; }
+
+.gestion-nota {
+  margin: 0;
+  padding: 0.7rem 1.1rem;
+  border-top: 1px solid var(--p-linea-suave);
+  font-size: 0.8rem;
+  color: var(--gris);
+}
+
+/* ---------- 6. Estado vacío ---------- */
+.gestion-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 2.2rem 1rem 2.4rem;
+  text-align: center;
+  white-space: normal;
+}
+.gestion-vacio-icono {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 0.4rem;
+  border-radius: 12px;
+  background: var(--gris-claro);
+  color: var(--gris);
+}
+.gestion-vacio-titulo { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--dark); }
+.gestion-vacio-texto { margin: 0 0 0.6rem; max-width: 380px; font-size: 0.85rem; color: var(--gris); line-height: 1.5; }
+
+/* ---------- Menú de fila (se pinta en <body>) ---------- */
+.menu-fila {
+  position: fixed;
+  z-index: 60;
+  min-width: 210px;
+  padding: 0.35rem;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: var(--superficie);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+  animation: menu-fila-in 0.14s var(--p-ease);
+}
+:root[data-tema="oscuro"] .menu-fila { box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5); }
+.menu-fila button {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 38px;
+  padding: 0.45rem 0.65rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--dark);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+}
+.menu-fila button svg { color: var(--gris); }
+.menu-fila button:hover:not(:disabled),
+.menu-fila button:focus-visible { outline: none; background: var(--gris-claro); }
+.menu-fila button.peligro,
+.menu-fila button.peligro svg { color: var(--rojo-texto); }
+.menu-fila button.peligro:hover,
+.menu-fila button.peligro:focus-visible { background: var(--rojo-claro); }
+.menu-fila button:disabled { opacity: 0.5; cursor: not-allowed; }
+@keyframes menu-fila-in {
+  from { opacity: 0; transform: translateY(-3px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1280px) {
+  .kpis-gestion { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .gestion-toolbar .select-filtro { flex: 1 1 160px; }
+  .gestion-rango { flex: 1 1 100%; }
+  .gestion-rango input { flex: 1; }
+}
+
+@media (max-width: 640px) {
+  /* Título y descripción a todo el ancho; las acciones, en su propia fila. */
+  .gestion-topbar { padding: 0.9rem 1rem; align-items: flex-start; flex-wrap: wrap; }
+  .gestion-titulo { flex: 1 1 100%; }
+  .gestion-topbar-acciones { width: 100%; }
+  .gestion-topbar-acciones .btn.primario { flex: 1; min-height: 42px; }
+  .gestion-titulo h1 { font-size: 1.2rem; }
+  .gestion-titulo p { font-size: 0.8rem; }
+  .gestion-vista { padding: 1rem; gap: 1rem; }
+
+  /* Dos columnas; la última tarjeta ocupa la fila entera en vez de quedar
+     sola a media anchura. */
+  .kpis-gestion { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
+  .kpi-gestion:last-child { grid-column: 1 / -1; }
+  .kpi-gestion { gap: 0.6rem; padding: 0.7rem; }
+  .kpi-gestion-icono { width: 32px; height: 32px; border-radius: 9px; }
+  .kpi-gestion-valor { font-size: 1.2rem; }
+  .kpi-gestion-flecha { display: none; }
+  .kpi-gestion-etiqueta { padding-right: 0; }
+
+  .gestion-modulo-cab { padding: 0.75rem 0.85rem 0; }
+  /* Con muchas pestañas, el selector se desliza en vez de apretarlas. */
+  .gestion-tabs { width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .gestion-tabs::-webkit-scrollbar { display: none; }
+  .gestion-tabs button { flex: 1 0 auto; justify-content: center; min-height: 40px; }
+  .gestion-topbar .btn.primario { padding-inline: 0.85rem; }
+  .gestion-meta { width: 100%; }
+
+  .gestion-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0.75rem 0.85rem;
+  }
+  .gestion-buscador,
+  .gestion-rango { grid-column: 1 / -1; min-width: 0; }
+  .gestion-toolbar .select-filtro { min-width: 0; width: 100%; min-height: 42px; font-size: 0.82rem; padding-inline: 0.65rem; }
+  .gestion-buscador input { min-height: 42px; font-size: 16px; }
+  .gestion-toolbar .btn-limpiar { justify-self: start; }
+  .gestion-toolbar .columnas-picker { justify-self: end; grid-column: -2; }
+
+  .gestion-seleccion { margin: 0 0.85rem 0.75rem; }
+  .gestion-seleccion-acciones { width: 100%; }
+  .gestion-seleccion-acciones .btn { flex: 1; min-height: 40px; }
+
+  /* La tabla se desplaza en su propio carril; la casilla queda fija a la
+     izquierda para poder seleccionar mientras se lee. */
+  .gestion-tabla-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+  .gestion-tabla .col-check {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    padding-right: 0.4rem;
+    background: var(--superficie);
+    box-shadow: 1px 0 0 var(--p-linea-suave);
+  }
+  .gestion-tabla thead .col-check { background: color-mix(in srgb, var(--gris-claro) 45%, var(--superficie)); }
+  .gestion-tabla tbody tr:hover .col-check { background: var(--p-hover); }
+  .gestion-tabla tbody tr.seleccionada .col-check { background: var(--p-seleccion); }
+  .gestion-tabla .btn-icon { width: 36px; height: 36px; }
+  .gestion-tabla.sin-filas thead { display: none; }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gestion-vista *,
+  .gestion-topbar *,
+  .menu-fila,
+  .menu-fila * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+  .girando { animation: gestion-girar 1.6s linear infinite !important; }
+  .kpi-gestion:hover { transform: none; }
+}

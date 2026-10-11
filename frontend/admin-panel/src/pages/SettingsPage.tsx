@@ -1,16 +1,15 @@
 import { Building2, KeyRound } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { cambiarPassword } from "../api/auth";
-import { actualizarSiteConfig } from "../api/content";
 import { useAuth } from "../auth/AuthContext";
-import { MediaField } from "../components/MediaField";
 import { NotificationPreferences } from "./NotificationPreferences";
 import { SidebarLayoutSettings } from "./SidebarLayoutSettings";
-import type { SiteConfig } from "../types";
+import { rutaDe } from "./configuracion/rutas";
 import { extraerMensajeError } from "../utils";
 
 export function SettingsPage() {
-  const { marca, refrescarMarca } = useAuth();
+  const { marca } = useAuth();
 
   const [passwordActual, setPasswordActual] = useState("");
   const [passwordNueva, setPasswordNueva] = useState("");
@@ -18,34 +17,6 @@ export function SettingsPage() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
-
-  const [nombreEmpresa, setNombreEmpresa] = useState("");
-  const [logo, setLogo] = useState<File | null>(null);
-  const [guardandoMarca, setGuardandoMarca] = useState(false);
-  const [errorMarca, setErrorMarca] = useState<string | null>(null);
-  const [okMarca, setOkMarca] = useState(false);
-
-  useEffect(() => {
-    if (marca) setNombreEmpresa(marca.nombreEmpresa);
-  }, [marca]);
-
-  async function guardarMarca(e: React.FormEvent) {
-    e.preventDefault();
-    setErrorMarca(null);
-    setOkMarca(false);
-    setGuardandoMarca(true);
-    try {
-      const cambios: Partial<SiteConfig> = { nombre_empresa: nombreEmpresa };
-      await actualizarSiteConfig(cambios, logo);
-      setLogo(null);
-      setOkMarca(true);
-      refrescarMarca();
-    } catch (err) {
-      setErrorMarca(extraerMensajeError(err, "No se pudo guardar la identidad del panel."));
-    } finally {
-      setGuardandoMarca(false);
-    }
-  }
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
@@ -91,37 +62,15 @@ export function SettingsPage() {
                   Identidad del panel
                 </h2>
               </div>
-              {!marca ? (
-                <div className="vacio">Cargando…</div>
-              ) : (
-                <form onSubmit={guardarMarca} style={{ padding: "1.2rem" }}>
-                  {errorMarca && <div className="error-box">{errorMarca}</div>}
-                  {okMarca && <div className="ok-box">Identidad actualizada correctamente.</div>}
-
-                  <div style={{ marginBottom: "1rem" }}>
-                    <MediaField
-                      valor={logo}
-                      urlActual={marca?.logoUrl ?? null}
-                      onCambiar={setLogo}
-                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                      ayuda="Se muestra en el menú lateral del panel y en la tienda pública."
-                    />
-                  </div>
-
-                  <div className="campo">
-                    <label>Nombre de la empresa</label>
-                    <input
-                      value={nombreEmpresa}
-                      onChange={(e) => setNombreEmpresa(e.target.value)}
-                      placeholder="La Gran Cosecha"
-                    />
-                  </div>
-
-                  <button className="btn primario" disabled={guardandoMarca}>
-                    {guardandoMarca ? "Guardando…" : "Guardar cambios"}
-                  </button>
-                </form>
-              )}
+              <div style={{ padding: "1.2rem" }}>
+                <p className="form-nota" style={{ marginTop: 0 }}>
+                  El nombre y el logo de {marca?.nombreEmpresa || "tu negocio"} se cambian en el centro de
+                  configuración, junto con el resto de su identidad.
+                </p>
+                <Link className="btn secundario" to={rutaDe("negocio/identidad")}>
+                  Ir a Identidad del negocio
+                </Link>
+              </div>
             </div>
           </div>
 

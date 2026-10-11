@@ -9,7 +9,7 @@ import axios from "axios";
  * lectura abierta justo para eso.
  *
  * Importa que salga de aquí y no de una constante: este panel lo usan todas
- * las empresas de Crynex. Con el logo escrito en el código, Perfumería Luna
+ * las empresas de Kryon X. Con el logo escrito en el código, Perfumería Luna
  * entraría a su panel bajo la marca de otro cliente.
  */
 const baseURL = import.meta.env.VITE_API_URL ?? "/api";

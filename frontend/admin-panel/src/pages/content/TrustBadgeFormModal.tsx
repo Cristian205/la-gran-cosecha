@@ -54,7 +54,8 @@ export function TrustBadgeFormModal({ badge, tipoInicial, onCerrar, onGuardado }
     <Modal
       titulo={badge ? "Editar sello de confianza" : "Nuevo sello de confianza"}
       onCerrar={onCerrar}
-      lateral
+      amplio
+      medio
       footer={
         <>
           <button className="btn secundario" onClick={onCerrar}>

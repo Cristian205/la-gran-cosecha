@@ -1,0 +1,56 @@
+/* ==========================================================================
+   PEDIDOS — lo propio de esta vista. Lo compartido (indicadores, módulo,
+   filtros, tabla, menús) vive en components/gestion/gestion.css.
+   ========================================================================== */
+
+/* ---------- 7. Historial ---------- */
+.pedidos-historial-cab {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 58px;
+  padding: 0.6rem 1.1rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition: background var(--p-dur) ease;
+}
+.pedidos-historial-cab:hover { background: var(--p-hover); }
+.pedidos-historial-cab:focus-visible { outline: 2px solid var(--verde-500); outline-offset: -2px; }
+.pedidos-historial-icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--gris-claro);
+  color: var(--gris);
+  transition: background var(--p-dur) ease, color var(--p-dur) ease;
+}
+.pedidos-historial.abierto .pedidos-historial-icono { background: var(--verde-claro); color: var(--verde-texto); }
+.pedidos-historial-texto { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pedidos-historial-titulo { font-size: 0.95rem; font-weight: 700; color: var(--dark); }
+.pedidos-historial-sub { font-size: 0.78rem; color: var(--gris); }
+.pedidos-historial-num {
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--gris-claro);
+  color: var(--dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.pedidos-historial .chevron { flex: none; transition: transform 0.2s var(--p-ease); }
+.pedidos-historial-cuerpo { animation: pedidos-desplegar 0.2s var(--p-ease); }
+@keyframes pedidos-desplegar {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 640px) {
+  .pedidos-historial-cab { padding: 0.6rem 0.85rem; }
+}

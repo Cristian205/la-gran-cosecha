@@ -61,6 +61,7 @@ LOCAL_APPS = [
     "apps.content",
     "apps.storefront",
     "apps.notifications",
+    "apps.mensajeria",
     "apps.media",
 ]
 
@@ -344,11 +345,11 @@ def _sin_comillas(valor: str) -> str:
     `django-environ` las quita al leer un archivo `.env`, pero NO al leer una
     variable de entorno de verdad. Y en el panel de Render se escribe
 
-        DEFAULT_FROM_EMAIL="Seguridad Crynex <hola@ejemplo.com>"
+        DEFAULT_FROM_EMAIL="Seguridad Kryon X <hola@ejemplo.com>"
 
     con las comillas puestas, porque es como se escribe en un `.env` y en un
     shell. Ahi sobreviven, y entonces `parseaddr` interpreta TODA la cadena
-    como la direccion —remitente `Seguridad Crynex <hola@ejemplo.com>`, sin
+    como la direccion —remitente `Seguridad Kryon X <hola@ejemplo.com>`, sin
     arroba util— y Brevo la rechaza con un 400 que solo aparece en los
     registros del servidor.
 
@@ -363,13 +364,40 @@ def _sin_comillas(valor: str) -> str:
 
 
 DEFAULT_FROM_EMAIL = _sin_comillas(
-    env("DEFAULT_FROM_EMAIL", default="Seguridad Crynex <no-reply@crynex.local>")
+    env("DEFAULT_FROM_EMAIL", default="Seguridad Kryon X <no-reply@kryonx.local>")
 )
 EMAIL_TIMEOUT = 15
 
 # Clave de la API de Brevo. Si esta puesta, produccion envia por HTTPS en vez
 # de SMTP (ver prod.py): Render bloquea los puertos SMTP salientes.
 BREVO_API_KEY = env("BREVO_API_KEY", default="")
+
+# ==========================================================================
+# WHATSAPP (apps.mensajeria) — Meta Cloud API con Twilio de respaldo
+# ==========================================================================
+# Las credenciales son de la PLATAFORMA y viven solo aquí, nunca en la base.
+# Lo de cada negocio (su Phone number ID, su remitente de Twilio, sus
+# plantillas y a quién alertar) se configura desde el panel.
+# Guía completa: backend/WHATSAPP.md
+META_WHATSAPP_TOKEN = _sin_comillas(env("META_WHATSAPP_TOKEN", default=""))
+META_APP_SECRET = _sin_comillas(env("META_APP_SECRET", default=""))
+META_WEBHOOK_VERIFY_TOKEN = _sin_comillas(env("META_WEBHOOK_VERIFY_TOKEN", default=""))
+META_GRAPH_VERSION = env("META_GRAPH_VERSION", default="v21.0")
+TWILIO_ACCOUNT_SID = _sin_comillas(env("TWILIO_ACCOUNT_SID", default=""))
+TWILIO_AUTH_TOKEN = _sin_comillas(env("TWILIO_AUTH_TOKEN", default=""))
+# URL pública del webhook de Twilio (estado de entrega). Sin ella Twilio no
+# avisa si el mensaje se entregó o falló.
+TWILIO_STATUS_CALLBACK_URL = env("TWILIO_STATUS_CALLBACK_URL", default="")
+# Base pública con la que Twilio llama (https://api.tudominio.com). Hace falta
+# detrás de un proxy para validar la firma con la URL correcta.
+TWILIO_WEBHOOK_BASE_URL = env("TWILIO_WEBHOOK_BASE_URL", default="")
+# Indicativo para teléfonos escritos sin él ("3001234567" → +573001234567).
+WHATSAPP_INDICATIVO_PAIS = env("WHATSAPP_INDICATIVO_PAIS", default="57")
+WHATSAPP_TIMEOUT = env.int("WHATSAPP_TIMEOUT", default=10)
+# Enviar al confirmarse el pedido (en un hilo) además de con el comando
+# `enviar_whatsapp`. Apagado, solo envía el comando.
+WHATSAPP_ENVIO_INMEDIATO = env.bool("WHATSAPP_ENVIO_INMEDIATO", default=True)
+WHATSAPP_ENVIO_EN_HILO = env.bool("WHATSAPP_ENVIO_EN_HILO", default=True)
 
 # ==========================================================================
 # PARÁMETROS DE NEGOCIO / OTP

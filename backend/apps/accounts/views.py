@@ -371,8 +371,8 @@ class PermisosDisponiblesView(ExigeNegocioMixin, APIView):
     Los permisos que ESTE negocio puede repartir entre su gente.
 
     Antes devolvía una constante idéntica para todos. Ahora es la intersección
-    de dos cosas que decide Crynex: lo que incluye el plan contratado y lo que
-    la plataforma tiene activo en su catálogo. Si Crynex retira un módulo,
+    de dos cosas que decide Kryon X: lo que incluye el plan contratado y lo que
+    la plataforma tiene activo en su catálogo. Si Kryon X retira un módulo,
     desaparece de todos los negocios sin tocar ningún plan.
 
     La forma de la respuesta —lista de módulos con sus permisos— no cambia, así

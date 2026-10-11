@@ -28,6 +28,19 @@ class Cliente(ModeloConTenant):
     #: pide una sola vez, en su primer pedido, y ya no se vuelve a preguntar.
     acepto_precios_en = models.DateTimeField(null=True, blank=True)
 
+    #: Cuándo autorizó el tratamiento de sus datos personales (Ley 1581 de
+    #: 2012). Es la PRUEBA de la autorización que la ley exige conservar; nulo
+    #: en los clientes de antes de pedirla y en los creados por la caja.
+    autorizo_datos_en = models.DateTimeField(null=True, blank=True)
+
+    #: Si acepta recibir por WhatsApp los avisos de sus pedidos. Meta exige
+    #: este consentimiento antes de escribirle, y `apps.mensajeria` no le
+    #: envía nada al cliente sin él (salvo que el negocio lo desactive).
+    acepta_whatsapp = models.BooleanField(default=False, db_default=False)
+    #: Cuándo lo decidió —aceptar o retirarlo—. Nulo = nunca se le preguntó,
+    #: y es lo que hace que la tienda le pregunte.
+    whatsapp_decidido_en = models.DateTimeField(null=True, blank=True)
+
     fecha_registro_cliente = models.DateTimeField(auto_now_add=True)
 
     class Meta:

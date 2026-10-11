@@ -34,7 +34,7 @@ import { Selector } from "./Selector";
  *
  * No hay una caja de boutique y otra de ferretería: hay esta, leyendo una
  * configuración distinta. Mejorarla las mejora todas a la vez, que es la razón
- * entera de que Crynex sea un sistema y no diez.
+ * entera de que Kryon X sea un sistema y no diez.
  */
 export function PosPage() {
   const { usuario } = useAuth();

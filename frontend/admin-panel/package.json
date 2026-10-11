@@ -1,9 +1,9 @@
 {
-  "name": "crynex-admin-panel",
+  "name": "kryonx-admin-panel",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Panel de negocio de Crynex — catálogo, pedidos, clientes y usuarios de cada empresa.",
+  "description": "Panel de negocio de Kryon X — catálogo, pedidos, clientes y usuarios de cada empresa.",
   "scripts": {
     "dev": "vite --port 5174",
     "build": "tsc --noEmit && vite build",

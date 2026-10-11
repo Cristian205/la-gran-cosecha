@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
@@ -281,10 +283,62 @@ class PresentacionProducto(ModeloConTenant):
     # la foto— y el pedido la guarda en la línea.
     imagen = models.ImageField(upload_to=ruta_presentacion, blank=True, null=True)
 
+    # Desde cuánto y de cuánto en cuánto se pide ESTA presentación. Antes era
+    # una regla del producto (`Producto.tipo_cantidad`), y no alcanzaba: el
+    # kilo de papa se vende de 0,5 en 0,5 y el bulto de la misma papa, entero.
+    # Las reglas y su validación viven en `catalog/cantidades.py`.
+    # Dos decimales como tope porque es lo que guarda `DetallePedido.cantidad`.
+    cantidad_minima = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("1")
+    )
+    incremento_cantidad = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("1")
+    )
+    decimales_cantidad = models.PositiveSmallIntegerField(default=0)
+
+    # Posición dentro del producto: la tienda y el panel la respetan. El
+    # desempate por id mantiene el orden de alta de las que comparten número.
+    orden = models.PositiveIntegerField(default=0)
+
+    # Concurrencia optimista: quien edita manda la versión que leyó y, si
+    # alguien guardó entre medias, recibe un 409 en vez de pisar el cambio
+    # ajeno. Un entero y no `fecha_actualizacion` porque comparar fechas que
+    # han dado la vuelta por JSON depende de la precisión de cada base.
+    version = models.PositiveIntegerField(default=1)
+
     class Meta:
         db_table = "ui_presentacionproducto"
         unique_together = ["producto", "nombre_presentacion", "unidad_venta"]
-        indexes = [models.Index(fields=["producto"])]
+        ordering = ["orden", "id"]
+        indexes = [
+            models.Index(fields=["producto"]),
+            models.Index(fields=["producto", "orden"], name="ui_present_producto_orden_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(cantidad_minima__gt=0),
+                name="catalog_presentacion_minima_positiva",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(incremento_cantidad__gt=0),
+                name="catalog_presentacion_incremento_positivo",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(decimales_cantidad__lte=2),
+                name="catalog_presentacion_decimales_maximo",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Toda escritura de una fila existente sube la versión, también las
+        # parciales (`update_fields`), para que la detección de conflictos no
+        # dependa de por qué camino se guardó.
+        if self.pk:
+            self.version = (self.version or 0) + 1
+            campos = kwargs.get("update_fields")
+            if campos is not None:
+                kwargs["update_fields"] = {*campos, "version"}
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return (

@@ -111,7 +111,7 @@ def test_un_pedido_no_puede_referenciar_una_presentacion_ajena(
     respuesta = api.post(
         "/api/orders/",
         {
-            "cliente": {"nombre": "Cliente del tenant A"},
+            "cliente": {"nombre": "Cliente del tenant A", "autoriza_datos": True},
             "items": [{"presentacion_id": ajena.id, "cantidad": "1"}],
         },
         format="json",
@@ -614,7 +614,7 @@ EXENTAS_DE_RLS = {
         "antes de que haya ambito declarado."
     ),
     "billing_subscription": (
-        "Dato comercial de plataforma, no del negocio. El panel de Crynex "
+        "Dato comercial de plataforma, no del negocio. El panel de Kryon X "
         "compara suscripciones entre clientes, que es su trabajo."
     ),
     "soporte_cosa": "Modelo de la propia suite, no existe en produccion.",

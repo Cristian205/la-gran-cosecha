@@ -3,7 +3,7 @@ Siembra el catálogo de permisos y los tres planes de arranque.
 
 Los permisos NO se inventan aquí: salen de `accounts/permisos.py`, que es el
 catálogo curado que el panel ya venía usando. Pasarlos a filas es lo que
-permite que Crynex añada un módulo sin desplegar código, y que cada plan
+permite que Kryon X añada un módulo sin desplegar código, y que cada plan
 decida cuáles incluye.
 
 El reparto entre planes es una propuesta de arranque, no una decisión cerrada:

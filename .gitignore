@@ -38,7 +38,7 @@ Thumbs.db
 next-env.d.ts
 
 # ==== Herramientas y espacio de trabajo ====
-# Llegaron aqui al unificar las carpetas del proyecto en crynex/.
+# Llegaron aqui al unificar las carpetas del proyecto en kryonx/.
 .agents/
 .claude/
 .windsurf/

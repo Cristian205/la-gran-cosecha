@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useAgregarAlCarrito } from "@/hooks/useAgregarAlCarrito";
 import { obtenerProductosMasVendidos } from "@/lib/datos";
 import type { Producto } from "@/lib/tipos";
-import { formatoPrecio, iconoCategoria } from "@/lib/utiles";
+import { cantidadInicial, formatoPrecio, iconoCategoria, reglaCantidad } from "@/lib/utiles";
 import { agruparPresentaciones } from "@/componentes/PresentationSelector";
 import { Reveal } from "@/componentes/animacion";
 
@@ -62,6 +62,7 @@ export function ProductoDestacado({
 
   function handleAgregar() {
     if (!presentacion) return;
+    const regla = reglaCantidad(presentacion, producto.permite_fraccion, producto.tipo_cantidad);
     agregar({
       productoId: producto.id,
       productoNombre: producto.nombre_producto,
@@ -69,9 +70,14 @@ export function ProductoDestacado({
       presentacionId: presentacion.id,
       presentacionNombre: `${presentacion.nombre_presentacion} · ${presentacion.unidad_venta_nombre}`,
       precioUnitario: parseFloat(presentacion.precio_unitario),
-      cantidad: 1,
+      // La primera cantidad válida de ESTA presentación ("Caja x 6" se pide
+      // de 6 en 6: un 1 fijo lo rechazaría el pedido).
+      cantidad: cantidadInicial(regla),
       permiteFraccion: producto.permite_fraccion,
       tipoCantidad: producto.tipo_cantidad,
+      minimo: regla.minimo,
+      paso: regla.paso,
+      decimales: regla.decimales,
     });
   }
 

@@ -26,10 +26,10 @@ import { Lienzo } from "./Lienzo";
 
 /** Lo que el panel envía. */
 type MensajeDelPanel =
-  | { fuente: "crynex-editor"; tipo: "composicion"; bloques: BloqueColocado[] }
-  | { fuente: "crynex-editor"; tipo: "seleccion"; id: string | null }
+  | { fuente: "kryonx-editor"; tipo: "composicion"; bloques: BloqueColocado[] }
+  | { fuente: "kryonx-editor"; tipo: "seleccion"; id: string | null }
   | {
-      fuente: "crynex-editor";
+      fuente: "kryonx-editor";
       tipo: "tema";
       variables: Record<string, string>;
     }
@@ -39,7 +39,7 @@ type MensajeDelPanel =
    * Es distinto de `tema` y la diferencia importa. `tema` lo manda el panel del
    * NEGOCIO con las variables ya resueltas, porque ese negocio tiene su color
    * de marca puesto y solo esta moviendo perillas encima. Esto lo manda el
-   * editor de plantillas de Crynex, donde la plantilla PROPONE un color de
+   * editor de plantillas de Kryon X, donde la plantilla PROPONE un color de
    * marca que no es de nadie todavia — y de ese color cuelga una escala de
    * nueve pasos que solo la tienda sabe derivar.
    *
@@ -48,7 +48,7 @@ type MensajeDelPanel =
    * juzgar una plantilla.
    */
   | {
-      fuente: "crynex-editor";
+      fuente: "kryonx-editor";
       tipo: "aspecto";
       marca: MarcaPropuesta;
       tokens: Record<string, string>;
@@ -56,8 +56,8 @@ type MensajeDelPanel =
 
 /** Lo que se responde. */
 type MensajeALPanel =
-  | { fuente: "crynex-tienda"; tipo: "listo" }
-  | { fuente: "crynex-tienda"; tipo: "seleccion"; id: string };
+  | { fuente: "kryonx-tienda"; tipo: "listo" }
+  | { fuente: "kryonx-tienda"; tipo: "seleccion"; id: string };
 
 interface Props {
   /** La composición publicada o en borrador, para el primer pintado. */
@@ -70,7 +70,7 @@ interface Props {
    * página que consiguiera enmarcar la tienda podría reescribir lo que se ve.
    *
    * Son varios porque hay dos editores —el panel del negocio y el Control
-   * Center de Crynex— y viven en direcciones distintas. Con uno solo, el otro
+   * Center de Kryon X— y viven en direcciones distintas. Con uno solo, el otro
    * quedaba mudo: los mensajes se descartaban en silencio y la previa parecía
    * funcionar porque el primer pintado sí llega del servidor.
    */
@@ -112,7 +112,7 @@ export function CapaEditor({ inicial, datos, origenPanel }: Props) {
       // herramientas (extensiones, Vite, Next) mandan a la misma ventana.
       if (permitidos.length > 0 && !permitidos.includes(evento.origin)) return;
       const dato = evento.data as MensajeDelPanel | undefined;
-      if (dato?.fuente !== "crynex-editor") return;
+      if (dato?.fuente !== "kryonx-editor") return;
 
       if (dato.tipo === "composicion") setBloques(dato.bloques);
 
@@ -169,7 +169,7 @@ export function CapaEditor({ inicial, datos, origenPanel }: Props) {
     window.addEventListener("message", alRecibir);
     // El panel no sabe cuándo terminó de cargar el iframe: se avisa, y así
     // manda la composición actual en vez de esperar un tiempo fijo.
-    responder({ fuente: "crynex-tienda", tipo: "listo" });
+    responder({ fuente: "kryonx-tienda", tipo: "listo" });
     return () => window.removeEventListener("message", alRecibir);
   }, [permitidos, responder]);
 
@@ -190,7 +190,7 @@ export function CapaEditor({ inicial, datos, origenPanel }: Props) {
     evento.preventDefault();
     const id = seccion.dataset.bloque!;
     setElegido(id);
-    responder({ fuente: "crynex-tienda", tipo: "seleccion", id });
+    responder({ fuente: "kryonx-tienda", tipo: "seleccion", id });
   }
 
   // La clase se pone sobre el nodo ya montado en vez de pasarla por props:

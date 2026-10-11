@@ -12,7 +12,7 @@ cuatro zonas, dos configuraciones opuestas, cero ramas de codigo.
                  que no distingue de vista.
 
 Solo se tocan los presets que siguen en su version original. Un preset que
-Crynex ya haya retocado a mano no se pisa: lo que esta migracion trae es un
+Kryon X ya haya retocado a mano no se pisa: lo que esta migracion trae es un
 valor por defecto que faltaba, no una correccion.
 """
 from django.db import migrations

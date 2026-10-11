@@ -146,7 +146,7 @@ def aplicar_tema(tenant, preset) -> dict:
     así que una plantilla que no menciona el color del pie deja el del tema.
 
     Se copia a `StoreSettings.tokens` y no se referencia, por la razón de
-    siempre: apuntar al tema haría que retocarlo en Crynex cambiara la tienda
+    siempre: apuntar al tema haría que retocarlo en Kryon X cambiara la tienda
     publicada de todos sus clientes.
     """
     from apps.content.models import StoreSettings  # noqa: PLC0415

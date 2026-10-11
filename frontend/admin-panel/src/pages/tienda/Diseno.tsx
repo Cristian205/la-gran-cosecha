@@ -20,7 +20,7 @@
  * vacíos. Aquí se hace por comodidad, allí porque es la regla que no se puede
  * saltar.
  *
- * # Por qué este archivo no es el mismo que el del panel de Crynex
+ * # Por qué este archivo no es el mismo que el del panel de Kryon X
  *
  * Porque los dos paneles tienen hojas de estilos distintas —aquí las clases son
  * `constructor-grupo` y `campo-ayuda`; allí, `constructor__grupo` y

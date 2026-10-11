@@ -3,7 +3,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute, RequierePermiso } from "./auth/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import { ClientsPage } from "./pages/ClientsPage";
-import { ContentPage } from "./pages/content/ContentPage";
+import { ConfiguracionPage } from "./pages/configuracion/ConfiguracionPage";
 import { TiendaPage } from "./pages/tienda/TiendaPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { HelpPage } from "./pages/HelpPage";
@@ -108,7 +108,7 @@ export default function App() {
           {/* Configuración del negocio y de su tienda. Sin permiso propio:
               «Tu negocio» lo ve todo el equipo, y cada pestaña de contenido
               pide el suyo dentro de la página. */}
-          <Route path="/contenido" element={<ContentPage />} />
+          <Route path="/contenido" element={<ConfiguracionPage />} />
           <Route
             path="/tienda"
             element={
@@ -118,7 +118,7 @@ export default function App() {
             }
           />
           {/* «Tu negocio» ahora es una pestaña de Configuración. */}
-          <Route path="/negocio" element={<Navigate to="/contenido?pestana=negocio" replace />} />
+          <Route path="/negocio" element={<Navigate to="/contenido?seccion=negocio/operacion" replace />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/configuracion" element={<SettingsPage />} />
           <Route path="/notificaciones" element={<NotificationsPage />} />

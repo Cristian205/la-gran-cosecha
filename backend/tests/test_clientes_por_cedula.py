@@ -28,6 +28,9 @@ def por_cedula(negocio):
 
 
 def _pedido(presentacion, **cliente):
+    # La tienda siempre manda la autorización de datos (Ley 1581) marcada:
+    # sin ella no deja enviar el pedido. Ver test_consentimiento.py.
+    cliente = {"autoriza_datos": True, **cliente}
     return {"cliente": cliente, "items": [{"presentacion_id": presentacion.id, "cantidad": 2}]}
 
 
@@ -195,6 +198,8 @@ def test_consultar_enmascara_los_datos(api, por_cedula, presentacion):
         "telefono": "•••• 4567",
         "direccion": "Cra 12…",
         "requiere_datos": False,
+        "requiere_autorizacion": False,
+        "pregunta_whatsapp": True,
     }
 
 

@@ -6,7 +6,8 @@ interface CartState {
   items: ItemCarrito[];
   personalizados: ItemPersonalizado[];
   agregar: (item: ItemCarrito) => void;
-  cambiarCantidad: (presentacionId: number, cantidad: number, paso?: number) => void;
+  /** `minimo`: la cantidad mínima de esa presentación (por defecto 1). */
+  cambiarCantidad: (presentacionId: number, cantidad: number, minimo?: number) => void;
   quitar: (presentacionId: number) => void;
   agregarPersonalizado: (item: ItemPersonalizado) => void;
   quitarPersonalizado: (id: string) => void;
@@ -42,11 +43,11 @@ export const useCart = create<CartState>()(
           return { items: [...state.items, item] };
         }),
 
-      cambiarCantidad: (presentacionId, cantidad, paso = 1) =>
+      cambiarCantidad: (presentacionId, cantidad, minimo = 1) =>
         set((state) => ({
           items: state.items.map((i) =>
             i.presentacionId === presentacionId
-              ? { ...i, cantidad: Math.max(paso, cantidad) }
+              ? { ...i, cantidad: Math.max(minimo, cantidad) }
               : i
           ),
         })),
@@ -81,7 +82,7 @@ export const useCart = create<CartState>()(
         get().items.reduce((acc, i) => acc + i.precioUnitario * i.cantidad, 0),
     }),
     {
-      name: "crynex-carrito",
+      name: "kryonx-carrito",
       // El HTML del servidor no puede conocer lo que hay en el `localStorage`
       // del navegador, asi que siempre sale con el carrito vacio. Sin esto,
       // `persist` rehidrataba en cuanto este modulo se evaluaba en el

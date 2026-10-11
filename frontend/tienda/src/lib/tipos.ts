@@ -22,6 +22,12 @@ export interface Presentacion {
   estado_presentacion: boolean;
   /** Foto propia de la presentación (el bulto, la caja…); null = la del producto. */
   imagen_url?: string | null;
+  /** Regla de cantidad de ESTA presentación (desde cuánto, de cuánto en
+   *  cuánto, cuántos decimales). El servidor la vuelve a validar al pedir.
+   *  Opcional: un servidor anterior no la manda y se usa la del producto. */
+  cantidad_minima?: string;
+  incremento_cantidad?: string;
+  decimales_cantidad?: number;
 }
 
 export interface Producto {
@@ -77,6 +83,11 @@ export interface ItemCarrito {
   cantidad: number;
   permiteFraccion: boolean;
   tipoCantidad: string;
+  /** Regla de la presentación al agregarla. Los carritos guardados antes de
+   *  existir no la tienen: entonces manda `permiteFraccion`/`tipoCantidad`. */
+  minimo?: number;
+  paso?: number;
+  decimales?: number;
 }
 
 export interface ItemPersonalizado {
@@ -108,6 +119,10 @@ export interface ClienteConsultado {
   direccion?: string;
   /** Aún no completó su primer pedido: hay que pedirle datos y el acuerdo. */
   requiere_datos?: boolean;
+  /** Cliente de antes de pedir la autorización de datos: se le pide una vez. */
+  requiere_autorizacion?: boolean;
+  /** Nunca se le preguntó si quiere avisos por WhatsApp. */
+  pregunta_whatsapp?: boolean;
 }
 
 export interface LineaHistorial {
@@ -120,6 +135,9 @@ export interface LineaHistorial {
   precio_actual: string;
   permite_fraccion: boolean;
   tipo_cantidad: string;
+  cantidad_minima?: string;
+  incremento_cantidad?: string;
+  decimales_cantidad?: number;
   disponible: boolean;
 }
 
@@ -191,6 +209,12 @@ export interface SiteConfig {
   cotizacion_texto: string;
   cta_final_titulo: string;
   cta_final_texto: string;
+  /** Datos del emisor de la factura. El centro legal los usa de respaldo
+   *  para la razón social y el NIT mientras no se diligencien allí. */
+  factura_nit?: string;
+  factura_proveedor?: string;
+  factura_telefono?: string;
+  factura_direccion?: string;
 }
 
 export interface PromoBanner {

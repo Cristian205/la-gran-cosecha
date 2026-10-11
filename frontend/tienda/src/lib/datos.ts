@@ -28,6 +28,7 @@ import type {
   TrustBadge,
   UnidadMedida,
 } from "@/lib/tipos";
+import type { LegalGuardado } from "@/lib/legal/tipos";
 
 const BASE = "/api";
 
@@ -125,6 +126,23 @@ export const OPCIONES_ORDEN: OpcionOrden[] = [
 // búsqueda global, la tienda, el bloque de inicio y el pie: eran tres o cuatro
 // peticiones idénticas por carga. Se comparte la misma promesa entre todos y
 // se descarta si falla, para que un error se pueda reintentar.
+let cacheLegal: Promise<LegalGuardado | null> | null = null;
+
+/**
+ * Los datos legales que diligenció el negocio (razón social, NIT…). Los pide
+ * el pie para su línea de identificación; si el backend no responde, el pie
+ * se pinta sin ella en vez de fallar.
+ */
+export function obtenerLegal(): Promise<LegalGuardado | null> {
+  if (!cacheLegal) {
+    cacheLegal = pedir<LegalGuardado>("/content/legal/").catch(() => {
+      cacheLegal = null;
+      return null;
+    });
+  }
+  return cacheLegal;
+}
+
 let cacheCategorias: Promise<Categoria[]> | null = null;
 
 export function obtenerCategorias(): Promise<Categoria[]> {
@@ -267,6 +285,11 @@ export interface DatosCliente {
   cedula?: string;
   /** El acuerdo de precios; en modo cédula se pide solo en el primer pedido. */
   acepta_precios?: boolean;
+  /** Autorización de tratamiento de datos (Ley 1581). Obligatoria mientras el
+   *  cliente no la haya dado; el servidor rechaza el pedido sin ella. */
+  autoriza_datos?: boolean;
+  /** Si acepta los avisos del pedido por WhatsApp. Sin enviar = no se le preguntó. */
+  acepta_whatsapp?: boolean;
   /** Otra dirección solo para este pedido. */
   direccion_entrega?: string;
 }

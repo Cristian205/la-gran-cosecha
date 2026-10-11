@@ -9,7 +9,7 @@ promesa, y por eso conviene mirar lo que NO hay en el diff de esta fase:
     cero componentes nuevos en la tienda
     cero ramas dentro de `apps.pos`
 
-Un restaurante es, para Crynex, cuatro cosas dichas con datos: cobra en
+Un restaurante es, para Kryon X, cuatro cosas dichas con datos: cobra en
 mostrador, atiende en mesas, no vende por internet y no lleva inventario
 estricto de cada ingrediente. Eso es todo. La palabra «restaurante» solo
 aparece como etiqueta que se muestra en pantalla.

@@ -78,7 +78,8 @@ export function BannerFormModal({ banner, onCerrar, onGuardado }: Props) {
     <Modal
       titulo={banner ? "Editar banner" : "Nuevo banner"}
       onCerrar={onCerrar}
-      lateral
+      amplio
+      medio
       footer={
         <>
           <button className="btn secundario" onClick={onCerrar}>

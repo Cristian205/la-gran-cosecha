@@ -2,9 +2,9 @@
 El perfil de negocio: presets, capacidades y módulos.
 
 Lo que se comprueba no es que los JSON se guarden, sino las cuatro promesas de
-las que depende que Crynex siga siendo un sistema y no diez aplicaciones:
+las que depende que Kryon X siga siendo un sistema y no diez aplicaciones:
 
-1. Que adoptar un preset COPIA, para que editarlo en Crynex no cambie negocios
+1. Que adoptar un preset COPIA, para que editarlo en Kryon X no cambie negocios
    en producción.
 2. Que las capacidades tienen consumidores reales — si nadie las lee, el perfil
    es decorativo.
@@ -32,10 +32,10 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def api_plataforma(negocio):
-    """El equipo de Crynex, que administra los presets de todos los negocios."""
+    """El equipo de Kryon X, que administra los presets de todos los negocios."""
     usuario = get_user_model().objects.create_user(
-        email_usuario="crynex@ejemplo.test",
-        nombre_usuario="Equipo Crynex",
+        email_usuario="kryonx@ejemplo.test",
+        nombre_usuario="Equipo Kryon X",
         password="clave-de-prueba-123",
         is_staff=True,
     )
@@ -87,7 +87,7 @@ def test_editar_el_preset_no_toca_a_quien_ya_lo_adopto(negocio, ferreteria):
     """
     La razón de que se copie en vez de referenciar.
 
-    Si el perfil apuntara al preset, retocar «Ferretería» en el panel de Crynex
+    Si el perfil apuntara al preset, retocar «Ferretería» en el panel de Kryon X
     cambiaría el comportamiento de cuarenta negocios en producción sin avisar a
     ninguno. Un negocio que funciona no cambia solo.
     """
@@ -151,7 +151,7 @@ def test_un_negocio_que_no_vende_online_rechaza_pedidos(
     respuesta = api.post(
         "/api/orders/",
         {
-            "cliente": {"nombre": "Quien sea", "telefono": "3000000000"},
+            "cliente": {"nombre": "Quien sea", "telefono": "3000000000", "autoriza_datos": True},
             "items": [{"presentacion_id": presentacion.id, "cantidad": "1"}],
         },
         format="json",
@@ -325,7 +325,7 @@ def test_nadie_ramifica_por_sector():
 
     En cuanto aparezca un `if perfil.sector == "restaurante"`, añadir un tipo de
     negocio dejará de ser un INSERT y volverá a ser una rama de código — y
-    Crynex se habrá convertido en diez aplicaciones dentro de un repositorio,
+    Kryon X se habrá convertido en diez aplicaciones dentro de un repositorio,
     que es exactamente lo que no se quiere.
 
     Se ramifica sobre CAPACIDADES. El sector es una etiqueta para mostrar y

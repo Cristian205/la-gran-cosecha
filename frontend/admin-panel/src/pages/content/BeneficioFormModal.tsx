@@ -73,7 +73,8 @@ export function BeneficioFormModal({ beneficio, onCerrar, onGuardado }: Props) {
     <Modal
       titulo={beneficio ? "Editar beneficio" : "Nuevo beneficio"}
       onCerrar={onCerrar}
-      lateral
+      amplio
+      medio
       footer={
         <>
           <button className="btn secundario" onClick={onCerrar}>

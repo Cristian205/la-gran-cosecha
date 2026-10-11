@@ -304,9 +304,12 @@
        del precio— se sale de la tarjeta y aparece recortada. */
     th, td { box-sizing: border-box; }
 
-    th:nth-child(1), td:nth-child(1) { width: 50%; }
-    th:nth-child(2), td:nth-child(2) { width: 19%; }
-    th:nth-child(3), td:nth-child(3) { width: 31%; }
+    /* Los calcula factura_layout para cada pedido (`_anchos_celdas`):
+       cantidad y precio miden lo justo para su cifra más ancha y el artículo
+       se queda con el resto. Los valores de respaldo son ANCHOS_POR_DEFECTO. */
+    th:nth-child(1), td:nth-child(1) { width: var(--w-art, 48%); }
+    th:nth-child(2), td:nth-child(2) { width: var(--w-cant, 22%); }
+    th:nth-child(3), td:nth-child(3) { width: var(--w-precio, 30%); }
 
     /* Los `line-height` van explícitos y las celdas no llevan nada que crezca
        en vertical: así el alto de cada fila es el mismo tenga la columna el
@@ -319,7 +322,7 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: .3px;
-        padding: 3px 6px;
+        padding: 3px var(--pad-h, 6px);
         background-color: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
         text-align: left;
@@ -328,7 +331,7 @@
     td {
         font-size: var(--fs-item, 6.8pt);
         line-height: 1.35;
-        padding: var(--pad-v, 2px) 6px;
+        padding: var(--pad-v, 2px) var(--pad-h, 6px);
         border-bottom: 1px solid #f1f5f9;
         text-align: left;
         white-space: nowrap;
@@ -353,11 +356,13 @@
         background: #f1f5f9;
         color: #475569;
         /* Sin padding vertical: el de antes estiraba la fila de forma
-           distinta según el ancho de la columna. */
-        padding: 0 5px;
+           distinta según el ancho de la columna. El horizontal va en `em`
+           para que encoja con la letra; debe coincidir con PILL_RELLENO_EM
+           de factura_layout. */
+        padding: 0 0.45em;
         line-height: inherit;
         border-radius: 999px;
-        margin-left: 4px;
+        margin-left: 0.35em;
         text-transform: uppercase;
     }
 

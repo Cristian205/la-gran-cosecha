@@ -9,7 +9,7 @@ se va a repetir con el POS y con cada modulo que venga:
   lo que se asigna. Anadir una entrada ahi basta para que un GERENTE pueda
   recibir el permiso.
 * `billing.PermisoDisponible` es el catalogo en la BASE. Lo lee el panel de
-  Crynex, y es lo que los planes conceden. Se sembro una sola vez, en la 0002,
+  Kryon X, y es lo que los planes conceden. Se sembro una sola vez, en la 0002,
   a partir del de Python.
 
 Anadir un permiso solo al primero lo deja funcionando para el negocio pero

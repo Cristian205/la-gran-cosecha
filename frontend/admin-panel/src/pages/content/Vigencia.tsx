@@ -45,8 +45,8 @@ export function Vigencia({
   return (
     <div className="campo">
       <label>Programar (opcional)</label>
-      {/* Dos fechas no caben lado a lado en el panel lateral: se acomodan
-          solas y bajan de línea cuando no hay ancho. */}
+      {/* Las dos fechas van lado a lado si caben y bajan de línea cuando
+          no hay ancho (móvil). */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "0 .75rem" }}>
         <div className="campo" style={{ minWidth: 0 }}>
           <label>Mostrar desde</label>

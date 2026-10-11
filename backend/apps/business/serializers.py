@@ -1,7 +1,7 @@
 """
 La API del perfil, en dos públicos.
 
-El negocio lee y ajusta el SUYO; Crynex administra los presets de todos. Son
+El negocio lee y ajusta el SUYO; Kryon X administra los presets de todos. Son
 serializers distintos y no uno con permisos, porque lo que cada uno puede tocar
 es distinto: un negocio no elige de qué preset viene ni con qué versión nació,
 y dejar esos campos escribibles «porque el permiso ya lo protege» es cómo se
@@ -175,7 +175,7 @@ class AplicarPresetSerializer(RespuestasAltaSerializer):
 
 
 class PresetSerializer(serializers.ModelSerializer):
-    """Lectura de un preset. La escritura vive en el panel de Crynex."""
+    """Lectura de un preset. La escritura vive en el panel de Kryon X."""
 
     class Meta:
         model = Preset

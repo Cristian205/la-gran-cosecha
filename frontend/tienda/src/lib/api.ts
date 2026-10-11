@@ -113,7 +113,7 @@ export async function pedirAlBackend<T>(
     // La vista de plantilla viaja en cabecera y no en la URL: si fuera un
     // parametro mas, la respuesta se guardaria en la cache compartida y el
     // siguiente visitante normal recibiria la previa de otro.
-    ...(testigo ? { "X-Crynex-Vista": testigo } : {}),
+    ...(testigo ? { "X-KryonX-Vista": testigo } : {}),
   };
 
   const respuesta = await pedir(url, {

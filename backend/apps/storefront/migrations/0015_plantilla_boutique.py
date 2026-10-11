@@ -35,7 +35,7 @@ pagina de acceso es justo donde un negocio deja de parecer generico. Como
 bloque se edita entera desde el constructor —el argumento de la izquierda, los
 textos, los proveedores— sin desplegar nada.
 
-Lo que ese bloque NO hace es autenticar: Crynex todavia no tiene cuentas de
+Lo que ese bloque NO hace es autenticar: Kryon X todavia no tiene cuentas de
 comprador, y montarlas es un modulo entero, no un formulario. El bloque lo dice
 en pantalla en vez de fingirlo. Ver `bloques/Acceso.tsx`.
 """
@@ -159,7 +159,7 @@ BLOQUES = [
 # LO QUE GANAN LOS BLOQUES QUE YA EXISTIAN
 # ==========================================================================
 #: Se ANADE a lo que cada uno tuviera. Si alguien retoco la lista desde el
-#: panel de Crynex, su trabajo manda: solo se mete lo que falta.
+#: panel de Kryon X, su trabajo manda: solo se mete lo que falta.
 VARIANTES_NUEVAS = {
     "cabecera": [
         {"codigo": "clasica", "nombre": "Clasica"},

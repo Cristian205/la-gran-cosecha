@@ -111,7 +111,8 @@ export function UserPermissionsModal({ usuario, onCerrar, onGuardado }: Props) {
 
   return (
     <Modal
-      lateral
+      amplio
+      medio
       titulo={`Permisos de ${usuario.nombre_usuario}`}
       onCerrar={onCerrar}
       footer={

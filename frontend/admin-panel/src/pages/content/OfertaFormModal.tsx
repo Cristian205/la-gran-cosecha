@@ -97,7 +97,8 @@ export function OfertaFormModal({ oferta, onCerrar, onGuardado }: Props) {
     <Modal
       titulo={oferta ? "Editar oferta" : "Nueva oferta"}
       onCerrar={onCerrar}
-      lateral
+      amplio
+      medio
       footer={
         <>
           <button className="btn secundario" onClick={onCerrar}>

@@ -30,7 +30,7 @@ from django.core import signing
 
 #: El espacio de nombres de la firma. Un testigo de aqui no vale en ningun otro
 #: sitio del sistema aunque comparta la SECRET_KEY.
-SAL = "crynex.storefront.vista-previa"
+SAL = "kryonx.storefront.vista-previa"
 
 #: Cuanto vale un enlace. Dos dias cubre «te lo mando y lo miras manana» sin
 #: convertirse en una puerta permanente que nadie recuerda haber abierto.
@@ -39,7 +39,7 @@ VIGENCIA = 60 * 60 * 48
 #: El nombre del parametro en la URL y de la cabecera con que el servidor de la
 #: tienda lo reenvia. Estan aqui los dos para que renombrarlo sea un sitio.
 PARAMETRO = "vista"
-CABECERA = "X-Crynex-Vista"
+CABECERA = "X-KryonX-Vista"
 
 
 def firmar(*, tenant_id: int, plantilla_slug: str) -> str:

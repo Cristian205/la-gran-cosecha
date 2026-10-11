@@ -168,10 +168,20 @@ class PedidoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         # Se recorre uno a uno porque `queryset.update()` no dispara señales ni
         # sabe de líneas; `despachar_pedido` es idempotente, así que pulsar dos
         # veces el botón —cosa que pasa— no descuenta dos veces.
+        from apps.mensajeria.disparadores import pedido_cambio_estado  # noqa: PLC0415
+
         with transaction.atomic():
+            recien_entregados = []
             for pedido in pedidos_qs:
                 despachar_pedido(pedido, usuario=request.user)
+                if pedido.estado != "ENTREGADO":
+                    recien_entregados.append(pedido)
             pedidos_qs.update(estado="ENTREGADO")
+            # `update()` no dispara señales: el aviso de entrega por WhatsApp se
+            # pide aquí, y sale al confirmarse la transacción. Solo a los que
+            # no estaban ya entregados, para no repetirlo si se pulsa dos veces.
+            for pedido in recien_entregados:
+                pedido_cambio_estado(pedido, "ENTREGADO")
 
         lote = LotePedidos.objects.create(
             tipo="ENTREGA",

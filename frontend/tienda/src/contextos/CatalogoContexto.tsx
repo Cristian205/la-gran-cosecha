@@ -59,6 +59,31 @@ interface Props {
 
 const ORDENES_VALIDOS = new Set<string>(OPCIONES_ORDEN.map((o) => o.valor));
 
+/**
+ * Lleva la vista al comienzo del catálogo tras cambiar un filtro.
+ *
+ * El caso que lo motiva: alguien baja hasta el final de "Frutas" y elige
+ * "Verduras". Sin esto se quedaba al fondo de una lista que ya no es la que
+ * estaba viendo —más corta, o recién cargando—, y quien no está habituado a
+ * las tiendas en línea lee «¿dónde estoy?, ¿se acabaron los productos?». Un
+ * filtro nuevo es una lista nueva, y una lista nueva se empieza a leer por
+ * arriba.
+ *
+ * El destino respeta el `scroll-margin-top` de `.catalogo`, que ya descuenta
+ * la cabecera y la barra del catálogo fijas. Solo NO se mueve si el comienzo
+ * ya está a la vista en la mitad de arriba de la pantalla: ahí el cambio se
+ * ve sin saltar.
+ */
+function volverAlInicioDelCatalogo() {
+  const destino = document.getElementById("catalogo");
+  if (!destino) return;
+  const margen = parseFloat(getComputedStyle(destino).scrollMarginTop) || 0;
+  const arriba = destino.getBoundingClientRect().top - margen;
+  if (arriba >= -8 && arriba < window.innerHeight * 0.5) return;
+  const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  destino.scrollIntoView({ behavior: quieto ? "auto" : "smooth", block: "start" });
+}
+
 function numeroDe(valor: string | null): number | null {
   if (!valor) return null;
   const n = Number(valor);
@@ -103,6 +128,12 @@ export function CatalogoProvider({ children, datosIniciales, categoriasIniciales
   const orden: OrdenCatalogo =
     ordenUrl && ORDENES_VALIDOS.has(ordenUrl) ? (ordenUrl as OrdenCatalogo) : "recomendados";
 
+  /** Cambia un filtro y vuelve al inicio de la lista: ver `volverAlInicioDelCatalogo`. */
+  function filtrar(cambios: Record<string, string | null>) {
+    cambiarParametros(cambios);
+    volverAlInicioDelCatalogo();
+  }
+
   /** Reescribe uno o varios parámetros de la URL; `null` los quita. */
   function cambiarParametros(cambios: Record<string, string | null>) {
     // `replace` y no `push`: filtrar no debería llenar el historial de
@@ -145,13 +176,12 @@ export function CatalogoProvider({ children, datosIniciales, categoriasIniciales
       value={{
         categorias,
         categoriaActiva,
-        cambiarCategoria: (id) => cambiarParametros({ categoria: id === null ? null : String(id) }),
+        cambiarCategoria: (id) => filtrar({ categoria: id === null ? null : String(id) }),
         unidades,
         unidadActiva,
-        cambiarUnidad: (id) => cambiarParametros({ unidad: id === null ? null : String(id) }),
+        cambiarUnidad: (id) => filtrar({ unidad: id === null ? null : String(id) }),
         orden,
-        cambiarOrden: (valor) =>
-          cambiarParametros({ orden: valor === "recomendados" ? null : valor }),
+        cambiarOrden: (valor) => filtrar({ orden: valor === "recomendados" ? null : valor }),
         busqueda,
         buscar,
         productos: estado.productos,
@@ -167,7 +197,7 @@ export function CatalogoProvider({ children, datosIniciales, categoriasIniciales
         hayFiltros,
         limpiarFiltros: () => {
           buscar("");
-          cambiarParametros({ categoria: null, unidad: null });
+          filtrar({ categoria: null, unidad: null });
         },
       }}
     >

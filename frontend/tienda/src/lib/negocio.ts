@@ -31,7 +31,7 @@ export interface Negocio {
  */
 export async function testigoDeVista(): Promise<string> {
   const cabeceras = await headers();
-  return cabeceras.get("x-crynex-vista") ?? "";
+  return cabeceras.get("x-kryonx-vista") ?? "";
 }
 
 export async function negocioDeLaPeticion(): Promise<Negocio> {

@@ -55,10 +55,22 @@ export function extraerMensajeError(e: unknown, fallback: string): string {
   const err = e as { response?: { data?: Record<string, unknown> } };
   const data = err?.response?.data;
   if (!data) return fallback;
+  // 409 y otros errores sin campo: DRF los manda como lista suelta.
+  if (Array.isArray(data) && typeof data[0] === "string") return data[0];
   if (typeof data.message === "string") return data.message;
+  if (typeof data.mensaje === "string") return data.mensaje;
   if (typeof data.detail === "string") return data.detail;
-  // Errores de validación de DRF: { campo: ["msg"] }
-  const primera = Object.values(data)[0];
-  if (Array.isArray(primera) && typeof primera[0] === "string") return primera[0];
-  return fallback;
+  // Errores de validación de DRF: { campo: ["msg"] }, o anidados como
+  // { presentaciones: [{}, { precio_unitario: ["msg"] }] }.
+  return primerMensaje(data) ?? fallback;
+}
+
+function primerMensaje(valor: unknown, profundidad = 0): string | null {
+  if (typeof valor === "string") return valor || null;
+  if (profundidad > 4 || !valor || typeof valor !== "object") return null;
+  for (const v of Array.isArray(valor) ? valor : Object.values(valor)) {
+    const m = primerMensaje(v, profundidad + 1);
+    if (m) return m;
+  }
+  return null;
 }

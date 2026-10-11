@@ -7,7 +7,7 @@ modulo nuevo, ya con tres ejemplos detras:
     1. `accounts/permisos.py`   el catalogo en Python. Sin esto, un gerente no
                                 puede recibir el permiso.
     2. Una migracion aqui       el catalogo en la base. Sin esto el modulo
-                                funciona, pero Crynex no puede venderlo ni
+                                funciona, pero Kryon X no puede venderlo ni
                                 incluirlo en un plan: es invisible.
     3. `<app>/migrations/…rls`  la tercera capa de aislamiento. Activar RLS es
                                 tabla por tabla; una app posterior a
@@ -20,7 +20,7 @@ hay migracion para eso —el registro vive en memoria— pero si un test.
 Como el POS y a diferencia de Inventario, NO se anade a los planes existentes:
 regalarselo a los clientes actuales sin que nadie lo decidiera seria una
 decision comercial tomada por descuido. Se activa cliente a cliente desde el
-panel de Crynex.
+panel de Kryon X.
 
 # La trampa del slug, otra vez
 

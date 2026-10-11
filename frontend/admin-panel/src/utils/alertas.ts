@@ -33,6 +33,30 @@ export async function confirmarAccion(
   return res.isConfirmed;
 }
 
+/**
+ * Cerrar un formulario con cambios sin guardar. El botón seguro ("Seguir
+ * editando") es el que queda enfocado: un Enter distraído no borra nada.
+ */
+export async function confirmarDescartar(detalle?: string): Promise<boolean> {
+  const res = await swalBase.fire({
+    icon: "warning",
+    title: "Tienes cambios sin guardar",
+    text: detalle ?? "Si cierras ahora, se perderán.",
+    showCancelButton: true,
+    reverseButtons: true,
+    focusCancel: true,
+    confirmButtonText: "Descartar cambios",
+    cancelButtonText: "Seguir editando",
+    customClass: {
+      popup: "swal-panel",
+      title: "swal-panel-titulo",
+      confirmButton: "btn peligro",
+      cancelButton: "btn secundario",
+    },
+  });
+  return res.isConfirmed;
+}
+
 export function confirmarEliminar(titulo: string, detalle?: string): Promise<boolean> {
   return confirmarAccion(titulo, detalle, "Eliminar");
 }

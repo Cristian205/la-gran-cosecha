@@ -1,5 +1,8 @@
 services:
   - type: web
+    # Conserva el nombre de antes de Kryon X a propósito: un Blueprint de Render
+    # identifica el servicio por este nombre, y cambiarlo crearía uno nuevo con
+    # otra URL en vez de renombrar el existente.
     name: crynex-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
@@ -63,3 +66,21 @@ services:
         sync: false
       - key: R2_LOCATION
         value: media
+
+      # --- WhatsApp (apps.mensajeria): Meta Cloud API + Twilio de respaldo ---
+      # Sin ellas el sistema funciona igual y no envía nada (o usa el modo
+      # SIMULADO si el negocio lo elige). Guía: backend/WHATSAPP.md
+      - key: META_WHATSAPP_TOKEN
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_STATUS_CALLBACK_URL
+        sync: false
+      - key: TWILIO_WEBHOOK_BASE_URL
+        sync: false

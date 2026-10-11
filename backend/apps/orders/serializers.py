@@ -44,10 +44,30 @@ class ClienteSerializer(serializers.ModelSerializer):
             "direccion_cliente",
             "documento_cliente",
             "acepto_precios_en",
+            "autorizo_datos_en",
+            "acepta_whatsapp",
+            "whatsapp_decidido_en",
             "fecha_registro_cliente",
             "total_pedidos",
         ]
-        read_only_fields = ["acepto_precios_en"]
+        # La autorización de datos solo la da el cliente (en la tienda). El
+        # consentimiento de WhatsApp sí lo puede registrar el equipo: lo pidió
+        # por teléfono o en el mostrador. Lo que nunca se edita es la fecha.
+        read_only_fields = ["acepto_precios_en", "autorizo_datos_en", "whatsapp_decidido_en"]
+
+    def create(self, validated_data):
+        if validated_data.get("acepta_whatsapp"):
+            from django.utils import timezone  # noqa: PLC0415
+
+            validated_data["whatsapp_decidido_en"] = timezone.now()
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        if "acepta_whatsapp" in validated_data and validated_data["acepta_whatsapp"] != instance.acepta_whatsapp:
+            from django.utils import timezone  # noqa: PLC0415
+
+            validated_data["whatsapp_decidido_en"] = timezone.now()
+        return super().update(instance, validated_data)
 
     def validate_documento_cliente(self, valor):
         """
@@ -186,6 +206,12 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
 # ==========================================================================
 # CREACIÓN PÚBLICA DE PEDIDO (storefront)
 # ==========================================================================
+AVISO_AUTORIZACION = (
+    "Para enviar el pedido necesitamos tu autorización para tratar tus datos "
+    "personales según nuestra política."
+)
+
+
 class ClienteInputSerializer(serializers.Serializer):
     # Opcional porque un cliente con cédula y datos guardados no vuelve a
     # escribir su nombre; `CrearPedidoSerializer.validate` decide cuándo falta.
@@ -196,6 +222,12 @@ class ClienteInputSerializer(serializers.Serializer):
     #: El acuerdo "el precio final se ajusta al mercado del día". En modo
     #: cédula se exige en el primer pedido y se guarda en el cliente.
     acepta_precios = serializers.BooleanField(required=False, default=False)
+    #: La autorización de tratamiento de datos (Ley 1581). Se exige mientras
+    #: el cliente no la haya dado antes, y se guarda con su fecha.
+    autoriza_datos = serializers.BooleanField(required=False, default=False)
+    #: Si acepta los avisos del pedido por WhatsApp. `None` = no se le
+    #: preguntó en este pedido (ya lo había decidido): no cambia nada.
+    acepta_whatsapp = serializers.BooleanField(required=False, allow_null=True, default=None)
     #: Solo para este pedido: la dirección guardada del cliente no cambia.
     direccion_entrega = serializers.CharField(required=False, allow_blank=True)
 
@@ -203,6 +235,34 @@ class ClienteInputSerializer(serializers.Serializer):
 class ItemCatalogoSerializer(serializers.Serializer):
     presentacion_id = ClaveDelNegocio(PresentacionProducto, source="presentacion")
     cantidad = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
+
+    def validate(self, attrs):
+        """
+        Lo que la tienda ya impide, comprobado otra vez aquí: el carrito vive
+        en el navegador y puede traer una presentación que se desactivó ayer,
+        o una cantidad que la regla de hoy ya no admite.
+        """
+        from apps.catalog import cantidades  # noqa: PLC0415
+
+        presentacion = attrs["presentacion"]
+        nombre = f"{presentacion.producto.nombre_producto} ({presentacion.nombre_presentacion})"
+        if not (presentacion.estado_presentacion and presentacion.producto.estado_producto):
+            raise serializers.ValidationError(
+                {"presentacion_id": f"{nombre} ya no está disponible. Quítalo del pedido."}
+            )
+        if not cantidades.cantidad_valida(
+            attrs["cantidad"],
+            presentacion.cantidad_minima,
+            presentacion.incremento_cantidad,
+            presentacion.decimales_cantidad,
+        ):
+            raise serializers.ValidationError(
+                {
+                    "cantidad": f"{nombre} se pide {cantidades.describir(presentacion)}. "
+                    "Ajusta la cantidad."
+                }
+            )
+        return attrs
 
 
 class ItemPersonalizadoSerializer(serializers.Serializer):
@@ -282,8 +342,18 @@ class CrearPedidoSerializer(serializers.Serializer):
                     raise serializers.ValidationError({"cliente": faltan})
             attrs["_por_cedula"] = True
             attrs["_cliente_existente"] = existente
+            ya_autorizo = existente is not None and existente.autorizo_datos_en is not None
         elif not (datos.get("nombre") or "").strip():
             raise serializers.ValidationError({"cliente": {"nombre": "Escribe tu nombre."}})
+        else:
+            # Por nombre no hay forma segura de saber si ESTA persona ya
+            # autorizó: el nombre no la identifica. Se pide en cada pedido.
+            ya_autorizo = False
+
+        if not ya_autorizo and not datos.get("autoriza_datos"):
+            raise serializers.ValidationError(
+                {"cliente": {"autoriza_datos": AVISO_AUTORIZACION}}
+            )
         return attrs
 
     def _cliente_por_nombre(self, datos):
@@ -331,15 +401,45 @@ class CrearPedidoSerializer(serializers.Serializer):
             cliente = Cliente.objects.get(documento_cliente=datos["cedula"])
         return cliente
 
+    def _registrar_consentimientos(self, cliente, datos, *, conocido: bool):
+        """
+        Guarda la autorización de datos y la decisión sobre WhatsApp, con su
+        fecha: es la prueba que piden la Ley 1581 y Meta.
+
+        A un cliente con cédula y datos completos, lo que llegue del
+        formulario solo puede COMPLETAR lo que nunca decidió, no cambiarlo:
+        quien conozca una cédula ajena no debe poder suscribir ni dar de baja
+        a esa persona. Retirar el consentimiento se hace respondiendo «BAJA»
+        o pidiéndoselo al negocio.
+        """
+        from django.utils import timezone  # noqa: PLC0415
+
+        ahora = timezone.now()
+        campos = []
+        if datos.get("autoriza_datos") and cliente.autorizo_datos_en is None:
+            cliente.autorizo_datos_en = ahora
+            campos.append("autorizo_datos_en")
+        whatsapp = datos.get("acepta_whatsapp")
+        if whatsapp is not None and (not conocido or cliente.whatsapp_decidido_en is None):
+            cliente.acepta_whatsapp = whatsapp
+            cliente.whatsapp_decidido_en = ahora
+            campos += ["acepta_whatsapp", "whatsapp_decidido_en"]
+        if campos:
+            cliente.save(update_fields=campos)
+
     @transaction.atomic
     def create(self, validated_data):
         datos_cliente = validated_data["cliente"]
         request = self.context.get("request")
 
+        existente = validated_data.get("_cliente_existente")
         if validated_data.get("_por_cedula"):
-            cliente = self._cliente_por_cedula(datos_cliente, validated_data.get("_cliente_existente"))
+            cliente = self._cliente_por_cedula(datos_cliente, existente)
+            conocido = existente is not None and existente.datos_completos
         else:
             cliente = self._cliente_por_nombre(datos_cliente)
+            conocido = False
+        self._registrar_consentimientos(cliente, datos_cliente, conocido=conocido)
 
         usuario = None
         if request and request.user and request.user.is_authenticated:
@@ -505,6 +605,7 @@ class EditarPedidoSerializer(serializers.Serializer):
                             "personalizado; elimínalo y agrega uno nuevo."
                         )
                     if nueva_presentacion and nueva_presentacion.id != detalle.presentacion_id:
+                        _exigir_presentacion_vendible(nueva_presentacion)
                         cambios.append((
                             "presentacion",
                             _etiqueta_presentacion(detalle.presentacion),
@@ -563,6 +664,8 @@ class EditarPedidoSerializer(serializers.Serializer):
                         "Cada producto nuevo debe ser de catálogo (con presentación) "
                         "o personalizado (con nombre), no ambos ni ninguno."
                     )
+                if nueva_presentacion:
+                    _exigir_presentacion_vendible(nueva_presentacion)
                 nuevo_detalle = DetallePedido(
                     pedido=pedido,
                     presentacion=nueva_presentacion,
@@ -595,6 +698,20 @@ class EditarPedidoSerializer(serializers.Serializer):
 # ==========================================================================
 # HISTORIAL DE CAMBIOS POR PEDIDO
 # ==========================================================================
+def _exigir_presentacion_vendible(presentacion):
+    """
+    Una presentación desactivada no entra en líneas NUEVAS de un pedido.
+
+    Las líneas que ya la tenían se quedan como están: desactivar una
+    presentación no puede reescribir pedidos que ya se hicieron.
+    """
+    if not (presentacion.estado_presentacion and presentacion.producto.estado_producto):
+        raise serializers.ValidationError(
+            f"{_etiqueta_presentacion(presentacion)} está desactivada y no se puede "
+            "agregar a un pedido."
+        )
+
+
 def _etiqueta_presentacion(presentacion):
     return (
         f"{presentacion.producto.nombre_producto} · {presentacion.nombre_presentacion} "

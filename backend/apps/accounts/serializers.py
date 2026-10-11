@@ -14,7 +14,7 @@ def _codenames_activos():
 
     `apps.accounts.permisos.TODOS_LOS_CODENAMES` era la única fuente cuando el
     catálogo vivía en código; ahora vive en `PermisoDisponible`, editable desde
-    el panel de Crynex. Seguir validando contra la lista fija dejaría sin poder
+    el panel de Kryon X. Seguir validando contra la lista fija dejaría sin poder
     repartirse ningún permiso que se cree de aquí en adelante.
     """
     from apps.billing.models import PermisoDisponible  # noqa: PLC0415

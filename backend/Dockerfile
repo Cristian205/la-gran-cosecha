@@ -20,6 +20,11 @@ RUN apt-get update && apt-get install -y libglib2.0-0 \
         libffi-dev \
         libcairo2 \
         shared-mime-info \
+        # La factura pide Helvetica/Arial. Sin una fuente con sus medidas, la
+        # imagen caía en DejaVu Sans (~12% más ancha) y los nombres salían más
+        # recortados que en desarrollo: factura_layout mide con las de Arial.
+        # Liberation Sans tiene exactamente esas medidas.
+        fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

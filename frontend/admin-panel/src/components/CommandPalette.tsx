@@ -14,6 +14,10 @@ import {
   User,
   Users,
   type LucideIcon,
+  MessageCircle,
+  Paintbrush,
+  Tag,
+  Workflow,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { obtenerClientes, obtenerPedidos, obtenerProductos } from "../api/resources";
@@ -53,8 +57,12 @@ const PAGINAS: PaginaBuscable[] = [
       "confianza",
     ],
   },
-  { titulo: "Tu negocio", ruta: "/contenido?pestana=negocio", icono: Building2, palabras: ["negocio", "módulos", "capacidades"] },
-  { titulo: "Páginas de la tienda", ruta: "/contenido?pestana=paginas", icono: LayoutTemplate, palabras: ["páginas", "secciones", "textos", "inicio", "nosotros", "contacto"] },
+  { titulo: "Tu negocio", ruta: "/contenido?seccion=negocio/operacion", icono: Building2, palabras: ["negocio", "módulos", "capacidades"] },
+  { titulo: "Páginas de la tienda", ruta: "/contenido?seccion=contenido/paginas", icono: LayoutTemplate, palabras: ["páginas", "secciones", "textos", "inicio", "nosotros", "contacto"] },
+  { titulo: "Identidad del negocio", ruta: "/contenido?seccion=negocio/identidad", icono: Tag, palabras: ["logo", "nombre", "marca", "redes"] },
+  { titulo: "Apariencia de la tienda", ruta: "/contenido?seccion=diseno/apariencia", icono: Paintbrush, palabras: ["colores", "fuente", "tipografía", "botones", "diseño"] },
+  { titulo: "Automatizaciones", ruta: "/contenido?seccion=automatizaciones/reglas", icono: Workflow, palabras: ["reglas", "avisos", "automático", "plantillas", "ejecuciones"] },
+  { titulo: "WhatsApp", ruta: "/contenido?seccion=integraciones/whatsapp", icono: MessageCircle, palabras: ["whatsapp", "meta", "twilio", "integración", "alertas"] },
   { titulo: "Perfil", ruta: "/perfil", icono: User, palabras: ["perfil", "cuenta"] },
   { titulo: "Preferencias", ruta: "/configuracion", icono: Settings, palabras: ["preferencias", "ajustes", "contraseña"] },
   { titulo: "Notificaciones", ruta: "/notificaciones", icono: Bell, palabras: ["notificaciones", "avisos"] },

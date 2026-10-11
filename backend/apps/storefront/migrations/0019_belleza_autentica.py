@@ -50,7 +50,7 @@ def booleano(titulo, defecto=False):
 
 
 #: Lo que gana cada bloque. Se anade sin pisar lo que ya hubiera: si alguien
-#: retoco un esquema desde el panel de Crynex, su trabajo manda.
+#: retoco un esquema desde el panel de Kryon X, su trabajo manda.
 PROPS_NUEVAS = {
     "cabecera": {
         "categorias_texto": texto("Boton de categorias (vacio = sin boton)"),

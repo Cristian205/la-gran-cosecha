@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import Count, DecimalField, Min, OuterRef, Prefetch, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from rest_framework import status, viewsets
@@ -14,6 +15,7 @@ from .models import Categoria, HistorialPrecio, PresentacionProducto, Producto, 
 from .serializers import (
     CategoriaSerializer,
     HistorialPrecioSerializer,
+    PresentacionGestionSerializer,
     PresentacionProductoSerializer,
     ProductoSerializer,
     ProductoWriteSerializer,
@@ -52,6 +54,13 @@ class UnidadMedidaViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     serializer_class = UnidadMedidaSerializer
     permission_classes = [SoloLecturaPublicaOStaff]
     modelo = UnidadMedida
+
+    def get_permissions(self):
+        # Crear o cambiar unidades es configurar el catálogo: lo hace quien
+        # puede editar productos (el editor de presentaciones las crea).
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [requiere_permiso("catalog.change_producto")()]
+        return super().get_permissions()
     # Catálogo cerrado y pequeño que los <select> del panel consumen entero:
     # paginarlo solo hacía desaparecer las unidades a partir de la número 20.
     pagination_class = None
@@ -247,18 +256,51 @@ def _validar_imagen(imagen):
 
 
 class PresentacionProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
-    """Presentaciones (staff). El borrado es lógico."""
+    """
+    Presentaciones de un producto, una a una (panel).
 
-    serializer_class = PresentacionProductoSerializer
+    Leer: cualquier persona del equipo. Crear, editar, ordenar, activar o
+    desactivar: quien puede editar productos, porque una presentación es parte
+    del producto. El borrado es lógico: los pedidos y las facturas viejas
+    apuntan a la presentación y tienen que seguir diciendo qué se vendió.
+
+    `?producto=<id>` devuelve las de un producto, activas e inactivas, en su
+    orden. Es lo que pide el editor del panel; el catálogo público solo lleva
+    las activas dentro de cada producto.
+    """
+
     permission_classes = [EsStaff]
     modelo = PresentacionProducto
+    # Un producto tiene pocas presentaciones y el editor las quiere todas.
+    pagination_class = None
+
+    ACCIONES_DE_ESCRITURA = (
+        "create",
+        "update",
+        "partial_update",
+        "destroy",
+        "imagen",
+        "reordenar",
+    )
 
     def get_permissions(self):
-        # La foto de una presentación es parte del producto: la cambia quien
-        # puede editar productos, igual que la foto principal.
-        if self.action == "imagen":
+        # La foto y los datos de una presentación son parte del producto: los
+        # cambia quien puede editar productos, igual que la foto principal.
+        if self.action in self.ACCIONES_DE_ESCRITURA:
             return [requiere_permiso("catalog.change_producto")()]
         return super().get_permissions()
+
+    def get_serializer_class(self):
+        if self.action in ("create", "update", "partial_update"):
+            return PresentacionGestionSerializer
+        return PresentacionProductoSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related("unidad_venta", "producto")
+        producto = self.request.query_params.get("producto")
+        if producto is not None:
+            qs = qs.filter(producto_id=producto) if producto.isdigit() else qs.none()
+        return qs.order_by("orden", "id")
 
     @action(detail=True, methods=["post", "delete"], parser_classes=[MultiPartParser, FormParser])
     def imagen(self, request, pk=None):
@@ -269,7 +311,7 @@ class PresentacionProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
                 presentacion.imagen.delete(save=False)
             presentacion.imagen = None
             presentacion.save(update_fields=["imagen"])
-            return Response(self.get_serializer(presentacion).data)
+            return Response(PresentacionProductoSerializer(presentacion, context={"request": request}).data)
 
         archivo = request.FILES.get("imagen")
         error = _validar_imagen(archivo)
@@ -277,10 +319,52 @@ class PresentacionProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             return Response({"ok": False, "mensaje": error}, status=status.HTTP_400_BAD_REQUEST)
         presentacion.imagen = archivo
         presentacion.save(update_fields=["imagen"])
-        return Response(self.get_serializer(presentacion).data)
+        return Response(PresentacionProductoSerializer(presentacion, context={"request": request}).data)
 
-    def get_queryset(self):
-        return super().get_queryset().select_related("unidad_venta", "producto")
+    @action(detail=False, methods=["post"])
+    def reordenar(self, request):
+        """
+        `{"producto": 7, "ids": [12, 9, 15]}`: deja las presentaciones de ese
+        producto en ese orden.
+
+        Tienen que venir TODAS las del producto, ni una más ni una menos: un
+        orden parcial dejaría a las que faltan con números que ya no se
+        corresponden con nada, y un id ajeno no puede colarse en la lista.
+        """
+        producto_id = request.data.get("producto")
+        ids = request.data.get("ids")
+        if not isinstance(ids, list) or not all(isinstance(i, int) for i in ids):
+            return Response(
+                {"ids": ["Envía la lista completa de presentaciones en el orden deseado."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        with transaction.atomic():
+            presentaciones = {
+                p.id: p
+                for p in self.get_queryset()
+                .filter(producto_id=producto_id)
+                .select_for_update()
+            }
+            if not presentaciones:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            if sorted(ids) != sorted(presentaciones):
+                return Response(
+                    {"ids": ["La lista no coincide con las presentaciones actuales del producto. Recarga e inténtalo de nuevo."]},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            cambiadas = []
+            for posicion, pid in enumerate(ids):
+                pres = presentaciones[pid]
+                if pres.orden != posicion:
+                    pres.orden = posicion
+                    pres.version += 1
+                    cambiadas.append(pres)
+            PresentacionProducto.objects.bulk_update(cambiadas, ["orden", "version"])
+
+        ordenadas = sorted(presentaciones.values(), key=lambda p: p.orden)
+        return Response(
+            PresentacionProductoSerializer(ordenadas, many=True, context={"request": request}).data
+        )
 
     def destroy(self, request, *args, **kwargs):
         presentacion = self.get_object()

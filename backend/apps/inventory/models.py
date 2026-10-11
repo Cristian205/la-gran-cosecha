@@ -1,5 +1,5 @@
 """
-El libro mayor de existencias de Crynex.
+El libro mayor de existencias de Kryon X.
 
 Hasta aquí la plataforma no sabía cuánto hay de nada: el catálogo tenía precios
 y presentaciones, los pedidos sumaban totales, y nadie descontaba. Esta app es

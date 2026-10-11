@@ -4,7 +4,7 @@ import { api } from "./client";
  * El perfil del negocio: qué sabe hacer y qué módulos usa.
  *
  * Conviene tener presente la distinción que gobierna toda esta pantalla,
- * porque es la que evita que Crynex se convierta en una aplicación por sector:
+ * porque es la que evita que Kryon X se convierta en una aplicación por sector:
  *
  *   sector       una ETIQUETA. Se muestra, se usa para sugerir en el alta,
  *                y nada más. Nadie ramifica sobre ella.

@@ -1,7 +1,7 @@
 """
 El catálogo de capacidades: qué se puede decir de un negocio.
 
-Es la pieza que decide si Crynex sigue siendo un sistema o se convierte en diez
+Es la pieza que decide si Kryon X sigue siendo un sistema o se convierte en diez
 aplicaciones dentro de un repositorio, así que conviene ser explícito sobre la
 regla que la gobierna:
 

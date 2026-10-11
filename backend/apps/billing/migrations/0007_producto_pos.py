@@ -8,7 +8,7 @@ comprobacion de un modulo nuevo, ya con dos ejemplos detras:
     1. `accounts/permisos.py`   el catalogo en Python. Sin esto, un gerente no
                                 puede recibir el permiso.
     2. Una migracion aqui       el catalogo en la base. Sin esto el modulo
-                                funciona, pero Crynex no puede venderlo ni
+                                funciona, pero Kryon X no puede venderlo ni
                                 incluirlo en un plan: es invisible.
     3. `<app>/migrations/…rls`  la tercera capa de aislamiento. Activar RLS es
                                 tabla por tabla; una app posterior a
@@ -19,7 +19,7 @@ razon es comercial y conviene decirla: inventario es infraestructura que todo
 negocio acaba necesitando, y regalar la lectura no le quita valor a nadie. El
 punto de venta es un producto que se vende aparte, y meterlo en los planes ya
 contratados seria regalarlo a los clientes actuales sin que nadie lo decidiera.
-Se activa desde el panel de Crynex, cliente a cliente.
+Se activa desde el panel de Kryon X, cliente a cliente.
 
 # Por que esto RECONCILIA en vez de crear
 

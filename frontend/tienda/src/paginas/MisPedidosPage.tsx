@@ -9,7 +9,7 @@ import { useEnvoltorio, useSiteConfig } from "@/componentes/CapaCliente";
 import { mensajeDeConsulta } from "@/componentes/tienda/IdentificacionCedula";
 import { useCart } from "@/estado/carrito";
 import { soloDigitos, useClienteTienda } from "@/estado/clienteTienda";
-import { formatoCantidad, formatoPrecio } from "@/lib/utiles";
+import { ajustarARegla, formatoCantidad, formatoPrecio, reglaCantidad } from "@/lib/utiles";
 
 const FECHA = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "long", year: "numeric" });
 
@@ -17,17 +17,25 @@ const FECHA = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "long", 
 function aCarrito(pedido: PedidoHistorial): ItemCarrito[] {
   return pedido.lineas
     .filter((l) => l.disponible)
-    .map((l) => ({
+    .map((l) => {
+      // La regla de HOY de la presentación: la cantidad de aquel pedido se
+      // ajusta a ella, o el pedido repetido lo rechazaría el servidor.
+      const regla = reglaCantidad(l, l.permite_fraccion, l.tipo_cantidad);
+      return {
       productoId: l.producto_id,
       productoNombre: l.producto_nombre,
       imagenUrl: l.imagen_url,
       presentacionId: l.presentacion_id,
       presentacionNombre: l.presentacion_nombre,
       precioUnitario: Number(l.precio_actual),
-      cantidad: Number(l.cantidad),
+      cantidad: ajustarARegla(Number(l.cantidad), regla),
       permiteFraccion: l.permite_fraccion,
       tipoCantidad: l.tipo_cantidad,
-    }));
+      minimo: regla.minimo,
+      paso: regla.paso,
+      decimales: regla.decimales,
+      };
+    });
 }
 
 /**

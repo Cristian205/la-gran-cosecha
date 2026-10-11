@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     AnuncioViewSet,
     BeneficioComercialViewSet,
+    LegalView,
     OfertaProductoViewSet,
     PromoBannerViewSet,
     SiteConfigView,
@@ -21,6 +22,7 @@ router.register(r"ofertas", OfertaProductoViewSet, basename="ofertas")
 
 urlpatterns = [
     path("site-config/", SiteConfigView.as_view(), name="site-config"),
+    path("legal/", LegalView.as_view(), name="legal"),
 ]
 
 urlpatterns += router.urls

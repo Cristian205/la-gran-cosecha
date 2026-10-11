@@ -9,7 +9,7 @@ import {
 
 type Tema = "claro" | "oscuro";
 
-const CLAVE = "crynex-tema";
+const CLAVE = "kryonx-tema";
 
 interface ThemeState {
   tema: Tema;

@@ -2,7 +2,7 @@
  * La lógica del aspecto propio de un bloque, sin la pantalla.
  *
  * Los dos paneles dibujan esta pestaña con clases distintas —`constructor__grupo`
- * en el de Crynex, `constructor-grupo` en el del negocio— pero deciden lo mismo:
+ * en el de Kryon X, `constructor-grupo` en el del negocio— pero deciden lo mismo:
  * qué tokens salen, en qué orden, agrupados cómo, y qué significa dejar uno en
  * blanco. Eso es lo que está aquí.
  */

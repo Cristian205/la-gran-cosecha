@@ -78,7 +78,8 @@ export function AnuncioFormModal({ anuncio, onCerrar, onGuardado }: Props) {
     <Modal
       titulo={anuncio ? "Editar anuncio" : "Nuevo anuncio"}
       onCerrar={onCerrar}
-      lateral
+      amplio
+      medio
       footer={
         <>
           <button className="btn secundario" onClick={onCerrar}>

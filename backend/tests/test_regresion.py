@@ -101,7 +101,7 @@ def test_el_orden_es_consecutivo(categoria):
 # ==========================================================================
 def _pedido_valido(presentacion, nombre="Tienda nueva"):
     return {
-        "cliente": {"nombre": nombre, "telefono": "3009998877"},
+        "cliente": {"nombre": nombre, "telefono": "3009998877", "autoriza_datos": True},
         "items": [{"presentacion_id": presentacion.id, "cantidad": "3"}],
         "observaciones": "Entregar por la mañana",
     }
@@ -143,7 +143,7 @@ def test_un_producto_personalizado_queda_pendiente_de_revision(api, categoria, u
     respuesta = api.post(
         "/api/orders/",
         {
-            "cliente": {"nombre": "Tienda curiosa"},
+            "cliente": {"nombre": "Tienda curiosa", "autoriza_datos": True},
             "personalizados": [
                 {
                     "nombre": "Algo que no está en catálogo",
@@ -319,14 +319,14 @@ def test_las_comillas_de_una_variable_no_rompen_el_remitente():
     from config.settings.base import _sin_comillas
 
     for crudo in (
-        '"Seguridad Crynex <hola@ejemplo.com>"',
-        "'Seguridad Crynex <hola@ejemplo.com>'",
-        "Seguridad Crynex <hola@ejemplo.com>",
-        '  "Seguridad Crynex <hola@ejemplo.com>"  ',
+        '"Seguridad Kryon X <hola@ejemplo.com>"',
+        "'Seguridad Kryon X <hola@ejemplo.com>'",
+        "Seguridad Kryon X <hola@ejemplo.com>",
+        '  "Seguridad Kryon X <hola@ejemplo.com>"  ',
     ):
         nombre, correo = parseaddr(_sin_comillas(crudo))
         assert correo == "hola@ejemplo.com", crudo
-        assert nombre == "Seguridad Crynex", crudo
+        assert nombre == "Seguridad Kryon X", crudo
 
 
 def test_un_remitente_invalido_se_para_antes_de_llamar_a_brevo():
@@ -344,7 +344,7 @@ def test_un_remitente_invalido_se_para_antes_de_llamar_a_brevo():
     mensaje = EmailMessage(
         subject="Hola",
         body="Cuerpo",
-        from_email='"Seguridad Crynex <hola@ejemplo.com>"',
+        from_email='"Seguridad Kryon X <hola@ejemplo.com>"',
         to=["destino@ejemplo.com"],
     )
     with pytest.raises(ValueError, match="DEFAULT_FROM_EMAIL"):

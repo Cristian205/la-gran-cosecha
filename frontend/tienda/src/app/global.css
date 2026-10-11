@@ -2333,18 +2333,29 @@ h1, h2, h3 {
 }
 
 /* ---------- Footer ----------
-   Cierra la tienda con una última acción útil: CTA de compra, accesos reales
-   al catálogo y ayuda directa. En móvil las listas colapsan en acordeones
-   para no apilar un pie enorme sobre el carrito y la barra de navegación. */
+   El cierre de la tienda y la firma de la marca. La jerarquía baja por
+   escalones: marca, las dos acciones (tienda y WhatsApp), títulos de columna,
+   enlaces, identificación del comercio y copyright. Cada escalón pierde peso
+   o contraste respecto al anterior; nada compite con la marca.
+   En móvil las listas colapsan en acordeones para no apilar un pie enorme
+   sobre el carrito y la barra de navegación. */
 .footer {
+  --f-fuerte: var(--footer-texto, white);
+  --f-texto: color-mix(in srgb, var(--footer-texto, white) 74%, transparent);
+  --f-suave: color-mix(in srgb, var(--footer-texto, white) 58%, transparent);
+  --f-linea: color-mix(in srgb, var(--footer-texto, white) 9%, transparent);
+  --f-acento: var(--marca-400);
+  --f-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --f-dur: 0.24s;
   position: relative;
+  isolation: isolate;
   margin-top: 3rem;
   background: linear-gradient(
     180deg,
     var(--footer-fondo, var(--tinta)),
-    color-mix(in srgb, var(--footer-fondo, var(--marca-900)) 85%, black)
+    color-mix(in srgb, var(--footer-fondo, var(--marca-900)) 86%, black)
   );
-  color: color-mix(in srgb, var(--footer-texto, white) 82%, transparent);
+  color: var(--f-texto);
 }
 /* Curva orgánica en el borde superior: separa el pie del contenido sin una
    línea dura, guiño al carácter agrícola sin llenar de ilustraciones. */
@@ -2358,13 +2369,30 @@ h1, h2, h3 {
   background: inherit;
   border-radius: 50% 50% 0 0 / 100% 100% 0 0;
 }
+/* La atmósfera: dos luces verdes muy tenues, curvas de nivel en una esquina
+   (campo y cartografía: lo agrícola y lo técnico a la vez) y un grano casi
+   imperceptible que le quita el plano de color digital. Todo por debajo del
+   contenido y sin capturar el puntero. */
+.footer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(55% 60% at 6% 0%, color-mix(in srgb, var(--marca-400) 9%, transparent), transparent 70%),
+    radial-gradient(40% 55% at 100% 100%, color-mix(in srgb, var(--marca-300) 6%, transparent), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400' fill='none' stroke='white' stroke-opacity='0.055'%3E%3Cpath d='M300 25c115 0 205 65 205 165s-110 185-215 185S90 300 90 200 185 25 300 25Z'/%3E%3Cpath d='M300 60c90 0 170 50 170 130s-90 150-180 150-160-60-160-140S210 60 300 60Z'/%3E%3Cpath d='M300 95c70 0 135 40 135 100s-70 115-140 115-125-45-125-108S230 95 300 95Z'/%3E%3Cpath d='M300 130c50 0 100 28 100 68s-50 80-100 80-90-32-90-75 40-73 90-73Z'/%3E%3Cpath d='M302 165c30 0 62 16 62 38s-32 46-62 46-55-18-55-42 25-42 55-42Z'/%3E%3C/svg%3E")
+      right -140px top -90px / 680px auto no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+}
 
 /* El CTA se lee como un bloque comercial aparte y no como la primera fila del
    pie: una tarjeta propia, con esquinas redondeadas y aire alrededor, en vez
    de una franja a todo lo ancho pegada al resto. */
 .footer-cta {
   position: relative;
-  margin: 0 clamp(1rem, 4vw, 2.5rem) 2.2rem;
+  margin: 0 clamp(1rem, 4vw, 2.5rem) 0.5rem;
   padding-top: 2.6rem;
   border-radius: var(--radio-lg);
   background:
@@ -2404,189 +2432,340 @@ h1, h2, h3 {
 }
 .btn-whatsapp:hover { filter: brightness(1.06); transform: translateY(-1px); }
 
+/* Escritorio: Marca | Contacto | Productos | Empresa | Legal y ayuda. */
 .footer-top {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 1rem 1.5rem 2rem;
+  padding: 3rem 1.5rem 2.75rem;
   display: grid;
-  grid-template-columns: 1.7fr 1.1fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.15fr) minmax(0, 0.9fr) minmax(0, 0.9fr);
   gap: 2.5rem;
 }
-.footer-marca { display: flex; align-items: center; gap: 0.65rem; font-weight: 800; font-size: 1.25rem; color: white; margin-bottom: 0.9rem; }
-.footer-tagline {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1.4;
-  color: white;
-  max-width: 320px;
+.footer-top--con-legal {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.15fr) minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.1fr);
+  gap: 2.25rem;
 }
-.footer-lema { margin: 0 0 1rem; font-size: 0.87rem; line-height: 1.7; max-width: 320px; color: rgba(255, 255, 255, 0.72); }
-.footer-info-lineas { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.2rem; }
-.footer-info-linea {
+
+/* -- 1. Marca -- */
+.footer-marca {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.83rem;
-  color: rgba(255, 255, 255, 0.68);
+  gap: 0.85rem;
+  margin-bottom: 1.4rem;
 }
-.footer-info-linea svg { color: var(--marca-400); flex-shrink: 0; }
-
-.footer-btn-tienda {
+.footer-logo {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  overflow: hidden;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--f-fuerte);
+}
+.footer-logo img { width: 100%; height: 100%; object-fit: contain; }
+.footer-logo--letra {
+  background: color-mix(in srgb, var(--marca-400) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--f-fuerte) 14%, transparent);
+}
+.footer-marca-texto { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.footer-marca-nombre {
+  font-size: 1.32rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--f-fuerte);
+}
+/* La frase institucional firma, no explica: pequeña, espaciada y en el verde
+   claro de la marca, un paso por debajo del nombre. */
+.footer-firma {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--marca-300) 78%, transparent);
+}
+.footer-tagline {
+  margin: 0 0 0.45rem;
+  max-width: 340px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--f-fuerte);
+}
+.footer-lema {
+  margin: 0 0 1.1rem;
+  max-width: 340px;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--f-texto);
+}
+.footer-info-lineas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1.25rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+.footer-info-linea {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  min-height: 42px;
-  padding: 0.5rem 1.1rem;
-  border-radius: var(--btn-radio);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  color: white;
-  font-size: 0.86rem;
-  font-weight: 700;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  font-size: 0.82rem;
+  color: var(--f-suave);
 }
-.footer-btn-tienda:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--marca-400); }
+.footer-info-linea svg { color: var(--f-acento); flex-shrink: 0; }
 
-.footer-col h4 {
-  color: white;
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin: 0 0 1.1rem;
+/* "Explorar tienda": cápsula de vidrio con la flecha en su propio círculo de
+   marca. Presencia sin gritar; el botón lleno es WhatsApp. */
+.footer-btn-tienda {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 44px;
+  padding: 0.4rem 0.4rem 0.4rem 1.15rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--f-fuerte) 16%, transparent);
+  background: color-mix(in srgb, var(--f-fuerte) 6%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--f-fuerte) 7%, transparent);
+  color: var(--f-fuerte);
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition:
+    background var(--f-dur) var(--f-ease),
+    border-color var(--f-dur) var(--f-ease),
+    box-shadow var(--f-dur) var(--f-ease),
+    transform var(--f-dur) var(--f-ease);
 }
-.footer-col-toggle { display: none; }
-.footer-col-panel { display: flex; flex-direction: column; }
-.footer-col-panel a, .footer-col-panel .linea-contacto {
-  position: relative;
+.footer-btn-tienda-flecha {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--f-acento);
+  color: var(--marca-900);
+  transition: transform var(--f-dur) var(--f-ease);
+}
+.footer-btn-tienda:hover {
+  background: color-mix(in srgb, var(--f-fuerte) 11%, transparent);
+  border-color: color-mix(in srgb, var(--f-acento) 55%, transparent);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 color-mix(in srgb, var(--f-fuerte) 9%, transparent);
+  transform: translateY(-1px);
+}
+.footer-btn-tienda:hover .footer-btn-tienda-flecha { transform: translateX(3px); }
+.footer-btn-tienda:active { transform: translateY(0); }
+
+.footer-redes { display: flex; gap: 0.6rem; margin-top: 1.4rem; }
+.footer-redes a {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--f-fuerte) 14%, transparent);
+  color: var(--f-texto);
+  transition:
+    background var(--f-dur) var(--f-ease),
+    border-color var(--f-dur) var(--f-ease),
+    color var(--f-dur) var(--f-ease),
+    transform var(--f-dur) var(--f-ease);
+}
+.footer-redes a:hover {
+  background: color-mix(in srgb, var(--f-acento) 18%, transparent);
+  border-color: color-mix(in srgb, var(--f-acento) 50%, transparent);
+  color: var(--f-fuerte);
+  transform: translateY(-2px);
+}
+
+/* -- Títulos de columna: pequeños, espaciados, con una raya de marca -- */
+.footer-col h4 {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  min-height: 34px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.88rem;
-  margin-bottom: 0.35rem;
-  transition: color 0.18s ease, transform 0.18s ease, padding-left 0.18s ease;
+  margin: 0 0 1.05rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--f-fuerte);
 }
-/* El "indicador" al pasar el cursor: un guioncito que crece a la izquierda,
-   más discreto que desplazar todo el texto y más visible que solo un cambio
-   de color. */
-.footer-col-panel a::before {
+.footer-col h4::before {
   content: "";
-  width: 0;
-  height: 1px;
-  background: var(--marca-400);
-  transition: width 0.18s ease;
+  flex: none;
+  width: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--f-acento);
 }
-.footer-col-panel a:hover {
-  color: white;
-  padding-left: 0.15rem;
-}
-.footer-col-panel a:hover::before { width: 10px; }
-@media (prefers-reduced-motion: reduce) {
-  .footer-col-panel a { transition: color 0.18s ease; }
-  .footer-col-panel a:hover { padding-left: 0; }
-  .footer-col-panel a::before { transition: none; }
-}
-.footer-col-panel a:focus-visible,
-.footer-btn-tienda:focus-visible,
-.footer-btn-wsp:focus-visible,
-.footer-col-toggle:focus-visible,
-.footer-redes a:focus-visible {
-  outline: 2px solid var(--marca-400);
-  outline-offset: 3px;
-  border-radius: 8px;
-}
+.footer-col-toggle { display: none; }
 
-.footer-ayuda-texto { margin: -0.4rem 0 0.9rem; font-size: 0.85rem; line-height: 1.6; }
-
-/* Los datos de contacto como pequeños elementos interactivos (chips), no
-   texto plano: el ícono en su propio círculo, fondo sutil que se aclara al
-   pasar el cursor. El indicador de línea de los enlaces normales no aplica
-   aquí — es otra clase de elemento. */
-.footer-contacto-chips { gap: 0.5rem; }
-.footer-contacto-chips a::before { content: none; }
-.footer-contacto-item {
-  display: flex;
+/* -- Enlaces: peso menor que los títulos; al pasar, se aclaran y avanzan -- */
+.footer-col-panel { display: flex; flex-direction: column; align-items: flex-start; }
+.footer-col-panel a {
+  display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  min-height: 42px;
-  padding: 0.3rem 0.7rem 0.3rem 0.3rem;
-  border-radius: var(--btn-radio);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.85rem;
-  transition: background 0.18s ease, transform 0.18s ease;
+  gap: 0.4rem;
+  min-height: 32px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--f-texto);
+  transition: color var(--f-dur) var(--f-ease), transform var(--f-dur) var(--f-ease);
 }
-a.footer-contacto-item:hover { background: rgba(255, 255, 255, 0.14); transform: translateX(2px); color: white; }
-.footer-contacto-item--estatico { cursor: default; }
-.footer-contacto-item--estatico:hover { background: rgba(255, 255, 255, 0.06); transform: none; }
-.footer-contacto-icono {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--marca-400);
-  flex-shrink: 0;
+.footer-col-panel a:hover { color: var(--f-fuerte); transform: translateX(3px); }
+/* "Ver catálogo" es la puerta a la tienda: blanco, más peso y su flecha. */
+.footer-col-panel a.footer-enlace-principal {
+  margin-bottom: 0.2rem;
+  font-weight: 700;
+  color: var(--f-fuerte);
 }
-@media (prefers-reduced-motion: reduce) {
-  a.footer-contacto-item:hover { transform: none; }
+.footer-enlace-principal svg {
+  color: var(--f-acento);
+  transition: transform var(--f-dur) var(--f-ease);
 }
+.footer-enlace-principal:hover svg { transform: translateX(2px); }
+
+/* Legal y Ayuda comparten columna en escritorio. */
+.footer-col-grupo { display: flex; flex-direction: column; gap: 1.6rem; min-width: 0; }
+
+/* -- 2. Contacto: WhatsApp es la acción; el resto, datos ligeros -- */
+.footer-ayuda-texto { margin: -0.35rem 0 1rem; font-size: 0.85rem; line-height: 1.6; }
 .footer-btn-wsp {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  min-height: 44px;
-  padding: 0.55rem 1rem;
-  margin-bottom: 1rem;
-  border-radius: var(--btn-radio);
+  gap: 0.55rem;
+  min-height: 46px;
+  margin-bottom: 1.3rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 999px;
   background: var(--whatsapp);
   color: white;
-  font-size: 0.87rem;
+  font-size: 0.88rem;
   font-weight: 700;
-  transition: filter 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--whatsapp) 24%, transparent);
+  transition:
+    transform var(--f-dur) var(--f-ease),
+    box-shadow var(--f-dur) var(--f-ease),
+    filter var(--f-dur) var(--f-ease);
 }
-.footer-btn-wsp:hover { filter: brightness(1.06); transform: translateY(-1px); }
-
-.footer-redes { display: flex; gap: 0.7rem; margin-top: 1.2rem; }
-.footer-redes a {
-  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.85);
-  transition: background 0.15s, color 0.15s, transform 0.15s;
+.footer-btn-wsp:hover {
+  filter: brightness(1.05);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--whatsapp) 32%, transparent);
 }
-.footer-redes a:hover { background: var(--marca-500); color: white; transform: translateY(-2px); }
+.footer-btn-wsp:active { transform: translateY(0); }
+.footer-contacto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.footer-contacto-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 32px;
+  font-size: 0.86rem;
+  color: var(--f-texto);
+  overflow-wrap: anywhere;
+}
+.footer-contacto-item svg { flex: none; color: var(--f-acento); }
+a.footer-contacto-item {
+  transition: color var(--f-dur) var(--f-ease), transform var(--f-dur) var(--f-ease);
+}
+a.footer-contacto-item:hover { color: var(--f-fuerte); transform: translateX(3px); }
 
+.footer-col-panel a:focus-visible,
+.footer-btn-tienda:focus-visible,
+.footer-btn-wsp:focus-visible,
+.footer-col-toggle:focus-visible,
+.footer-redes a:focus-visible,
+a.footer-contacto-item:focus-visible,
+.footer-identidad a:focus-visible,
+.footer-legal a:focus-visible {
+  outline: 2px solid var(--f-acento);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* -- 5. Barra institucional: quién vende y cómo encontrarlo -- */
+.footer-identidad {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1.05rem 1.5rem;
+  border-top: 1px solid var(--f-linea);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 2rem;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--f-suave);
+}
+.footer-identidad-datos { display: flex; flex-wrap: wrap; align-items: center; margin: 0; }
+/* El separador es un punto dibujado, no un "·" de texto: no se queda
+   colgando al final de una línea cuando la fila se parte. */
+.footer-identidad-datos > span + span::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin: 0 0.65rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+  vertical-align: middle;
+}
+.footer-identidad-nombre { font-weight: 600; color: var(--f-texto); }
+.footer-identidad a { color: inherit; transition: color var(--f-dur) var(--f-ease); }
+.footer-identidad a:hover { color: var(--f-fuerte); }
+
+/* -- 6. Copyright: el último escalón, pero legible -- */
 .footer-bottom {
   max-width: 1240px;
   margin: 0 auto;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 1.2rem 1.5rem;
+  border-top: 1px solid var(--f-linea);
+  padding: 1.1rem 1.5rem 1.4rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--f-suave);
 }
 .footer-legal { display: flex; gap: 1.4rem; }
-.footer-legal a {
-  color: rgba(255, 255, 255, 0.55);
-  transition: color 0.18s ease;
-}
-.footer-legal a:hover { color: white; }
+.footer-legal a { color: var(--f-suave); transition: color var(--f-dur) var(--f-ease); }
+.footer-legal a:hover { color: var(--f-fuerte); }
+.footer--minimo .footer-legal { flex-wrap: wrap; row-gap: 0.4rem; }
 
+/* Tablet: marca a dos columnas junto al contacto; los enlaces, debajo. */
 @media (max-width: 1100px) {
-  .footer-top { grid-template-columns: 1.4fr 1fr 1fr; gap: 2rem; }
-  .footer-marca-col { grid-column: 1 / -1; }
+  .footer-top,
+  .footer-top--con-legal {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2.5rem 2rem;
+  }
+  .footer-marca-col { grid-column: span 2; }
+  .footer::after { background-size: auto, auto, 520px auto, auto; }
 }
 
+/* Móvil: un pie pensado para el pulgar. Marca, contacto completo y luego las
+   listas como acordeones: todo sigue ahí, a un toque, sin un pie interminable. */
 @media (max-width: 780px) {
   .footer { margin-top: 2rem; }
-  .footer-cta { margin: 0 0.7rem 1.6rem; }
+  .footer::after {
+    background-position: 0 0, 0 0, right -190px top -120px, 0 0;
+    background-size: auto, auto, 460px auto, auto;
+  }
+  .footer-cta { margin: 0 0.7rem 0.5rem; }
   .footer-cta-inner { padding: 1.8rem 1.1rem; text-align: center; justify-content: center; }
   .footer-cta h2 { font-size: 1.15rem; }
   .footer-cta-acciones { width: 100%; flex-direction: column; }
@@ -2596,24 +2775,34 @@ a.footer-contacto-item:hover { background: rgba(255, 255, 255, 0.14); transform:
     display: flex;
     flex-direction: column;
     gap: 0;
-    padding: 1.6rem 1.1rem 0.8rem;
+    padding: 2.25rem 1.25rem 0.75rem;
   }
-  .footer-marca-col { padding-bottom: 1.1rem; }
+  .footer-marca-col { padding-bottom: 1.6rem; }
+  .footer-marca { margin-bottom: 1.1rem; }
+  .footer-logo { width: 50px; height: 50px; border-radius: 14px; }
+  .footer-marca-nombre { font-size: 1.22rem; }
   .footer-tagline, .footer-lema { max-width: none; }
-  .footer-lema { margin-bottom: 0.9rem; font-size: 0.86rem; line-height: 1.6; }
+  .footer-lema { margin-bottom: 1rem; font-size: 0.86rem; line-height: 1.6; }
+  .footer-info-lineas { margin-bottom: 1.25rem; }
 
   .footer-ayuda {
-    padding: 1.1rem 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.4rem 0 1.25rem;
+    border-top: 1px solid var(--f-linea);
   }
-  .footer-ayuda-texto { margin: -0.5rem 0 0.75rem; }
-  .footer-btn-wsp { margin-bottom: 0.75rem; }
-  /* La ciudad y el horario no son enlaces: no necesitan 40px de alto. */
-  .footer-col-panel .linea-contacto { min-height: 30px; margin-bottom: 0.15rem; }
-  .footer-btn-wsp { width: 100%; }
+  .footer-ayuda-texto { margin: -0.45rem 0 0.85rem; }
+  .footer-btn-wsp { width: 100%; min-height: 48px; margin-bottom: 0.9rem; }
+  /* Teléfono y correo en dos columnas: los datos caben y el bloque no se
+     estira; ciudad y horario completan la rejilla. */
+  .footer-contacto {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.1rem 1rem;
+  }
+  .footer-contacto-item { min-height: 40px; }
 
   /* Las listas colapsan; el <h4> cede su papel al botón del acordeón. */
-  .footer-col:not(.footer-ayuda) { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+  .footer-col-grupo { gap: 0; }
+  .footer-col:not(.footer-ayuda) { border-top: 1px solid var(--f-linea); }
   .footer-col:not(.footer-ayuda) h4 { display: none; }
   .footer-col-toggle {
     display: flex;
@@ -2621,34 +2810,39 @@ a.footer-contacto-item:hover { background: rgba(255, 255, 255, 0.14); transform:
     justify-content: space-between;
     gap: 1rem;
     width: 100%;
-    min-height: 52px;
+    min-height: 54px;
     padding: 0.2rem 0;
     border: none;
     background: none;
-    color: white;
-    font-size: 0.95rem;
-    font-weight: 700;
+    color: var(--f-fuerte);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     text-align: left;
   }
-  .footer-col-toggle svg { transition: transform 0.18s ease; color: rgba(255, 255, 255, 0.6); }
-  .footer-col-toggle svg.girado { transform: rotate(45deg); }
+  .footer-col-toggle svg { transition: transform var(--f-dur) var(--f-ease); color: var(--f-suave); }
+  .footer-col-toggle svg.girado { transform: rotate(45deg); color: var(--f-acento); }
   .footer-col:not(.footer-ayuda) .footer-col-panel { display: none; }
   .footer-col:not(.footer-ayuda) .footer-col-panel.abierto {
     display: flex;
-    padding-bottom: 0.9rem;
-    animation: footer-panel-in 0.18s ease;
+    padding-bottom: 1rem;
+    animation: footer-panel-in 0.2s var(--f-ease);
   }
-  .footer-col-panel a, .footer-col-panel .linea-contacto { min-height: 40px; }
-  .footer-contacto-chips { gap: 0.6rem; }
-  a.footer-contacto-item, .footer-contacto-item { width: 100%; }
+  .footer-col-panel a { min-height: 42px; font-size: 0.92rem; }
 
-  .footer-bottom {
-    padding: 1rem 1.1rem;
-    font-size: 0.75rem;
-    justify-content: center;
-    text-align: center;
+  .footer-identidad {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    padding: 1.1rem 1.25rem;
+    font-size: 0.78rem;
   }
-  .footer-legal { justify-content: center; flex-wrap: wrap; row-gap: 0.4rem; }
+  .footer-bottom {
+    padding: 1rem 1.25rem 1.25rem;
+    font-size: 0.78rem;
+  }
+  .footer-legal { flex-wrap: wrap; row-gap: 0.4rem; }
 }
 @keyframes footer-panel-in {
   from { opacity: 0; transform: translateY(-4px); }
@@ -2656,8 +2850,22 @@ a.footer-contacto-item:hover { background: rgba(255, 255, 255, 0.14); transform:
 }
 @media (prefers-reduced-motion: reduce) {
   .footer-col-panel.abierto { animation: none; }
-  .footer-col-toggle svg { transition: none; }
-  .footer-col-panel a:hover, .footer-btn-wsp:hover, .btn-whatsapp:hover { transform: none; }
+  .footer-col-toggle svg,
+  .footer-col-panel a,
+  .footer-enlace-principal svg,
+  a.footer-contacto-item,
+  .footer-btn-tienda,
+  .footer-btn-tienda-flecha,
+  .footer-btn-wsp,
+  .footer-redes a { transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease; }
+  .footer-col-panel a:hover,
+  .footer-enlace-principal:hover svg,
+  a.footer-contacto-item:hover,
+  .footer-btn-tienda:hover,
+  .footer-btn-tienda:hover .footer-btn-tienda-flecha,
+  .footer-btn-wsp:hover,
+  .footer-redes a:hover,
+  .btn-whatsapp:hover { transform: none; }
 }
 
 /* ---------- Página: Contacto ----------
@@ -7083,6 +7291,42 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   text-transform: uppercase;
   color: var(--gris-600);
 }
+/* "Tu pedido" y la acción de vaciar comparten fila. */
+.carrito-cuerpo-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+.carrito-cuerpo-cab .carrito-kicker { margin-bottom: 0; }
+.carrito-vaciar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gris-600);
+  transition: background-color var(--t-rapido) ease, color var(--t-rapido) ease;
+}
+.carrito-vaciar:hover { background: #fef2f2; color: #dc2626; }
+.carrito-vaciar:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25); }
+.carrito-vaciar-confirma {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--tinta);
+}
+.carrito-vaciar--si { background: #dc2626; color: #fff; }
+.carrito-vaciar--si:hover { background: #b91c1c; color: #fff; }
+.carrito-vaciar--no:hover { background: var(--marca-100); color: var(--marca-700); }
 .carrito-lista { list-style: none; margin: 0; padding: 0; }
 /* El espacio entre tarjetas es padding de la envoltura, no `gap`: así, al
    quitar una línea, su hueco se cierra junto con ella en vez de saltar. */
@@ -7291,7 +7535,8 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   .carrito,
   .carrito-cifra--cambia { animation: none; }
   .carrito-cta svg,
-  .citem-quitar { transition: none; }
+  .citem-quitar,
+  .carrito-vaciar { transition: none; }
 }
 
 /* ---------- Fotos del contenido administrable ----------

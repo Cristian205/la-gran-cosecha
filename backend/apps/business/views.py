@@ -2,7 +2,7 @@
 Las rutas del perfil, en dos públicos separados por prefijo.
 
     /api/business/…    el negocio: su perfil, sus módulos, su alta guiada
-    /api/platform/…    Crynex: los presets de todos
+    /api/platform/…    Kryon X: los presets de todos
 
 La separación se lee en la URL a propósito. Un preset lo administra la
 plataforma y lo consumen todos los negocios; mezclarlos bajo el mismo prefijo
@@ -216,7 +216,7 @@ class AdoptarPresetView(ExigeNegocioMixin, APIView):
 # ==========================================================================
 class PresetViewSet(viewsets.ModelViewSet):
     """
-    El catálogo de presets, administrado desde el panel de Crynex.
+    El catálogo de presets, administrado desde el panel de Kryon X.
 
     No lleva ámbito de negocio porque no es de ningún negocio: es de la
     plataforma, igual que `Plantilla` y `Plan`. Su permiso es el de staff de

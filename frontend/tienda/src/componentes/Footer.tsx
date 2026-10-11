@@ -13,7 +13,10 @@ import {
   Truck,
 } from "lucide-react";
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { obtenerCategorias } from "@/lib/datos";
+import { obtenerCategorias, obtenerLegal } from "@/lib/datos";
+import { resolverDatos } from "@/lib/legal/datos";
+import { ENLACES_LEGALES } from "@/lib/legal/enlaces";
+import type { LegalGuardado } from "@/lib/legal/tipos";
 import { useSiteConfig } from "@/componentes/CapaCliente";
 import { ENLACES } from "@/lib/navegacion";
 import type { EnlaceCabecera } from "@/componentes/Navbar";
@@ -22,10 +25,15 @@ import { telHref, whatsappHref } from "@/lib/utiles";
 import { claseDeVariante } from "@/bloques/Seccion";
 import { TikTokIcon } from "@/componentes/icons/TikTokIcon";
 import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
+import { WhatsAppLineaIcon } from "@/componentes/icons/WhatsAppLineaIcon";
 import { Reveal } from "@/componentes/animacion";
 
 /** Cuántas categorías caben en la columna "Compra" sin volverla un índice. */
 const MAX_CATEGORIAS_FOOTER = 4;
+
+/** Un solo trazo para todos los íconos del pie: el de lucide por defecto (2)
+ *  se ve grueso a 15-16px sobre fondo oscuro. */
+const TRAZO = 1.75;
 
 /**
  * Los dos pies que esta hoja sabe dibujar.
@@ -62,7 +70,7 @@ function ColumnaFooter({ titulo, children }: { titulo: string; children: ReactNo
         onClick={() => setAbierto((v) => !v)}
       >
         <span>{titulo}</span>
-        <Plus size={18} className={abierto ? "girado" : ""} aria-hidden="true" />
+        <Plus size={18} strokeWidth={TRAZO} className={abierto ? "girado" : ""} aria-hidden="true" />
       </button>
       <div id={idPanel} className={`footer-col-panel ${abierto ? "abierto" : ""}`}>
         {children}
@@ -77,6 +85,10 @@ interface Props {
   cta_texto?: string;
   cta_boton?: string;
   cta_href?: string;
+  /** Frase institucional corta bajo el nombre, junto al logo («Abastecimiento
+   *  confiable para negocios.»). Discreta: firma la marca, no la explica.
+   *  Vacía no se dibuja. */
+  firma?: string;
   /** El reclamo corto y en negrita bajo el logo («Abastecemos negocios que no
    *  pueden parar.»). Opcional: sin él, la columna de marca se ve como
    *  siempre —logo, nombre y `lema`— y ninguna tienda existente lo nota. */
@@ -86,6 +98,8 @@ interface Props {
    *  un camión al lado. Opt-in a propósito: no todas las tiendas reparten. */
   entrega_texto?: string;
   ayuda_titulo?: string;
+  /** Texto bajo el título de contacto. Vacío no se dibuja: con el botón de
+   *  WhatsApp debajo, a veces sobra. */
   ayuda_texto?: string;
   compra_titulo?: string;
   mostrar_categorias?: boolean;
@@ -101,6 +115,14 @@ interface Props {
   privacidad_texto?: string;
   terminos_href?: string;
   terminos_texto?: string;
+  /** La columna «Información legal» y la línea de identificación del
+   *  comercio (razón social, NIT, dirección, contacto). Encendida por
+   *  defecto: un comercio en línea en Colombia debe identificarse. */
+  mostrar_legal?: boolean;
+  legal_titulo?: string;
+  /** Título del segundo grupo de la columna legal: envíos, devoluciones,
+   *  retracto, pagos y PQRS. */
+  soporte_titulo?: string;
   variante?: string;
 }
 
@@ -118,6 +140,12 @@ interface Props {
  * telefono, y el segundo se quedaria viejo. Lo que si es propiedad del bloque
  * son los TEXTOS y que columnas se muestran.
  *
+ * La jerarquía es deliberada y va de más a menos: marca, las dos acciones
+ * (tienda y WhatsApp), títulos de columna, enlaces, identificación del
+ * comercio y copyright. Cada nivel baja de peso o de contraste respecto al
+ * anterior, para que el pie se lea como la firma de la marca y no como una
+ * lista de enlaces.
+ *
  * Sin propiedades se ve exactamente como antes.
  */
 export function Footer({
@@ -126,6 +154,7 @@ export function Footer({
   cta_texto = "Productos frescos directamente para tu negocio, en minutos.",
   cta_boton = "Explorar productos",
   cta_href = "/tienda",
+  firma = "",
   tagline = "",
   lema = "",
   entrega_texto = "",
@@ -142,15 +171,34 @@ export function Footer({
   privacidad_texto = "Política de privacidad",
   terminos_href = "",
   terminos_texto = "Términos y condiciones",
+  mostrar_legal = true,
+  legal_titulo = "Información legal",
+  soporte_titulo = "Ayuda",
   variante,
 }: Props = {}) {
   const { config } = useSiteConfig();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [legal, setLegal] = useState<LegalGuardado | null>(null);
 
   useEffect(() => {
     // Comparte la petición cacheada con la tienda y el buscador (api/catalog).
     obtenerCategorias().then(setCategorias).catch(() => undefined);
-  }, []);
+    if (mostrar_legal) obtenerLegal().then(setLegal);
+  }, [mostrar_legal]);
+
+  // La identificación del comercio: lo diligenciado en el centro legal y, si
+  // falta, lo que ya está en la configuración (el NIT de la factura, el
+  // correo…). En el pie solo va lo que existe: un «[NIT por completar]» en
+  // cada página de la tienda sería ruido; las políticas sí lo marcan.
+  const identidad = resolverDatos(config, legal, "");
+  const lineaLegal = [
+    identidad.empresa.razon_social,
+    identidad.empresa.nit && `NIT ${identidad.empresa.nit}`,
+    identidad.empresa.direccion,
+    identidad.empresa.ciudad,
+  ].filter(Boolean) as string[];
+  const correoLegal = identidad.contacto.correo_atencion;
+  const telefonoLegal = identidad.contacto.telefono;
 
   // El nombre del negocio, con un respaldo neutro: este componente lo comparten
   // todas las tiendas y no puede llevar el de ninguna dentro.
@@ -160,6 +208,9 @@ export function Footer({
     enlaces && enlaces.length > 0
       ? enlaces
       : ENLACES.map((e) => ({ texto: e.label, href: e.to, exacto: e.fin }));
+
+  const enlacesLegales = ENLACES_LEGALES.filter((e) => e.grupo === "legal");
+  const enlacesSoporte = ENLACES_LEGALES.filter((e) => e.grupo === "ayuda");
 
   const hayRedes = mostrar_redes && Boolean(
     config.instagram_url || config.facebook_url || config.tiktok_url
@@ -205,21 +256,20 @@ export function Footer({
       </Reveal>
       )}
 
-      <div className="footer-top">
+      <div className={`footer-top ${mostrar_legal && !minimo ? "footer-top--con-legal" : ""}`}>
         <div className="footer-marca-col">
           <div className="footer-marca">
-            <span className="logo-circ" style={{ width: 44, height: 44 }}>
+            <span className={`footer-logo ${config.logo_url ? "" : "footer-logo--letra"}`}>
               {config.logo_url ? (
-                <img
-                  src={config.logo_url}
-                  alt={nombre}
-                  style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "inherit" }}
-                />
+                <img src={config.logo_url} alt="" />
               ) : (
                 nombre.slice(0, 1).toUpperCase()
               )}
             </span>
-            {nombre}
+            <span className="footer-marca-texto">
+              <span className="footer-marca-nombre">{nombre}</span>
+              {firma && <span className="footer-firma">{firma}</span>}
+            </span>
           </div>
           {tagline && <p className="footer-tagline">{tagline}</p>}
           <p className="footer-lema">
@@ -228,32 +278,35 @@ export function Footer({
               "Haz tu pedido en línea y recíbelo donde lo necesites."}
           </p>
           {(entrega_texto || config.ciudad) && (
-            <div className="footer-info-lineas">
+            <ul className="footer-info-lineas">
               {entrega_texto && (
-                <span className="footer-info-linea">
-                  <Truck size={15} /> {entrega_texto}
-                </span>
+                <li className="footer-info-linea">
+                  <Truck size={15} strokeWidth={TRAZO} aria-hidden="true" /> {entrega_texto}
+                </li>
               )}
               {config.ciudad && (
-                <span className="footer-info-linea">
-                  <MapPin size={15} /> {config.ciudad}
-                </span>
+                <li className="footer-info-linea">
+                  <MapPin size={15} strokeWidth={TRAZO} aria-hidden="true" /> {config.ciudad}
+                </li>
               )}
-            </div>
+            </ul>
           )}
           <Link href="/tienda" className="footer-btn-tienda">
-            Explorar tienda <ArrowRight size={15} />
+            Explorar tienda
+            <span className="footer-btn-tienda-flecha" aria-hidden="true">
+              <ArrowRight size={14} strokeWidth={2} />
+            </span>
           </Link>
           {hayRedes && (
             <div className="footer-redes">
               {config.instagram_url && (
                 <a href={config.instagram_url} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                  <Instagram size={17} />
+                  <Instagram size={17} strokeWidth={TRAZO} />
                 </a>
               )}
               {config.facebook_url && (
                 <a href={config.facebook_url} target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-                  <Facebook size={17} />
+                  <Facebook size={17} strokeWidth={TRAZO} />
                 </a>
               )}
               {config.tiktok_url && (
@@ -265,10 +318,12 @@ export function Footer({
           )}
         </div>
 
-        {/* Ayuda: en móvil va justo tras la marca (orden CSS), no al final. */}
+        {/* Contacto: en móvil va justo tras la marca, no al final. WhatsApp es
+            la acción; el resto son datos y se leen como texto, no como
+            botones. */}
         <div className="footer-col footer-ayuda">
           <h4>{ayuda_titulo}</h4>
-          <p className="footer-ayuda-texto">{ayuda_texto}</p>
+          {ayuda_texto && <p className="footer-ayuda-texto">{ayuda_texto}</p>}
           {hrefWhatsapp && (
             <a
               className="footer-btn-wsp"
@@ -276,41 +331,47 @@ export function Footer({
               target="_blank"
               rel="noopener noreferrer"
             >
-              <WhatsAppIcon size={17} /> Hablar por WhatsApp
+              <WhatsAppLineaIcon size={18} /> Hablar por WhatsApp
             </a>
           )}
-          <div className="footer-col-panel abierto footer-contacto-chips">
+          <ul className="footer-contacto">
             {config.telefono && (
-              <a href={telHref(config.telefono)} className="footer-contacto-item">
-                <span className="footer-contacto-icono"><Phone size={14} /></span>
-                {config.telefono}
-              </a>
+              <li>
+                <a href={telHref(config.telefono)} className="footer-contacto-item">
+                  <Phone size={15} strokeWidth={TRAZO} aria-hidden="true" />
+                  {config.telefono}
+                </a>
+              </li>
             )}
             {config.email && (
-              <a href={`mailto:${config.email}`} className="footer-contacto-item">
-                <span className="footer-contacto-icono"><Mail size={14} /></span>
-                {config.email}
-              </a>
+              <li>
+                <a href={`mailto:${config.email}`} className="footer-contacto-item">
+                  <Mail size={15} strokeWidth={TRAZO} aria-hidden="true" />
+                  {config.email}
+                </a>
+              </li>
             )}
             {config.ciudad && (
-              <span className="footer-contacto-item footer-contacto-item--estatico">
-                <span className="footer-contacto-icono"><MapPin size={14} /></span>
+              <li className="footer-contacto-item">
+                <MapPin size={15} strokeWidth={TRAZO} aria-hidden="true" />
                 {config.ciudad}
-              </span>
+              </li>
             )}
             {config.horario && (
-              <span className="footer-contacto-item footer-contacto-item--estatico">
-                <span className="footer-contacto-icono"><Clock size={14} /></span>
+              <li className="footer-contacto-item">
+                <Clock size={15} strokeWidth={TRAZO} aria-hidden="true" />
                 {config.horario}
-              </span>
+              </li>
             )}
-          </div>
+          </ul>
         </div>
 
         {/* Solo categorías reales del catálogo: nada de enlaces inventados. */}
         {!minimo && (
         <ColumnaFooter titulo={compra_titulo}>
-          <Link href="/tienda">Ver catálogo</Link>
+          <Link href="/tienda" className="footer-enlace-principal">
+            Ver catálogo <ArrowRight size={14} strokeWidth={2} aria-hidden="true" />
+          </Link>
           {mostrar_categorias &&
             categorias.slice(0, max_categorias).map((c) => (
               <Link key={c.id} href={`/tienda?categoria=${c.id}`}>
@@ -340,17 +401,80 @@ export function Footer({
             ))}
           </ColumnaFooter>
         )}
+
+        {/* Las nueve páginas legales en dos grupos que comparten columna en
+            escritorio y son dos acordeones en móvil. */}
+        {mostrar_legal && !minimo && (
+          <div className="footer-col-grupo">
+            <ColumnaFooter titulo={legal_titulo}>
+              {enlacesLegales.map((e) => (
+                <Link key={e.href} href={e.href}>
+                  {e.texto}
+                </Link>
+              ))}
+            </ColumnaFooter>
+            <ColumnaFooter titulo={soporte_titulo}>
+              {enlacesSoporte.map((e) => (
+                <Link key={e.href} href={e.href}>
+                  {e.texto}
+                </Link>
+              ))}
+            </ColumnaFooter>
+          </div>
+        )}
       </div>
+
+      {/* Barra institucional: quién vende (izquierda) y cómo encontrarlo
+          (derecha). Una línea de datos, no otro bloque de contenido. */}
+      {mostrar_legal && (lineaLegal.length > 0 || correoLegal || telefonoLegal) && (
+        <div className="footer-identidad">
+          {lineaLegal.length > 0 && (
+            <p className="footer-identidad-datos">
+              {lineaLegal.map((dato, i) => (
+                <span key={i} className={i === 0 ? "footer-identidad-nombre" : undefined}>
+                  {dato}
+                </span>
+              ))}
+            </p>
+          )}
+          {(correoLegal || telefonoLegal) && (
+            <p className="footer-identidad-datos footer-identidad-contacto">
+              {correoLegal && (
+                <span>
+                  <a href={`mailto:${correoLegal}`}>{correoLegal}</a>
+                </span>
+              )}
+              {telefonoLegal && (
+                <span>
+                  <a href={telHref(telefonoLegal)}>{telefonoLegal}</a>
+                </span>
+              )}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="footer-bottom">
         <span className="footer-copyright">
           © {new Date().getFullYear()} {nombre} — {nota_legal || "Todos los derechos reservados"}
         </span>
-        {(privacidad_href || terminos_href) && (
-          <nav className="footer-legal" aria-label="Legal">
-            {privacidad_href && <Link href={privacidad_href}>{privacidad_texto}</Link>}
-            {terminos_href && <Link href={terminos_href}>{terminos_texto}</Link>}
+        {/* En el pie mínimo no hay columna: los enlaces legales van aquí,
+            todos, porque son los que no se pueden quitar. */}
+        {mostrar_legal && minimo ? (
+          <nav className="footer-legal" aria-label={legal_titulo}>
+            {ENLACES_LEGALES.map((e) => (
+              <Link key={e.href} href={e.href}>
+                {e.texto}
+              </Link>
+            ))}
           </nav>
+        ) : (
+          (privacidad_href || terminos_href) && (
+            <nav className="footer-legal" aria-label="Legal">
+              {privacidad_href && <Link href={privacidad_href}>{privacidad_texto}</Link>}
+              {terminos_href && <Link href={terminos_href}>{terminos_texto}</Link>}
+            </nav>
+          )
         )}
       </div>
     </footer>

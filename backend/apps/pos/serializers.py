@@ -143,6 +143,15 @@ class AgregarLineaSerializer(serializers.Serializer):
     nota = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     atributos = serializers.DictField(required=False, allow_null=True, default=dict)
 
+    def validate_presentacion_id(self, presentacion):
+        # La cantidad del POS es libre a propósito (lo que marque la báscula);
+        # lo que no se vende es lo que el negocio retiró del catálogo.
+        if not (presentacion.estado_presentacion and presentacion.producto.estado_producto):
+            raise serializers.ValidationError(
+                "Esta presentación está desactivada y no se puede vender."
+            )
+        return presentacion
+
 
 class PagoEntradaSerializer(serializers.Serializer):
     medio_id = ClaveDelNegocio(MedioPago, source="medio")

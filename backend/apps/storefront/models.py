@@ -1,5 +1,5 @@
 """
-El motor de tiendas de Crynex.
+El motor de tiendas de Kryon X.
 
 Una sola aplicación de React sirve todas las tiendas, y lo que las hace
 distintas son datos: qué bloques lleva cada página, en qué orden y con qué
@@ -16,7 +16,7 @@ mantenible de un constructor que acaba siendo imposible de rediseñar:
 
 Los cinco modelos, en dos niveles:
 
-    Nivel plataforma — lo administra Crynex
+    Nivel plataforma — lo administra Kryon X
       Bloque     el catálogo de lo que se puede colocar
       Tema       preajustes visuales reutilizables
       Plantilla  una composición inicial por sector
@@ -37,7 +37,7 @@ from apps.tenancy.models import ModeloConTenant
 
 
 # ==========================================================================
-# NIVEL PLATAFORMA — el catálogo de Crynex
+# NIVEL PLATAFORMA — el catálogo de Kryon X
 # ==========================================================================
 class Bloque(models.Model):
     """
@@ -155,7 +155,7 @@ class Tema(models.Model):
     configuración del negocio.
 
     Copiar y no referenciar es deliberado: si un negocio apuntara a este tema,
-    que Crynex retocara "Fresco" le cambiaría los colores de la tienda a
+    que Kryon X retocara "Fresco" le cambiaría los colores de la tienda a
     cuarenta clientes sin avisar.
     """
 
@@ -271,7 +271,7 @@ class Plantilla(models.Model):
     borrador del negocio.
 
     Otra vez copiar y no referenciar, y aquí importa todavía más: si `Pagina`
-    apuntara a la plantilla, que Crynex editara "Mercado" reescribiría en
+    apuntara a la plantilla, que Kryon X editara "Mercado" reescribiría en
     silencio la tienda PUBLICADA de todos los clientes que la usan. Una tienda
     en producción no puede cambiar sola.
     """
