@@ -20,9 +20,22 @@
 }
 
 .editor-cargando {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   min-height: 60vh;
+  color: var(--gris);
+}
+
+.girando { animation: editor-girar 0.9s linear infinite; }
+@keyframes editor-girar { to { transform: rotate(360deg); } }
+
+/* El foco se ve siempre que se navega con teclado, también en los controles
+   propios del editor (segmentados, apartados, la muestra del encuadre). */
+.editor :is(button, a, select, input, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 2px;
 }
 
 /* --------------------------------------------------------------- la barra */
@@ -56,6 +69,45 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.editor-barra .btn-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.editor-barra .btn-icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.editor-nombre { white-space: nowrap; }
+
+.editor-deshacer {
+  display: flex;
+  gap: 0.2rem;
+  padding-left: 0.5rem;
+  margin-left: 0.2rem;
+  border-left: 1px solid var(--borde);
+}
+
+.editor-vista {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.editor-zoom {
+  height: 34px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--superficie);
+  color: var(--dark);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 /* Los tres anchos van al centro y no con las acciones: cambiar de pantalla es
@@ -81,22 +133,54 @@
   color: var(--verde-texto);
 }
 
+.editor-estado-caja { display: inline-flex; }
+
 .editor-estado {
-  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--gris-claro);
+  font: inherit;
+  font-size: 0.76rem;
   font-weight: 600;
+  white-space: nowrap;
   color: var(--gris);
 }
 
 .editor-estado.pendiente {
+  background: var(--ambar-claro);
   color: var(--ambar-texto, #92400e);
 }
+
+.editor-estado.ok { color: var(--verde-texto); background: var(--verde-claro); }
+.editor-estado.error { color: var(--rojo-texto); background: #fef2f2; cursor: pointer; }
+.editor-sin-publicar { font-weight: 500; opacity: 0.8; }
+
+.editor-punto {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 0.3rem;
+  border-radius: 50%;
+  background: var(--ambar, #f59e0b);
+  vertical-align: middle;
+}
+.editor-estado .editor-punto { margin-left: 0; }
 
 /* --------------------------------------------------------------- el cuerpo */
 .editor-cuerpo {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 340px minmax(0, 1fr);
   min-height: 0;
 }
+
+/* Ampliada, la previa ocupa todo el ancho: para juzgar la página entera o
+   mirarla a 100 % en una pantalla pequeña. */
+.editor--ampliado .editor-cuerpo { grid-template-columns: minmax(0, 1fr); }
+.editor--ampliado .editor-panel { display: none; }
 
 .editor-panel {
   padding: 0.9rem;
@@ -106,9 +190,9 @@
 }
 
 .editor-previa {
+  position: relative;
   display: flex;
-  justify-content: center;
-  padding: 1rem;
+  padding: 16px;
   background: var(--gris-claro);
   overflow: auto;
 }
@@ -119,21 +203,67 @@
   text-align: center;
 }
 
+/* El lienzo mide lo que ocupa la pantalla YA escalada; dentro, el marco tiene
+   el tamaño real del dispositivo (390 × 844 en móvil) y se reduce o amplía
+   con `transform`. Así la tienda se pinta con sus cortes reales —la previa de
+   móvil es la tienda de móvil, no la de escritorio encogida— y el zoom no la
+   recarga. `margin: auto` centra sin recortar cuando el lienzo es mayor que el
+   hueco (con `justify-content: center` la parte izquierda quedaría fuera del
+   desplazamiento). */
+.editor-lienzo {
+  position: relative;
+  flex: none;
+  margin: auto;
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
 .editor-marco {
-  height: 100%;
-  /* La transicion es del ancho: cambiar de escritorio a movil se lee como un
-     cambio de tamano y no como una pagina distinta. */
-  transition: width 0.2s ease;
-  max-width: 100%;
+  transform-origin: 0 0;
 }
 
 .editor-marco iframe {
+  display: block;
   width: 100%;
   height: 100%;
   border: 1px solid var(--borde);
   border-radius: 12px;
   background: #fff;
   box-shadow: var(--sombra);
+}
+
+.editor-lienzo--tablet .editor-marco iframe,
+.editor-lienzo--movil .editor-marco iframe {
+  border: 8px solid #1e293b;
+  border-radius: 28px;
+}
+
+.editor-previa-cargando {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gris);
+  background: rgba(241, 245, 249, 0.75);
+  pointer-events: none;
+}
+
+.editor-medida {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--gris);
+  background: var(--superficie);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
 }
 
 /* -------------------------------------------------------- panel izquierdo */
@@ -658,16 +788,37 @@
   color: var(--gris);
 }
 
+@media (max-width: 1280px) {
+  /* Con poco ancho los botones se quedan en su icono; el título lo nombra. */
+  .editor-texto-boton,
+  .editor-nombre,
+  .editor-sin-publicar { display: none; }
+}
+
+@media (max-width: 1100px) {
+  .editor-barra { flex-wrap: wrap; row-gap: 0.5rem; }
+  .editor-vista { order: 3; width: 100%; justify-content: center; }
+}
+
 @media (max-width: 900px) {
   /* En pantalla estrecha no caben las dos: manda el panel, porque componer sin
-     poder tocar los ajustes no es posible, y mirar la tienda sí tiene otra
-     puerta — el enlace de la barra. */
+     poder tocar los ajustes no es posible. «Ampliar» cambia al revés: la
+     previa entera, y Esc o el mismo botón devuelven al panel. */
   .editor-cuerpo {
     grid-template-columns: minmax(0, 1fr);
   }
   .editor-previa {
     display: none;
   }
+  .editor--ampliado .editor-previa {
+    display: flex;
+  }
+  .editor-barra-izq select { max-width: 9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-lienzo { transition: none; }
+  .girando { animation-duration: 2.4s; }
 }
 
 /* Las dos mitades del constructor: que bloques lleva la pagina y como se ve la
@@ -722,3 +873,378 @@
 .paginas-tab-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .paginas-tab-acciones .btn { display: inline-flex; align-items: center; gap: 0.35rem; }
 .paginas-tab-editor { max-width: 760px; }
+
+/* ==========================================================================
+   Los ajustes de una sección, en apartados desplegables
+   ========================================================================== */
+.constructor-descripcion { margin: -0.4rem 0 0.8rem; }
+
+.apartados {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.apartado {
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: var(--superficie);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.apartado.abierto {
+  border-color: var(--verde-400, #22c55e);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
+.apartado-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-right: 0.4rem;
+}
+
+.apartado-boton {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 0.6rem 0.4rem 0.6rem 0.65rem;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--dark);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.apartado-icono {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--gris);
+  background: var(--gris-claro);
+}
+
+.apartado.abierto .apartado-icono {
+  color: var(--verde-texto);
+  background: var(--verde-claro);
+}
+
+.apartado-textos {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.apartado-textos strong {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.86rem;
+}
+
+.apartado-textos small {
+  overflow: hidden;
+  font-size: 0.72rem;
+  color: var(--gris);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apartado-marca {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--verde);
+}
+
+.apartado-flecha {
+  flex: none;
+  color: var(--gris);
+  transition: transform 0.15s ease;
+}
+
+.apartado.abierto .apartado-flecha { transform: rotate(180deg); }
+
+.apartado-restaurar.btn-icon {
+  width: 28px;
+  height: 28px;
+  border-color: transparent;
+  background: none;
+}
+
+.apartado-restaurar.btn-icon:hover {
+  border-color: var(--borde);
+  color: var(--verde-texto);
+}
+
+.apartado-cuerpo {
+  padding: 0.75rem 0.8rem 0.3rem;
+  border-top: 1px solid var(--borde);
+}
+
+.apartado-cuerpo > .campo,
+.apartado-cuerpo > div > .campo { margin-bottom: 0.85rem; }
+
+.apartado-cuerpo .campo label { font-size: 0.8rem; }
+.apartado-cuerpo .campo input:not([type="range"]):not([type="checkbox"]):not([type="color"]),
+.apartado-cuerpo .campo select,
+.apartado-cuerpo .campo textarea { padding: 0.5rem 0.6rem; font-size: 0.86rem; }
+
+/* Un botón por tarjeta: «Botón principal», «Botón secundario». */
+.constructor-subtitulo {
+  margin: 0.2rem 0 0.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--borde);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gris);
+}
+
+.apartado-cuerpo > .constructor-subtitulo:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Lo de un botón oculto se puede seguir editando, pero se ve en segundo plano. */
+.constructor-atenuado { opacity: 0.5; }
+
+/* ---------- Controles visuales ---------- */
+.constructor-segmentado {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border-radius: 9px;
+  background: var(--gris-claro);
+}
+
+.constructor-segmentado button {
+  flex: 1;
+  min-width: 0;
+  padding: 0.38rem 0.3rem;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--gris);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.constructor-segmentado button:hover:not(.activo) { color: var(--dark); }
+
+.constructor-segmentado button.activo {
+  background: var(--superficie);
+  color: var(--verde-texto);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+}
+
+.constructor-deslizador {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.constructor-deslizador input[type="range"],
+.encuadre-deslizadores input[type="range"] {
+  flex: 1;
+  width: auto;
+  padding: 0;
+  border: 0;
+  accent-color: var(--verde);
+}
+
+.constructor-deslizador output,
+.encuadre-deslizadores output {
+  min-width: 2.6rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--dark);
+}
+
+.constructor-interruptor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.6rem;
+}
+
+.constructor-interruptor > label:first-child { margin: 0; cursor: pointer; }
+.constructor-interruptor .campo-ayuda { grid-column: 1 / -1; }
+
+/* ---------- Encuadre de la imagen ---------- */
+.encuadre-modos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.encuadre-modos button {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--gris);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.encuadre-modos button.activo {
+  border-color: var(--verde);
+  background: var(--verde-claro);
+  color: var(--verde-texto);
+}
+
+.encuadre-muestra {
+  position: relative;
+  width: 100%;
+  max-height: 260px;
+  margin: 0.55rem auto 0;
+  overflow: hidden;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--gris-claro);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.encuadre-muestra img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+.encuadre-punto {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: rgba(22, 163, 74, 0.55);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.encuadre-deslizadores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+}
+
+.encuadre-deslizadores label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.encuadre-deslizadores label > span {
+  width: 4.8rem;
+  font-size: 0.76rem;
+  color: var(--gris);
+}
+
+/* ---------- Fotos por dispositivo ---------- */
+.imagenes-dispositivo {
+  margin-bottom: 0.9rem;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.imagenes-pestanas {
+  display: flex;
+  background: var(--gris-claro);
+  border-bottom: 1px solid var(--borde);
+}
+
+.imagenes-pestanas button {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.3rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--gris);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.imagenes-pestanas button.activo {
+  border-bottom-color: var(--verde);
+  background: var(--superficie);
+  color: var(--verde-texto);
+}
+
+.imagenes-punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--verde);
+}
+
+.imagenes-panel { padding: 0.7rem 0.7rem 0.2rem; }
+.imagenes-panel .campo { margin-bottom: 0.7rem; }
+
+.imagenes-cabecera strong {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.imagenes-etiqueta {
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--gris);
+  background: var(--gris-claro);
+}
+
+.imagenes-etiqueta.obligatoria { color: var(--verde-texto); background: var(--verde-claro); }
+
+.imagenes-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin: -0.3rem 0 0.7rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--gris);
+}
+
+.imagenes-nota svg { flex: none; margin-top: 0.1rem; }
+.imagenes-nota.aviso { color: var(--ambar-texto, #92400e); }
+.imagenes-nota.ok { color: var(--verde-texto); }

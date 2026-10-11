@@ -1,7 +1,7 @@
 /**
  * La forma de una composición, en un solo sitio.
  *
- * Los dos paneles que construyen tiendas —el de Crynex, que edita plantillas, y
+ * Los dos paneles que construyen tiendas —el de Kryon X, que edita plantillas, y
  * el del negocio, que edita su propia tienda— manipulan exactamente la misma
  * estructura. Hasta la fase 12 cada uno la tenía declarada por su cuenta, y ya
  * habían empezado a separarse:
@@ -62,6 +62,8 @@ export interface CampoEsquema {
   maximo?: number;
   /** Para `enum`. */
   opciones?: string[];
+  /** Para `enum`: el nombre que se enseña de cada código. Sin él, el código. */
+  opciones_etiquetas?: Record<string, string>;
   /** Para `array`: la forma de cada elemento. */
   items?: CampoEsquema;
   /** Para `object`. */
@@ -176,7 +178,7 @@ export interface OpcionToken {
 /**
  * Una perilla del aspecto de la tienda.
  *
- * El catálogo lo administra Crynex; cada negocio elige sus valores. Un token que
+ * El catálogo lo administra Kryon X; cada negocio elige sus valores. Un token que
  * no esté en el catálogo se ignora al resolver el tema, así que retirar uno
  * devuelve a todas las tiendas a su valor por defecto sin migrar nada.
  */
