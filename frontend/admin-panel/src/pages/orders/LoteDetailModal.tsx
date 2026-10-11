@@ -22,7 +22,7 @@ export function LoteDetailModal({ loteId, onCerrar, onVerPedido }: Props) {
   return (
     <Modal
       ancho
-      lateral
+      amplio
       titulo={lote ? `Lote #${lote.id} · ${lote.tipo_display}` : `Lote #${loteId}`}
       onCerrar={onCerrar}
       footer={

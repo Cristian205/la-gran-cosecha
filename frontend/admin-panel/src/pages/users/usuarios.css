@@ -1,0 +1,52 @@
+/* ==========================================================================
+   USUARIOS — lo propio de esta vista. Lo compartido (indicadores, módulo,
+   filtros, tabla, menús) vive en components/gestion/gestion.css, igual que
+   en Pedidos y Clientes.
+   ========================================================================== */
+
+/* Iniciales en un círculo y, debajo del nombre, el correo: es como se
+   reconoce a alguien del equipo. */
+.usuario-identidad {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: 300px;
+  vertical-align: middle;
+}
+.usuario-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--azul-claro);
+  color: var(--azul-texto);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.usuario-avatar.inactivo { background: var(--gris-claro); color: var(--gris); }
+.usuario-textos { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.usuario-textos .celda-nombre { display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%; min-width: 0; }
+.usuario-correo {
+  overflow: hidden;
+  font-size: 0.76rem;
+  color: var(--gris);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.usuario-tu {
+  flex: none;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--verde-claro);
+  color: var(--verde-texto);
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+/* Quien no puede entrar se ve atenuado, sin desaparecer de la lista. */
+.usuario-fila-inactiva .usuario-textos { opacity: 0.65; }
+.pastilla svg { vertical-align: -2px; }

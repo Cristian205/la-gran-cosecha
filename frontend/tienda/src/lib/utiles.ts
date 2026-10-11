@@ -156,10 +156,70 @@ export function pasoCantidad(permiteFraccion: boolean, tipoCantidad: string): nu
   return 1;
 }
 
-/** Suma `delta` a `valor` respetando el paso permitido, sin bajar de un paso. */
-export function ajustarCantidad(valor: number, delta: number, paso: number): number {
-  const n = Math.round((valor + delta) / paso) * paso;
-  return Math.max(paso, Number(n.toFixed(2)));
+/**
+ * Desde cuánto y de cuánto en cuánto se pide una presentación: mínima,
+ * mínima + paso, mínima + 2·paso… Es la misma regla que valida el servidor
+ * (`catalog/cantidades.py`): lo que este archivo deja pedir, el pedido lo
+ * acepta.
+ */
+export interface ReglaCantidad {
+  minimo: number;
+  paso: number;
+  decimales: number;
+}
+
+/** La regla de la presentación; sin ella (servidor anterior), la del producto. */
+export function reglaCantidad(
+  presentacion: { cantidad_minima?: string; incremento_cantidad?: string; decimales_cantidad?: number } | null | undefined,
+  permiteFraccion: boolean,
+  tipoCantidad: string
+): ReglaCantidad {
+  const minimo = Number(presentacion?.cantidad_minima);
+  const paso = Number(presentacion?.incremento_cantidad);
+  if (minimo > 0 && paso > 0) {
+    return { minimo, paso, decimales: presentacion?.decimales_cantidad ?? 2 };
+  }
+  const legado = pasoCantidad(permiteFraccion, tipoCantidad);
+  return { minimo: legado, paso: legado, decimales: legado === 1 ? 0 : 2 };
+}
+
+/** La regla con la que se agregó una línea del carrito. */
+export function reglaDeItem(item: {
+  minimo?: number;
+  paso?: number;
+  decimales?: number;
+  permiteFraccion: boolean;
+  tipoCantidad: string;
+}): ReglaCantidad {
+  if (item.paso && item.paso > 0) {
+    return { minimo: item.minimo ?? item.paso, paso: item.paso, decimales: item.decimales ?? 2 };
+  }
+  return reglaCantidad(null, item.permiteFraccion, item.tipoCantidad);
+}
+
+/** Lleva `valor` a la cantidad válida más cercana (nunca por debajo de la mínima). */
+export function ajustarARegla(valor: number, regla: ReglaCantidad): number {
+  const { minimo, paso } = regla;
+  const pasos = Math.max(0, Math.round((valor - minimo) / paso));
+  // toFixed(2): la regla nunca tiene más de dos decimales, y así 0,1 + 0,2
+  // no llega al servidor como 0,30000000000000004.
+  return Number((minimo + pasos * paso).toFixed(2));
+}
+
+/** La cantidad con la que arranca el selector: 1 si es válida; si no, la válida más cercana por encima. */
+export function cantidadInicial(regla: ReglaCantidad): number {
+  if (regla.minimo >= 1) return regla.minimo;
+  return Number((regla.minimo + Math.ceil((1 - regla.minimo) / regla.paso - 1e-9) * regla.paso).toFixed(2));
+}
+
+/** ¿Se escribe con fracciones? (para `formatoCantidad`). */
+export function esFraccionaria(regla: ReglaCantidad): boolean {
+  return regla.decimales > 0;
+}
+
+/** Suma `delta` a `valor` respetando el paso, sin bajar de la mínima (por defecto, un paso). */
+export function ajustarCantidad(valor: number, delta: number, paso: number, minimo: number = paso): number {
+  return ajustarARegla(valor + delta, { minimo, paso, decimales: 2 });
 }
 
 const FRACCIONES: Record<number, string> = { 25: "1/4", 50: "1/2", 75: "3/4" };
@@ -176,7 +236,9 @@ export function formatoCantidad(valor: number, permiteFraccion: boolean): string
   const entero = Math.floor(valor + 1e-6);
   const resto = Math.round((valor - entero) * 100);
   if (resto <= 0) return String(entero);
-  const frac = FRACCIONES[resto] ?? `${resto}/100`;
+  const frac = FRACCIONES[resto];
+  // 0,1 · 0,2 · 1,35…: sin una fracción de mostrador, decimal con coma.
+  if (!frac) return String(Number(valor.toFixed(2))).replace(".", ",");
   return entero > 0 ? `${entero} ${frac}` : frac;
 }
 
@@ -187,7 +249,7 @@ export function formatoCantidad(valor: number, permiteFraccion: boolean): string
  * botón "+" eran 49 clics. Devuelve `null` si no se entiende, para que quien
  * llama conserve el valor anterior en vez de inventar uno.
  */
-export function parsearCantidad(texto: string, paso: number): number | null {
+export function parsearCantidad(texto: string, paso: number, minimo: number = paso): number | null {
   const limpio = texto.trim().replace(",", ".");
   if (!limpio) return null;
   const partes = limpio.split(/\s+/);
@@ -205,6 +267,5 @@ export function parsearCantidad(texto: string, paso: number): number | null {
     }
   }
   if (!(total > 0)) return null;
-  const ajustado = Math.round(total / paso) * paso;
-  return Math.max(paso, Number(ajustado.toFixed(2)));
+  return ajustarARegla(total, { minimo, paso, decimales: 2 });
 }

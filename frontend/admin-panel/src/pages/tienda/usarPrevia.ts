@@ -14,8 +14,8 @@ import { composicionParaPrevia, type Composicion, type TokenTema } from "@constr
  * arrancaría mostrando la versión vieja hasta el primer cambio.
  */
 type MensajeDeLaTienda =
-  | { fuente: "crynex-tienda"; tipo: "listo" }
-  | { fuente: "crynex-tienda"; tipo: "seleccion"; id: string };
+  | { fuente: "kryonx-tienda"; tipo: "listo" }
+  | { fuente: "kryonx-tienda"; tipo: "seleccion"; id: string };
 
 interface Opciones {
   /** El origen de la tienda; se usa como destino de cada mensaje. */
@@ -37,7 +37,7 @@ export function usarPrevia({ origen, composicion, tokens, elegido, onSeleccion }
     (mensaje: Record<string, unknown>) => {
       if (!origen) return;
       marco.current?.contentWindow?.postMessage(
-        { fuente: "crynex-editor", ...mensaje },
+        { fuente: "kryonx-editor", ...mensaje },
         origen
       );
     },
@@ -49,7 +49,7 @@ export function usarPrevia({ origen, composicion, tokens, elegido, onSeleccion }
     function alRecibir(evento: MessageEvent) {
       if (origen && evento.origin !== origen) return;
       const dato = evento.data as MensajeDeLaTienda | undefined;
-      if (dato?.fuente !== "crynex-tienda") return;
+      if (dato?.fuente !== "kryonx-tienda") return;
 
       if (dato.tipo === "listo") setLista(true);
       if (dato.tipo === "seleccion") onSeleccion(dato.id);

@@ -89,6 +89,18 @@ export interface Presentacion {
   estado_presentacion: boolean;
   /** Foto propia de la presentación; sin ella la tienda usa la del producto. */
   imagen_url?: string | null;
+  producto?: number;
+  unidad_venta_abreviatura?: string;
+  /** Regla de cantidad (ver utils/cantidades.ts): desde cuánto… */
+  cantidad_minima: string;
+  /** …de cuánto en cuánto… */
+  incremento_cantidad: string;
+  /** …y con cuántos decimales como máximo (0 a 2). */
+  decimales_cantidad: number;
+  /** Posición dentro del producto. */
+  orden: number;
+  /** Para detectar que otra persona la editó mientras tanto (409). */
+  version: number;
 }
 
 export interface Producto {
@@ -111,7 +123,10 @@ export interface Producto {
   precio_desde: string | null;
   imagen_url: string | null;
   orden: number;
+  /** Solo las ACTIVAS: es lo que ve la tienda. */
   presentaciones: Presentacion[];
+  num_presentaciones?: number;
+  num_presentaciones_inactivas?: number;
 }
 
 export interface Pedido {
@@ -208,6 +223,12 @@ export interface Cliente {
   documento_cliente: string;
   /** Cuándo aceptó en la tienda que el precio se ajusta al mercado; null si nunca. */
   acepto_precios_en: string | null;
+  /** Cuándo autorizó el tratamiento de datos en la tienda (Ley 1581). Solo lo da el cliente. */
+  autorizo_datos_en: string | null;
+  /** Si acepta los avisos de sus pedidos por WhatsApp. */
+  acepta_whatsapp: boolean;
+  /** Cuándo lo decidió; null si nunca se le preguntó. */
+  whatsapp_decidido_en: string | null;
   fecha_registro_cliente: string;
   total_pedidos: number;
 }

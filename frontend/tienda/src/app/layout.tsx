@@ -16,6 +16,7 @@ import "./global.css";
 import "./campanas.css";
 import "./nosotros.css";
 import "./contacto.css";
+import "./legal.css";
 
 /**
  * Los metadatos salen de la configuración del negocio, no del código.

@@ -94,7 +94,7 @@ input, select, textarea { font-family: inherit; }
 .layout { display: flex; height: 100vh; overflow: hidden; }
 /* El sidebar vive en components/sidebar.css. */
 
-.main { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow-y: auto; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow-y: auto; overflow-x: hidden; }
 
 .navbar-global {
   background: var(--navbar-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -175,9 +175,6 @@ input, select, textarea { font-family: inherit; }
 .menu-usuario button.salir { color: var(--rojo); }
 .menu-usuario button.salir:hover { background: rgba(220,38,38,.08); }
 
-.menu-informes { left: 0; right: auto; width: 270px; }
-.menu-informes button:disabled { opacity: .45; cursor: not-allowed; }
-.menu-informes button:disabled:hover { background: none; }
 
 .chevron { color: var(--gris); transition: transform .15s ease; }
 .chevron.abierto { transform: rotate(180deg); }
@@ -1162,8 +1159,8 @@ td .input:focus, td select:focus {
   gap: 0.5rem;
   width: 100%;
   padding: 0.45rem 0.6rem;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--sb-control);
+  border: 1px solid var(--sb-control-borde);
   border-radius: 8px;
   color: inherit;
   font: inherit;
@@ -1173,7 +1170,7 @@ td .input:focus, td select:focus {
 }
 
 .selector-negocio-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.11);
+  background: var(--sb-control-hover);
 }
 
 .selector-negocio-btn:disabled {
@@ -1207,9 +1204,9 @@ td .input:focus, td select:focus {
   margin-top: 0.25rem;
   padding: 0.25rem;
   list-style: none;
-  background: #ffffff;
-  color: #0f172a;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: var(--superficie);
+  color: var(--dark);
+  border: 1px solid var(--borde);
   border-radius: 8px;
   box-shadow: 0 12px 28px -12px rgba(15, 23, 42, 0.35);
 }
@@ -1232,7 +1229,7 @@ td .input:focus, td select:focus {
 }
 
 .selector-negocio-lista button:hover {
-  background: rgba(15, 23, 42, 0.06);
+  background: var(--gris-claro);
 }
 
 .selector-negocio-lista button.activo {
@@ -1491,4 +1488,363 @@ td .input:focus, td select:focus {
   background: var(--superficie-2);
   border: 1px solid var(--borde);
   color: var(--gris);
+}
+
+/* ==========================================================================
+   PRESENTACIONES COMERCIALES
+   Editor de producto (lista), modal de presentación y tarjeta del catálogo.
+   Solo tokens existentes: la identidad del panel no cambia, se ordena.
+   ========================================================================== */
+
+/* ---------- Modal: título con contexto, variante amplia ---------- */
+.modal-titulos { min-width: 0; }
+.modal-subtitulo {
+  margin: .15rem 0 0; font-size: .8rem; color: var(--gris); font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.modal-overlay.amplio { z-index: 65; }
+.modal.amplio { width: min(860px, 100%); max-height: min(92vh, 900px); }
+.modal .cuerpo:focus-visible { outline: none; }
+.cerrar-x { border-radius: 8px; line-height: 1; width: 2.2rem; height: 2.2rem; flex-shrink: 0; }
+.cerrar-x:hover { background: var(--gris-claro); color: var(--dark); }
+.cerrar-x:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 2px; }
+@media (max-width: 640px) {
+  /* En el móvil, a pantalla completa: un formulario de cuatro secciones no
+     cabe en una tarjeta flotante sin esconder el pie. */
+  .modal-overlay.amplio { padding: 0; }
+  .modal.amplio { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .modal.amplio header, .modal.amplio footer { padding-left: 1rem; padding-right: 1rem; }
+  .modal.amplio .cuerpo { padding: 1rem; }
+  .modal.amplio footer .btn { flex: 1; }
+}
+
+/* ---------- Mensajes de validación en contexto ---------- */
+.campo-error {
+  display: flex; align-items: flex-start; gap: .3rem; margin: .35rem 0 0;
+  font-size: .78rem; font-weight: 600; color: var(--rojo-texto); line-height: 1.35;
+}
+.campo-error svg { flex-shrink: 0; margin-top: .1rem; }
+.campo input[aria-invalid="true"], .campo select[aria-invalid="true"] { border-color: var(--rojo) !important; }
+.campo input[aria-invalid="true"]:focus, .campo select[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, .18);
+}
+.pie-aviso { margin-right: auto; align-self: center; font-size: .78rem; font-weight: 600; color: var(--ambar-texto); }
+
+/* ---------- Editor de producto: información básica ---------- */
+.producto-basico { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 1.2rem; align-items: start; }
+.producto-basico .producto-hero { margin-bottom: 0; }
+.producto-basico-campos .campo:last-child { margin-bottom: .4rem; }
+.producto-interruptores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin-top: .6rem; }
+.producto-interruptores .campo-switch {
+  margin: 0; padding: .8rem .9rem; border: 1px solid var(--borde); border-radius: var(--radio-sm);
+  background: var(--superficie-2); cursor: pointer; align-items: flex-start;
+}
+.producto-interruptores .campo-switch > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.producto-seccion-presentaciones { margin-top: 1.6rem; scroll-margin-top: 1rem; }
+@media (max-width: 700px) {
+  .producto-basico { grid-template-columns: 1fr; }
+  .producto-interruptores { grid-template-columns: 1fr; }
+  .fila.fila-responsive { flex-direction: column; gap: 0; }
+}
+
+/* ---------- Sección "Presentaciones comerciales" ---------- */
+.pc { container-type: inline-size; }
+.pc-cabecera {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+  padding-bottom: .7rem; margin-bottom: .8rem; border-bottom: 1px solid var(--borde);
+}
+.pc-titulo {
+  display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: 0;
+  font-size: .95rem; font-weight: 700; color: var(--dark);
+}
+.pc-titulo svg { color: var(--verde-texto); }
+.pc-contador {
+  font-size: .72rem; font-weight: 600; color: var(--gris);
+  background: var(--gris-claro); border-radius: 999px; padding: .15rem .55rem;
+}
+.pc-descripcion { margin: .3rem 0 0; font-size: .8rem; color: var(--gris); line-height: 1.4; }
+.pc-agregar { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; flex-shrink: 0; min-height: 2.25rem; }
+.pc-error { margin: -.3rem 0 .7rem; }
+
+.pc-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+.pc-fila {
+  display: grid; align-items: center; gap: .75rem;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "orden foto info precio estado acciones";
+  padding: .65rem .75rem; border: 1px solid var(--borde); border-radius: var(--radio-sm);
+  background: var(--superficie);
+  transition: border-color .15s ease;
+}
+.pc-fila:hover { border-color: color-mix(in srgb, var(--verde-500) 35%, var(--borde)); }
+.pc-fila.inactiva { background: var(--superficie-2); }
+.pc-fila.inactiva .pc-nombre, .pc-fila.inactiva .pc-precio-valor { color: var(--gris); }
+.pc-fila.con-error { border-color: var(--rojo); }
+.pc-fila-esqueleto { display: flex; flex-direction: column; gap: .4rem; padding: .9rem; }
+.pc-fila-esqueleto .skeleton-line { margin: 0; }
+
+.pc-orden { grid-area: orden; display: flex; flex-direction: column; gap: 2px; }
+.pc-orden-btn {
+  display: grid; place-items: center; width: 1.6rem; height: 1.15rem; padding: 0;
+  border: 1px solid var(--borde); border-radius: 6px; background: var(--superficie); color: var(--gris);
+}
+.pc-orden-btn:hover:not(:disabled) { color: var(--dark); border-color: var(--gris); }
+.pc-orden-btn:disabled { opacity: .35; cursor: not-allowed; }
+/* Sin flechas (una sola fila o sin permiso): la rejilla no deja hueco. */
+.pc-fila:not(:has(.pc-orden)) { grid-template-columns: auto minmax(0, 1fr) auto auto auto; grid-template-areas: "foto info precio estado acciones"; }
+
+.pc-foto {
+  grid-area: foto; width: 2.6rem; height: 2.6rem; border-radius: 8px; object-fit: cover;
+  border: 1px solid var(--borde); background: var(--gris-claro);
+}
+.pc-foto-vacia { display: grid; place-items: center; font-weight: 700; font-size: .9rem; color: var(--gris); }
+.pc-info { grid-area: info; min-width: 0; }
+.pc-nombre {
+  display: flex; align-items: center; gap: .4rem; font-weight: 700; font-size: .9rem; color: var(--dark);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pc-etiqueta {
+  font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+  color: var(--azul-texto); background: var(--azul-claro); border-radius: 999px; padding: .1rem .45rem;
+}
+.pc-meta {
+  display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .15rem;
+  font-size: .76rem; color: var(--gris);
+}
+.pc-alerta { display: flex; align-items: center; gap: .3rem; margin-top: .25rem; font-size: .74rem; font-weight: 600; color: var(--rojo-texto); }
+.pc-precio { grid-area: precio; text-align: right; white-space: nowrap; }
+.pc-precio-valor { font-weight: 800; font-size: .95rem; color: var(--verde-texto); }
+.pc-precio-unidad { margin-left: .2rem; font-size: .74rem; color: var(--gris); }
+.pc-estado { grid-area: estado; }
+.pc-acciones { grid-area: acciones; }
+.pc-orden-btn:focus-visible, .pc .btn-icon:focus-visible, .pres-mas:focus-visible, .pf-preset:focus-visible {
+  outline: 2px solid var(--verde-500); outline-offset: 2px;
+}
+
+.pc-vacio {
+  display: flex; flex-direction: column; align-items: center; gap: .35rem; text-align: center;
+  padding: 1.6rem 1rem; border: 1px dashed var(--borde); border-radius: var(--radio-sm);
+  color: var(--gris); font-size: .82rem; line-height: 1.4;
+}
+.pc-vacio strong { color: var(--dark); font-size: .9rem; }
+.pc-vacio-error { border-color: var(--rojo); color: var(--rojo-texto); }
+.pc-vacio .btn { display: inline-flex; align-items: center; gap: .35rem; margin-top: .3rem; }
+
+/* Panel estrecho (móvil o ventana pequeña): la fila pasa a dos líneas. */
+@container (max-width: 560px) {
+  .pc-cabecera { flex-direction: column; align-items: stretch; }
+  .pc-agregar { justify-content: center; }
+  .pc-fila, .pc-fila:not(:has(.pc-orden)) {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "foto info precio"
+      "foto estado acciones";
+    row-gap: .45rem;
+  }
+  .pc-fila:has(.pc-orden) {
+    grid-template-areas:
+      "foto info precio"
+      "orden estado acciones";
+  }
+  .pc-orden { flex-direction: row; justify-self: start; }
+  .pc-estado { justify-self: start; }
+  .pc-acciones { justify-self: end; }
+}
+
+/* ---------- Modal de presentación ---------- */
+.form-presentacion { display: flex; flex-direction: column; gap: 1.1rem; }
+.pf-seccion { border: 1px solid var(--borde); border-radius: var(--radio-sm); padding: 1rem 1.1rem .3rem; }
+.pf-seccion-titulo {
+  display: flex; align-items: center; gap: .45rem; margin: 0 0 .9rem;
+  font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--gris);
+}
+.pf-seccion-titulo svg { color: var(--verde-texto); }
+.pf-opcional {
+  margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 600;
+  font-size: .72rem; color: var(--gris);
+}
+.pf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1rem; align-items: start; }
+.pf-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pf-col-2 { grid-column: 1 / -1; }
+.form-presentacion .campo input, .form-presentacion .campo select { min-height: 2.6rem; }
+.pf-etiqueta { display: block; font-weight: 600; margin-bottom: .35rem; font-size: .85rem; color: var(--dark); }
+.pf-estado { display: flex; align-items: center; gap: .7rem; min-height: 2.6rem; font-size: .85rem; cursor: pointer; }
+
+.form-presentacion .input-precio { min-height: 2.6rem; }
+.input-precio.campo-invalido { border-color: var(--rojo) !important; }
+.pf-moneda { margin-left: auto; font-size: .72rem !important; font-weight: 600 !important; }
+.pf-ayuda-contextual {
+  display: flex; flex-direction: column; gap: .2rem; margin: 1.55rem 0 1rem;
+  padding: .6rem .8rem; border-radius: 10px; background: var(--gris-claro);
+  font-size: .8rem; color: var(--gris); line-height: 1.4;
+}
+.pf-ayuda-contextual strong { color: var(--verde-texto); font-size: .9rem; }
+
+.pf-unidad-nueva { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem; gap: .5rem; }
+.pf-unidad-nueva input {
+  width: 100%; padding: .6rem; border: 1px solid var(--borde); border-radius: 10px;
+  font-size: .9rem; background: var(--superficie); color: var(--dark); min-height: 2.6rem;
+}
+.pf-unidad-nueva input:focus { outline: none; border-color: var(--verde); box-shadow: 0 0 0 3px rgba(22, 163, 74, .15); }
+.pf-unidad-nueva-acciones, .pf-unidad-nueva .campo-error { grid-column: 1 / -1; }
+.pf-unidad-nueva-acciones { display: flex; gap: .4rem; }
+
+.pf-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; margin-bottom: 1rem; }
+.pf-preset {
+  position: relative; display: flex; flex-direction: column; gap: .1rem; text-align: left;
+  padding: .55rem .7rem; border: 1px solid var(--borde); border-radius: 10px;
+  background: var(--superficie); color: var(--dark); cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.pf-preset:hover { border-color: var(--verde-400); }
+.pf-preset.activo { border-color: var(--verde); background: var(--verde-claro); }
+.pf-preset > svg { position: absolute; top: .5rem; right: .5rem; color: var(--verde-texto); }
+.pf-preset-titulo { font-weight: 700; font-size: .8rem; padding-right: 1rem; }
+.pf-preset-ejemplo { font-size: .74rem; color: var(--gris); }
+.pf-preset-info { cursor: default; border-style: dashed; }
+.pf-preset-info:hover { border-color: var(--borde); }
+.pf-preset-info.activo { border-style: solid; }
+
+.pf-vista-previa {
+  margin: 0 0 1rem; padding: .75rem .85rem; border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--verde-500) 30%, var(--borde));
+  background: color-mix(in srgb, var(--verde-500) 6%, var(--superficie));
+}
+.pf-vista-previa.invalida { border-color: var(--borde); background: var(--gris-claro); }
+.pf-vista-previa p { margin: .45rem 0 0; font-size: .78rem; color: var(--gris); line-height: 1.4; }
+.pf-vista-previa .pf-etiqueta { margin-bottom: .45rem; font-size: .74rem; text-transform: uppercase; letter-spacing: .3px; color: var(--gris); }
+.pf-secuencia { display: flex; flex-wrap: wrap; gap: .35rem; }
+.pf-cantidad {
+  font-variant-numeric: tabular-nums; font-weight: 700; font-size: .85rem; color: var(--dark);
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 8px; padding: .2rem .55rem;
+}
+.pf-cantidad small { font-weight: 500; color: var(--gris); }
+.pf-cantidad-mas { color: var(--gris); }
+
+.form-presentacion .pres-foto { margin: 1.55rem 0 1rem; padding-top: 0; border-top: none; }
+
+@media (max-width: 640px) {
+  .pf-grid, .pf-grid-3 { grid-template-columns: 1fr; }
+  .pf-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pf-ayuda-contextual { margin-top: 0; }
+  .form-presentacion .pres-foto { margin-top: 0; }
+  .pf-seccion { padding: .9rem .85rem .2rem; }
+}
+
+/* ---------- Tarjeta del catálogo ---------- */
+.precio-desde .precio-unidad { font-size: .76rem; color: var(--gris); font-weight: 600; }
+.precio-desde.sin-precio { font-size: .78rem; color: var(--ambar-texto); font-weight: 600; }
+.producto-presentaciones .pres-inactivas { text-transform: none; font-weight: 600; letter-spacing: 0; }
+.pres-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3rem; }
+/* Desplegada no crece sin límite: con 15 presentaciones, la tarjeta haría
+   saltar toda la fila de la rejilla. Se desplaza por dentro. */
+.pres-lista.expandida { max-height: 11.5rem; overflow-y: auto; padding-right: .15rem; }
+.pres-chip .pres-nombre { display: flex; flex-direction: column; min-width: 0; }
+.pres-chip .pres-nombre small {
+  font-weight: 500; font-size: .68rem; color: var(--gris);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+button.pres-mas {
+  display: inline-flex; align-items: center; gap: .25rem; align-self: flex-start;
+  border: none; background: none; padding: .15rem 0; cursor: pointer;
+  color: var(--verde-texto); font-size: .76rem; font-weight: 700;
+}
+button.pres-mas:hover { text-decoration: underline; }
+
+/* El editor de producto, central y algo más ancho que el de presentación:
+   al abrir una presentación encima, se ve que es una capa sobre el producto. */
+.modal.amplio.ancho { width: min(1000px, 100%); }
+@media (max-width: 640px) {
+  .modal.amplio.ancho { width: 100vw; }
+}
+
+/* ==========================================================================
+   BARRAS DE DESPLAZAMIENTO
+   Finas, redondeadas y casi invisibles en reposo: la barra aparece con
+   fuerza solo donde está el puntero, crece un poco al tocarla y se tiñe del
+   verde del panel mientras se arrastra. Sin flechas ni pista: el contenido
+   manda, la barra solo orienta.
+
+   Todo pasa por variables `--scroll-*`, así cada zona (el sidebar, por
+   ejemplo) puede afinar su color sin repetir las reglas.
+   ========================================================================== */
+:root {
+  --scroll-reposo: rgba(100, 116, 139, 0.18);
+  --scroll-visible: rgba(100, 116, 139, 0.34);
+  --scroll-encima: rgba(100, 116, 139, 0.55);
+  --scroll-arrastre: color-mix(in srgb, var(--verde-500) 70%, transparent);
+}
+:root[data-tema="oscuro"] {
+  --scroll-reposo: rgba(148, 163, 184, 0.14);
+  --scroll-visible: rgba(148, 163, 184, 0.28);
+  --scroll-encima: rgba(148, 163, 184, 0.5);
+  --scroll-arrastre: color-mix(in srgb, var(--verde-400) 70%, transparent);
+}
+
+/* Chrome, Edge, Safari. El borde transparente con `background-clip` es lo
+   que deja una píldora de ~4 px dentro de un área de 12 px: fina a la vista
+   y fácil de atrapar con el ratón. */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  min-width: 44px;
+  border: 4px solid transparent;
+  border-radius: 999px;
+  background-color: var(--scroll-reposo);
+  background-clip: padding-box;
+}
+*:hover::-webkit-scrollbar-thumb { background-color: var(--scroll-visible); }
+::-webkit-scrollbar-thumb:hover {
+  border-width: 3px;
+  background-color: var(--scroll-encima);
+}
+::-webkit-scrollbar-thumb:active {
+  border-width: 3px;
+  background-color: var(--scroll-arrastre);
+}
+
+/* Firefox: no tiene pseudo-elementos, pero sí barra fina y color propio.
+   Solo ahí: en Chrome 121+ declarar `scrollbar-color` anula todo lo de arriba. */
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: var(--scroll-visible) transparent; }
+}
+
+/* Al llegar al final de un modal o una lista, el desplazamiento no se
+   contagia a la página de detrás: se siente contenido y estable. */
+.modal .cuerpo, .cmdk-lista, .menu-columnas, .historial-lista, .pres-lista.expandida, .sb-nav {
+  overscroll-behavior: contain;
+}
+
+/* Sombras de borde en el cuerpo de los modales: aparecen solo cuando hay más
+   contenido arriba o abajo, y se desvanecen al llegar al tope. Es la técnica
+   de fondos `local`/`scroll`: sin JavaScript y sin escuchar el scroll. */
+.modal:not(.lateral) .cuerpo {
+  background:
+    linear-gradient(var(--superficie) 40%, transparent) top / 100% 36px no-repeat local,
+    linear-gradient(transparent, var(--superficie) 60%) bottom / 100% 36px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgba(15, 23, 42, 0.1), transparent) top / 100% 12px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgba(15, 23, 42, 0.1), transparent) bottom / 100% 12px no-repeat scroll,
+    var(--superficie);
+}
+:root[data-tema="oscuro"] .modal:not(.lateral) .cuerpo {
+  background:
+    linear-gradient(var(--superficie) 40%, transparent) top / 100% 36px no-repeat local,
+    linear-gradient(transparent, var(--superficie) 60%) bottom / 100% 36px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.45), transparent) top / 100% 12px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.45), transparent) bottom / 100% 12px no-repeat scroll,
+    var(--superficie);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .modal .cuerpo, .cmdk-lista, .historial-lista, .pres-lista.expandida { scroll-behavior: smooth; }
+}
+
+/* Modal central de formularios cortos (cliente, usuario, contenido…): los
+   que antes eran panel lateral. En el móvil, a pantalla completa como el
+   resto de modales `amplio`. */
+.modal.amplio.medio { width: min(640px, 100%); }
+@media (max-width: 640px) {
+  .modal.amplio.medio { width: 100vw; }
 }

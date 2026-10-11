@@ -39,12 +39,12 @@ jobs:
     #
     # Va a nivel de TRABAJO y no de paso para que ningun paso futuro se olvide.
     env:
-      DATABASE_URL: postgres://app_crynex:app@localhost:5432/crynex_ci
+      DATABASE_URL: postgres://app_kryonx:app@localhost:5432/kryonx_ci
       # Con esta se activan los dos tests de RLS y los dos de concurrencia
       # —dos cajeros vendiendo la ultima unidad, dos camareros dando la misma
       # mesa—, que en SQLite se saltan solos porque `select_for_update` no
       # bloquea nada.
-      TEST_DATABASE_URL: postgres://app_crynex:app@localhost:5432/crynex_ci
+      TEST_DATABASE_URL: postgres://app_kryonx:app@localhost:5432/kryonx_ci
       DJANGO_SETTINGS_MODULE: config.settings.test
 
     services:
@@ -52,7 +52,7 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: crynex_ci
+          POSTGRES_DB: kryonx_ci
         options: >-
           --health-cmd pg_isready
           --health-interval 5s
@@ -83,14 +83,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          psql -h localhost -U postgres -d crynex_ci -v ON_ERROR_STOP=1 <<'SQL'
-          CREATE ROLE app_crynex LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS CREATEDB;
-          GRANT ALL ON SCHEMA public TO app_crynex;
+          psql -h localhost -U postgres -d kryonx_ci -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE app_kryonx LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS CREATEDB;
+          GRANT ALL ON SCHEMA public TO app_kryonx;
           -- Que sea DUEÑO de la base, no solo invitado con permisos. Django
-          -- crea `test_crynex_ci` aparte y ahi los GRANT de arriba no llegan;
+          -- crea `test_kryonx_ci` aparte y ahi los GRANT de arriba no llegan;
           -- siendo dueño no hay ninguna pregunta de permisos que responder, ni
           -- aqui ni en la de pruebas, que tambien crea el.
-          ALTER DATABASE crynex_ci OWNER TO app_crynex;
+          ALTER DATABASE kryonx_ci OWNER TO app_kryonx;
           SQL
 
       - name: Migraciones al dia
@@ -123,7 +123,7 @@ jobs:
       # tambien. Enterarse de los dos fallos de una vez ahorra un ciclo entero.
       fail-fast: false
       matrix:
-        app: [tienda, admin-panel, panel-crynex]
+        app: [tienda, admin-panel, panel-kryonx]
 
     steps:
       - uses: actions/checkout@v5

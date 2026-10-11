@@ -61,29 +61,83 @@ MAX_PAD_EXTRA_PX = 7.0
 # separa la última fila del pie con el total.
 FRACCION_SOBRANTE_A_REPARTIR = 0.85
 
-# Proporción de la columna que ocupa la celda del artículo y padding de la
-# celda, según la hoja de estilos. Con Helvetica, un carácter mide de media
-# ~0,52 em en negrita (el nombre) y ~0,50 en redonda (la presentación). Sirve
-# para saber si un nombre va a caber o va a salir recortado.
-ANCHO_CELDA_ARTICULO = 0.50
-PAD_CELDA_PT = 9.0
-EM_NEGRITA = 0.52
-EM_REDONDA = 0.50
+# El ancho de las celdas no es fijo: cantidad y precio miden lo justo para la
+# cifra más ancha DE ESTE PEDIDO (ver `_anchos_celdas`) y el resto es para el
+# nombre del artículo. Con anchos fijos sobraba sitio en casi todas las filas
+# y, aun así, un solo "$ 1.068.000" descartaba las facturas de tres columnas.
+# Estos son los de respaldo (un plan sin artículos).
+ANCHOS_POR_DEFECTO = (0.48, 0.22, 0.30)
+# El nombre nunca se queda con menos que esto de la columna.
+MIN_FRACCION_ARTICULO = 0.42
+# Holgura sobre lo medido en cantidad y precio: si una cifra no cabe, la celda
+# la corta, y un precio "$ 12.…" no se entiende.
+HOLGURA_CIFRAS = 1.06
+# Y un extra fijo: la píldora de la unidad se dibuja con algo más de lo que da
+# la suma de sus letras (medido sobre el PDF: hasta 0,6pt).
+EXTRA_CIFRAS_PT = 1.5
+# Espaciado entre letras de los títulos "CANT." y "PRECIO" (0,3px): la celda
+# tampoco puede quedar más angosta que ellos.
+ESPACIADO_TITULO_PT = 0.225
 
-# Las otras dos celdas (19% y 31% en la hoja de estilos). Las cifras de
-# Helvetica miden 0,556 em; "$", "." y "/" algo menos, así que 0,56 queda del
-# lado seguro. La unidad va en una píldora con 5px de padding a cada lado y
-# 4px de margen: 10,5pt que no dependen de la letra.
-ANCHO_CELDA_CANTIDAD = 0.19
-ANCHO_CELDA_PRECIO = 0.31
-EM_CIFRA = 0.56
-EM_CIFRA_NEGRITA = 0.58
-PILL_EXTRA_PT = 10.5
+# Relleno de la píldora de la unidad, en em de SU letra (el 85% de la del
+# artículo): 0,45 a cada lado y 0,35 de margen, igual que `.unit-pill`. Antes
+# eran 10,5pt fijos, que en una columna estrecha se comían la celda y
+# descartaban siempre las facturas de tres columnas.
+PILL_RELLENO_EM = 0.45 * 2 + 0.35
 
-# Solo se cuentan como recorte los nombres que se pasan de largo más de un
-# 15%: perder un par de letras del final no estorba, y ser estricto obligaba a
-# bajar la letra hasta tamaños incómodos con tal de no cortar nada.
-TOLERANCIA_RECORTE = 1.15
+# Un nombre cuenta como recortado si no entra en el 97% de su celda: el ancho
+# se mide letra por letra (ver `_ancho_texto`), así que el margen solo cubre
+# el redondeo del renderizado. La información no debe salir cortada.
+MARGEN_RECORTE = 0.97
+
+# Anchos reales de Helvetica/Arial (y de Liberation Sans, que es la que usa el
+# servidor: tiene las mismas medidas), en milésimas de em, de las métricas AFM
+# estándar. Medir con un promedio por letra sobrestimaba las cifras —el punto
+# y el espacio miden la mitad que un dígito— y subestimaba las mayúsculas, y
+# con eso las celdas salían o muy anchas o cortadas.
+_ANCHOS_REGULAR = {
+    **dict.fromkeys("0123456789$", 556), " ": 278, ".": 278, ",": 278, "/": 278,
+    "-": 333, "(": 333, ")": 333, "#": 556, "%": 889, "&": 667, "@": 1015, "x": 500,
+    "a": 556, "b": 556, "c": 500, "d": 556, "e": 556, "f": 278, "g": 556, "h": 556,
+    "i": 222, "j": 222, "k": 500, "l": 222, "m": 833, "n": 556, "o": 556, "p": 556,
+    "q": 556, "r": 333, "s": 500, "t": 278, "u": 556, "v": 500, "w": 722,
+    "y": 500, "z": 500,
+    "A": 667, "B": 667, "C": 722, "D": 722, "E": 667, "F": 611, "G": 778, "H": 722,
+    "I": 278, "J": 500, "K": 667, "L": 556, "M": 833, "N": 722, "O": 778, "P": 667,
+    "Q": 778, "R": 722, "S": 667, "T": 611, "U": 722, "V": 667, "W": 944, "X": 667,
+    "Y": 667, "Z": 611,
+}
+_ANCHOS_NEGRITA = {
+    **_ANCHOS_REGULAR,
+    "(": 333, ")": 333, "-": 333, "#": 556, "&": 722, "@": 975,
+    "a": 556, "b": 611, "c": 556, "d": 611, "e": 556, "f": 333, "g": 611, "h": 611,
+    "i": 278, "j": 278, "k": 556, "l": 278, "m": 889, "n": 611, "o": 611, "p": 611,
+    "q": 611, "r": 389, "s": 556, "t": 333, "u": 611, "v": 556, "w": 778, "x": 556,
+    "y": 556, "z": 500,
+    "A": 722, "B": 722, "J": 556, "K": 722, "L": 611,
+}
+# Una letra con tilde mide lo mismo que la base.
+_SIN_TILDE = str.maketrans("áéíóúÁÉÍÓÚñÑüÜ", "aeiouAEIOUnNuU")
+
+
+def _ancho_texto(texto: str, fuente_pt: float, negrita: bool = False, mayusculas: bool = False) -> float:
+    """Lo que ocupa `texto` en puntos, en Helvetica/Arial del cuerpo dado."""
+    tabla = _ANCHOS_NEGRITA if negrita else _ANCHOS_REGULAR
+    texto = str(texto or "")
+    if mayusculas:
+        texto = texto.upper()
+    milesimas = sum(tabla.get(c, 600) for c in texto.translate(_SIN_TILDE))
+    return milesimas / 1000 * fuente_pt
+
+
+def pad_horizontal_px(fuente_pt: float) -> float:
+    """
+    Padding lateral de cada celda: proporcional a la letra, entre 3,5 y 6px.
+
+    Con 6px fijos, en letra pequeña el relleno se comía el ancho que le hacía
+    falta al nombre. Debe coincidir con `--pad-h` en la hoja de estilos.
+    """
+    return round(max(3.5, min(6.0, fuente_pt * 0.72)), 2)
 
 # Por debajo de este cuerpo la factura deja de leerse con comodidad. Se elige
 # siempre entre las densidades que lo respetan; solo se baja de aquí cuando el
@@ -94,6 +148,9 @@ FUENTE_MINIMA_COMODA = 6.1
 # 50% (los renglones de "Otros Productos" llevan dos líneas y a tres columnas
 # quedaban demasiado estrechos).
 COLUMNAS_ESPECIALES = 2
+
+# La tabla única de las categorías especiales, en la franja o en las columnas.
+NOMBRE_OTROS = "Otros Productos"
 
 
 @dataclass(frozen=True)
@@ -205,6 +262,12 @@ class Plan:
     pad_extra_px: float = 0.0
     # Solo cuando no cabe en una: las columnas de cada hoja, en orden.
     hojas: list | None = None
+    # "Otros Productos" va como una tabla más en las columnas y no en su franja
+    # a lo ancho (ver `planificar`): la plantilla no pinta la franja.
+    especiales_en_columnas: bool = False
+    # Fracción de la columna para artículo, cantidad y precio (ver
+    # `_anchos_celdas`). La plantilla los aplica con `variables_css`.
+    anchos: tuple = ANCHOS_POR_DEFECTO
 
     @property
     def paginas(self) -> list:
@@ -230,7 +293,13 @@ class Plan:
         con coma decimal, que como valor CSS es inválido y hacía que el tamaño
         de letra cayera al heredado, descuadrando toda la maquetación.
         """
-        return f"--fs-item: {self.densidad.fuente_pt:.2f}pt; --pad-v: {self.pad_v_px:.2f}px;"
+        articulo, cantidad, precio = self.anchos
+        return (
+            f"--fs-item: {self.densidad.fuente_pt:.2f}pt; --pad-v: {self.pad_v_px:.2f}px; "
+            f"--pad-h: {pad_horizontal_px(self.densidad.fuente_pt):.2f}px; "
+            f"--w-art: {articulo * 100:.2f}%; --w-cant: {cantidad * 100:.2f}%; "
+            f"--w-precio: {precio * 100:.2f}%;"
+        )
 
     @property
     def ancho_columna_pt(self) -> float:
@@ -243,7 +312,7 @@ class Plan:
         return self.alto_maximo_pt / self.alto_disponible_pt
 
 
-def _contar_recortes(bloques, n_columnas: int, densidad: Densidad) -> int:
+def _contar_recortes(bloques, n_columnas: int, densidad: Densidad, fraccion_articulo: float) -> int:
     """
     Cuántos artículos no caben a lo ancho de su columna y saldrían cortados.
 
@@ -251,51 +320,71 @@ def _contar_recortes(bloques, n_columnas: int, densidad: Densidad) -> int:
     con letra algo menor": repartir 100 productos en cinco columnas deja cada
     una tan estrecha que solo entran diez caracteres del nombre.
     """
-    disponible = (ANCHO_UTIL_PT / n_columnas) * ANCHO_CELDA_ARTICULO - PAD_CELDA_PT
+    disponible = (ANCHO_UTIL_PT / n_columnas) * fraccion_articulo - _pad_celda_pt(densidad)
     if disponible <= 0:
         return sum(len(items) for _, items in bloques)
 
+    fuente = densidad.fuente_pt
     recortes = 0
     for _, items in bloques:
         for it in items:
-            nombre = str(it.get("articulo") or "")
-            pres = str(it.get("pres") or "")
-            ancho = (
-                len(nombre) * EM_NEGRITA + (len(pres) + 1) * EM_REDONDA
-            ) * densidad.fuente_pt
-            if ancho > disponible * TOLERANCIA_RECORTE:
+            # La plantilla pinta "<b>Nombre</b> presentación".
+            ancho = _ancho_texto(it.get("articulo"), fuente, negrita=True) + _ancho_texto(
+                f" {it.get('pres') or ''}", fuente
+            )
+            if ancho > disponible * MARGEN_RECORTE:
                 recortes += 1
     return recortes
 
 
-def _cifras_caben(bloques, n_columnas: int, densidad: Densidad) -> bool:
-    """
-    Si la cantidad (con su unidad) y el precio de TODOS los artículos caben
-    enteros en sus celdas con este número de columnas.
+def _pad_celda_pt(densidad: Densidad) -> float:
+    """Los dos rellenos laterales de una celda, en pt (1px = 0,75pt)."""
+    return pad_horizontal_px(densidad.fuente_pt) * 2 * 0.75
 
-    Un nombre recortado se entiende; un precio "$ 12.…" no. En una hoja
-    angosta, cuatro o cinco columnas dejan la celda del precio por debajo de lo
-    que ocupa "$ 12.500", así que esos repartos se descartan.
+
+def _anchos_celdas(bloques, n_columnas: int, densidad: Densidad):
+    """
+    El ancho justo de cada celda para este pedido, o None si no caben.
+
+    Cantidad y precio miden lo que ocupa su cifra más ancha (o su título, si
+    es más ancho), con una holgura; el nombre del artículo se queda con el
+    resto. Un nombre recortado se entiende; un precio "$ 12.…" no: si con
+    este número de columnas el nombre se quedara con menos del mínimo, el
+    reparto se descarta.
     """
     ancho_columna = ANCHO_UTIL_PT / n_columnas
-    ancho_cant = ancho_columna * ANCHO_CELDA_CANTIDAD - PAD_CELDA_PT
-    ancho_precio = ancho_columna * ANCHO_CELDA_PRECIO - PAD_CELDA_PT
-    pill = densidad.fuente_pt * 0.85  # la unidad va en letra al 85%
+    fuente = densidad.fuente_pt
+    pequena = fuente * 0.85  # la unidad y los títulos van en letra al 85%
+    pad = _pad_celda_pt(densidad)
+
+    def titulo(texto):
+        return _ancho_texto(texto, pequena, negrita=True) + len(texto) * ESPACIADO_TITULO_PT
+
+    cantidad_max = titulo("CANT.")
+    precio_max = titulo("PRECIO")
     for _, items in bloques:
         for it in items:
             precio = f"$ {int(it.get('subtotal') or 0):,}"
-            if len(precio) * EM_CIFRA_NEGRITA * densidad.fuente_pt > ancho_precio:
-                return False
+            precio_max = max(precio_max, _ancho_texto(precio, fuente, negrita=True))
             cantidad = _texto_cantidad(it.get("cant"))
-            unidad = str(it.get("unidad") or "")
-            ocupa = (
-                len(cantidad) * EM_CIFRA * densidad.fuente_pt
-                + len(unidad) * EM_NEGRITA * pill
-                + PILL_EXTRA_PT
+            cantidad_max = max(
+                cantidad_max,
+                _ancho_texto(cantidad, fuente)
+                + _ancho_texto(it.get("unidad"), pequena, negrita=True, mayusculas=True)
+                + PILL_RELLENO_EM * pequena,
             )
-            if ocupa > ancho_cant:
-                return False
-    return True
+
+    f_cantidad = (cantidad_max * HOLGURA_CIFRAS + EXTRA_CIFRAS_PT + pad) / ancho_columna
+    f_precio = (precio_max * HOLGURA_CIFRAS + EXTRA_CIFRAS_PT + pad) / ancho_columna
+    f_articulo = 1 - f_cantidad - f_precio
+    if f_articulo < MIN_FRACCION_ARTICULO:
+        return None
+    return (f_articulo, f_cantidad, f_precio)
+
+
+def _cifras_caben(bloques, n_columnas: int, densidad: Densidad) -> bool:
+    """Si la cantidad y el precio de todos los artículos caben enteros."""
+    return _anchos_celdas(bloques, n_columnas, densidad) is not None
 
 
 def _texto_cantidad(valor) -> str:
@@ -463,8 +552,36 @@ def planificar(categorias_normales, categorias_especiales) -> Plan:
 
     Prioridades, en orden: que quepa en una hoja, que la letra sea lo más
     grande posible, y que cada categoría lleve sus renglones en blanco.
+
+    Las categorías especiales (Desechables, Salsamentaria, Dulcería) van
+    SIEMPRE juntas en una sola tabla, "Otros Productos": así lo pidió el
+    cliente. Siempre que se pueda es la franja a lo ancho de siempre. Pero esa
+    franja gasta dos líneas por artículo y solo tiene dos columnas: con muchos
+    artículos especiales se comía la hoja entera y mandaba la factura a una
+    segunda. En ese caso "Otros Productos" pasa a las columnas como una tabla
+    más —una sola, nunca una por categoría—, una línea por artículo, y se
+    queda ese plan si cabe en una hoja con más letra.
     """
-    bloques = list(categorias_normales.items())
+    plan = _planificar(list(categorias_normales.items()), categorias_especiales)
+    if not categorias_especiales:
+        return plan
+    comodo = plan.cabe_en_una_hoja and plan.densidad.fuente_pt >= FUENTE_MINIMA_COMODA
+    if comodo:
+        return plan
+
+    otros = [item for items in categorias_especiales.values() for item in items]
+    juntas = list(categorias_normales.items()) + [(NOMBRE_OTROS, otros)]
+    fusion = _planificar(juntas, {})
+    if fusion.cabe_en_una_hoja and (
+        not plan.cabe_en_una_hoja or fusion.densidad.fuente_pt > plan.densidad.fuente_pt
+    ):
+        fusion.especiales_en_columnas = True
+        return fusion
+    return plan
+
+
+def _planificar(bloques, categorias_especiales) -> Plan:
+    """El plan para unas categorías dadas, con la franja de especiales aparte."""
 
     if not bloques:
         densidad = DENSIDADES[2]
@@ -489,7 +606,8 @@ def planificar(categorias_normales, categorias_especiales) -> Plan:
                 if n_columnas == 1 and len(bloques) > 1:
                     continue
 
-                if not _cifras_caben(bloques, n_columnas, densidad):
+                anchos = _anchos_celdas(bloques, n_columnas, densidad)
+                if anchos is None:
                     continue  # el precio o la cantidad saldrían cortados
 
                 if n_columnas > len(bloques):
@@ -517,9 +635,10 @@ def planificar(categorias_normales, categorias_especiales) -> Plan:
                     alto_maximo_pt=max(alturas),
                     alto_disponible_pt=disponible,
                     cabe_en_una_hoja=max(alturas) <= disponible,
+                    anchos=anchos,
                 )
                 if plan.cabe_en_una_hoja:
-                    recortes = _contar_recortes(bloques, n_columnas, densidad)
+                    recortes = _contar_recortes(bloques, n_columnas, densidad, anchos[0])
                     incomoda = densidad.fuente_pt < FUENTE_MINIMA_COMODA
                     if recortes == 0 and not incomoda:
                         # Nada que cortar, con cuerpo legible y la letra más
@@ -531,7 +650,10 @@ def planificar(categorias_normales, categorias_especiales) -> Plan:
                     # los nombres dejen de cortarse. Eso sí, primero manda la
                     # legibilidad: no compensa bajar a cuerpo 5 con tal de
                     # salvar unos cuantos nombres largos.
-                    clave = (incomoda, recortes, DENSIDADES.index(densidad))
+                    # Primero que no se corte nada; entre los que no cortan,
+                    # la letra cómoda y luego la más grande. Solo si todos
+                    # cortan algo, el que menos.
+                    clave = (recortes > 0, incomoda, recortes, DENSIDADES.index(densidad))
                     if mejor_clave is None or clave < mejor_clave:
                         mejor, mejor_clave = plan, clave
                 elif respaldo is None or plan.alto_maximo_pt < respaldo.alto_maximo_pt:
@@ -615,19 +737,23 @@ def _plan_varias_hojas(bloques, respaldo) -> Plan:
     )
     candidatas = [n for n in COLUMNAS_CANDIDATAS if not (n == 1 and len(bloques) > 1)]
     # Nunca con el precio cortado; si ni con la que menos columnas usa cabe
-    # (un subtotal enorme), se queda esa: es la de celdas más anchas.
-    candidatas = [n for n in candidatas if _cifras_caben(bloques, n, densidad)] or candidatas[:1]
+    # (un subtotal enorme), se queda esa con los anchos por defecto: es la de
+    # celdas más anchas.
+    con_anchos = [(n, _anchos_celdas(bloques, n, densidad)) for n in candidatas]
+    con_anchos = [(n, a) for n, a in con_anchos if a is not None] or [
+        (candidatas[0], ANCHOS_POR_DEFECTO)
+    ]
 
     mejor, mejor_clave = None, None
-    for n_columnas in candidatas:
+    for n_columnas, anchos in con_anchos:
         hojas = _llenar_hojas(bloques, n_columnas, densidad)
-        clave = (_contar_recortes(bloques, n_columnas, densidad), len(hojas), -n_columnas)
+        clave = (_contar_recortes(bloques, n_columnas, densidad, anchos[0]), len(hojas), -n_columnas)
         if mejor_clave is None or clave < mejor_clave:
-            mejor, mejor_clave = (n_columnas, hojas), clave
+            mejor, mejor_clave = (n_columnas, hojas, anchos), clave
 
     if mejor is None:
         return respaldo
-    n_columnas, hojas = mejor
+    n_columnas, hojas, anchos = mejor
     return Plan(
         columnas=hojas[0],
         densidad=densidad,
@@ -637,4 +763,5 @@ def _plan_varias_hojas(bloques, respaldo) -> Plan:
         alto_disponible_pt=ALTO_HOJA_SIGUIENTE_PT,
         cabe_en_una_hoja=False,
         hojas=hojas,
+        anchos=anchos,
     )

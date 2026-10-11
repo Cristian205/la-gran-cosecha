@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   FolderCog,
   History,
   ImageOff,
@@ -16,14 +18,15 @@ import {
   X,
 } from "lucide-react";
 import {
-  actualizarProducto,
+  actualizarProductoParcial,
   desactivarProducto,
   obtenerCategorias,
   obtenerPaginaProductos,
   obtenerUnidades,
 } from "../../api/resources";
-import type { Categoria, Producto, UnidadMedida } from "../../types";
+import type { Categoria, Presentacion, Producto, UnidadMedida } from "../../types";
 import { extraerMensajeError, formatoPrecio, tienePermiso } from "../../utils";
+import { describirRegla } from "../../utils/cantidades";
 import { alertaError, confirmarAccion } from "../../utils/alertas";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../auth/AuthContext";
@@ -87,6 +90,17 @@ export function ProductsPage() {
   const [editando, setEditando] = useState<Producto | null>(null);
   const [historialDe, setHistorialDe] = useState<Producto | null>(null);
   const [modalCategorias, setModalCategorias] = useState(false);
+  /** Tarjetas con todas sus presentaciones desplegadas. */
+  const [expandidas, setExpandidas] = useState<Set<number>>(new Set());
+
+  function alternarExpandida(id: number) {
+    setExpandidas((prev) => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
+      return s;
+    });
+  }
 
   const coloresCategoria = useMemo(() => coloresPorCategoria(categorias), [categorias]);
 
@@ -158,25 +172,10 @@ export function ProductsPage() {
       if (p.estado_producto) {
         await desactivarProducto(p.id);
       } else {
-        await actualizarProducto(p.id, {
-          nombre_producto: p.nombre_producto,
-          categoria: p.categoria,
-          unidad_base: p.unidad_base,
-          tipo_cantidad: p.tipo_cantidad,
-          permite_fraccion: p.permite_fraccion,
-          estado_producto: true,
-          // Se reenvian tal cual: esto es un PUT, y omitirlos devolveria el
-          // producto a «sin control de existencias» sin que nadie lo pidiera.
-          controla_stock: p.controla_stock,
-          codigo_barras: p.codigo_barras,
-          presentaciones: p.presentaciones.map((x) => ({
-            id: x.id,
-            nombre_presentacion: x.nombre_presentacion,
-            unidad_venta: x.unidad_venta,
-            factor_conversion: x.factor_conversion,
-            precio_unitario: x.precio_unitario,
-          })),
-        });
+        // PATCH de un solo campo: reenviar el producto entero (como hacía el
+        // PUT de antes) desactivaba de paso las presentaciones inactivas que
+        // no venían en la lista y podía pisar cambios de otra persona.
+        await actualizarProductoParcial(p.id, { estado_producto: true });
       }
       cargar();
     } catch (err) {
@@ -184,11 +183,15 @@ export function ProductsPage() {
     }
   }
 
-  function precioDesde(p: Producto): string {
+  /**
+   * La presentación ACTIVA más barata, para el "Desde": el precio va con su
+   * unidad ("$2.000 / kg") porque un mínimo que mezcla kilos y bultos sin
+   * decir cuál es no significa nada. Sin activas no hay precio que mostrar.
+   */
+  function masBarata(p: Producto): Presentacion | null {
     const activas = p.presentaciones.filter((x) => x.estado_presentacion);
-    if (activas.length === 0) return "—";
-    const min = Math.min(...activas.map((x) => parseFloat(x.precio_unitario)));
-    return formatoPrecio(min);
+    if (activas.length === 0) return null;
+    return activas.reduce((min, x) => (Number(x.precio_unitario) < Number(min.precio_unitario) ? x : min));
   }
 
   return (
@@ -285,6 +288,9 @@ export function ProductsPage() {
             <div className="catalogo-grid">
               {productos.map((p, i) => {
                 const activas = p.presentaciones.filter((x) => x.estado_presentacion);
+                const inactivas = p.num_presentaciones_inactivas ?? 0;
+                const barata = masBarata(p);
+                const expandida = expandidas.has(p.id);
                 return (
                   <div
                     className={`producto-card ${
@@ -316,35 +322,54 @@ export function ProductsPage() {
                       <span className="codigo">{p.codigo_producto}</span>
                       <span className="nombre">{p.nombre_producto}</span>
 
-                      <div className="precio-desde">
-                        <span className="precio-label">Desde</span>
-                        <span className="precio-valor">{precioDesde(p)}</span>
-                      </div>
+                      {barata ? (
+                        <div className="precio-desde">
+                          <span className="precio-label">{activas.length > 1 ? "Desde" : "Precio"}</span>
+                          <span className="precio-valor">{formatoPrecio(barata.precio_unitario)}</span>
+                          <span className="precio-unidad">
+                            / {barata.unidad_venta_abreviatura || barata.unidad_venta_nombre}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="precio-desde sin-precio">Sin precio: no hay presentaciones activas</div>
+                      )}
 
                       <div className="producto-presentaciones">
                         <div className="pres-header">
-                          <Layers size={12} /> Presentaciones
+                          <Layers size={12} aria-hidden />
+                          {activas.length} {activas.length === 1 ? "presentación" : "presentaciones"}
+                          {inactivas > 0 && (
+                            <span className="pres-inactivas">
+                              · {inactivas} {inactivas === 1 ? "inactiva" : "inactivas"}
+                            </span>
+                          )}
                         </div>
-                        {activas.length === 0 ? (
-                          <span className="pres-vacio">Sin presentaciones activas</span>
-                        ) : (
-                          <>
-                            {activas.slice(0, 3).map((pr) => (
-                              <div className="pres-chip" key={pr.id}>
+                        {activas.length > 0 && (
+                          <ul className={expandida ? "pres-lista expandida" : "pres-lista"} id={"pres-" + p.id}>
+                            {(expandida ? activas : activas.slice(0, 2)).map((pr) => (
+                              <li className="pres-chip" key={pr.id}>
                                 <span className="pres-nombre">
-                                  {pr.nombre_presentacion} - {pr.unidad_venta_nombre}
+                                  {pr.nombre_presentacion}
+                                  <small>
+                                    {pr.unidad_venta_nombre} · {describirRegla(pr.cantidad_minima, pr.incremento_cantidad)}
+                                  </small>
                                 </span>
-                                <span className="pres-precio">
-                                  {formatoPrecio(pr.precio_unitario)}
-                                </span>
-                              </div>
+                                <span className="pres-precio">{formatoPrecio(pr.precio_unitario)}</span>
+                              </li>
                             ))}
-                            {activas.length > 3 && (
-                              <span className="pres-mas">
-                                +{activas.length - 3} más
-                              </span>
-                            )}
-                          </>
+                          </ul>
+                        )}
+                        {activas.length > 2 && (
+                          <button
+                            type="button"
+                            className="pres-mas"
+                            aria-expanded={expandida}
+                            aria-controls={"pres-" + p.id}
+                            onClick={() => alternarExpandida(p.id)}
+                          >
+                            {expandida ? <ChevronUp size={13} aria-hidden /> : <ChevronDown size={13} aria-hidden />}
+                            {expandida ? "Ver menos" : `Ver ${activas.length - 2} más`}
+                          </button>
                         )}
                       </div>
                     </div>
@@ -473,6 +498,8 @@ export function ProductsPage() {
             setModalAbierto(false);
             cargar();
           }}
+          onPresentacionesCambiadas={cargar}
+          onUnidadCreada={(u) => setUnidades((prev) => [...prev, u])}
         />
       )}
 

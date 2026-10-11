@@ -310,7 +310,7 @@ export function OrderDetailModal({
   return (
     <Modal
       ancho
-      lateral
+      amplio
       titulo={`Pedido #${pedidoId}`}
       onCerrar={onCerrar}
       footer={

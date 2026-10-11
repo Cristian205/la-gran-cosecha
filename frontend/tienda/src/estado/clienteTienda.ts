@@ -26,7 +26,7 @@ export const useClienteTienda = create<ClienteTiendaState>()(
       olvidar: () => set({ cedula: null, nombre: null }),
     }),
     {
-      name: "crynex-cliente",
+      name: "kryonx-cliente",
       // Mismo motivo que `estado/carrito.ts`: el servidor pinta sin cliente y
       // `CapaCliente` rehidrata después de montar.
       skipHydration: true,

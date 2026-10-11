@@ -1,5 +1,5 @@
 """
-El panel de Crynex: planes, permisos y negocios.
+El panel de Kryon X: planes, permisos y negocios.
 
 Es la única parte del sistema que atraviesa negocios a propósito, así que es
 también donde más importa comprobar quién entra: administrar un negocio no
@@ -25,8 +25,8 @@ RUTAS = [
 @pytest.fixture
 def staff_plataforma(negocio):
     usuario = get_user_model().objects.create_user(
-        email_usuario="crynex@ejemplo.test",
-        nombre_usuario="Equipo Crynex",
+        email_usuario="kryonx@ejemplo.test",
+        nombre_usuario="Equipo Kryon X",
         password="clave-de-prueba-123",
         is_staff=True,
     )
@@ -123,7 +123,7 @@ def test_retirar_un_permiso_lo_oculta_en_todos_los_negocios(
     api_owner, negocio, staff_plataforma
 ):
     """
-    El sentido de tener el catálogo en la base: Crynex desactiva un módulo y
+    El sentido de tener el catálogo en la base: Kryon X desactiva un módulo y
     desaparece de todas las empresas sin tocar ningún plan.
     """
     catalogo = staff_plataforma.get("/api/platform/permissions/").json()
@@ -165,6 +165,66 @@ def test_la_plataforma_ve_todos_los_negocios(staff_plataforma, negocio):
 
     slugs = {n["slug"] for n in staff_plataforma.get("/api/platform/tenants/").json()}
     assert {negocio.slug, otro.slug} <= slugs
+
+
+def test_el_listado_trae_el_logo_de_la_tienda(staff_plataforma, negocio):
+    """Sin logo subido, `logo_url` es null y el panel pinta la inicial."""
+    fila = next(
+        n for n in staff_plataforma.get("/api/platform/tenants/").json() if n["id"] == negocio.id
+    )
+    assert "logo_url" in fila
+
+
+def test_la_identidad_corporativa_se_edita_donde_la_lee_la_tienda(staff_plataforma, negocio):
+    from apps.content.models import StoreSettings
+
+    respuesta = staff_plataforma.patch(
+        f"/api/platform/tenants/{negocio.id}/identidad/",
+        {
+            "nombre_comercial": "La Gran Cosecha",
+            "razon_social": "Fready Balaguera",
+            "nit": "80.760.871-1",
+            "telefono": "3002124562",
+            "ciudad": "Soacha",
+        },
+        format="json",
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.json()["razon_social"] == "Fready Balaguera"
+
+    ajustes = StoreSettings.objects.get(tenant=negocio)
+    # El contacto, en la configuración de la tienda; lo legal, en su centro legal.
+    assert ajustes.nombre_empresa == "La Gran Cosecha"
+    assert ajustes.telefono == "3002124562"
+    assert ajustes.legal["empresa"]["razon_social"] == "Fready Balaguera"
+    assert ajustes.legal["empresa"]["nit"] == "80.760.871-1"
+
+    leida = staff_plataforma.get(f"/api/platform/tenants/{negocio.id}/identidad/").json()
+    assert leida["nit"] == "80.760.871-1"
+    assert leida["ciudad"] == "Soacha"
+
+
+def test_editar_la_identidad_no_borra_el_resto_del_centro_legal(staff_plataforma, negocio):
+    from apps.content.models import StoreSettings
+
+    ajustes, _ = StoreSettings.objects.get_or_create(tenant=negocio)
+    ajustes.legal = {"empresa": {"matricula_mercantil": "12345"}, "envios": {"horarios": "7am"}}
+    ajustes.save(update_fields=["legal"])
+
+    staff_plataforma.patch(
+        f"/api/platform/tenants/{negocio.id}/identidad/", {"nit": "900.1"}, format="json"
+    )
+
+    ajustes.refresh_from_db()
+    assert ajustes.legal["empresa"] == {"matricula_mercantil": "12345", "nit": "900.1"}
+    assert ajustes.legal["envios"] == {"horarios": "7am"}
+
+
+def test_un_negocio_no_edita_la_identidad_desde_la_plataforma(api_owner, negocio):
+    respuesta = api_owner.patch(
+        f"/api/platform/tenants/{negocio.id}/identidad/", {"nit": "1"}, format="json"
+    )
+    assert respuesta.status_code in (401, 403)
 
 
 def test_se_puede_mover_una_empresa_de_plan(staff_plataforma, negocio):

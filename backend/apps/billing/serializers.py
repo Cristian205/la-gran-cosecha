@@ -218,13 +218,19 @@ class NegocioSerializer(serializers.ModelSerializer):
     estado_suscripcion = serializers.SerializerMethodField()
     dominios = serializers.SerializerMethodField()
     usuarios = serializers.SerializerMethodField()
+    # El logo de su tienda: el que sube al montar su plantilla o desde su panel.
+    # La plataforma lo muestra en vez de la inicial; sin logo, la inicial.
+    logo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Tenant
         fields = [
             "id", "uuid", "slug", "nombre", "estado", "fecha_creacion",
-            "plan", "estado_suscripcion", "dominios", "usuarios",
+            "plan", "estado_suscripcion", "dominios", "usuarios", "logo_url",
         ]
+
+    def get_logo_url(self, obj):
+        return url_de_logo(ajustes_de(obj), self.context.get("request"))
 
     def get_plan(self, obj):
         sus = getattr(obj, "suscripcion", None)
@@ -241,6 +247,64 @@ class NegocioSerializer(serializers.ModelSerializer):
         return obj.memberships.filter(activo=True).count()
 
 
+def ajustes_de(negocio):
+    """La configuración de tienda del negocio, o None si aún no la tiene."""
+    try:
+        return negocio.settings
+    except Exception:  # noqa: BLE001 — RelatedObjectDoesNotExist de la relación inversa
+        return None
+
+
+def url_de_logo(ajustes, request):
+    if not ajustes or not ajustes.logo:
+        return None
+    return request.build_absolute_uri(ajustes.logo.url) if request else ajustes.logo.url
+
+
+class IdentidadNegocioSerializer(serializers.Serializer):
+    """
+    La información corporativa de un negocio, editable desde la plataforma.
+
+    No es un modelo nuevo: se lee y se escribe donde la tienda ya la busca.
+    El nombre comercial, el logo y el contacto viven en `StoreSettings`; los
+    datos legales (razón social, NIT, representante…) en la sección `empresa`
+    del centro legal, con el NIT de la factura como respaldo al leer. Así lo
+    que se corrige aquí aparece igual en la tienda, en sus políticas y en el
+    pie, sin una segunda copia que se quede vieja.
+    """
+
+    nombre_comercial = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    razon_social = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    nit = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    representante_legal = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    telefono = serializers.CharField(max_length=25, required=False, allow_blank=True)
+    correo = serializers.EmailField(required=False, allow_blank=True)
+    direccion = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    ciudad = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    departamento = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    logo = serializers.ImageField(required=False, write_only=True)
+    quitar_logo = serializers.BooleanField(required=False, write_only=True)
+
+    #: Los que se guardan en `legal.empresa` (la clave es la misma).
+    DE_LEGAL = ("razon_social", "nit", "representante_legal", "departamento")
+
+    @staticmethod
+    def leer(ajustes, request) -> dict:
+        empresa = (ajustes.legal or {}).get("empresa", {}) if ajustes else {}
+        return {
+            "nombre_comercial": getattr(ajustes, "nombre_empresa", ""),
+            "razon_social": empresa.get("razon_social", ""),
+            "nit": empresa.get("nit") or getattr(ajustes, "factura_nit", ""),
+            "representante_legal": empresa.get("representante_legal", ""),
+            "telefono": getattr(ajustes, "telefono", ""),
+            "correo": getattr(ajustes, "email", ""),
+            "direccion": empresa.get("direccion") or getattr(ajustes, "direccion", ""),
+            "ciudad": empresa.get("ciudad") or getattr(ajustes, "ciudad", ""),
+            "departamento": empresa.get("departamento", ""),
+            "logo_url": url_de_logo(ajustes, request),
+        }
+
+
 class DomainPlataformaSerializer(serializers.Serializer):
     """El detalle de un dominio, para la pestaña que hoy solo tiene el nombre."""
 
@@ -252,7 +316,7 @@ class DomainPlataformaSerializer(serializers.Serializer):
 class MembershipPlataformaSerializer(serializers.Serializer):
     """
     El equipo de un negocio, visto desde la plataforma. Solo lectura: quién
-    trabaja ahí lo administra el propio negocio, no Crynex — esto es lo justo
+    trabaja ahí lo administra el propio negocio, no Kryon X — esto es lo justo
     para que `Empresa.tsx` deje de decir «todavía no disponible aquí».
     """
 

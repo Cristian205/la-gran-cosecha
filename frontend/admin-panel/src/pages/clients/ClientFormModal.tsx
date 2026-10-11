@@ -17,6 +17,7 @@ export function ClientFormModal({ cliente, onCerrar, onGuardado }: Props) {
   const [telefono, setTelefono] = useState(cliente?.telefono_cliente ?? "");
   const [direccion, setDireccion] = useState(cliente?.direccion_cliente ?? "");
   const [documento, setDocumento] = useState(cliente?.documento_cliente ?? "");
+  const [aceptaWhatsapp, setAceptaWhatsapp] = useState(cliente?.acepta_whatsapp ?? false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +35,7 @@ export function ClientFormModal({ cliente, onCerrar, onGuardado }: Props) {
       telefono_cliente: telefono.trim(),
       direccion_cliente: direccion.trim(),
       documento_cliente: documento.trim(),
+      acepta_whatsapp: aceptaWhatsapp,
     };
 
     setGuardando(true);
@@ -53,7 +55,8 @@ export function ClientFormModal({ cliente, onCerrar, onGuardado }: Props) {
 
   return (
     <Modal
-      lateral
+      amplio
+      medio
       titulo={esEdicion ? "Editar cliente" : "Nuevo cliente"}
       onCerrar={onCerrar}
       footer={
@@ -104,6 +107,29 @@ export function ClientFormModal({ cliente, onCerrar, onGuardado }: Props) {
             onChange={(e) => setDireccion(e.target.value)}
           />
         </div>
+
+        <div className="campo-switch">
+          <label className="switch">
+            <input type="checkbox" checked={aceptaWhatsapp} onChange={(e) => setAceptaWhatsapp(e.target.checked)} />
+            <span className="switch-riel" />
+          </label>
+          <div>
+            <div className="campo-switch-titulo">Acepta avisos por WhatsApp</div>
+            <div className="campo-switch-desc">
+              Márcalo solo si el cliente te lo autorizó (por teléfono, en persona o en la tienda).
+              {cliente?.whatsapp_decidido_en &&
+                ` Última decisión: ${new Date(cliente.whatsapp_decidido_en).toLocaleDateString("es-CO")}.`}
+            </div>
+          </div>
+        </div>
+
+        {esEdicion && (
+          <p style={{ color: "var(--gris)", fontSize: ".82rem" }}>
+            {cliente?.autorizo_datos_en
+              ? `Autorizó el tratamiento de sus datos el ${new Date(cliente.autorizo_datos_en).toLocaleDateString("es-CO")}.`
+              : "Aún no ha autorizado el tratamiento de sus datos en la tienda: se le pedirá en su próximo pedido."}
+          </p>
+        )}
       </form>
     </Modal>
   );

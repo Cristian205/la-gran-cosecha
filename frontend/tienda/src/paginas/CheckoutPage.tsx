@@ -54,6 +54,10 @@ export function CheckoutPage() {
   const [direccion, setDireccion] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [acepta, setAcepta] = useState(false);
+  const [autorizaDatos, setAutorizaDatos] = useState(false);
+  // Desmarcada de entrada a propósito: un consentimiento premarcado no vale
+  // ni para Meta ni para la Ley 1581.
+  const [aceptaWhatsapp, setAceptaWhatsapp] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pedidoOk, setPedidoOk] = useState<{ id: number; total: number; nombre: string } | null>(null);
@@ -69,7 +73,20 @@ export function CheckoutPage() {
   // Los campos de contacto y el acuerdo: siempre por nombre; por cédula, solo
   // la primera vez y después de que la cédula se haya consultado.
   const pideDatos = porCedula ? consulta !== null && !conocido : true;
-  const listoParaEnviar = !enviando && (porCedula ? consulta !== null : true) && (!pideDatos || acepta);
+  // La autorización de datos se pide siempre por nombre (el nombre no
+  // identifica a nadie) y, por cédula, mientras ese cliente no la haya dado.
+  // WhatsApp, igual: solo a quien nunca se le preguntó.
+  const pideAutorizacion = porCedula
+    ? consulta !== null && (pideDatos || consulta.requiere_autorizacion === true)
+    : true;
+  const preguntaWhatsapp = porCedula
+    ? consulta !== null && (pideDatos || consulta.pregunta_whatsapp === true)
+    : true;
+  const listoParaEnviar =
+    !enviando &&
+    (porCedula ? consulta !== null : true) &&
+    (!pideDatos || acepta) &&
+    (!pideAutorizacion || autorizaDatos);
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -97,6 +114,10 @@ export function CheckoutPage() {
         return;
       }
     }
+    if (pideAutorizacion && !autorizaDatos) {
+      setError("Para enviar el pedido necesitamos tu autorización para tratar tus datos personales.");
+      return;
+    }
     if (conocido && otraDireccion && !direccionEntrega.trim()) {
       setError("Escribe la dirección de entrega para este pedido.");
       return;
@@ -106,9 +127,16 @@ export function CheckoutPage() {
       return;
     }
 
-    const datosContacto: DatosCliente = pideDatos
-      ? { nombre: nombre.trim(), telefono: `${codigoPais} ${telefono.trim()}`, direccion: direccion.trim() }
-      : {};
+    const consentimientos: DatosCliente = {
+      ...(pideAutorizacion ? { autoriza_datos: true } : {}),
+      ...(preguntaWhatsapp ? { acepta_whatsapp: aceptaWhatsapp } : {}),
+    };
+    const datosContacto: DatosCliente = {
+      ...(pideDatos
+        ? { nombre: nombre.trim(), telefono: `${codigoPais} ${telefono.trim()}`, direccion: direccion.trim() }
+        : {}),
+      ...consentimientos,
+    };
     const cliente: DatosCliente = porCedula
       ? {
           ...datosContacto,
@@ -327,6 +355,43 @@ export function CheckoutPage() {
                 con que se ajusten según la cotización del día de la cosecha al
                 procesarse en el sistema.
                 {porCedula && " Solo te lo preguntamos esta vez."}
+              </span>
+            </label>
+            )}
+
+            {preguntaWhatsapp && (
+            <label className="checkout-acuerdo checkout-acuerdo--opcional">
+              <input
+                type="checkbox"
+                checked={aceptaWhatsapp}
+                onChange={(e) => setAceptaWhatsapp(e.target.checked)}
+              />
+              <span>
+                Quiero recibir por WhatsApp la confirmación y el estado de mi pedido. Puedes
+                dejar de recibirlos cuando quieras respondiendo «BAJA».
+              </span>
+            </label>
+            )}
+
+            {pideAutorizacion && (
+            <label className="checkout-acuerdo">
+              <input
+                type="checkbox"
+                checked={autorizaDatos}
+                onChange={(e) => setAutorizaDatos(e.target.checked)}
+                required
+              />
+              <span>
+                Autorizo el tratamiento de mis datos personales para gestionar mi pedido,
+                según la{" "}
+                <Link href="/politica-tratamiento-datos" target="_blank" rel="noopener">
+                  Política de Tratamiento de Datos
+                </Link>{" "}
+                y los{" "}
+                <Link href="/terminos-y-condiciones" target="_blank" rel="noopener">
+                  Términos y Condiciones
+                </Link>
+                .
               </span>
             </label>
             )}

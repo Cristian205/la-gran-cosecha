@@ -17,7 +17,7 @@ import { Navbar } from "./Navbar";
  *
  * Dentro del editor (`?editor=1`) escucha el mismo canal que ya usa
  * `CapaEditor` para el contenido de la página, pero para el armazón. Sin
- * esto, editar una plantilla en el taller de Crynex enseñaba SIEMPRE el
+ * esto, editar una plantilla en el taller de Kryon X enseñaba SIEMPRE el
  * navbar y el pie reales del negocio de referencia —nunca los que la
  * plantilla propone para los suyos—, porque este componente vive en
  * `layout.tsx`, que envuelve la página entera y no sabe nada de qué ruta se
@@ -26,7 +26,7 @@ import { Navbar } from "./Navbar";
  * cliente de boutique el menú de una verdulería.
  */
 type MensajeDelPanel = {
-  fuente: "crynex-editor";
+  fuente: "kryonx-editor";
   tipo: "armazon";
   bloques: BloqueColocado[];
 };
@@ -92,7 +92,7 @@ export function ArmazonPrevia({ inicial, origenPanel, children }: Props) {
     function alRecibir(evento: MessageEvent) {
       if (permitidos.length > 0 && !permitidos.includes(evento.origin)) return;
       const dato = evento.data as MensajeDelPanel | undefined;
-      if (dato?.fuente !== "crynex-editor" || dato.tipo !== "armazon") return;
+      if (dato?.fuente !== "kryonx-editor" || dato.tipo !== "armazon") return;
       setBloques(dato.bloques);
     }
     window.addEventListener("message", alRecibir);

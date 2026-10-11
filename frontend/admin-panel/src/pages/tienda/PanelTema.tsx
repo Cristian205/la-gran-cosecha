@@ -12,7 +12,7 @@ interface Props {
 /**
  * La apariencia de la tienda, perilla a perilla.
  *
- * El catálogo lo define Crynex y aquí solo se eligen valores. Es la mitad que
+ * El catálogo lo define Kryon X y aquí solo se eligen valores. Es la mitad que
  * faltaba: hasta ahora el negocio solo podía cambiar los cuatro campos de
  * siempre —color, fuente, radio del botón— y todo lo demás que el motor sabe
  * ajustar quedaba en manos de la plataforma.

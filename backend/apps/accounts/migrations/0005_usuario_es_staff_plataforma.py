@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='usuario',
             name='es_staff_plataforma',
-            field=models.BooleanField(default=False, help_text='Acceso al panel de la plataforma: planes, permisos y negocios.', verbose_name='Administra Crynex'),
+            field=models.BooleanField(default=False, help_text='Acceso al panel de la plataforma: planes, permisos y negocios.', verbose_name='Administra Kryon X'),
         ),
     ]

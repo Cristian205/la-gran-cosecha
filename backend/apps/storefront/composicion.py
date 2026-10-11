@@ -276,7 +276,7 @@ def adoptar_plantilla(
     """
     Copia las páginas de una plantilla al negocio.
 
-    Copia y no referencia: si la página apuntara a la plantilla, que Crynex
+    Copia y no referencia: si la página apuntara a la plantilla, que Kryon X
     retocara «Mercado» reescribiría la tienda publicada de todos los clientes
     que la usan. Una tienda en producción no cambia sola.
 

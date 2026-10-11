@@ -9,17 +9,15 @@
  * La alternativa —tres columnas fijas— deja la previa en un tercio, que es
  * demasiado poco para juzgar cómo queda una tienda.
  */
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
   Copy,
   GripVertical,
-  Monitor,
   Plus,
-  Smartphone,
-  Tablet,
+  RotateCcw,
   Trash2,
   X,
 } from "lucide-react";
@@ -36,14 +34,11 @@ import {
   type Composicion,
   type TokenTema,
 } from "../../api/tienda";
+import { GRUPOS, agrupar, difiere, restaurar, type ClaveGrupo, type Grupo } from "./agrupacion";
+import { confirmarAccion } from "../../utils/alertas";
 import { Diseno } from "./Diseno";
+import { DISPOSITIVOS, type ClaveDispositivo } from "./dispositivos";
 import { Propiedades } from "./Propiedades";
-
-const DISPOSITIVOS = [
-  { clave: "escritorio", icono: Monitor, nombre: "Escritorio" },
-  { clave: "tablet", icono: Tablet, nombre: "Tablet" },
-  { clave: "movil", icono: Smartphone, nombre: "Móvil" },
-] as const;
 
 interface Props {
   catalogo: Bloque[];
@@ -53,6 +48,10 @@ interface Props {
   elegido: string | null;
   onCambio: (composicion: Composicion) => void;
   onElegir: (id: string | null) => void;
+  /** La pantalla de la vista previa. Sin ella (Configuración › Páginas), las
+   *  fotos por dispositivo eligen pantalla por su cuenta. */
+  pantalla?: ClaveDispositivo;
+  onPantalla?: (clave: ClaveDispositivo) => void;
 }
 
 export function PanelSecciones({
@@ -62,8 +61,13 @@ export function PanelSecciones({
   elegido,
   onCambio,
   onElegir,
+  pantalla,
+  onPantalla,
 }: Props) {
   const [anadiendo, setAnadiendo] = useState(false);
+  // El apartado abierto se recuerda al pasar de una sección a otra: quien está
+  // repasando los botones de toda la página no quiere reabrirlo cada vez.
+  const [abierto, setAbierto] = useState<ClaveGrupo | null>("contenido");
 
   const porCodigo = useMemo(
     () => new Map(catalogo.map((b) => [b.codigo, b])),
@@ -79,6 +83,10 @@ export function PanelSecciones({
         bloque={actual}
         definicion={porCodigo.get(actual.tipo) ?? null}
         tokens={tokens}
+        abierto={abierto}
+        onAbrir={setAbierto}
+        pantalla={pantalla}
+        onPantalla={onPantalla}
         onVolver={() => onElegir(null)}
         onCambio={(cambios) => onCambio(actualizar(composicion, actual.id, cambios))}
         onQuitar={() => {
@@ -306,10 +314,23 @@ function Catalogo({
 // ==========================================================================
 // 3. Los ajustes de la sección elegida
 // ==========================================================================
+/**
+ * Los ajustes van en apartados desplegables —Contenido, Imágenes, Diseño,
+ * Botones, Legibilidad, Colores— y solo uno abierto a la vez: un hero tiene
+ * más de veinte ajustes, y verlos todos juntos es una pared de campos.
+ *
+ * Un apartado sin nada que ajustar en esta sección no se pinta. Cada uno tiene
+ * su «Restaurar», que devuelve SOLO ese apartado a los valores de fábrica (y
+ * se deshace como cualquier otro cambio).
+ */
 function Ajustes({
   bloque,
   definicion,
   tokens,
+  abierto,
+  onAbrir,
+  pantalla,
+  onPantalla,
   onVolver,
   onCambio,
   onQuitar,
@@ -317,10 +338,148 @@ function Ajustes({
   bloque: BloqueColocado;
   definicion: Bloque | null;
   tokens: TokenTema[];
+  abierto: ClaveGrupo | null;
+  onAbrir: (grupo: ClaveGrupo | null) => void;
+  pantalla?: ClaveDispositivo;
+  onPantalla?: (clave: ClaveDispositivo) => void;
   onVolver: () => void;
   onCambio: (cambios: Partial<BloqueColocado>) => void;
   onQuitar: () => void;
 }) {
+  const esquema = definicion?.esquema_props;
+  const grupos = agrupar(esquema);
+  const variantes = definicion?.variantes ?? [];
+  const admitidos = definicion?.tokens_admitidos ?? [];
+  const sinPropiedades = Object.keys(esquema?.properties ?? {}).length === 0;
+
+  const visibleCompleto = DISPOSITIVOS.every((d) => bloque.visible[d.clave]);
+  const varianteInicial = variantes[0]?.codigo ?? "";
+
+  // Qué apartados tienen algo, y si algo de ellos está cambiado de fábrica.
+  const hay: Record<ClaveGrupo, boolean> = {
+    contenido: grupos.contenido.length > 0 || sinPropiedades,
+    imagenes: grupos.imagenes.length > 0,
+    diseno: true,
+    botones: grupos.botones.length > 0,
+    legibilidad: grupos.legibilidad.length > 0,
+    estilo: admitidos.length > 0,
+  };
+  const cambiado: Record<ClaveGrupo, boolean> = {
+    contenido: difiere(bloque.props, grupos.contenido, esquema),
+    imagenes: difiere(bloque.props, grupos.imagenes, esquema),
+    diseno:
+      difiere(bloque.props, grupos.diseno, esquema) ||
+      !visibleCompleto ||
+      (variantes.length > 0 && bloque.variante !== varianteInicial),
+    botones: difiere(bloque.props, grupos.botones, esquema),
+    legibilidad: difiere(bloque.props, grupos.legibilidad, esquema),
+    estilo: Object.keys(bloque.estilo ?? {}).length > 0,
+  };
+
+  const disponibles = GRUPOS.filter((g) => hay[g.clave]);
+  // Si el apartado recordado no existe en esta sección, se abre el primero.
+  const actual = abierto === null ? null : hay[abierto] ? abierto : disponibles[0]?.clave ?? null;
+
+  async function restaurarGrupo(grupo: ClaveGrupo) {
+    const nombre = GRUPOS.find((g) => g.clave === grupo)?.titulo ?? grupo;
+    const ok = await confirmarAccion(
+      `¿Restaurar «${nombre}»?`,
+      "Los ajustes de este apartado vuelven a sus valores predeterminados. Puedes deshacerlo con Ctrl+Z.",
+      "Restaurar"
+    );
+    if (!ok) return;
+    if (grupo === "estilo") return onCambio({ estilo: {} });
+    const props = restaurar(bloque.props, grupos[grupo], esquema);
+    if (grupo === "diseno") {
+      return onCambio({
+        props,
+        variante: variantes.length > 0 ? varianteInicial : bloque.variante,
+        visible: { movil: true, tablet: true, escritorio: true },
+      });
+    }
+    onCambio({ props });
+  }
+
+  const propiedades = (claves: string[]) => (
+    <Propiedades
+      esquema={esquema}
+      valores={bloque.props}
+      claves={claves}
+      pantalla={pantalla}
+      onPantalla={onPantalla}
+      onCambio={(props) => onCambio({ props })}
+    />
+  );
+
+  function cuerpo(grupo: ClaveGrupo): ReactNode {
+    switch (grupo) {
+      case "contenido":
+        return sinPropiedades ? (
+          <p className="campo-ayuda">
+            Esta sección no tiene textos propios: se alimenta del contenido que
+            administras en Configuración (banners, anuncios, beneficios, testimonios…).
+          </p>
+        ) : (
+          propiedades(grupos.contenido)
+        );
+      case "diseno":
+        return (
+          <>
+            {variantes.length > 0 && (
+              <div className="campo">
+                <label htmlFor={`variante-${bloque.id}`}>Aspecto</label>
+                <select
+                  id={`variante-${bloque.id}`}
+                  value={bloque.variante}
+                  onChange={(e) => onCambio({ variante: e.target.value })}
+                >
+                  {variantes.map((v) => (
+                    <option key={v.codigo} value={v.codigo}>
+                      {v.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {propiedades(grupos.diseno)}
+            <div className="campo">
+              <label>Se ve en</label>
+              <div className="constructor-dispositivos">
+                {DISPOSITIVOS.map(({ clave, icono: Icono, nombre }) => (
+                  <button
+                    key={clave}
+                    type="button"
+                    className={`constructor-dispositivo ${bloque.visible[clave] ? "activo" : ""}`}
+                    aria-pressed={bloque.visible[clave]}
+                    onClick={() =>
+                      onCambio({
+                        visible: { ...bloque.visible, [clave]: !bloque.visible[clave] },
+                      })
+                    }
+                  >
+                    <Icono size={15} />
+                    {nombre}
+                  </button>
+                ))}
+              </div>
+              <p className="campo-ayuda">Apaga una pantalla para ocultar la sección en ella.</p>
+            </div>
+          </>
+        );
+      case "estilo":
+        return (
+          <Diseno
+            admitidos={admitidos}
+            tokens={tokens}
+            valores={bloque.estilo ?? {}}
+            onCambio={(estilo) => onCambio({ estilo })}
+          />
+        );
+      default:
+        return propiedades(grupos[grupo]);
+    }
+  }
+
   return (
     <>
       <p className="constructor-titulo">
@@ -338,74 +497,89 @@ function Ajustes({
       </p>
 
       {definicion?.descripcion && (
-        <p className="campo-ayuda">{definicion.descripcion}</p>
+        <p className="campo-ayuda constructor-descripcion">{definicion.descripcion}</p>
       )}
 
-      {definicion && definicion.variantes.length > 0 && (
-        <div className="campo">
-          <label>Aspecto</label>
-          <select
-            value={bloque.variante}
-            onChange={(e) => onCambio({ variante: e.target.value })}
+      <div className="apartados">
+        {disponibles.map((grupo) => (
+          <Apartado
+            key={grupo.clave}
+            grupo={grupo}
+            abierto={actual === grupo.clave}
+            cambiado={cambiado[grupo.clave]}
+            onAlternar={() => onAbrir(actual === grupo.clave ? null : grupo.clave)}
+            onRestaurar={() => void restaurarGrupo(grupo.clave)}
           >
-            {definicion.variantes.map((v) => (
-              <option key={v.codigo} value={v.codigo}>
-                {v.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      <div className="campo">
-        <label>Se ve en</label>
-        <div className="constructor-dispositivos">
-          {DISPOSITIVOS.map(({ clave, icono: Icono, nombre }) => (
-            <button
-              key={clave}
-              type="button"
-              className={`constructor-dispositivo ${
-                bloque.visible[clave] ? "activo" : ""
-              }`}
-              aria-pressed={bloque.visible[clave]}
-              onClick={() =>
-                onCambio({
-                  visible: { ...bloque.visible, [clave]: !bloque.visible[clave] },
-                })
-              }
-            >
-              <Icono size={15} />
-              {nombre}
-            </button>
-          ))}
-        </div>
+            {cuerpo(grupo.clave)}
+          </Apartado>
+        ))}
       </div>
-
-      <hr className="constructor-separador" />
-
-      <Propiedades
-        esquema={definicion?.esquema_props}
-        valores={bloque.props}
-        onCambio={(props) => onCambio({ props })}
-      />
-
-      <hr className="constructor-separador" />
-
-      {/* El diseño de ESTA seccion. Debajo del contenido y no en otra pestaña a
-          proposito: quien esta ajustando una seccion quiere ver lo que dice y
-          como se ve sin cambiar de sitio. */}
-      <Diseno
-        admitidos={definicion?.tokens_admitidos ?? []}
-        tokens={tokens}
-        valores={bloque.estilo ?? {}}
-        onCambio={(estilo) => onCambio({ estilo })}
-      />
-
-      <hr className="constructor-separador" />
 
       <button type="button" className="btn peligro constructor-quitar" onClick={onQuitar}>
         <Trash2 size={14} /> Quitar esta sección
       </button>
     </>
+  );
+}
+
+function Apartado({
+  grupo,
+  abierto,
+  cambiado,
+  onAlternar,
+  onRestaurar,
+  children,
+}: {
+  grupo: Grupo;
+  abierto: boolean;
+  cambiado: boolean;
+  onAlternar: () => void;
+  onRestaurar: () => void;
+  children: ReactNode;
+}) {
+  const id = useId();
+  const Icono = grupo.icono;
+  return (
+    <section className={`apartado ${abierto ? "abierto" : ""}`}>
+      <div className="apartado-cabecera">
+        <button
+          type="button"
+          className="apartado-boton"
+          aria-expanded={abierto}
+          aria-controls={id}
+          onClick={onAlternar}
+        >
+          <span className="apartado-icono" aria-hidden="true">
+            <Icono size={15} />
+          </span>
+          <span className="apartado-textos">
+            <strong>
+              {grupo.titulo}
+              {cambiado && (
+                <span className="apartado-marca" title="Tiene cambios respecto a los valores predeterminados" />
+              )}
+            </strong>
+            <small>{grupo.ayuda}</small>
+          </span>
+          <ChevronDown size={15} className="apartado-flecha" aria-hidden="true" />
+        </button>
+        {cambiado && (
+          <button
+            type="button"
+            className="btn-icon apartado-restaurar"
+            title={`Restaurar «${grupo.titulo}» a los valores predeterminados (se puede deshacer)`}
+            aria-label={`Restaurar ${grupo.titulo} a los valores predeterminados`}
+            onClick={onRestaurar}
+          >
+            <RotateCcw size={13} />
+          </button>
+        )}
+      </div>
+      {abierto && (
+        <div id={id} className="apartado-cuerpo" role="region" aria-label={grupo.titulo}>
+          {children}
+        </div>
+      )}
+    </section>
   );
 }

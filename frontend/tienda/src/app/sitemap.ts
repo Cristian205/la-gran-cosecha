@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { pedirAlBackend } from "@/lib/api";
 import { desempaquetar } from "@/lib/datos";
 import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
+import { POLITICAS } from "@/lib/legal/politicas";
 import type { Paginated, Producto } from "@/lib/tipos";
 
 /**
@@ -20,7 +21,8 @@ import type { Paginated, Producto } from "@/lib/tipos";
  * páginas indexables que hoy no tenían ninguna URL que un buscador pudiera
  * encontrar por su cuenta.
  */
-const RUTAS_FIJAS = ["/", "/tienda", "/nosotros", "/contacto"];
+const RUTAS_LEGALES = ["/legal", ...POLITICAS.map((p) => `/${p.slug}`)];
+const RUTAS_FIJAS = ["/", "/tienda", "/nosotros", "/contacto", ...RUTAS_LEGALES];
 const RUTAS_EXCLUIDAS = new Set([...RUTAS_FIJAS, "/tienda/pedido"]);
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -41,6 +43,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/tienda`, lastModified: ahora, changeFrequency: "daily", priority: 0.9 },
     { url: `${base}/nosotros`, lastModified: ahora, changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/contacto`, lastModified: ahora, changeFrequency: "monthly", priority: 0.5 },
+    // Las políticas: poca prioridad, pero que se encuentren. Quien busca
+    // «devoluciones» junto al nombre de la tienda debería llegar aquí.
+    ...RUTAS_LEGALES.map((ruta) => ({
+      url: `${base}${ruta}`,
+      lastModified: ahora,
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    })),
   ];
 
   const [respuestaRutas, productos] = await Promise.all([

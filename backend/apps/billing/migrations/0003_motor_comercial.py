@@ -152,7 +152,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='permisodisponible',
             name='producto',
-            field=models.ForeignKey(blank=True, help_text='A qué solución de Crynex pertenece este permiso.', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='permisos', to='billing.producto'),
+            field=models.ForeignKey(blank=True, help_text='A qué solución de Kryon X pertenece este permiso.', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='permisos', to='billing.producto'),
         ),
         migrations.CreateModel(
             name='PrecioPlan',

@@ -8,7 +8,7 @@ recomendación y no debe llegar a serlo.
 
 Y su resultado se copia. Nunca al pintar una página ni al abrir el panel. Un
 algoritmo que se ejecutara en cada visita haría que la configuración de un
-cliente cambiara sola el día que Crynex añadiera un preset nuevo — y nadie
+cliente cambiara sola el día que Kryon X añadiera un preset nuevo — y nadie
 podría explicarle por qué su tienda amaneció distinta.
 
 # Por qué devuelve tres y no uno
@@ -72,7 +72,7 @@ def sugerir(respuestas, *, modulos_disponibles=None, limite=3) -> list:
             motivos.append(f"Dijiste que tu negocio es «{preset.nombre}»")
 
         # Las señales son la inteligencia real: preguntan cómo trabaja el
-        # negocio, no cómo se llama. Se editan desde el panel de Crynex.
+        # negocio, no cómo se llama. Se editan desde el panel de Kryon X.
         for senal, peso in (preset.senales or {}).items():
             if respuestas.get(senal):
                 puntos += PESO_SENAL * int(peso or 1)

@@ -7,7 +7,7 @@ Tres públicos bien separados, y la separación es la que sostiene el aislamient
   entró. Sin sesión, sin poder pedir otra cosa que lo publicado.
 * El NEGOCIO edita sus páginas: borrador, publicar, restaurar. Solo las suyas,
   porque el mixin de tenancy acota el queryset.
-* CRYNEX administra el catálogo —bloques, temas, plantillas—, que es global y
+* KRYON X administra el catálogo —bloques, temas, plantillas—, que es global y
   no pertenece a ningún negocio.
 """
 from django.db.models import Prefetch
@@ -19,7 +19,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.billing.permisos import EsStaffDePlataforma
-from apps.common.permissions import EsStaff
+from apps.common.permissions import EsStaff, requiere_permiso
 from apps.content.models import StoreSettings
 from apps.tenancy.viewsets import ExigeNegocioMixin, TenantScopedMixin
 
@@ -253,9 +253,12 @@ class PaginaViewSet(TenantScopedMixin, viewsets.ModelViewSet):
 
 
 class AdoptarPlantillaView(ExigeNegocioMixin, APIView):
-    """Arranca la tienda de un negocio desde una plantilla de Crynex."""
+    """Arranca la tienda de un negocio desde una plantilla de Kryon X."""
 
-    permission_classes = [EsStaff]
+    # Reescribe borradores de todas las páginas y, con el aspecto, los colores
+    # de la tienda en vivo: lo hace quien administra el contenido, no cualquier
+    # persona del equipo.
+    permission_classes = [requiere_permiso("content.view_promobanner")]
 
     def post(self, request):
         entrada = AdoptarPlantillaSerializer(data=request.data)
@@ -268,10 +271,11 @@ class AdoptarPlantillaView(ExigeNegocioMixin, APIView):
             plantilla,
             autor=request.user,
             publicar_ya=datos["publicar"],
+            con_aspecto=datos["aplicar_aspecto"],
         )
 
         # El tema se copia a la configuración del negocio en vez de quedar
-        # referenciado: si el negocio apuntara al tema, que Crynex lo retocara
+        # referenciado: si el negocio apuntara al tema, que Kryon X lo retocara
         # le cambiaría los colores de la tienda sin avisar.
         if datos["aplicar_tema"] and plantilla.tema:
             config = StoreSettings.get_para(request.tenant)
@@ -297,7 +301,7 @@ class AdoptarPlantillaView(ExigeNegocioMixin, APIView):
 
 
 # ==========================================================================
-# 3. CRYNEX — el catálogo global
+# 3. KRYON X — el catálogo global
 # ==========================================================================
 class BaseDeCatalogo(viewsets.ModelViewSet):
     """
@@ -395,7 +399,7 @@ class CatalogoDeBloquesView(ExigeNegocioMixin, APIView):
     """
     Los bloques disponibles, para el constructor del negocio.
 
-    Es de solo lectura y separado del ViewSet de Crynex a propósito: el negocio
+    Es de solo lectura y separado del ViewSet de Kryon X a propósito: el negocio
     necesita saber qué puede colocar, pero crear bloques es cambiar lo que la
     plataforma ofrece y eso no le toca.
     """

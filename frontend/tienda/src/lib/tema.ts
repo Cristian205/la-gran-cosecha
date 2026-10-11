@@ -224,7 +224,7 @@ export function variablesDelTema(config: SiteConfig | null): string {
 /**
  * Lo que una PLANTILLA propone, resuelto a variables CSS.
  *
- * Existe por un fallo que solo se ve mirando: el editor de plantillas de Crynex
+ * Existe por un fallo que solo se ve mirando: el editor de plantillas de Kryon X
  * mandaba a la vista previa las variables de los tokens y nada mas, asi que la
  * boutique se previsualizaba con la maqueta nueva y el verde de la empresa de
  * referencia. Y no era un descuido del panel: el color de marca NO es un token

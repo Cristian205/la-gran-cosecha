@@ -1,0 +1,873 @@
+/*
+ * La tienda en miniatura (`TiendaMaqueta`), sus productos (`Objeto`) y las
+ * piezas publicitarias (`BannerCampana`).
+ *
+ * Todo en `em`, y el `em` sale del ancho del contenedor: la maqueta es la
+ * misma a cualquier tamaño. Los colores del tema se registran con @property
+ * para que, al cambiar de identidad, se FUNDAN en vez de saltar —incluidos
+ * los degradados, que sin esto no se pueden animar—. Es lo que hace que el
+ * cambio de tema se lea como "editar en vivo" y no como "otra imagen".
+ */
+
+@property --t-fondo { syntax: "<color>"; inherits: true; initial-value: #ffffff; }
+@property --t-sup { syntax: "<color>"; inherits: true; initial-value: #f1f1f1; }
+@property --t-texto { syntax: "<color>"; inherits: true; initial-value: #111111; }
+@property --t-tenue { syntax: "<color>"; inherits: true; initial-value: #666666; }
+@property --t-acento { syntax: "<color>"; inherits: true; initial-value: #e11d2a; }
+@property --t-sobre { syntax: "<color>"; inherits: true; initial-value: #ffffff; }
+@property --o1 { syntax: "<color>"; inherits: true; initial-value: #cccccc; }
+@property --o2 { syntax: "<color>"; inherits: true; initial-value: #888888; }
+
+.tm {
+  container: tienda / inline-size;
+  width: 100%;
+  background: var(--t-fondo);
+  color: var(--t-texto);
+  transition:
+    --t-fondo 0.8s var(--suave),
+    --t-sup 0.8s var(--suave),
+    --t-texto 0.8s var(--suave),
+    --t-tenue 0.8s var(--suave),
+    --t-acento 0.8s var(--suave),
+    --t-sobre 0.8s var(--suave);
+}
+
+.tm__ventana {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: var(--tm-proporcion, 16 / 10.4);
+}
+
+.tm__lienzo {
+  position: relative;
+  font-size: 1.55cqi;
+  line-height: 1.35;
+  font-family: var(--sans);
+  padding-bottom: 0.1em;
+  transition: transform 0.9s var(--suave);
+}
+
+.tm svg {
+  width: 1.3em;
+  height: 1.3em;
+  stroke-width: 1.8;
+}
+
+/* ---------- zonas y resaltado del editor ---------- */
+
+.tm__zona {
+  position: relative;
+}
+.tm__zona--activa::after {
+  content: "";
+  position: absolute;
+  inset: 0.25em 0.8em;
+  border: 0.18em solid #e11d2a;
+  border-radius: 0.7em;
+  box-shadow: 0 0 0 0.45em rgba(225, 29, 42, 0.16);
+  pointer-events: none;
+  z-index: 4;
+  animation: tm-marca 0.45s var(--suave);
+}
+@keyframes tm-marca {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+.tm__etiqueta {
+  position: absolute;
+  top: 0.9em;
+  left: 1.6em;
+  z-index: 5;
+  padding: 0.3em 0.8em;
+  border-radius: 0.45em;
+  background: #e11d2a;
+  color: #fff;
+  font: 600 0.85em/1.2 var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: 0 0.4em 1em rgba(225, 29, 42, 0.45);
+}
+
+/* ---------- anuncio y navegación ---------- */
+
+.tm__anuncio {
+  display: grid;
+  place-items: center;
+  height: 2.3em;
+  overflow: hidden;
+  background: var(--t-texto);
+  color: var(--t-fondo);
+  font-size: 0.85em;
+  letter-spacing: 0.02em;
+}
+
+.tm__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2em;
+  padding: 1.2em 2.4em;
+  border-bottom: 1px solid color-mix(in srgb, var(--t-texto) 9%, transparent);
+  transition: background 0.5s, color 0.5s;
+}
+.tm__nav--oscura {
+  background: var(--t-texto);
+  color: var(--t-fondo);
+}
+.tm__logo {
+  font-family: var(--t-fuente);
+  font-size: 1.55em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+[data-mayus] .tm__logo {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.tm__menu {
+  display: flex;
+  gap: 2.2em;
+  font-size: 0.95em;
+  opacity: 0.7;
+}
+.tm__iconos {
+  display: flex;
+  gap: 1em;
+}
+.tm__hamburguesa {
+  display: none;
+}
+
+/* ---------- portada ---------- */
+
+.tm__portada {
+  margin: 1.2em 2.4em 0;
+  border-radius: var(--t-radio);
+  overflow: hidden;
+}
+
+.tm__hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  align-items: center;
+  min-height: 26em;
+  padding: 2.4em 3em;
+  background: var(--t-sup);
+}
+.tm__hero-texto {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.tm__ante {
+  font-size: 0.85em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t-tenue);
+}
+.tm__titular {
+  display: block;
+  margin: 0.35em 0 0.7em;
+  font-family: var(--t-fuente);
+  font-size: 3.6em;
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+[data-fuente="editorial"] .tm__titular {
+  font-size: 4.2em;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+[data-fuente="display"] .tm__titular,
+[data-fuente="serif"] .tm__titular {
+  font-weight: 500;
+}
+[data-mayus] .tm__titular {
+  text-transform: uppercase;
+  font-size: 3.2em;
+  letter-spacing: 0;
+}
+[data-mayus][data-fuente="sans"] .tm__titular {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.tm__boton {
+  display: inline-block;
+  padding: 0.95em 1.9em;
+  border-radius: var(--t-radio);
+  background: var(--t-acento);
+  color: var(--t-sobre);
+  font-size: 0.95em;
+  font-weight: 600;
+}
+.tm__hero-objeto {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+.tm__hero-objeto .objeto {
+  width: 78%;
+}
+.tm__hero-objeto .objeto__cuerpo {
+  animation: tm-flotar 6s ease-in-out infinite;
+}
+@keyframes tm-flotar {
+  50% {
+    translate: 0 -5%;
+  }
+}
+
+.tm__hero--centrado {
+  grid-template-columns: 1fr;
+  text-align: center;
+}
+.tm__hero--centrado .tm__hero-texto {
+  align-items: center;
+  max-width: 70%;
+  margin-inline: auto;
+}
+.tm__hero--centrado .tm__hero-objeto {
+  position: absolute;
+  inset: 0;
+  opacity: 0.32;
+}
+.tm__hero--centrado .tm__hero-objeto .objeto {
+  width: 52%;
+}
+
+.tm__puntos {
+  position: absolute;
+  bottom: 1.3em;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  gap: 0.45em;
+}
+.tm__puntos i {
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 1em;
+  background: color-mix(in srgb, var(--t-texto) 22%, transparent);
+}
+.tm__puntos i.activo {
+  width: 1.6em;
+  background: var(--t-texto);
+}
+
+/* ---------- categorías ---------- */
+
+.tm__categorias {
+  display: flex;
+  gap: 0.8em;
+  padding: 1.6em 2.4em 0;
+}
+.tm__categoria {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6em 1.3em;
+  border: 1px solid color-mix(in srgb, var(--t-texto) 16%, transparent);
+  border-radius: var(--t-radio);
+  font-size: 0.95em;
+  white-space: nowrap;
+}
+.tm__categorias--circulo {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.4em;
+}
+.tm__categorias--circulo .tm__categoria {
+  flex-direction: column;
+  gap: 0.6em;
+  padding: 0;
+  border: 0;
+}
+.tm__categorias--circulo .objeto {
+  width: 62%;
+  border-radius: 50%;
+  background: var(--t-sup);
+}
+.tm__categorias--circulo .objeto__sombra {
+  display: none;
+}
+
+/* ---------- productos ---------- */
+
+.tm__seccion {
+  padding: 2em 2.4em 0;
+}
+.tm__cabeza {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.tm__cabeza strong {
+  font-family: var(--t-fuente);
+  font-size: 1.6em;
+  font-weight: 600;
+}
+[data-mayus] .tm__cabeza strong {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 1.3em;
+}
+.tm__cabeza span {
+  font-size: 0.9em;
+  color: var(--t-tenue);
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+.tm__grilla {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), 1fr);
+  gap: 1.2em;
+  margin-top: 1.1em;
+}
+.tm__foto {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1.08;
+  border-radius: var(--t-radio);
+  background: var(--t-sup);
+  overflow: hidden;
+}
+.tm__foto .objeto {
+  width: 70%;
+}
+.tm__nombre {
+  display: block;
+  margin-top: 0.7em;
+  font-size: 0.95em;
+  font-weight: 500;
+}
+.tm__precio {
+  display: block;
+  font-size: 0.9em;
+  color: var(--t-tenue);
+}
+
+/* ---------- carrusel ---------- */
+
+.tm__carrusel {
+  padding-top: 2em;
+  overflow: hidden;
+}
+.tm__carrusel-pista {
+  display: flex;
+  gap: 1em;
+  width: max-content;
+  padding-left: 2.4em;
+  animation: tm-desliza 22s linear infinite;
+}
+@keyframes tm-desliza {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.tm__diapositiva {
+  display: flex;
+  align-items: flex-end;
+  width: 22em;
+  height: 9em;
+  padding: 1.1em 1.3em;
+  border-radius: var(--t-radio);
+  background: linear-gradient(125deg, var(--o1), var(--o2));
+  color: #fff;
+}
+.tm__diapositiva span {
+  font-family: var(--t-fuente);
+  font-size: 1.3em;
+  font-weight: 600;
+  text-shadow: 0 0.1em 0.6em rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- promoción ---------- */
+
+.tm__promos {
+  display: grid;
+  gap: 1em;
+  padding: 2em 2.4em 0;
+}
+.tm__promos--doble {
+  grid-template-columns: 1fr 1fr;
+}
+.tm__promo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  padding: 1.9em 2.1em;
+  border-radius: var(--t-radio);
+  background: var(--t-acento);
+  color: var(--t-sobre);
+}
+.tm__promo strong {
+  font-family: var(--t-fuente);
+  font-size: 1.7em;
+  font-weight: 600;
+}
+.tm__promo span {
+  font-size: 0.95em;
+  opacity: 0.8;
+}
+.tm__reutilizado {
+  position: absolute;
+  top: 0.9em;
+  right: 0.9em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.3em 0.75em;
+  border-radius: 1em;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2449d8 !important;
+  opacity: 1 !important;
+  font: 600 0.75em/1.2 var(--sans) !important;
+}
+.tm__reutilizado svg {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+/* ---------- pie ---------- */
+
+.tm__pie {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, 1fr);
+  gap: 2em;
+  margin-top: 2.4em;
+  padding: 2.4em;
+  background: var(--t-sup);
+}
+.tm__pie > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65em;
+}
+.tm__pie strong {
+  font-size: 0.9em;
+}
+.tm__linea {
+  display: block;
+  height: 0.45em;
+  border-radius: 1em;
+  background: color-mix(in srgb, var(--t-texto) 13%, transparent);
+}
+
+/* ---------- versión móvil de la tienda ---------- */
+
+@container tienda (max-width: 360px) {
+  .tm__lienzo {
+    font-size: 3.6cqi;
+  }
+  .tm__anuncio {
+    font-size: 0.72em;
+  }
+  .tm__nav {
+    padding: 0.9em 1.2em;
+  }
+  .tm__menu,
+  .tm__iconos svg:nth-child(2) {
+    display: none;
+  }
+  .tm__hamburguesa {
+    display: block;
+  }
+  .tm__portada {
+    margin: 0.9em 1.2em 0;
+  }
+  .tm__hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding: 1.4em 1.2em 2.4em;
+    text-align: center;
+  }
+  .tm__hero-texto {
+    align-items: center;
+  }
+  .tm__hero-objeto {
+    order: -1;
+    height: 9em;
+  }
+  .tm__hero-objeto .objeto {
+    width: 9em;
+  }
+  .tm__titular,
+  [data-mayus] .tm__titular,
+  [data-fuente="editorial"] .tm__titular {
+    font-size: 2.2em;
+  }
+  .tm__categorias {
+    overflow: hidden;
+    padding: 1.2em 1.2em 0;
+  }
+  .tm__seccion,
+  .tm__promos {
+    padding-inline: 1.2em;
+  }
+  .tm__grilla {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tm__promos--doble {
+    grid-template-columns: 1fr;
+  }
+  .tm__pie {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .banner {
+    grid-template-columns: 1fr !important;
+    min-height: 22em !important;
+    padding: 1.6em !important;
+  }
+  .banner__titulo {
+    font-size: 2.4em !important;
+  }
+  .banner__gigante {
+    font-size: 5.5em !important;
+  }
+  .banner--hero .banner__lado,
+  .banner--temporada .banner__lado,
+  .banner--destacada .banner__vitrina {
+    display: none;
+  }
+  .banner--destacada .banner__marca {
+    padding: 0 !important;
+  }
+  .banner__orbita {
+    position: absolute !important;
+    inset: auto -20% -30% auto;
+    width: 70% !important;
+    opacity: 0.5;
+  }
+  .banner__mosaico {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .banner__mosaico-cabeza {
+    grid-column: 1 / -1;
+  }
+  .banner__tesela {
+    min-height: 6em !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Objeto                                                              */
+/* ------------------------------------------------------------------ */
+
+.objeto {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  transition: --o1 0.8s var(--suave), --o2 0.8s var(--suave);
+}
+.objeto__cuerpo {
+  position: relative;
+  z-index: 1;
+  background: radial-gradient(
+    circle at 32% 26%,
+    color-mix(in srgb, var(--o1) 55%, #ffffff) 0%,
+    var(--o1) 30%,
+    var(--o2) 82%
+  );
+  box-shadow:
+    inset -0.5em -0.7em 1.4em rgba(0, 0, 0, 0.16),
+    inset 0.35em 0.35em 0.9em rgba(255, 255, 255, 0.28);
+  transition: border-radius 0.6s var(--suave), width 0.6s var(--suave), height 0.6s var(--suave);
+}
+.objeto__cuerpo--circulo {
+  width: 62%;
+  height: 62%;
+  border-radius: 50%;
+}
+.objeto__cuerpo--capsula {
+  width: 32%;
+  height: 76%;
+  border-radius: 999px;
+}
+.objeto__cuerpo--botella {
+  width: 34%;
+  height: 64%;
+  margin-top: 12%;
+  border-radius: 40% 40% 14% 14% / 24% 24% 8% 8%;
+}
+.objeto__cuerpo--botella::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 32%;
+  width: 36%;
+  height: 16%;
+  border-radius: 18% 18% 0 0;
+  background: var(--o2);
+  filter: brightness(0.75);
+}
+.objeto__cuerpo--arco {
+  width: 54%;
+  height: 70%;
+  border-radius: 50% 50% 7% 7% / 38% 38% 5% 5%;
+}
+.objeto__cuerpo--cubo {
+  width: 50%;
+  height: 50%;
+  border-radius: 16%;
+  transform: rotate(-10deg);
+}
+.objeto__cuerpo--gota {
+  width: 50%;
+  height: 62%;
+  border-radius: 50% 50% 46% 46% / 62% 62% 38% 38%;
+  transform: rotate(-12deg);
+}
+.objeto__sombra {
+  position: absolute;
+  bottom: 9%;
+  width: 46%;
+  height: 7%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.26), transparent);
+}
+
+/* ------------------------------------------------------------------ */
+/* Piezas publicitarias                                                */
+/* ------------------------------------------------------------------ */
+
+.banner {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  align-items: center;
+  min-height: 26em;
+  padding: 2.6em 3em;
+  background: var(--c-fondo);
+  color: #fff;
+  overflow: hidden;
+  font-family: var(--sans);
+}
+.banner svg {
+  width: 1.1em;
+  height: 1.1em;
+}
+.banner__texto {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6em;
+}
+.banner__ante {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: 0.85em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.banner__titulo {
+  font-size: 3.4em;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.banner__parrafo {
+  max-width: 24em;
+  font-size: 1em;
+  opacity: 0.75;
+}
+.banner__boton {
+  margin-top: 0.6em;
+  padding: 0.9em 1.8em;
+  border-radius: 999px;
+  background: var(--c-acento);
+  color: #fff;
+  font-size: 0.95em;
+  font-weight: 600;
+}
+.banner__lado {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+.banner__objeto {
+  width: 82%;
+}
+.banner__objeto .objeto__cuerpo {
+  animation: tm-flotar 6s ease-in-out infinite;
+}
+
+.banner--hero {
+  background:
+    radial-gradient(circle at 76% 50%, color-mix(in srgb, var(--c-acento) 60%, transparent), transparent 58%),
+    var(--c-fondo);
+}
+
+.banner--temporada {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.14) 0.08em, transparent 0.12em) 0 0 / 2.4em 2.4em,
+    radial-gradient(circle at 80% 40%, rgba(232, 194, 106, 0.28), transparent 55%),
+    var(--c-fondo);
+}
+.banner--temporada .banner__titulo {
+  font-family: "DM Serif Display", Georgia, serif;
+  font-weight: 400;
+  color: var(--c-acento);
+  letter-spacing: -0.01em;
+}
+.banner--temporada .banner__boton {
+  color: var(--c-fondo);
+}
+
+.banner--flash {
+  background: linear-gradient(118deg, var(--c-fondo) 0%, #b0102d 100%);
+}
+.banner__gigante {
+  font-size: 8.5em;
+  line-height: 0.88;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  color: var(--c-acento);
+}
+.banner--flash .banner__lado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2em;
+}
+.banner--flash .banner__boton {
+  color: #3a0510;
+}
+.banner__reloj {
+  display: flex;
+  gap: 0.35em;
+}
+.banner__digito {
+  min-width: 2.2em;
+  padding: 0.35em 0.4em;
+  border-radius: 0.35em;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 1.9em;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.banner--producto {
+  background: radial-gradient(circle at 72% 50%, #ffffff 0%, var(--c-fondo) 60%);
+  color: #1b1240;
+}
+.banner__orbita {
+  order: 2;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 78%;
+  aspect-ratio: 1;
+  justify-self: center;
+  border-radius: 50%;
+  border: 0.12em dashed color-mix(in srgb, var(--c-acento) 45%, transparent);
+}
+.banner--producto .banner__objeto {
+  width: 72%;
+}
+.banner--producto .banner__titulo {
+  font-size: 4.6em;
+  color: var(--c-acento);
+}
+
+.banner--destacada {
+  padding: 0;
+  align-items: stretch;
+}
+.banner__marca {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.6em;
+  padding: 2.6em 3em;
+}
+.banner__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.3em 0.85em;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 1em;
+  font-size: 0.75em;
+}
+.banner--destacada .banner__titulo {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 500;
+  font-size: 3em;
+}
+.banner--destacada .banner__boton {
+  background: #fff;
+  color: #111;
+}
+.banner__vitrina {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: 2em;
+  background: var(--c-acento);
+}
+
+.banner--seccion {
+  padding: 2.2em;
+  color: #2a1600;
+}
+.banner__mosaico {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  gap: 1em;
+  align-self: stretch;
+  min-height: 21em;
+}
+.banner__mosaico-cabeza {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5em;
+}
+.banner--seccion .banner__titulo {
+  color: var(--c-acento);
+  font-size: 3em;
+}
+.banner__tesela {
+  display: flex;
+  align-items: flex-end;
+  min-height: 0;
+  padding: 1.2em;
+  border-radius: 1em;
+  font-size: 1.45em;
+  font-weight: 700;
+  line-height: 1.05;
+}
+.banner__tesela--0 {
+  background: var(--c-acento);
+  color: #fff;
+  font-size: 2.6em;
+}
+.banner__tesela--1 {
+  background: #ffe1b3;
+}
+.banner__tesela--2 {
+  background: #2a1600;
+  color: #fff4d6;
+}

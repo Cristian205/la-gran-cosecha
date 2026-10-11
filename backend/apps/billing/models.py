@@ -1,5 +1,5 @@
 """
-El motor comercial de Crynex.
+El motor comercial de Kryon X.
 
 Aquí vive todo lo que la plataforma vende y todo lo que decide qué puede hacer
 cada empresa. NO pertenece a ningún negocio: es la única parte del sistema
@@ -14,7 +14,7 @@ comercial sino una de arquitectura.
 
 El reparto de responsabilidades:
 
-* `Producto` es lo que Crynex comercializa: E-commerce, Inventario, CRM. Un
+* `Producto` es lo que Kryon X comercializa: E-commerce, Inventario, CRM. Un
   cliente puede contratar unos y no otros.
 * `PermisoDisponible` es la aplicación técnica: los codenames que el panel de
   cada negocio reparte entre su gente. Cada uno pertenece a un producto.
@@ -89,11 +89,11 @@ class EstadoComercial(models.TextChoices):
 
 
 # ==========================================================================
-# 1. CATÁLOGO — qué vende Crynex
+# 1. CATÁLOGO — qué vende Kryon X
 # ==========================================================================
 class Producto(models.Model):
     """
-    Una solución que Crynex comercializa.
+    Una solución que Kryon X comercializa.
 
     Es la entidad que faltaba: hasta ahora "Catálogo" o "Pedidos" eran una
     cadena de texto repetida en cada permiso, lo que hacía imposible decir que
@@ -156,7 +156,7 @@ class PermisoDisponible(models.Model):
         related_name="permisos",
         null=True,
         blank=True,
-        help_text="A qué solución de Crynex pertenece este permiso.",
+        help_text="A qué solución de Kryon X pertenece este permiso.",
     )
     modulo = models.CharField(
         max_length=60, help_text="Etiqueta del producto; se sincroniza con él."
@@ -658,7 +658,7 @@ class Subscription(models.Model):
         `permisos_excluidos` —esto último manda: un permiso que el plan
         concede pero que este cliente tiene excluido no se recupera colándolo
         también en `permisos_extra`—. El resultado se acota siempre a lo que
-        la plataforma tenga activo: si Crynex retira un módulo, desaparece de
+        la plataforma tenga activo: si Kryon X retira un módulo, desaparece de
         todos los negocios sin tocar ningún plan ni ninguna concesión puntual.
         """
         if not self.vigente:

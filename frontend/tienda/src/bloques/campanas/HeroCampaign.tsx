@@ -23,17 +23,39 @@ interface Props {
   subtitulo?: string;
   imagen?: string;
   imagen_movil?: string;
+  /** Entre 781 y 1024 px. Vacía: la de escritorio. */
+  imagen_tablet?: string;
   imagen_alt?: string;
-  /** `object-position` en escritorio y en móvil, ej. "50% 70%". */
+  /** `object-position` en escritorio, tablet y móvil, ej. "50% 70%". */
   enfoque?: string;
   enfoque_movil?: string;
+  enfoque_tablet?: string;
   video_url?: string;
   video_movil_url?: string;
   cta_texto?: string;
   cta_href?: string;
   cta2_texto?: string;
   cta2_href?: string;
+  /** Diseño y legibilidad. Cada valor por defecto es el aspecto de siempre. */
+  altura?: "completa" | "alta" | "media";
+  alineacion?: "izquierda" | "centro" | "derecha";
+  posicion?: "arriba" | "centro" | "abajo";
+  /** Capa oscura extra sobre la foto, 0–80 (%). */
+  oscurecer?: number;
+  degradado?: "editorial" | "inferior" | "lateral" | "ninguno";
+  tono_texto?: "claro" | "oscuro";
+  cta_visible?: boolean;
+  cta_estilo?: "ambar" | "oscuro" | "fantasma";
+  cta2_visible?: boolean;
+  cta2_estilo?: "ambar" | "oscuro" | "fantasma";
 }
+
+/** Solo lo conocido llega a una clase: un valor escrito a mano no rompe el CSS. */
+function uno<T extends string>(valor: unknown, validos: readonly T[], defecto: T): T {
+  return validos.includes(valor as T) ? (valor as T) : defecto;
+}
+
+const ESTILOS_BOTON = ["ambar", "oscuro", "fantasma"] as const;
 
 export function HeroCampaign({
   kicker = "",
@@ -42,15 +64,27 @@ export function HeroCampaign({
   subtitulo = "",
   imagen = "",
   imagen_movil = "",
+  imagen_tablet = "",
   imagen_alt = "",
   enfoque = "50% 60%",
   enfoque_movil = "",
+  enfoque_tablet = "",
   video_url = "",
   video_movil_url = "",
   cta_texto = "",
   cta_href = "/tienda",
   cta2_texto = "",
   cta2_href = "/contacto",
+  altura,
+  alineacion,
+  posicion,
+  oscurecer = 0,
+  degradado,
+  tono_texto,
+  cta_visible = true,
+  cta_estilo,
+  cta2_visible = true,
+  cta2_estilo,
 }: Props) {
   const ref = useRef<HTMLElement>(null);
   const quieto = useSinMovimiento();
@@ -75,13 +109,26 @@ export function HeroCampaign({
 
   if (!titulo && !titulo_resaltado) return null;
 
+  const velo = Math.min(80, Math.max(0, Number(oscurecer) || 0));
   const variables = {
     "--enfoque": enfoque,
     "--enfoque-movil": enfoque_movil || enfoque,
+    "--enfoque-tablet": enfoque_tablet || enfoque,
+    "--hc-oscurecer": velo / 100,
   } as CSSProperties;
+  const clases = [
+    "hc",
+    `hc--alto-${uno(altura, ["completa", "alta", "media"] as const, "completa")}`,
+    `hc--alinear-${uno(alineacion, ["izquierda", "centro", "derecha"] as const, "izquierda")}`,
+    `hc--posicion-${uno(posicion, ["arriba", "centro", "abajo"] as const, "arriba")}`,
+    `hc--degradado-${uno(degradado, ["editorial", "inferior", "lateral", "ninguno"] as const, "editorial")}`,
+    `hc--texto-${uno(tono_texto, ["claro", "oscuro"] as const, "claro")}`,
+  ].join(" ");
+  const verCta = Boolean(cta_texto) && cta_visible !== false;
+  const verCta2 = Boolean(cta2_texto) && cta2_visible !== false;
 
   return (
-    <section ref={ref} className="hc" style={variables}>
+    <section ref={ref} className={clases} style={variables}>
       <TipografiaEditorial />
       <motion.div
         className="hc-media"
@@ -91,6 +138,9 @@ export function HeroCampaign({
         {imagen && (
           <picture>
             {imagen_movil && <source media="(max-width: 780px)" srcSet={imagen_movil} />}
+            {imagen_tablet && (
+              <source media="(min-width: 781px) and (max-width: 1024px)" srcSet={imagen_tablet} />
+            )}
             {/* `img` y no `next/image`: el archivo vive en el bucket de cada negocio. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="hc-img" src={imagen} alt={imagen_alt} fetchPriority="high" decoding="async" />
@@ -112,6 +162,7 @@ export function HeroCampaign({
         )}
       </motion.div>
       <div className="hc-velo" aria-hidden="true" />
+      {velo > 0 && <div className="hc-oscuro" aria-hidden="true" />}
 
       <motion.div
         className="hc-contenido"
@@ -127,11 +178,19 @@ export function HeroCampaign({
             {subtitulo}
           </p>
         )}
-        {(cta_texto || cta2_texto) && (
+        {(verCta || verCta2) && (
           <div className="hc-acciones hc-in" style={{ "--i": 3 } as CSSProperties}>
-            {cta_texto && <Boton href={cta_href || "/tienda"}>{cta_texto}</Boton>}
-            {cta2_texto && (
-              <Boton href={cta2_href || "/contacto"} variante="fantasma" flecha={false}>
+            {verCta && (
+              <Boton href={cta_href || "/tienda"} variante={uno(cta_estilo, ESTILOS_BOTON, "ambar")}>
+                {cta_texto}
+              </Boton>
+            )}
+            {verCta2 && (
+              <Boton
+                href={cta2_href || "/contacto"}
+                variante={uno(cta2_estilo, ESTILOS_BOTON, "fantasma")}
+                flecha={false}
+              >
                 {cta2_texto}
               </Boton>
             )}

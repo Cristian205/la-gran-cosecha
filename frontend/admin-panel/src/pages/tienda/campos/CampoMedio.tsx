@@ -42,6 +42,7 @@ export function urlDeVista(valor: string): string {
 /** Ancho mínimo sugerido según para qué es la foto (por el nombre del campo). */
 function anchoRecomendado(clave: string): number | null {
   if (/movil/.test(clave)) return 800;
+  if (/tablet/.test(clave)) return 1200;
   if (/^(imagen|fondo|poster_url)$/.test(clave)) return 1600;
   if (/foto|logo/.test(clave)) return 400;
   return null;
@@ -54,6 +55,8 @@ export function CampoMedio({
   ayuda,
   valor,
   onCambio,
+  anchoMinimo,
+  sinEtiqueta = false,
 }: {
   clave: string;
   tipo: "imagen" | "video";
@@ -61,6 +64,10 @@ export function CampoMedio({
   ayuda?: string;
   valor: string;
   onCambio: (url: string) => void;
+  /** Anula el ancho recomendado que se deduce del nombre del campo. */
+  anchoMinimo?: number;
+  /** Cuando quien lo usa ya pone su propio título encima. */
+  sinEtiqueta?: boolean;
 }) {
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +78,7 @@ export function CampoMedio({
   const limites = LIMITES[tipo];
   // Los esquemas viejos dicen "Foto (URL)": ya no hay que pegar ninguna URL.
   etiqueta = etiqueta.replace(/\s*\(URL[^)]*\)/i, "").replace(/\s*\(MP4[^)]*\)/i, "");
-  const minimo = tipo === "imagen" ? anchoRecomendado(clave) : null;
+  const minimo = tipo === "imagen" ? (anchoMinimo ?? anchoRecomendado(clave)) : null;
 
   async function subir(archivo: File | null) {
     if (!archivo) return;
@@ -117,7 +124,7 @@ export function CampoMedio({
 
   return (
     <div className="campo">
-      <label>{etiqueta}</label>
+      {!sinEtiqueta && <label>{etiqueta}</label>}
       <div className={`campo-medio ${valor ? "con-valor" : ""}`}>
         <button
           type="button"

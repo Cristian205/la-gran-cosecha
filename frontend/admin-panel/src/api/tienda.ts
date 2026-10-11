@@ -7,11 +7,11 @@
  *
  * El catálogo de bloques llega por `/content/constructor/`, que es de solo
  * lectura. Crear bloques o plantillas es cambiar lo que la plataforma ofrece y
- * eso lo administra Crynex, no cada negocio.
+ * eso lo administra Kryon X, no cada negocio.
  */
 /**
  * Los tipos y las operaciones de una composicion viven en `@constructor`, que es
- * el codigo que este panel comparte con el editor de plantillas de Crynex.
+ * el codigo que este panel comparte con el editor de plantillas de Kryon X.
  * Estaban declarados en los dos y ya habian empezado a separarse: este archivo
  * no declaraba `activo`, `id` ni `orden` en `TokenTema` —aunque el servidor los
  * manda— ni `icono` en `Bloque`. Ninguna de las dos cosas daba error, porque
@@ -99,14 +99,52 @@ function filas<T>(datos: T[] | Paginado<T>): T[] {
 }
 
 
+/** Una plantilla de tienda que ofrece Kryon X (solo lectura para el negocio). */
+export interface PlantillaTienda {
+  id: number;
+  slug: string;
+  nombre: string;
+  descripcion: string;
+  sector: string;
+  /** URL de una imagen de muestra; puede venir vacía. */
+  vista_previa: string;
+  tema_nombre?: string | null;
+  /** Las páginas que trae, por ruta. */
+  paginas: Record<string, unknown>;
+  es_predeterminada: boolean;
+}
+
 export const tienda = {
+  /** Las plantillas activas, en el mismo catálogo que los bloques. */
+  async plantillas(): Promise<PlantillaTienda[]> {
+    const { data } = await api.get<{ plantillas?: PlantillaTienda[] }>("/content/constructor/");
+    return data.plantillas ?? [];
+  },
+
+  /**
+   * Copia las páginas de una plantilla como BORRADOR (lo publicado no cambia
+   * hasta publicar). `aplicar_aspecto` copia además colores y tipografía, y
+   * eso sí se ve en la tienda al momento.
+   */
+  async adoptarPlantilla(
+    slug: string,
+    opciones: { aplicar_aspecto: boolean; publicar?: boolean }
+  ): Promise<{ plantilla: string; paginas: string[]; publicadas: boolean }> {
+    const { data } = await api.post("/content/adoptar-plantilla/", {
+      plantilla: slug,
+      aplicar_aspecto: opciones.aplicar_aspecto,
+      publicar: opciones.publicar ?? false,
+    });
+    return data;
+  },
+
   async catalogo(): Promise<Bloque[]> {
     const { data } = await api.get<{ bloques: Bloque[] }>("/content/constructor/");
     return data.bloques;
   },
 
   /**
-   * El catálogo de perillas del tema, tal como lo define Crynex.
+   * El catálogo de perillas del tema, tal como lo define Kryon X.
    *
    * Viene de la misma petición que los bloques —el endpoint ya lo mandaba y
    * nadie lo leía— así que abrir la pestaña de apariencia no cuesta una

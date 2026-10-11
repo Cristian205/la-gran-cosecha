@@ -140,7 +140,8 @@ export function MovimientoModal({
 
   return (
     <Modal
-      lateral
+      amplio
+      medio
       titulo={textos.titulo}
       onCerrar={onCerrar}
       footer={

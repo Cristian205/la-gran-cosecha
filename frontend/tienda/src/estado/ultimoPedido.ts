@@ -17,7 +17,7 @@ export const useUltimoPedido = create<UltimoPedidoState>()(
       guardar: (items) => set({ items, fecha: new Date().toISOString() }),
     }),
     {
-      name: "crynex-ultimo-pedido",
+      name: "kryonx-ultimo-pedido",
       // Mismo motivo que en `estado/carrito.ts`: el servidor siempre pinta
       // `items: []`, y `RepetirPedido` devuelve `null` en ese caso. Sin
       // `skipHydration`, un cliente con un pedido guardado pintaba la tarjeta

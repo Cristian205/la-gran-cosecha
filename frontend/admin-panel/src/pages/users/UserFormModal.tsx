@@ -60,7 +60,8 @@ export function UserFormModal({ usuario, puedeEditarRol, onCerrar, onGuardado }:
 
   return (
     <Modal
-      lateral
+      amplio
+      medio
       titulo={esEdicion ? "Editar usuario" : "Nuevo usuario"}
       onCerrar={cerrar}
       footer={

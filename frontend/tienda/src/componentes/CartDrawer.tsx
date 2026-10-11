@@ -13,8 +13,9 @@ import {
   ajustarCantidad,
   formatoCantidad,
   formatoPrecio,
+  esFraccionaria,
   parsearCantidad,
-  pasoCantidad,
+  reglaDeItem,
 } from "@/lib/utiles";
 
 function textoProductos(n: number): string {
@@ -39,7 +40,7 @@ const ANIM_LINEA = {
  * alcance del pulgar. En escritorio es un panel flotante con el mismo criterio.
  */
 export function CartDrawer({ onCerrar }: { onCerrar: () => void }) {
-  const { items, personalizados, cambiarCantidad, quitar, quitarPersonalizado, totalLineas, totalPrecio } =
+  const { items, personalizados, cambiarCantidad, quitar, quitarPersonalizado, vaciar, totalLineas, totalPrecio } =
     useCart();
   const router = useRouter();
   const panelRef = useRef<HTMLElement>(null);
@@ -101,7 +102,10 @@ export function CartDrawer({ onCerrar }: { onCerrar: () => void }) {
         ) : (
           <>
             <div className="carrito-cuerpo">
-              <p className="carrito-kicker">Tu pedido</p>
+              <div className="carrito-cuerpo-cab">
+                <p className="carrito-kicker">Tu pedido</p>
+                <VaciarCarrito onVaciar={vaciar} />
+              </div>
               <ul className="carrito-lista">
                 <AnimatePresence initial={false}>
                   {items.map((i) => (
@@ -193,10 +197,10 @@ function LineaCatalogo({
   onQuitar,
 }: {
   item: ItemCarrito;
-  onCantidad: (presentacionId: number, cantidad: number, paso: number) => void;
+  onCantidad: (presentacionId: number, cantidad: number, minimo: number) => void;
   onQuitar: () => void;
 }) {
-  const paso = pasoCantidad(item.permiteFraccion, item.tipoCantidad);
+  const regla = reglaDeItem(item);
   const subtotal = item.precioUnitario * item.cantidad;
   const { variante, unidad } = partesPresentacion(item.presentacionNombre);
   const cantidad = cantidadConUnidad(item.cantidad, unidad);
@@ -231,9 +235,10 @@ function LineaCatalogo({
           <CantidadLinea
             nombre={item.productoNombre}
             cantidad={item.cantidad}
-            paso={paso}
-            permiteFraccion={item.permiteFraccion}
-            onCambiar={(n) => onCantidad(item.presentacionId, n, paso)}
+            paso={regla.paso}
+            minimo={regla.minimo}
+            permiteFraccion={item.permiteFraccion || esFraccionaria(regla)}
+            onCambiar={(n) => onCantidad(item.presentacionId, n, regla.minimo)}
           />
         </div>
       </div>
@@ -271,6 +276,56 @@ function DescripcionLinea({ producto, variante, cantidad }: { producto: string; 
   );
 }
 
+/**
+ * Vaciar todo el carrito de un toque es fácil de hacer sin querer, así que
+ * pide confirmación en el mismo sitio (sin abrir otro diálogo encima de la
+ * hoja). Si no se confirma en unos segundos, vuelve sola a su estado normal.
+ */
+function VaciarCarrito({ onVaciar }: { onVaciar: () => void }) {
+  const [confirmando, setConfirmando] = useState(false);
+  const confirmarRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!confirmando) return;
+    confirmarRef.current?.focus();
+    const t = window.setTimeout(() => setConfirmando(false), 5000);
+    return () => window.clearTimeout(t);
+  }, [confirmando]);
+
+  if (!confirmando) {
+    return (
+      <button type="button" className="carrito-vaciar" onClick={() => setConfirmando(true)}>
+        <Trash2 size={14} aria-hidden="true" />
+        Vaciar carrito
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className="carrito-vaciar-confirma"
+      role="group"
+      aria-label="Confirmar vaciar el carrito"
+      onKeyDown={(e) => {
+        // Escape cancela la confirmación sin cerrar todo el carrito.
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          e.nativeEvent.stopImmediatePropagation();
+          setConfirmando(false);
+        }
+      }}
+    >
+      <span>¿Quitar todo?</span>
+      <button type="button" ref={confirmarRef} className="carrito-vaciar carrito-vaciar--si" onClick={onVaciar}>
+        Sí, vaciar
+      </button>
+      <button type="button" className="carrito-vaciar carrito-vaciar--no" onClick={() => setConfirmando(false)}>
+        Cancelar
+      </button>
+    </div>
+  );
+}
+
 function BotonQuitar({ nombre, onQuitar }: { nombre: string; onQuitar: () => void }) {
   return (
     <button type="button" className="citem-quitar" onClick={onQuitar} aria-label={`Quitar ${nombre} del carrito`}>
@@ -288,21 +343,23 @@ function CantidadLinea({
   nombre,
   cantidad,
   paso,
+  minimo,
   permiteFraccion,
   onCambiar,
 }: {
   nombre: string;
   cantidad: number;
   paso: number;
+  minimo: number;
   permiteFraccion: boolean;
   onCambiar: (cantidad: number) => void;
 }) {
   const [texto, setTexto] = useState<string | null>(null);
-  const enElMinimo = cantidad <= paso;
+  const enElMinimo = cantidad <= minimo + 1e-9;
 
   function confirmar() {
     if (texto === null) return;
-    const valor = parsearCantidad(texto, paso);
+    const valor = parsearCantidad(texto, paso, minimo);
     if (valor !== null) onCambiar(valor);
     setTexto(null);
   }
@@ -311,7 +368,7 @@ function CantidadLinea({
     <div className="qty qty--carrito" role="group" aria-label={`Cantidad de ${nombre}`}>
       <button
         type="button"
-        onClick={() => onCambiar(ajustarCantidad(cantidad, -paso, paso))}
+        onClick={() => onCambiar(ajustarCantidad(cantidad, -paso, paso, minimo))}
         disabled={enElMinimo}
         aria-label="Disminuir cantidad"
       >
@@ -338,7 +395,7 @@ function CantidadLinea({
           }
         }}
       />
-      <button type="button" onClick={() => onCambiar(ajustarCantidad(cantidad, paso, paso))} aria-label="Aumentar cantidad">
+      <button type="button" onClick={() => onCambiar(ajustarCantidad(cantidad, paso, paso, minimo))} aria-label="Aumentar cantidad">
         <Plus size={14} />
       </button>
     </div>

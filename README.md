@@ -1,11 +1,11 @@
-# CryneX — Plataforma modular de gestión, POS y e-commerce
+# Kryon X — Plataforma modular de gestión, POS y e-commerce
 
 Un solo núcleo con módulos configurables, sirviendo a varios negocios a la vez.
 El backend es un monolito Django modular; cada frontend tiene sus propias
 dependencias.
 
 ```
-crynex/
+kryonx/
 ├─ backend/              API REST (Django + DRF + JWT)
 │  ├─ config/settings/   base / dev / prod / test
 │  ├─ tests/             regresión, aislamiento, motor, inventario, POS
@@ -27,7 +27,7 @@ crynex/
 ├─ frontend/
 │  ├─ tienda/            tienda pública (Next.js + TS) — puerto 3000
 │  ├─ admin-panel/       panel del negocio (React + Vite + TS) — puerto 5174
-│  └─ panel-crynex/      panel de la plataforma (React + Vite + TS) — puerto 5176
+│  └─ panel-kryonx/      panel de la plataforma (React + Vite + TS) — puerto 5176
 └─ docker-compose.yml    db + backend + tienda + panel
 ```
 
@@ -91,7 +91,7 @@ npm run dev        # http://localhost:5174  (proxy /api → :8000)
 ### 4. Panel de la plataforma
 
 ```bash
-cd frontend/panel-crynex
+cd frontend/panel-kryonx
 npm install
 npm run dev        # http://localhost:5176  (proxy /api → :8000)
 ```

@@ -2,8 +2,8 @@ import axios from "axios";
 
 const baseURL = import.meta.env.VITE_API_URL ?? "/api";
 
-const ACCESS_KEY = "crynex_admin_access";
-const REFRESH_KEY = "crynex_admin_refresh";
+const ACCESS_KEY = "kryonx_admin_access";
+const REFRESH_KEY = "kryonx_admin_refresh";
 
 /**
  * Dónde viven los tokens, según lo que pidió quien entró.

@@ -47,7 +47,7 @@ class PlantillaSerializer(serializers.ModelSerializer):
     def validate_marca(self, valor):
         """
         Solo las claves del catalogo. Sin esto, un JSON editable desde el panel
-        de Crynex seria escritura arbitraria sobre la configuracion de cada
+        de Kryon X seria escritura arbitraria sobre la configuracion de cada
         negocio que adopte la plantilla: `aplicar_aspecto` hace `setattr`.
         """
         from .aspecto import limpiar_marca  # noqa: PLC0415
@@ -158,6 +158,10 @@ class AdoptarPlantillaSerializer(serializers.Serializer):
     #: pide explícitamente en vez de venir de regalo.
     aplicar_tema = serializers.BooleanField(default=False)
     publicar = serializers.BooleanField(default=False)
+    #: Copiar el aspecto de la plantilla (color de marca, tipografía, tokens).
+    #: Se aplica a la tienda EN VIVO, no al borrador, así que el panel deja
+    #: elegir. Por defecto sí, como siempre: quien no lo manda no nota cambio.
+    aplicar_aspecto = serializers.BooleanField(default=True)
 
     def validate_plantilla(self, valor):
         if not Plantilla.objects.filter(slug=valor, activa=True).exists():

@@ -89,6 +89,11 @@ def resumen_publico(cliente) -> dict:
         # Si todavía le falta su primer pedido completo, la tienda le pide los
         # datos y el acuerdo de precios; si no, ya no se le vuelve a preguntar.
         "requiere_datos": not cliente.datos_completos,
+        # Clientes de antes de pedir la autorización de datos: se les pide una
+        # vez, sin volver a pedirles todo lo demás.
+        "requiere_autorizacion": cliente.autorizo_datos_en is None,
+        # Nunca se le preguntó por WhatsApp: la tienda le ofrece la casilla.
+        "pregunta_whatsapp": cliente.whatsapp_decidido_en is None,
     }
 
 
@@ -146,6 +151,11 @@ def historial_publico(cliente, request=None) -> list:
                     "precio_actual": str(presentacion.precio_unitario),
                     "permite_fraccion": producto.permite_fraccion,
                     "tipo_cantidad": producto.tipo_cantidad,
+                    # La regla de HOY de la presentación: repetir el pedido
+                    # tiene que ajustar la cantidad vieja a ella.
+                    "cantidad_minima": str(presentacion.cantidad_minima),
+                    "incremento_cantidad": str(presentacion.incremento_cantidad),
+                    "decimales_cantidad": presentacion.decimales_cantidad,
                     "disponible": bool(producto.estado_producto and presentacion.estado_presentacion),
                 }
             )

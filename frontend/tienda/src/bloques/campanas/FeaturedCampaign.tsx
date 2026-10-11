@@ -19,9 +19,12 @@ interface Props {
   texto?: string;
   imagen?: string;
   imagen_movil?: string;
+  /** Entre 781 y 1024 px. Vacía: la de escritorio. */
+  imagen_tablet?: string;
   imagen_alt?: string;
   enfoque?: string;
   enfoque_movil?: string;
+  enfoque_tablet?: string;
   cta_texto?: string;
   cta_href?: string;
   alineacion?: "izquierda" | "centro";
@@ -36,9 +39,11 @@ export function FeaturedCampaign({
   texto = "",
   imagen = "",
   imagen_movil = "",
+  imagen_tablet = "",
   imagen_alt = "",
   enfoque = "50% 50%",
   enfoque_movil = "",
+  enfoque_tablet = "",
   cta_texto = "",
   cta_href = "/tienda",
   alineacion = "izquierda",
@@ -53,6 +58,7 @@ export function FeaturedCampaign({
   const variables = {
     "--enfoque": enfoque,
     "--enfoque-movil": enfoque_movil || enfoque,
+    "--enfoque-tablet": enfoque_tablet || enfoque,
   } as CSSProperties;
 
   return (
@@ -60,6 +66,9 @@ export function FeaturedCampaign({
       <motion.div className="fc-media" style={movimiento}>
         <picture>
           {imagen_movil && <source media="(max-width: 780px)" srcSet={imagen_movil} />}
+          {imagen_tablet && (
+            <source media="(min-width: 781px) and (max-width: 1024px)" srcSet={imagen_tablet} />
+          )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={imagen} alt={imagen_alt} loading="lazy" decoding="async" />
         </picture>

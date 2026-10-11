@@ -11,85 +11,162 @@
  * catálogo (`CampoProductos`). Si el esquema no lo declara, se deduce del
  * nombre de la propiedad, que es la convención de todos los bloques.
  *
+ * Los controles son visuales cuando el dato lo permite: un `enum` corto es un
+ * botón segmentado, un número acotado un deslizador, un `enfoque` el control
+ * de encuadre, y las fotos de escritorio/tablet/móvil un solo control con una
+ * pestaña por pantalla (`ImagenesPorDispositivo`).
+ *
+ * `claves` limita el formulario a un apartado del panel (Contenido, Botones…):
+ * qué propiedad va en cuál lo decide `agrupacion.ts`.
+ *
  * Lo que NO hace es validar. Eso lo hace el servidor al guardar, que es el
  * único sitio donde la regla no se puede saltar; aquí solo se acotan los
  * números al rango declarado, porque descubrir al guardar que 500 no cabía es
  * una fricción tonta.
  */
 import { ArrowDown, ArrowUp, ChevronDown, Copy, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import type { CampoEsquema } from "../../api/tienda";
+import { grupoDe, nombreDeBoton, prefijoDeBoton } from "./agrupacion";
+import { CampoEncuadre } from "./campos/CampoEncuadre";
 import { CampoEnlace } from "./campos/CampoEnlace";
 import { CampoMedio, urlDeVista } from "./campos/CampoMedio";
 import { CampoProductos } from "./campos/CampoProductos";
+import { ImagenesPorDispositivo, clavesDeImagenes } from "./campos/ImagenesPorDispositivo";
+import type { ClaveDispositivo } from "./dispositivos";
 
 interface Props {
   esquema: CampoEsquema | undefined;
   valores: Record<string, unknown>;
   onCambio: (valores: Record<string, unknown>) => void;
+  /** Solo estas propiedades y en este orden (un apartado del panel). Sin ella, todas. */
+  claves?: string[];
+  /** La pantalla de la previa, que es también la de las fotos por dispositivo. */
+  pantalla?: ClaveDispositivo;
+  onPantalla?: (clave: ClaveDispositivo) => void;
 }
 
 /** El formato declarado o, si falta, el que sugiere el nombre de la propiedad. */
 function formatoDe(clave: string, campo: CampoEsquema): CampoEsquema["formato"] {
   if (campo.formato) return campo.formato;
   if (campo.tipo !== "string") return undefined;
-  if (/^(imagen|imagen_movil|poster_url|logo|logo_url|foto|fondo)$/.test(clave)) return "imagen";
+  if (/^(imagen|imagen_movil|imagen_tablet|poster_url|logo|logo_url|foto|fondo)$/.test(clave)) return "imagen";
   if (/^(video_url|video_movil_url)$/.test(clave)) return "video";
   if (clave === "href" || clave.endsWith("_href")) return "enlace";
   return undefined;
 }
 
-export function Propiedades({ esquema, valores, onCambio }: Props) {
-  const campos = Object.entries(esquema?.properties ?? {});
-
-  if (campos.length === 0) {
-    return (
-      <p className="campo-ayuda">
-        Este bloque no tiene opciones: se alimenta del contenido que administras
-        en Configuración (banners, anuncios, beneficios, testimonios…).
-      </p>
-    );
+/**
+ * La etiqueta que se enseña. Los esquemas viejos hablan de «Enfoque», que es
+ * jerga de fotógrafo: lo que el control hace es encuadrar.
+ */
+function tituloDe(clave: string, campo: CampoEsquema): string {
+  const titulo = campo.titulo ?? clave;
+  if (/^enfoque/.test(clave)) {
+    if (/^Enfoque de la foto$/i.test(titulo)) return "Encuadre de la imagen";
+    return titulo.replace(/^Enfoque/i, "Encuadre");
   }
+  return titulo;
+}
 
-  return (
-    <>
-      {campos.map(([clave, campo]) => (
+/** El nombre de una opción: el que declara el esquema o el código, legible. */
+function etiquetaDeOpcion(campo: CampoEsquema, opcion: string): string {
+  const declarada = campo.opciones_etiquetas?.[opcion];
+  if (declarada) return declarada;
+  const legible = opcion.replace(/[_-]+/g, " ");
+  return legible.charAt(0).toUpperCase() + legible.slice(1);
+}
+
+export function Propiedades({ esquema, valores, onCambio, claves, pantalla = "escritorio", onPantalla }: Props) {
+  const [pantallaLocal, setPantallaLocal] = useState<ClaveDispositivo>(pantalla);
+  const todas = esquema?.properties ?? {};
+  const lista = (claves ?? Object.keys(todas)).filter((clave) => clave in todas);
+  const deImagenes = new Set(clavesDeImagenes(esquema));
+  const primeraImagen = lista.find((c) => deImagenes.has(c));
+
+  if (lista.length === 0) return null;
+
+  const salida: ReactNode[] = [];
+  let botonAnterior: string | null = null;
+
+  for (const clave of lista) {
+    const campo = todas[clave];
+
+    // Las fotos por dispositivo son UN control, aunque sean seis propiedades:
+    // se pinta en el sitio de la primera y las demás se saltan.
+    if (deImagenes.has(clave)) {
+      if (clave === primeraImagen) {
+        salida.push(
+          <ImagenesPorDispositivo
+            key="imagenes-por-dispositivo"
+            esquema={esquema}
+            valores={valores}
+            onCambio={(cambios) => onCambio({ ...valores, ...cambios })}
+            pantalla={onPantalla ? pantalla : pantallaLocal}
+            onPantalla={onPantalla ?? setPantallaLocal}
+          />
+        );
+      }
+      continue;
+    }
+
+    // Los botones van por tarjetas: «Botón principal», «Botón secundario».
+    let atenuado = false;
+    if (grupoDe(clave, campo) === "botones") {
+      const prefijo = prefijoDeBoton(clave);
+      if (prefijo !== botonAnterior) {
+        salida.push(
+          <p key={`boton-${prefijo}`} className="constructor-subtitulo">
+            {nombreDeBoton(prefijo)}
+          </p>
+        );
+        botonAnterior = prefijo;
+      }
+      atenuado = clave !== `${prefijo}_visible` && valores[`${prefijo}_visible`] === false;
+    }
+
+    salida.push(
+      <div key={clave} className={atenuado ? "constructor-atenuado" : undefined}>
         <CampoDeEsquema
-          key={clave}
           clave={clave}
           campo={campo}
           valor={valores[clave]}
+          hermanos={valores}
           onCambio={(v) => onCambio({ ...valores, [clave]: v })}
         />
-      ))}
-    </>
-  );
+      </div>
+    );
+  }
+
+  return <>{salida}</>;
 }
 
 function CampoDeEsquema({
   clave,
   campo,
   valor,
+  hermanos,
   onCambio,
 }: {
   clave: string;
   campo: CampoEsquema;
   valor: unknown;
+  /** Las demás propiedades del mismo objeto: el encuadre necesita su foto. */
+  hermanos?: Record<string, unknown>;
   onCambio: (valor: unknown) => void;
 }) {
-  const etiqueta = campo.titulo ?? clave;
+  const id = useId();
+  const etiqueta = tituloDe(clave, campo);
   const formato = formatoDe(clave, campo);
 
   if (campo.tipo === "boolean") {
+    const marcado = Boolean(valor ?? campo.default ?? false);
     return (
-      <div className="campo">
-        <label className="constructor-switch">
-          <input
-            type="checkbox"
-            checked={Boolean(valor ?? campo.default ?? false)}
-            onChange={(e) => onCambio(e.target.checked)}
-          />
-          <span>{etiqueta}</span>
+      <div className="campo constructor-interruptor">
+        <label htmlFor={id}>{etiqueta}</label>
+        <label className="switch">
+          <input id={id} type="checkbox" role="switch" checked={marcado} onChange={(e) => onCambio(e.target.checked)} />
+          <span className="switch-riel" aria-hidden="true" />
         </label>
         {campo.ayuda && <p className="campo-ayuda">{campo.ayuda}</p>}
       </div>
@@ -97,29 +174,77 @@ function CampoDeEsquema({
   }
 
   if (campo.tipo === "enum") {
+    const opciones = campo.opciones ?? [];
+    const actual = String(valor ?? campo.default ?? "");
+    // Pocas opciones cortas: botones segmentados, que se ven todas de un
+    // vistazo. Muchas o largas: un desplegable.
+    const segmentado =
+      opciones.length > 1 && opciones.length <= 4 && opciones.every((o) => etiquetaDeOpcion(campo, o).length <= 11);
     return (
       <div className="campo">
-        <label>{etiqueta}</label>
-        <select
-          value={String(valor ?? campo.default ?? "")}
-          onChange={(e) => onCambio(e.target.value)}
-        >
-          {(campo.opciones ?? []).map((opcion) => (
-            <option key={opcion} value={opcion}>
-              {opcion}
-            </option>
-          ))}
-        </select>
+        <label id={`${id}-etiqueta`} htmlFor={segmentado ? undefined : id}>
+          {etiqueta}
+        </label>
+        {segmentado ? (
+          <div className="constructor-segmentado" role="radiogroup" aria-labelledby={`${id}-etiqueta`}>
+            {opciones.map((opcion) => (
+              <button
+                key={opcion}
+                type="button"
+                role="radio"
+                aria-checked={actual === opcion}
+                className={actual === opcion ? "activo" : ""}
+                onClick={() => onCambio(opcion)}
+              >
+                {etiquetaDeOpcion(campo, opcion)}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <select id={id} value={actual} onChange={(e) => onCambio(e.target.value)}>
+            {opciones.map((opcion) => (
+              <option key={opcion} value={opcion}>
+                {etiquetaDeOpcion(campo, opcion)}
+              </option>
+            ))}
+          </select>
+        )}
         {campo.ayuda && <p className="campo-ayuda">{campo.ayuda}</p>}
       </div>
     );
   }
 
   if (campo.tipo === "number") {
+    // Con un rango corto, un deslizador: se ajusta mirando la previa en vez de
+    // adivinando un número.
+    const deslizable =
+      campo.minimo !== undefined && campo.maximo !== undefined && campo.maximo - campo.minimo <= 200;
+    if (deslizable) {
+      const bruto = Number(valor ?? campo.default ?? campo.minimo);
+      const n = Number.isFinite(bruto) ? bruto : (campo.minimo as number);
+      return (
+        <div className="campo">
+          <label htmlFor={id}>{etiqueta}</label>
+          <div className="constructor-deslizador">
+            <input
+              id={id}
+              type="range"
+              min={campo.minimo}
+              max={campo.maximo}
+              value={n}
+              onChange={(e) => onCambio(Number(e.target.value))}
+            />
+            <output htmlFor={id}>{n}</output>
+          </div>
+          {campo.ayuda && <p className="campo-ayuda">{campo.ayuda}</p>}
+        </div>
+      );
+    }
     return (
       <div className="campo">
-        <label>{etiqueta}</label>
+        <label htmlFor={id}>{etiqueta}</label>
         <input
+          id={id}
           type="number"
           min={campo.minimo}
           max={campo.maximo}
@@ -177,6 +302,21 @@ function CampoDeEsquema({
     );
   }
 
+  if (campo.tipo === "string" && /^enfoque/.test(clave)) {
+    // La foto que encuadra: la de la misma pantalla (`enfoque_movil` →
+    // `imagen_movil`) o, si no hay, la principal.
+    const foto = hermanos?.[clave.replace(/^enfoque/, "imagen")] || hermanos?.imagen;
+    return (
+      <CampoEncuadre
+        etiqueta={etiqueta}
+        valor={String(valor ?? "")}
+        porDefecto={campo.default ? String(campo.default) : "50% 50%"}
+        imagen={typeof foto === "string" && foto ? foto : undefined}
+        onCambio={onCambio}
+      />
+    );
+  }
+
   if (formato === "enlace") {
     return (
       <CampoEnlace
@@ -191,18 +331,20 @@ function CampoDeEsquema({
 
   // `string`, y cualquier tipo que este panel todavía no dibuje: un campo de
   // texto sirve y no pierde el dato, que es mejor que no mostrarlo.
-  const largo = etiqueta.toLowerCase().includes("texto");
+  const largo = /texto|subt[ií]tulo|descripci/i.test(etiqueta) && !/bot[oó]n|alternativo/i.test(etiqueta);
   return (
     <div className="campo">
-      <label>{etiqueta}</label>
+      <label htmlFor={id}>{etiqueta}</label>
       {largo ? (
         <textarea
+          id={id}
           rows={2}
           value={String(valor ?? "")}
           onChange={(e) => onCambio(e.target.value)}
         />
       ) : (
         <input
+          id={id}
           value={String(valor ?? "")}
           onChange={(e) => onCambio(e.target.value)}
           placeholder={campo.default ? String(campo.default) : undefined}
@@ -370,6 +512,7 @@ function ListaDeEsquema({
                         clave={clave}
                         campo={sub}
                         valor={(elemento as Record<string, unknown>)?.[clave]}
+                        hermanos={elemento as Record<string, unknown>}
                         onCambio={(v) =>
                           onCambio(valor.map((x, j) => (j === i ? { ...(x as Record<string, unknown>), [clave]: v } : x)))
                         }

@@ -1,5 +1,5 @@
 """
-La API del panel de Crynex.
+La API del panel de Kryon X.
 
 Es la única parte del sistema que atraviesa negocios a propósito, y por eso
 todo lo de aquí declara `ambito_de_plataforma()` de forma explícita: en el
@@ -17,6 +17,7 @@ from django.db.models import Count, Prefetch
 from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -41,6 +42,7 @@ from .serializers import (
     CaracteristicaSerializer,
     DomainPlataformaSerializer,
     DuplicarPlanSerializer,
+    IdentidadNegocioSerializer,
     MembershipPlataformaSerializer,
     NegocioSerializer,
     PermisoDisponibleSerializer,
@@ -92,7 +94,7 @@ def aplicar_plantilla(negocio, slug, *, aplicar_tema=True, publicar=False, autor
 
 
 class BaseDePlataforma(viewsets.ModelViewSet):
-    """Todo el panel de Crynex exige ser staff de plataforma."""
+    """Todo el panel de Kryon X exige ser staff de plataforma."""
 
     permission_classes = [EsStaffDePlataforma]
     pagination_class = None  # son catálogos cortos que la UI consume enteros
@@ -103,7 +105,7 @@ class BaseDePlataforma(viewsets.ModelViewSet):
 # ==========================================================================
 class ProductoViewSet(BaseDePlataforma):
     """
-    Las soluciones que Crynex comercializa.
+    Las soluciones que Kryon X comercializa.
 
     Antes eran una cadena repetida en cada permiso (`modulo`), lo que hacía
     imposible darle a un producto descripción, categoría o estado propios.
@@ -162,7 +164,7 @@ class TipoLimiteViewSet(BaseDePlataforma):
 
 class PermisoDisponibleViewSet(BaseDePlataforma):
     """
-    El catálogo de lo que Crynex puede conceder a las empresas.
+    El catálogo de lo que Kryon X puede conceder a las empresas.
 
     Antes era una constante de Python. Como filas, añadir un módulo o retirar
     uno deja de exigir un despliegue — y desactivar uno lo oculta en todos los
@@ -268,7 +270,7 @@ class PrecioPlanViewSet(BaseDePlataforma):
 # Clientes y contratos
 # ==========================================================================
 class NegocioViewSet(BaseDePlataforma):
-    """Las empresas que usan Crynex."""
+    """Las empresas que usan Kryon X."""
 
     serializer_class = NegocioSerializer
     # Sin "post" la acción `cambiar-plan` daría 405: `http_method_names` filtra
@@ -333,7 +335,7 @@ class NegocioViewSet(BaseDePlataforma):
         Asigna una plantilla de tienda a un cliente, desde la plataforma.
 
         Existe además de la acción del panel del negocio porque quien lo hace es
-        otro: allí un cliente elige el molde de SU tienda, y aquí Crynex lo hace
+        otro: allí un cliente elige el molde de SU tienda, y aquí Kryon X lo hace
         por él —al darlo de alta, o al rediseñarle la tienda—. La operación es
         la misma; lo que cambia es quién puede.
 
@@ -360,7 +362,7 @@ class NegocioViewSet(BaseDePlataforma):
     def get_queryset(self):
         with ambito_de_plataforma():
             return list(
-                Tenant.objects.select_related("suscripcion__plan").prefetch_related(
+                Tenant.objects.select_related("suscripcion__plan", "settings").prefetch_related(
                     "dominios", "memberships"
                 )
             )
@@ -434,6 +436,79 @@ class NegocioViewSet(BaseDePlataforma):
         return Response(
             DomainPlataformaSerializer(negocio.dominios.all(), many=True).data
         )
+
+
+    @action(
+        detail=True,
+        methods=["get", "patch"],
+        url_path="identidad",
+        parser_classes=[MultiPartParser, FormParser, JSONParser],
+    )
+    def identidad(self, request, pk=None):
+        """
+        La información corporativa del negocio: nombre comercial, logo, datos
+        legales y de contacto.
+
+        Se guarda donde la tienda ya la lee (`StoreSettings` y la sección
+        `empresa` del centro legal), así que la plataforma y la tienda nunca
+        muestran dos versiones distintas. Solo se tocan los campos que llegan.
+        """
+        from apps.content import legal as centro_legal  # noqa: PLC0415
+        from apps.content.models import StoreSettings  # noqa: PLC0415
+
+        with ambito_de_plataforma():
+            negocio = Tenant.objects.filter(pk=pk).first()
+            if negocio is None:
+                return Response({"detail": "No existe ese negocio."}, status=404)
+            ajustes, _ = StoreSettings.objects.get_or_create(tenant=negocio)
+
+        if request.method == "GET":
+            return Response(IdentidadNegocioSerializer.leer(ajustes, request))
+
+        entrada = IdentidadNegocioSerializer(data=request.data, partial=True)
+        entrada.is_valid(raise_exception=True)
+        datos = entrada.validated_data
+
+        with transaction.atomic():
+            campos = []
+            # Identidad y contacto de la tienda.
+            for origen, destino in (
+                ("nombre_comercial", "nombre_empresa"),
+                ("telefono", "telefono"),
+                ("correo", "email"),
+                ("direccion", "direccion"),
+                ("ciudad", "ciudad"),
+            ):
+                if origen in datos:
+                    setattr(ajustes, destino, datos[origen])
+                    campos.append(destino)
+
+            if datos.get("quitar_logo"):
+                ajustes.logo.delete(save=False)
+                ajustes.logo = None
+                campos.append("logo")
+            elif "logo" in datos:
+                ajustes.logo = datos["logo"]
+                campos.append("logo")
+
+            # Datos legales: se mezclan con lo que ya tenía la sección
+            # `empresa` para no borrar lo que el negocio llenó en su centro legal.
+            empresa = {
+                clave: datos[clave]
+                for clave in (*IdentidadNegocioSerializer.DE_LEGAL, "direccion", "ciudad")
+                if clave in datos
+            }
+            if empresa:
+                anterior = ajustes.legal or {}
+                ajustes.legal = centro_legal.combinar(
+                    anterior, {"empresa": {**anterior.get("empresa", {}), **empresa}}
+                )
+                campos.append("legal")
+
+            if campos:
+                ajustes.save(update_fields=sorted(set(campos)))
+
+        return Response(IdentidadNegocioSerializer.leer(ajustes, request))
 
 
 class SubscriptionViewSet(BaseDePlataforma):

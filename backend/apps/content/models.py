@@ -210,6 +210,17 @@ class StoreSettings(models.Model):
     # ------------------------------------------------------------------
     tokens = models.JSONField(default=dict, blank=True)
 
+    # ------------------------------------------------------------------
+    # Centro legal: datos legales de la empresa, condiciones de envío,
+    # devoluciones y pagos, y lo que el negocio haya reescrito de cada
+    # política. Lo sirve `/api/content/legal/` y lo pinta la tienda.
+    #
+    # JSON por lo mismo que `tokens`: son textos y listas que cambian con la
+    # ley y con la operación, y cada ajuste no debería costar una migración.
+    # La forma la documenta y la normaliza `apps/content/legal.py`.
+    # ------------------------------------------------------------------
+    legal = models.JSONField(default=dict, blank=True)
+
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:

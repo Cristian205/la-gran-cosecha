@@ -34,7 +34,7 @@ pytestmark = pytest.mark.django_db
 def staff_plataforma(negocio):
     usuario = get_user_model().objects.create_user(
         email_usuario="comercial@ejemplo.test",
-        nombre_usuario="Equipo Crynex",
+        nombre_usuario="Equipo Kryon X",
         password="clave-de-prueba-123",
         is_staff=True,
     )

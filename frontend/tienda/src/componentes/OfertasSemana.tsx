@@ -10,7 +10,8 @@ import {
   colorCategoria,
   formatoCantidad,
   formatoPrecio,
-  pasoCantidad,
+  cantidadInicial,
+  reglaCantidad,
 } from "@/lib/utiles";
 import { Seccion, claseDeVariante } from "@/bloques/Seccion";
 
@@ -27,8 +28,13 @@ function tiempoRestante(fechaFin: string): string | null {
 
 function TarjetaOferta({ oferta }: { oferta: OfertaProducto }) {
   const { agregar, agregado } = useAgregarAlCarrito();
-  const paso = pasoCantidad(oferta.producto_permite_fraccion, oferta.producto_tipo_cantidad);
-  const [cantidad, setCantidad] = useState(paso);
+  const regla = reglaCantidad(
+    oferta.presentacion_detalle,
+    oferta.producto_permite_fraccion,
+    oferta.producto_tipo_cantidad
+  );
+  const { paso, minimo } = regla;
+  const [cantidad, setCantidad] = useState(() => cantidadInicial(regla));
   const [restante, setRestante] = useState<string | null>(
     oferta.fecha_fin ? tiempoRestante(oferta.fecha_fin) : null
   );
@@ -50,8 +56,11 @@ function TarjetaOferta({ oferta }: { oferta: OfertaProducto }) {
       cantidad,
       permiteFraccion: oferta.producto_permite_fraccion,
       tipoCantidad: oferta.producto_tipo_cantidad,
+      minimo,
+      paso,
+      decimales: regla.decimales,
     });
-    setCantidad(paso);
+    setCantidad(cantidadInicial(regla));
   }
 
   return (
@@ -92,7 +101,7 @@ function TarjetaOferta({ oferta }: { oferta: OfertaProducto }) {
 
         <div className="oferta-linea-cantidad">
           <div className="pc-stepper">
-            <button type="button" aria-label="Disminuir" onClick={() => setCantidad((c) => ajustarCantidad(c, -paso, paso))}>
+            <button type="button" aria-label="Disminuir" onClick={() => setCantidad((c) => ajustarCantidad(c, -paso, paso, minimo))}>
               <Minus size={14} />
             </button>
             {oferta.producto_permite_fraccion ? (
@@ -110,7 +119,7 @@ function TarjetaOferta({ oferta }: { oferta: OfertaProducto }) {
                 }}
               />
             )}
-            <button type="button" aria-label="Aumentar" onClick={() => setCantidad((c) => ajustarCantidad(c, paso, paso))}>
+            <button type="button" aria-label="Aumentar" onClick={() => setCantidad((c) => ajustarCantidad(c, paso, paso, minimo))}>
               <Plus size={14} />
             </button>
           </div>

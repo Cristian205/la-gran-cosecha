@@ -21,8 +21,8 @@ import type { NextRequest } from "next/server";
  * En Next 16 este archivo se llama `proxy.ts`; `middleware.ts` está obsoleto.
  */
 const PARAMETRO = "vista";
-const CABECERA = "x-crynex-vista";
-const COOKIE = "crynex_vista";
+const CABECERA = "x-kryonx-vista";
+const COOKIE = "kryonx_vista";
 
 export function proxy(request: NextRequest) {
   const enLaUrl = request.nextUrl.searchParams.get(PARAMETRO);

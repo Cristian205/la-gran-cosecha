@@ -165,7 +165,10 @@ def _obtener_datos_factura(pedido):
     return {
         "pedido": pedido,
         "plan": plan,
-        "categorias_especiales": categorias_especiales,
+        # Con muchos especiales, "Otros Productos" va como una tabla más en
+        # las columnas (una línea por artículo) y la franja no se pinta:
+        # saldría dos veces.
+        "categorias_especiales": {} if plan.especiales_en_columnas else categorias_especiales,
         "fecha_entrega": fecha_entrega,
     }
 

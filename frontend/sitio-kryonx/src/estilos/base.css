@@ -1,0 +1,434 @@
+/*
+ * Kryon X · sitio comercial — base.
+ *
+ * Los colores son los del logo: negro de la pantera, rojo de sus trazos, oro
+ * de la X y blanco. El rojo es el acento que actúa —botones, foco, lo
+ * seleccionado—; el oro es el brillo de la marca y se reserva para el nombre y
+ * la palabra que el titular quiere subrayar: si todo fuera dorado, nada lo
+ * sería.
+ *
+ * La página es un escenario negro y las tiendas son claras y de colores: el
+ * contraste hace que el producto —las tiendas— sea lo que se mira.
+ */
+
+:root {
+  --lienzo: #070708;
+  --lienzo-alto: #0d0d0f;
+  --superficie: #131315;
+  --superficie-alta: #1a1a1d;
+  --linea: rgba(255, 255, 255, 0.08);
+  --linea-viva: rgba(255, 255, 255, 0.16);
+
+  --texto: #ffffff;
+  --texto-medio: #b4b4bb;
+  --texto-tenue: #77777f;
+
+  --rojo: #e11d2a;
+  --rojo-vivo: #ff3b46;
+  --rojo-tenue: rgba(225, 29, 42, 0.14);
+  --rojo-linea: rgba(225, 29, 42, 0.45);
+  --oro: #d4a63a;
+  --oro-vivo: #f2c96b;
+  --oro-metal: linear-gradient(180deg, #fbe7a6 0%, #e0b453 48%, #a8771f 100%);
+  --plata: linear-gradient(180deg, #ffffff 0%, #d6d6dc 55%, #9a9aa3 100%);
+
+  --sans: "Inter Tight", "Segoe UI", system-ui, sans-serif;
+  --serif: "Instrument Serif", Georgia, serif;
+
+  --ancho: 1240px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --radio: 14px;
+  --radio-l: 22px;
+  --suave: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 72px;
+}
+
+/* Lenis gestiona la inercia; el `smooth` nativo encima la duplicaría. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+body {
+  margin: 0;
+  background: var(--lienzo);
+  color: var(--texto);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+}
+
+body.sin-scroll {
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+ol,
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+::selection {
+  background: var(--rojo);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--rojo-vivo);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.saltar {
+  position: absolute;
+  left: 16px;
+  top: -60px;
+  z-index: 100;
+  padding: 10px 16px;
+  background: var(--rojo);
+  border-radius: 10px;
+  font-weight: 600;
+  transition: top 0.2s;
+}
+.saltar:focus {
+  top: 16px;
+}
+
+.contenedor {
+  width: 100%;
+  max-width: var(--ancho);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.seccion {
+  position: relative;
+  padding-block: clamp(96px, 14vw, 180px);
+}
+
+/* ------------------------------------------------------------------ */
+/* Tipografía compartida                                               */
+/* ------------------------------------------------------------------ */
+
+.etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rojo-vivo);
+}
+.etiqueta::before {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: currentColor;
+}
+
+/* La cursiva serif es la voz de la marca: la frase que se quiere recordar. */
+em {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.encabezado {
+  display: grid;
+  gap: 20px;
+  max-width: 640px;
+}
+.encabezado--centro {
+  margin-inline: auto;
+  text-align: center;
+  justify-items: center;
+}
+.encabezado__titulo {
+  font-size: clamp(36px, 5.4vw, 64px);
+  line-height: 1.02;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.encabezado__titulo em {
+  display: inline;
+  background: var(--oro-metal);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding-right: 0.06em;
+}
+.encabezado__texto {
+  font-size: clamp(16px, 1.4vw, 18px);
+  color: var(--texto-medio);
+  max-width: 52ch;
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ */
+/* Logo                                                                */
+/* ------------------------------------------------------------------ */
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo__marca {
+  width: 38px;
+  height: auto;
+}
+/* Mayúsculas y espaciadas, como el logotipo: KRYON en plata y la X en oro. */
+.logo__nombre {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: var(--plata);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.logo__nombre b {
+  background: var(--oro-metal);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------ */
+/* Botones                                                             */
+/* ------------------------------------------------------------------ */
+
+.boton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 52px;
+  padding-inline: 26px;
+  border-radius: 999px;
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  isolation: isolate;
+  transition: background 0.3s var(--suave), border-color 0.3s var(--suave), box-shadow 0.4s var(--suave);
+  will-change: transform;
+}
+.boton__icono {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.35s var(--suave);
+}
+.boton:hover .boton__icono {
+  transform: translateX(4px);
+}
+
+.boton--primario {
+  background: var(--rojo);
+  color: #fff;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+    0 10px 30px -8px rgba(225, 29, 42, 0.7);
+}
+.boton--primario:hover {
+  background: #4a76ff;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset,
+    0 16px 44px -8px rgba(225, 29, 42, 0.9);
+}
+/* El brillo que cruza el botón al pasar. */
+.boton--primario::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.8s var(--suave);
+}
+.boton--primario:hover::after {
+  transform: translateX(120%);
+}
+
+.boton--secundario {
+  color: var(--texto);
+  border: 1px solid var(--linea-viva);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+}
+.boton--secundario:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.boton--fantasma {
+  height: auto;
+  padding: 0;
+  color: var(--texto-medio);
+}
+
+/* ------------------------------------------------------------------ */
+/* Insignia                                                            */
+/* ------------------------------------------------------------------ */
+
+.insignia {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px 7px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--linea-viva);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13.5px;
+  color: var(--texto-medio);
+  backdrop-filter: blur(8px);
+}
+.insignia__punto {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rojo-vivo);
+}
+.insignia__punto::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--rojo-vivo);
+  animation: latido 2.2s var(--suave) infinite;
+}
+@keyframes latido {
+  from {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Ventana de navegador                                                */
+/* ------------------------------------------------------------------ */
+
+.marco {
+  border-radius: var(--radio-l);
+  background: #0f0f11;
+  border: 1px solid var(--linea-viva);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 40px 80px -30px rgba(0, 0, 0, 0.8),
+    0 20px 60px -40px rgba(225, 29, 42, 0.4);
+}
+.marco__barra {
+  display: grid;
+  grid-template-columns: 60px 1fr 60px;
+  align-items: center;
+  gap: 12px;
+  height: 38px;
+  padding-inline: 14px;
+  border-bottom: 1px solid var(--linea);
+  background: var(--lienzo-alto);
+}
+.marco__semaforo {
+  display: inline-flex;
+  gap: 6px;
+}
+.marco__semaforo i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2c2c31;
+}
+.marco__semaforo i:first-child {
+  background: #ff5f57;
+}
+.marco__semaforo i:nth-child(2) {
+  background: #febc2e;
+}
+.marco__semaforo i:nth-child(3) {
+  background: #28c840;
+}
+.marco__direccion {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+  color: var(--texto-medio);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.marco__direccion svg {
+  width: 11px;
+  height: 11px;
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

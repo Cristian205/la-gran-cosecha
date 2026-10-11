@@ -27,7 +27,7 @@ export function Layout() {
   const navigate = useNavigate();
 
   const [colapsado, setColapsado] = useState(
-    () => localStorage.getItem("crynex-sidebar-colapsado") === "1"
+    () => localStorage.getItem("kryonx-sidebar-colapsado") === "1"
   );
   const [menuAbierto, setMenuAbierto] = useState(false);
   const modo = useModoSidebar();
@@ -39,7 +39,7 @@ export function Layout() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    localStorage.setItem("crynex-sidebar-colapsado", colapsado ? "1" : "0");
+    localStorage.setItem("kryonx-sidebar-colapsado", colapsado ? "1" : "0");
   }, [colapsado]);
 
   useEffect(() => {

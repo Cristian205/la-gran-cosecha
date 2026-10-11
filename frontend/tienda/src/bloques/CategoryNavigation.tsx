@@ -27,8 +27,10 @@ import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
  * reconoce antes de leerla. En móvil es una fila con desplazamiento lateral;
  * la elegida se distingue por color, borde y `aria-pressed`, no solo por tono.
  *
- * Elegir una lleva la vista al catálogo: la rejilla está más abajo (después
- * de los favoritos) y filtrar algo que no se ve parece no haber hecho nada.
+ * Elegir una lleva la vista al COMIENZO del catálogo: si la rejilla está más
+ * abajo, porque filtrar algo que no se ve parece no haber hecho nada; y si ya
+ * se bajó por la lista, porque quedarse al fondo de una categoría nueva hace
+ * creer que se acabaron los productos.
  *
  * Sin `CatalogoProvider` (puesto suelto, fuera de una página de catálogo)
  * cae a enlaces normales a "/tienda?categoria=X".
@@ -40,16 +42,6 @@ interface Props {
   /** Un título visible sobre la fila. Vacío = sin título (solo `aria-label`). */
   titulo?: string;
   variante?: string;
-}
-
-function irAlCatalogo() {
-  const destino = document.getElementById("catalogo");
-  if (!destino) return;
-  // Solo si la rejilla está por debajo de la vista: si ya se está dentro del
-  // catálogo, saltar arriba haría perder el sitio.
-  if (destino.getBoundingClientRect().top > window.innerHeight * 0.5) {
-    destino.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
 }
 
 export function CategoryNavigation({ todos_texto = "Todos", titulo = "", variante }: Props) {
@@ -68,9 +60,11 @@ export function CategoryNavigation({ todos_texto = "Todos", titulo = "", variant
   const clase = claseDeVariante(variante, VARIANTES, "categorias-nav", "pills");
   const total = catalogo?.totalCatalogo ?? null;
 
+  // Llevar la vista al comienzo de la lista lo hace `cambiarCategoria`, para
+  // todos los sitios desde donde se filtra (estas fichas, el panel de filtros
+  // del móvil, los chips de filtros activos, el buscador).
   function elegir(id: number | null) {
     catalogo?.cambiarCategoria(id);
-    irAlCatalogo();
   }
 
   return (

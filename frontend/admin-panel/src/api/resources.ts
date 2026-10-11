@@ -10,6 +10,7 @@ import type {
   Paginated,
   Pedido,
   PedidoDetalle,
+  Presentacion,
   PanelEstadisticas,
   Producto,
   ProductoPendiente,
@@ -91,6 +92,14 @@ export async function obtenerUnidades(): Promise<UnidadMedida[]> {
   return unwrap(data);
 }
 
+export async function crearUnidad(datos: {
+  nombre_unidad: string;
+  abreviatura_unidad: string;
+}): Promise<UnidadMedida> {
+  const { data } = await api.post<UnidadMedida>("/catalog/units/", datos);
+  return data;
+}
+
 // ---------- Productos ----------
 /** Catálogo completo, para los selectores de producto que lo cargan de una vez. */
 export async function obtenerProductos(params?: {
@@ -139,13 +148,22 @@ export interface ProductoPayload {
   estado_producto: boolean;
   controla_stock: boolean;
   codigo_barras: string;
-  presentaciones: {
-    id?: number | null;
-    nombre_presentacion: string;
-    unidad_venta: number;
-    factor_conversion: string;
-    precio_unitario: string;
-  }[];
+  /** Opcional: al editar un producto existente el panel ya no lo manda
+   *  (cada presentación se guarda por su endpoint) y el servidor no las toca. */
+  presentaciones?: PresentacionAnidada[];
+}
+
+/** Una presentación dentro del guardado anidado del producto. */
+export interface PresentacionAnidada {
+  id?: number | null;
+  nombre_presentacion: string;
+  unidad_venta: number;
+  factor_conversion: string;
+  precio_unitario: string;
+  cantidad_minima?: string;
+  incremento_cantidad?: string;
+  decimales_cantidad?: number;
+  estado_presentacion?: boolean;
 }
 
 export async function crearProducto(payload: ProductoPayload): Promise<Producto> {
@@ -158,6 +176,15 @@ export async function actualizarProducto(
   payload: ProductoPayload
 ): Promise<Producto> {
   const { data } = await api.put<Producto>(`/catalog/products/${id}/`, payload);
+  return data;
+}
+
+/** Cambia solo los campos enviados; no toca las presentaciones. */
+export async function actualizarProductoParcial(
+  id: number,
+  cambios: Partial<Omit<ProductoPayload, "presentaciones">>
+): Promise<Producto> {
+  const { data } = await api.patch<Producto>(`/catalog/products/${id}/`, cambios);
   return data;
 }
 
@@ -198,6 +225,53 @@ export async function quitarImagenPresentacion(id: number): Promise<void> {
   await api.delete(`/catalog/presentations/${id}/imagen/`);
 }
 
+// ---------- Presentaciones comerciales (una a una) ----------
+export interface PresentacionPayload {
+  producto: number;
+  nombre_presentacion: string;
+  unidad_venta: number;
+  precio_unitario: string;
+  factor_conversion: string;
+  cantidad_minima: string;
+  incremento_cantidad: string;
+  decimales_cantidad: number;
+  estado_presentacion: boolean;
+  /** La versión leída; si otra persona guardó entretanto, el servidor da 409. */
+  version?: number;
+}
+
+/** Todas las presentaciones del producto, activas e inactivas, en su orden. */
+export async function obtenerPresentaciones(productoId: number): Promise<Presentacion[]> {
+  const { data } = await api.get<Presentacion[]>("/catalog/presentations/", {
+    params: { producto: productoId },
+  });
+  return data;
+}
+
+export async function crearPresentacion(payload: PresentacionPayload): Promise<Presentacion> {
+  const { data } = await api.post<Presentacion>("/catalog/presentations/", payload);
+  return data;
+}
+
+export async function actualizarPresentacion(
+  id: number,
+  cambios: Partial<PresentacionPayload>
+): Promise<Presentacion> {
+  const { data } = await api.patch<Presentacion>(`/catalog/presentations/${id}/`, cambios);
+  return data;
+}
+
+export async function reordenarPresentaciones(
+  productoId: number,
+  ids: number[]
+): Promise<Presentacion[]> {
+  const { data } = await api.post<Presentacion[]>("/catalog/presentations/reordenar/", {
+    producto: productoId,
+    ids,
+  });
+  return data;
+}
+
 // ---------- Pedidos ----------
 export async function obtenerPedidos(params?: {
   search?: string;
@@ -209,6 +283,22 @@ export async function obtenerPedidos(params?: {
     params: { ...params, page_size: 100 },
   });
   return unwrap(data);
+}
+
+/**
+ * Cuántos pedidos cumplen los filtros, sin traerlos: pide una página de un
+ * solo registro y lee el `count` de la paginación. Para los indicadores, que
+ * con `obtenerPedidos` se quedaban en los 100 más recientes.
+ */
+export async function contarPedidos(params?: {
+  estado?: string;
+  desde?: string;
+  hasta?: string;
+}): Promise<number> {
+  const { data } = await api.get<Paginated<Pedido> | Pedido[]>("/orders/", {
+    params: { ...params, page_size: 1 },
+  });
+  return Array.isArray(data) ? data.length : data.count;
 }
 
 export async function obtenerPedido(id: number): Promise<PedidoDetalle> {
@@ -289,6 +379,14 @@ export async function obtenerLotes(): Promise<Lote[]> {
   return unwrap(data);
 }
 
+/** Cuántos lotes hay en total (la lista de `obtenerLotes` llega hasta 200). */
+export async function contarLotes(): Promise<number> {
+  const { data } = await api.get<Paginated<Lote> | Lote[]>("/orders-lotes/", {
+    params: { page_size: 1 },
+  });
+  return Array.isArray(data) ? data.length : data.count;
+}
+
 export async function obtenerLote(id: number): Promise<LoteDetalle> {
   const { data } = await api.get<LoteDetalle>(`/orders-lotes/${id}/`);
   return data;
@@ -302,11 +400,31 @@ export async function obtenerClientes(search?: string): Promise<Cliente[]> {
   return unwrap(data);
 }
 
+/**
+ * Todos los clientes (o todos los que coinciden con `search`), recorriendo las
+ * páginas. `obtenerClientes` se queda en los primeros 200: suficiente para un
+ * selector, pero los indicadores y filtros de la vista de Clientes necesitan
+ * la base completa para no mentir cuando el negocio crece.
+ */
+export async function obtenerTodosLosClientes(search?: string): Promise<Cliente[]> {
+  const todos: Cliente[] = [];
+  for (let page = 1; ; page++) {
+    const { data } = await api.get<Paginated<Cliente> | Cliente[]>("/clients/", {
+      params: { q: search || undefined, page_size: 500, page },
+    });
+    if (Array.isArray(data)) return data;
+    todos.push(...data.results);
+    if (!data.next) return todos;
+  }
+}
+
 export interface ClientePayload {
   nombre_cliente: string;
   telefono_cliente?: string;
   direccion_cliente?: string;
   documento_cliente?: string;
+  /** El equipo puede registrar el consentimiento que el cliente dio por teléfono o en persona. */
+  acepta_whatsapp?: boolean;
 }
 
 export async function crearCliente(payload: ClientePayload): Promise<Cliente> {

@@ -1,4 +1,4 @@
-"""Quién puede administrar Crynex."""
+"""Quién puede administrar Kryon X."""
 from rest_framework.permissions import BasePermission
 
 
@@ -12,7 +12,7 @@ class EsStaffDePlataforma(BasePermission):
     clientes tiene que ser una decisión explícita, no un efecto secundario.
     """
 
-    message = "Esta sección es de la administración de Crynex."
+    message = "Esta sección es de la administración de Kryon X."
 
     def has_permission(self, request, view):
         usuario = request.user

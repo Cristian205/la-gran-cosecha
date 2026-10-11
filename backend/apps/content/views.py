@@ -170,3 +170,45 @@ class OfertaProductoViewSet(_ContenidoPublicoOStaffMixin, viewsets.ModelViewSet)
             vigente = Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=timezone.now())
             qs = qs.filter(activo=True).filter(vigente)
         return qs
+
+
+class LegalView(ExigeNegocioMixin, APIView):
+    """
+    El contenido del centro legal de la tienda (`StoreSettings.legal`).
+
+    Endpoint propio y no un campo más de `site-config`: la configuración del
+    sitio se pide en cada página, y las políticas reescritas pueden pesar
+    decenas de kilobytes que solo hacen falta en las páginas legales.
+
+    Lectura pública; escritura solo staff. El PATCH combina por secciones y
+    anota el historial de cada política (ver `apps/content/legal.py`).
+    """
+
+    parser_classes = [JSONParser]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [EsStaff()]
+
+    def _config(self, request):
+        config = StoreSettings.get_para(getattr(request, "tenant", None))
+        if config is None:
+            raise NotFound("No hay ningún negocio asociado a esta dirección.")
+        return config
+
+    def get(self, request):
+        return Response(self._config(request).legal or {})
+
+    def patch(self, request):
+        from rest_framework.exceptions import ValidationError  # noqa: PLC0415
+
+        from .legal import ContenidoLegalInvalido, combinar  # noqa: PLC0415
+
+        config = self._config(request)
+        try:
+            config.legal = combinar(config.legal or {}, request.data)
+        except ContenidoLegalInvalido as error:
+            raise ValidationError({"legal": str(error)}) from error
+        config.save(update_fields=["legal", "fecha_actualizacion"])
+        return Response(config.legal)

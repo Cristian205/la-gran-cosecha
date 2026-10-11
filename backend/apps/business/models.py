@@ -4,7 +4,7 @@ Qué necesita cada negocio, y cómo se decide.
 Tres modelos en dos niveles, la misma separación que ya usan el motor de
 tiendas y el comercial:
 
-    Nivel plataforma — lo administra Crynex
+    Nivel plataforma — lo administra Kryon X
       Preset        una propuesta inicial por tipo de negocio
 
     Nivel negocio — lo edita cada cliente
@@ -18,7 +18,7 @@ COPIA sus valores al perfil y ahí se acaba la relación: `preset_origen` queda
 para saber de dónde vino, no para leer nada de él.
 
 Copiar y no referenciar es la misma regla que `Plantilla` y `Tema` ya siguen, y
-aquí importa igual: si el perfil apuntara al preset, que Crynex retocara
+aquí importa igual: si el perfil apuntara al preset, que Kryon X retocara
 «Ferretería» cambiaría el comportamiento de cuarenta negocios en producción sin
 avisar a ninguno. Un negocio que funciona no cambia solo.
 
@@ -44,7 +44,7 @@ class Preset(models.Model):
     """
     Un punto de partida para un tipo de negocio.
 
-    Se administra desde el panel de Crynex, y añadir «floristería» es un alta
+    Se administra desde el panel de Kryon X, y añadir «floristería» es un alta
     aquí: ni una línea de código, ni una migración. Esa es la prueba de que la
     arquitectura cumple lo que promete.
 
@@ -143,7 +143,7 @@ class PerfilNegocio(models.Model):
     Es `OneToOne` con `Tenant` y no hereda `ModeloConTenant`, igual que
     `Subscription` y `StoreSettings`: no es un dato DEL negocio sino la
     configuración del negocio mismo, y tanto el panel del cliente como el de
-    Crynex tienen que poder leerlo. El aislamiento lo garantiza la vista, que
+    Kryon X tienen que poder leerlo. El aislamiento lo garantiza la vista, que
     solo entrega el perfil del negocio de la petición.
     """
 

@@ -116,7 +116,7 @@ export function PendingProductApprovalModal({
 
   return (
     <Modal
-      lateral
+      amplio
       titulo="Aceptar producto personalizado"
       onCerrar={onCerrar}
       footer={

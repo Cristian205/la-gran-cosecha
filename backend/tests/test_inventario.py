@@ -249,7 +249,7 @@ def test_la_api_rechaza_un_pedido_sin_stock(
     respuesta = api.post(
         "/api/orders/",
         {
-            "cliente": {"nombre": "Quien sea", "telefono": "3000000000"},
+            "cliente": {"nombre": "Quien sea", "telefono": "3000000000", "autoriza_datos": True},
             "items": [{"presentacion_id": presentacion_con_stock.id, "cantidad": "500"}],
         },
         format="json",
@@ -422,7 +422,7 @@ def test_inventario_esta_en_el_catalogo_comercial():
     El hueco que deja tener dos catalogos de permisos.
 
     `accounts/permisos.py` (Python) basta para que un GERENTE reciba el
-    permiso; `billing.PermisoDisponible` (base) es lo que Crynex vende y
+    permiso; `billing.PermisoDisponible` (base) es lo que Kryon X vende y
     administra. Anadir solo al primero deja el modulo funcionando pero
     invisible para la plataforma: no se puede incluir en ningun plan.
     """

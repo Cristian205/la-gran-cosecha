@@ -47,7 +47,6 @@ export function CategoriesManagerModal({ onCerrar, onCambio }: Props) {
     <Modal
       titulo="Categorías del catálogo"
       onCerrar={onCerrar}
-      lateral
       footer={
         <button className="btn secundario" onClick={onCerrar}>
           Cerrar

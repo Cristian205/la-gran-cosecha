@@ -238,3 +238,16 @@ export async function actualizarOferta(
 export async function eliminarOferta(id: number): Promise<void> {
   await api.delete(`/content/ofertas/${id}/`);
 }
+
+/** Los listados de contenido que el centro de configuración ordena y activa. */
+export type RecursoContenido = "banners" | "anuncios" | "testimonials" | "trust-badges" | "beneficios" | "ofertas";
+
+/**
+ * Cambia solo los campos dados (`activo`, `orden`) sin reenviar el resto.
+ * Va en JSON —los endpoints lo aceptan— porque en multipart DRF leería
+ * cualquier booleano ausente como `false`.
+ */
+export async function cambiarContenido<T>(recurso: RecursoContenido, id: number, cambios: Record<string, unknown>): Promise<T> {
+  const { data } = await api.patch<T>(`/content/${recurso}/${id}/`, cambios);
+  return data;
+}

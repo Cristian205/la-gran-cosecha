@@ -1,0 +1,28 @@
+/* ==========================================================================
+   CLIENTES — lo propio de esta vista. Lo compartido (indicadores, módulo,
+   filtros, tabla, menús) vive en components/gestion/gestion.css.
+   ========================================================================== */
+
+/* Iniciales del nombre en un círculo: ayuda a recorrer la lista con la vista
+   sin inventar una foto que no existe. */
+.cliente-identidad {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: 230px;
+  vertical-align: middle;
+}
+.cliente-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--verde-claro);
+  color: var(--verde-texto);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.cliente-identidad .celda-nombre { max-width: 100%; min-width: 0; }

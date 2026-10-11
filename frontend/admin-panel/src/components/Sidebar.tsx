@@ -44,7 +44,7 @@ export type ModoSidebar = "escritorio" | "tableta" | "movil";
 
 const TABLETA = "(max-width: 1024px)";
 const MOVIL = "(max-width: 700px)";
-const CLAVE_GRUPOS = "crynex-sidebar-grupos-cerrados";
+const CLAVE_GRUPOS = "kryonx-sidebar-grupos-cerrados";
 
 export function useModoSidebar(): ModoSidebar {
   const leer = (): ModoSidebar =>

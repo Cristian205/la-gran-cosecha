@@ -1,12 +1,13 @@
 # Despliegue del frontend en Vercel
 
-Este directorio tiene **tres aplicaciones**, y no todas son lo mismo:
+Este directorio tiene **cuatro aplicaciones**, y no todas son lo mismo:
 
 | App | Directorio | Qué es | Cómo se compila |
 |---|---|---|---|
-| `crynex-tienda` | `frontend/tienda` | Tienda pública multiempresa | **Next.js con render en servidor** |
+| `kryonx-tienda` | `frontend/tienda` | Tienda pública multiempresa | **Next.js con render en servidor** |
 | `lgc-admin-panel` | `frontend/admin-panel` | Panel del negocio | Vite (SPA estática) |
-| `crynex-panel` | `frontend/panel-crynex` | Control Center de la plataforma | Vite (SPA estática) |
+| `kryonx-panel` | `frontend/panel-kryonx` | Control Center de la plataforma | Vite (SPA estática) |
+| `kryonx-sitio` | `frontend/sitio-kryonx` | Sitio comercial (página de ventas) | Vite (SPA estática) |
 
 Vercel despliega **un directorio por proyecto**, así que hace falta un proyecto
 por cada una.
@@ -30,6 +31,14 @@ En Vercel: borra ese proyecto, o cámbiale el *Root Directory* a
 `frontend/tienda` **y el Framework Preset a Next.js**. Si tenía un dominio
 asignado, muévelo al proyecto nuevo antes de borrarlo o la tienda se queda sin
 dirección.
+
+### Y el cambio de marca a Kryon X
+
+Con el cambio de marca, `frontend/panel-crynex/` y `frontend/sitio-crynex/`
+pasaron a llamarse `frontend/panel-kryonx/` y `frontend/sitio-kryonx/`. Los
+proyectos de Vercel que apuntaban a las carpetas viejas fallan igual que el de
+arriba: cámbiales el *Root Directory* a la ruta nueva. El nombre del proyecto
+en Vercel se puede renombrar en *Settings → General* sin que cambie su dominio.
 
 ---
 
@@ -67,10 +76,10 @@ indica, y **no se incrustan en el bundle**: se leen en cada petición.
 |---|---|---|
 | `API_URL` | `https://tu-backend.com/api` | A qué Django llamar. Sin barra final. |
 | `TENANCY_CLAVE_SERVIDOR` | *(la del `.env` del backend)* | Acredita la llamada de servidor a servidor. **Es un secreto.** |
-| `DOMINIO_PLATAFORMA` | `crynex.app` | El dominio bajo el cual `negocio.crynex.app` resuelve al negocio «negocio». |
+| `DOMINIO_PLATAFORMA` | `kryonx.app` | El dominio bajo el cual `negocio.kryonx.app` resuelve al negocio «negocio». |
 | `REVALIDAR_SEGUNDOS` | `60` | Cuánto se cachea el catálogo. Opcional. |
 | `NEXT_PUBLIC_MEDIA_HOST` | `pub-xxx.r2.dev` | El dominio del bucket, para que `next/image` acepte las fotos. Opcional. |
-| `NEXT_PUBLIC_PANEL_URL` | `https://panel.crynex.app` | A dónde manda el enlace de «entrar al panel». Opcional. |
+| `NEXT_PUBLIC_PANEL_URL` | `https://panel.kryonx.app` | A dónde manda el enlace de «entrar al panel». Opcional. |
 
 `TENANCY_CLAVE_SERVIDOR` **no puede llevar `NEXT_PUBLIC_`**. Con ese prefijo
 acabaría en el JavaScript que descarga el navegador, y entonces cualquiera podría
@@ -81,7 +90,7 @@ pedirle a Django el catálogo de cualquier negocio.
 Una sola instancia sirve **todas** las tiendas, y lo único que las distingue es
 el `Host` de la petición. Así que el proyecto necesita:
 
-1. **Un dominio comodín** `*.crynex.app` apuntando a este proyecto, para los
+1. **Un dominio comodín** `*.kryonx.app` apuntando a este proyecto, para los
    subdominios de la plataforma. Los comodines requieren plan Pro en Vercel.
 2. **Cada dominio propio** de cliente añadido al mismo proyecto, y dado de alta
    en la tabla `Domain` del backend. La fuente de verdad de qué host es de quién
@@ -94,9 +103,9 @@ tienda, no un error.
 
 ## Proyectos 2 y 3 — los paneles (Vite)
 
-| Ajuste | `lgc-admin-panel` | `crynex-panel` |
+| Ajuste | `lgc-admin-panel` | `kryonx-panel` |
 |---|---|---|
-| Root Directory | `frontend/admin-panel` | `frontend/panel-crynex` |
+| Root Directory | `frontend/admin-panel` | `frontend/panel-kryonx` |
 | Framework Preset | Vite | Vite |
 | Output Directory | `dist` | `dist` |
 
@@ -109,8 +118,29 @@ VITE_API_URL = https://tu-backend.com/api
 Y en el Control Center, además, la tienda contra la que previsualiza plantillas:
 
 ```
-VITE_TIENDA_URL = https://una-tienda-real.crynex.app
+VITE_TIENDA_URL = https://una-tienda-real.kryonx.app
 ```
+
+## Proyecto 4 — el sitio comercial (Vite)
+
+La página de ventas de Kryon X, la que va en `www`. No habla con el backend:
+no necesita `VITE_API_URL`.
+
+| Ajuste | Valor |
+|---|---|
+| Root Directory | `frontend/sitio-kryonx` |
+| Framework Preset | Vite |
+| Output Directory | `dist` |
+
+Única variable, opcional — adónde lleva «Crear mi tienda» (registro, WhatsApp,
+formulario…). Sin ella el botón baja al cierre de la página:
+
+```
+VITE_URL_CREAR_TIENDA = https://...
+```
+
+A diferencia de los paneles, este **sí** se indexa: su `vercel.json` no manda
+`X-Robots-Tag: noindex`.
 
 ### Ojo con las variables de Vite
 
@@ -132,8 +162,8 @@ En el `.env` del backend:
 
 ```
 DJANGO_ALLOWED_HOSTS=tu-backend.com
-CORS_ALLOWED_ORIGINS=https://panel.crynex.app,https://admin.crynex.app
-CSRF_TRUSTED_ORIGINS=https://panel.crynex.app,https://admin.crynex.app
+CORS_ALLOWED_ORIGINS=https://panel.kryonx.app,https://admin.kryonx.app
+CSRF_TRUSTED_ORIGINS=https://panel.kryonx.app,https://admin.kryonx.app
 ```
 
 **La tienda no necesita estar en CORS.** Sus llamadas salen del servidor de

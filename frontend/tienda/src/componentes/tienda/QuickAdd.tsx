@@ -23,13 +23,13 @@ interface CantidadProps {
  * misma notación que usa el mostrador.
  */
 export function Cantidad({ seleccion, productoNombre, permiteFraccion, tamano = "normal" }: CantidadProps) {
-  const { cantidad, enCarrito, enElMinimo, paso, subir, bajar, fijarCantidad } = seleccion;
+  const { cantidad, enCarrito, enElMinimo, paso, minimo, fraccionaria, subir, bajar, fijarCantidad } = seleccion;
   const [texto, setTexto] = useState<string | null>(null);
   const quitaDelPedido = Boolean(enCarrito) && enElMinimo;
 
   function confirmar() {
     if (texto === null) return;
-    const valor = parsearCantidad(texto, paso);
+    const valor = parsearCantidad(texto, paso, minimo);
     if (valor !== null) fijarCantidad(valor);
     setTexto(null);
   }
@@ -51,7 +51,7 @@ export function Cantidad({ seleccion, productoNombre, permiteFraccion, tamano = 
         className="qty-valor"
         inputMode="decimal"
         aria-label={enCarrito ? "Cantidad en tu pedido" : "Cantidad a agregar"}
-        value={texto ?? formatoCantidad(cantidad, permiteFraccion)}
+        value={texto ?? formatoCantidad(cantidad, permiteFraccion || fraccionaria)}
         onFocus={(e) => {
           setTexto(String(cantidad));
           requestAnimationFrame(() => e.target.select());

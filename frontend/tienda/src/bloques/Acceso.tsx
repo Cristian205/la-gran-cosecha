@@ -13,7 +13,7 @@ import { claseDeVariante } from "./Seccion";
  *
  * # Lo que este bloque NO hace, y no por descuido
  *
- * No autentica a nadie. Crynex todavía no tiene CUENTAS DE COMPRADOR: los
+ * No autentica a nadie. Kryon X todavía no tiene CUENTAS DE COMPRADOR: los
  * clientes de `orders.Cliente` son fichas que crea el negocio, sin correo ni
  * contraseña, y montar sesiones de visitante es un módulo entero —registro,
  * recuperación, verificación, «mis pedidos»— no un formulario.

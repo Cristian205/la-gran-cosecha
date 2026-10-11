@@ -2,7 +2,7 @@
 Las rutas del perfil, repartidas por quien las llama.
 
 Mismo criterio que el motor de tiendas: `/business/` lo consume el panel del
-negocio y `/platform/` el de Crynex. El prefijo importa tanto como la vista,
+negocio y `/platform/` el de Kryon X. El prefijo importa tanto como la vista,
 porque es lo que hace que un permiso mal puesto se note al leer la URL.
 """
 from django.urls import path

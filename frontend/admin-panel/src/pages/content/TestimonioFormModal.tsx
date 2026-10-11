@@ -54,7 +54,8 @@ export function TestimonioFormModal({ testimonio, onCerrar, onGuardado }: Props)
     <Modal
       titulo={testimonio ? "Editar testimonio" : "Nuevo testimonio"}
       onCerrar={onCerrar}
-      lateral
+      amplio
+      medio
       footer={
         <>
           <button className="btn secundario" onClick={onCerrar}>

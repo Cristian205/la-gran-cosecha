@@ -3,7 +3,7 @@ Las rutas del motor, repartidas por quién las llama.
 
 El prefijo importa tanto como la vista: `/storefront/` lo consume el servidor
 de Next sin sesión, `/content/` lo consume el panel del negocio y
-`/platform/` el Control Center de Crynex. Mezclarlas haría que un permiso mal
+`/platform/` el Control Center de Kryon X. Mezclarlas haría que un permiso mal
 puesto pasara desapercibido.
 """
 from django.urls import path

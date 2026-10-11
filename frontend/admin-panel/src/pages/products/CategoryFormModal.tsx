@@ -60,7 +60,6 @@ export function CategoryFormModal({ categoria, onCerrar, onGuardado }: Props) {
     <Modal
       titulo={categoria ? "Editar categoría" : "Nueva categoría"}
       onCerrar={onCerrar}
-      lateral
       footer={
         <>
           <button className="btn secundario" onClick={onCerrar}>

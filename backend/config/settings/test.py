@@ -12,7 +12,7 @@ utilizable desde el primer día. Para las pruebas que necesitan PostgreSQL de
 verdad — la de Row-Level Security de la fase 3, que es la que verifica que la
 base de datos aísla aunque el ORM falle — se define TEST_DATABASE_URL:
 
-    TEST_DATABASE_URL=postgres://usuario:clave@localhost:5432/crynex_test pytest
+    TEST_DATABASE_URL=postgres://usuario:clave@localhost:5432/kryonx_test pytest
 """
 from .base import *  # noqa: F401,F403
 from .base import env
@@ -51,6 +51,12 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 # Ningún correo sale de verdad: los tests del flujo OTP leen mail.outbox.
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+# Los tests de WhatsApp envían en el mismo hilo para poder comprobar el
+# resultado; nunca salen a la red (los proveedores se sustituyen en cada test).
+WHATSAPP_ENVIO_EN_HILO = False
+META_WHATSAPP_TOKEN = ""
+TWILIO_ACCOUNT_SID = ""
+TWILIO_AUTH_TOKEN = ""
 
 # Los archivos de prueba nunca deben acabar en Cloudflare R2 ni en media/.
 USE_R2 = False

@@ -1,6 +1,6 @@
 # constructor
 
-Lo que el editor de tiendas de Crynex y el del negocio tienen en comun: los
+Lo que el editor de tiendas de Kryon X y el del negocio tienen en comun: los
 tipos de una composicion y las operaciones que la mueven.
 
 No es un paquete de npm. Es un directorio de TypeScript que los dos paneles

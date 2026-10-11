@@ -1,5 +1,5 @@
 """
-Deja las cuentas como quedaron acordadas al pasar a Crynex.
+Deja las cuentas como quedaron acordadas al pasar a Kryon X.
 
 Es una limpieza puntual, no una herramienta permanente: se escribe como comando
 y no como script suelto para poder ensayarla, revisarla y repetirla, porque
@@ -74,7 +74,7 @@ class Command(BaseCommand):
             raise CommandError("No hay ningún negocio. Se aborta.")
 
         self.stdout.write(f"\nNegocio: {negocio.nombre} ({negocio.slug})")
-        self.stdout.write(f"Administra Crynex : {admin.email_usuario}")
+        self.stdout.write(f"Administra Kryon X : {admin.email_usuario}")
         self.stdout.write(f"Dueño del negocio : {dueno.email_usuario}")
         self.stdout.write(f"Se borran         : {', '.join(u.email_usuario for u in sobrantes) or '(ninguna)'}\n")
 
@@ -133,7 +133,7 @@ class Command(BaseCommand):
         admin.is_active = True
         admin.save()
 
-        # El dueño del negocio NO administra Crynex, y deja de ser
+        # El dueño del negocio NO administra Kryon X, y deja de ser
         # superusuario de Django: ese flag se salta la comprobación de
         # pertenencia y le daría acceso a cualquier empresa futura.
         dueno.es_staff_plataforma = False
@@ -155,7 +155,7 @@ class Command(BaseCommand):
         for u in Usuario.objects.order_by("id"):
             marcas = []
             if u.es_staff_plataforma:
-                marcas.append("Crynex")
+                marcas.append("Kryon X")
             if u.is_superuser:
                 marcas.append("superusuario")
             negocios = ", ".join(

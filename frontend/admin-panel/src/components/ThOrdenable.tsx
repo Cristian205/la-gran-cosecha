@@ -9,16 +9,18 @@ interface Props {
   direccion: DireccionOrden;
   onClick: (clave: string) => void;
   onMover: (claveOrigen: string, claveDestino: string) => void;
+  /** Clase extra de la celda, p. ej. `num` para alinear a la derecha. */
+  className?: string;
 }
 
-export function ThOrdenable({ clave, etiqueta, columnaActiva, direccion, onClick, onMover }: Props) {
+export function ThOrdenable({ clave, etiqueta, columnaActiva, direccion, onClick, onMover, className = "" }: Props) {
   const activa = columnaActiva === clave;
   const [arrastrando, setArrastrando] = useState(false);
   const [sobrevolando, setSobrevolando] = useState(false);
 
   return (
     <th
-      className={`th-ordenable ${arrastrando ? "arrastrando" : ""} ${sobrevolando ? "sobrevolando" : ""}`}
+      className={`th-ordenable ${className} ${arrastrando ? "arrastrando" : ""} ${sobrevolando ? "sobrevolando" : ""}`}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", clave);

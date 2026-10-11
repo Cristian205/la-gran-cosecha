@@ -2,7 +2,7 @@
 La identidad que una plantilla propone, copiada al negocio que la adopta.
 
 Va aparte de `tema.py` porque son dos cosas distintas y confundirlas costaría
-caro. `tema.py` resuelve TOKENS —el catálogo de perillas que Crynex define— y
+caro. `tema.py` resuelve TOKENS —el catálogo de perillas que Kryon X define— y
 esto copia los CAMPOS DE MARCA de `StoreSettings`: el color primario, la
 tipografía, el redondeo de los botones. Esos campos existen desde antes del
 motor de temas y de ellos la tienda deriva su escala de color entera, así que
@@ -14,7 +14,7 @@ La regla del sistema es «un dato, un sitio», y el color de marca vive en
 `StoreSettings`. Lo que guarda la plantilla no es el color del negocio: es el
 que PROPONE para quien la adopte. Se copia una vez, en la adopción, y a partir
 de ahí manda el del negocio — exactamente como las páginas, y por la misma
-razón que ellas: referenciarlo haría que retocar la plantilla en Crynex
+razón que ellas: referenciarlo haría que retocar la plantilla en Kryon X
 cambiara el color de todas las tiendas que la usan, en producción y sin aviso.
 
 # La lista es cerrada
@@ -22,7 +22,7 @@ cambiara el color de todas las tiendas que la usan, en producción y sin aviso.
 Una clave que no esté aquí se descarta en silencio, igual que hace
 `capacidades.normalizar()` con una bandera desconocida. La alternativa —copiar
 lo que venga con `setattr`— convertiría un JSON editable desde el panel de
-Crynex en escritura arbitraria sobre el modelo de configuración del negocio.
+Kryon X en escritura arbitraria sobre el modelo de configuración del negocio.
 """
 
 #: Los campos de `StoreSettings` que una plantilla puede proponer. Cada uno lo

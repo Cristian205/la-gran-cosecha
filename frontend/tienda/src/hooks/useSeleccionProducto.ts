@@ -6,7 +6,7 @@ import { agruparPresentaciones } from "@/componentes/PresentationSelector";
 import { useCart } from "@/estado/carrito";
 import { useAgregarAlCarrito } from "@/hooks/useAgregarAlCarrito";
 import type { Producto } from "@/lib/tipos";
-import { ajustarCantidad, pasoCantidad } from "@/lib/utiles";
+import { ajustarARegla, ajustarCantidad, cantidadInicial, esFraccionaria, reglaCantidad } from "@/lib/utiles";
 
 /**
  * Todo lo que hace falta para comprar UN producto: qué variante y qué unidad
@@ -32,7 +32,6 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
   const cambiarCantidadCarrito = useCart((s) => s.cambiarCantidad);
   const quitar = useCart((s) => s.quitar);
 
-  const paso = pasoCantidad(producto.permite_fraccion, producto.tipo_cantidad);
   const grupos = useMemo(
     () => agruparPresentaciones(producto.presentaciones),
     [producto.presentaciones]
@@ -50,12 +49,17 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
   const [presId, setPresId] = useState<number | null>(
     preferida?.id ?? grupos[0]?.opciones[0]?.id ?? null
   );
-  const inicial = Math.max(1, paso);
-  const [borrador, setBorrador] = useState(inicial);
-
   const grupo = grupos.find((g) => g.nombre === nombreSel) ?? grupos[0] ?? null;
   const presentacion =
     grupo?.opciones.find((p) => p.id === presId) ?? grupo?.opciones[0] ?? null;
+
+  // Cada presentación tiene su regla: el kilo se pide de 0,5 en 0,5 y la
+  // caja, de 6 en 6. Cambiar de presentación recoloca la cantidad.
+  const regla = reglaCantidad(presentacion, producto.permite_fraccion, producto.tipo_cantidad);
+  const { paso, minimo } = regla;
+  const inicial = cantidadInicial(regla);
+  const [borradorCrudo, setBorrador] = useState(inicial);
+  const borrador = ajustarARegla(borradorCrudo, regla);
 
   const enCarrito = useCart((s) =>
     presentacion ? s.items.find((i) => i.presentacionId === presentacion.id) : undefined
@@ -84,7 +88,7 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
 
   const cantidad = enCarrito ? enCarrito.cantidad : borrador;
   /** Bajar desde aquí saca la línea del pedido (solo si ya está dentro). */
-  const enElMinimo = cantidad - paso < paso - 1e-6;
+  const enElMinimo = cantidad - paso < minimo - 1e-6;
 
   function elegirVariante(nombre: string) {
     setNombreSel(nombre);
@@ -110,13 +114,13 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
     presentacion?.imagen_url || imagenDeGrupo(grupo?.opciones ?? []) || producto.imagen_url;
 
   function fijarCantidad(valor: number) {
-    const limpio = Math.max(paso, Number(valor.toFixed(2)));
-    if (enCarrito && presentacion) cambiarCantidadCarrito(presentacion.id, limpio, paso);
+    const limpio = ajustarARegla(valor, regla);
+    if (enCarrito && presentacion) cambiarCantidadCarrito(presentacion.id, limpio, minimo);
     else setBorrador(limpio);
   }
 
   function subir() {
-    fijarCantidad(ajustarCantidad(cantidad, paso, paso));
+    fijarCantidad(ajustarCantidad(cantidad, paso, paso, minimo));
   }
 
   function bajar() {
@@ -125,7 +129,7 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
       setBorrador(inicial);
       return;
     }
-    fijarCantidad(ajustarCantidad(cantidad, -paso, paso));
+    fijarCantidad(ajustarCantidad(cantidad, -paso, paso, minimo));
   }
 
   function agregarAlPedido() {
@@ -141,6 +145,9 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
       cantidad: borrador,
       permiteFraccion: producto.permite_fraccion,
       tipoCantidad: producto.tipo_cantidad,
+      minimo,
+      paso,
+      decimales: regla.decimales,
     });
     setBorrador(inicial);
   }
@@ -159,6 +166,9 @@ export function useSeleccionProducto(producto: Producto, unidadPreferida: number
     recibePedidos,
     puedePedir,
     paso,
+    minimo,
+    /** La regla admite fracciones: la cantidad se escribe "1 1/2". */
+    fraccionaria: producto.permite_fraccion || esFraccionaria(regla),
     cantidad,
     enCarrito,
     enElMinimo,
