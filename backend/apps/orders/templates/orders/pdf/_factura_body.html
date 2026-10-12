@@ -86,12 +86,11 @@
                                 {{ item.articulo }}
                                 <span style="font-weight:400; color:#64748b;">{{ item.pres }}</span>
                             </td>
-                            <td style="text-align: center;">
-                                {{ item.cant|fraction }}<span class="unit-pill">{{ item.unidad|lower }}</span>
-                            </td>
-                            <td style="text-align: right;" class="text-bold">
-                                $ {{ item.subtotal|floatformat:0|intcomma }}
-                            </td>
+                            {% comment %}Cantidad y precio sin saltos de línea dentro de la celda: el salto
+                               se pinta como un espacio al final que `factura_layout` no mide, y
+                               en la columna de precio ese espacio era lo que cortaba "$ 170.000".{% endcomment %}
+                            <td style="text-align: center;">{{ item.cant|fraction }}<span class="unit-pill">{{ item.unidad|lower }}</span></td>
+                            <td style="text-align: right;" class="text-bold">$ {{ item.subtotal|floatformat:0|intcomma }}</td>
                         </tr>
                         {% endfor %}
                         {% for _ in seccion.rango_vacias %}
@@ -125,12 +124,8 @@
                                 {{ item.articulo }} <span style="font-weight:400; color:#64748b;">{{ item.pres }}</span>
                                 <br><small style="color: #94a3b8; font-weight: 400;">{{ cat.nombre_categoria }}</small>
                             </td>
-                            <td style="text-align: center; width: 20%; border:none;">
-                                {{ item.cant|fraction }}<span class="unit-pill">{{ item.unidad|lower }}</span>
-                            </td>
-                            <td style="text-align: right; width: 25%; border:none;" class="text-bold">
-                                ${{ item.subtotal|floatformat:0|intcomma }}
-                            </td>
+                            <td style="text-align: center; width: 20%; border:none;">{{ item.cant|fraction }}<span class="unit-pill">{{ item.unidad|lower }}</span></td>
+                            <td style="text-align: right; width: 25%; border:none;" class="text-bold">${{ item.subtotal|floatformat:0|intcomma }}</td>
                         </tr>
                     </tbody>
                 </table>
