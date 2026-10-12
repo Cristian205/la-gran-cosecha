@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, RotateCw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { obtenerProductos } from "@/lib/datos";
 import type { Producto } from "@/lib/tipos";
 import { ProductCard } from "@/componentes/ProductCard";
@@ -241,20 +241,39 @@ function CatalogoInteractivo({
     const progreso =
       catalogo.total && catalogo.total > 0 ? (catalogo.productos.length / catalogo.total) * 100 : 100;
 
+    // En «Todos» con el orden recomendado los productos llegan agrupados por
+    // categoría (ver `ORDEN_RECOMENDADOS`): cada vez que cambia, un separador
+    // con su nombre, para saber en qué parte del catálogo se está. Con otro
+    // orden (precio, A-Z…) las categorías se mezclan y el separador saldría
+    // a cada tarjeta, así que no se pinta.
+    const separar = catalogo.categoriaActiva === null && catalogo.orden === "recomendados";
+    const totalPorCategoria = new Map(catalogo.categorias.map((c) => [c.id, c.num_productos ?? null]));
+
     contenido = (
       <>
         <div className={claseGrid} aria-busy={cargandoMas}>
-          {catalogo.productos.map((p, i) => (
-            <ProductCard
+          {catalogo.productos.map((p, i) => {
+            const nuevaCategoria = separar && (i === 0 || catalogo.productos[i - 1].categoria !== p.categoria);
+            const cuantos = totalPorCategoria.get(p.categoria);
+            return (
               // La unidad en la clave: cambiar el filtro vuelve a elegir la
               // presentación inicial de cada tarjeta.
-              key={`${p.id}-${catalogo.unidadActiva ?? ""}`}
-              producto={p}
-              variante={tarjetaVariante}
-              indice={i}
-              unidadPreferida={catalogo.unidadActiva}
-            />
-          ))}
+              <Fragment key={`${p.id}-${catalogo.unidadActiva ?? ""}`}>
+                {nuevaCategoria && (
+                  <h3 className="pgrid-separador">
+                    <span>{p.categoria_nombre}</span>
+                    {cuantos ? <small>{cuantos} {cuantos === 1 ? "producto" : "productos"}</small> : null}
+                  </h3>
+                )}
+                <ProductCard
+                  producto={p}
+                  variante={tarjetaVariante}
+                  indice={i}
+                  unidadPreferida={catalogo.unidadActiva}
+                />
+              </Fragment>
+            );
+          })}
           {cargandoMas && <EsqueletosCatalogo cantidad={4} />}
         </div>
 

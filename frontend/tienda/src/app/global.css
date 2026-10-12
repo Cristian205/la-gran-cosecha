@@ -6336,6 +6336,25 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   .pcard-media { margin: 0.35rem 0.35rem 0; }
 }
 .pgrid-centinela { height: 1px; }
+/* Separador de categoría en «Todos»: ocupa la fila entera de la rejilla. */
+.pgrid-separador {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 1.4rem 0 0.1rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 2px solid var(--marca-100, rgba(10, 61, 35, 0.12));
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--marca-800, #0a3d23);
+}
+.pgrid-separador:first-child { margin-top: 0; }
+.pgrid-separador small { font-size: 0.8rem; font-weight: 600; color: var(--texto-suave, #64748b); }
+@media (max-width: 767px) {
+  .pgrid-separador { margin-top: 1rem; font-size: 1rem; }
+}
 
 .catalogo { padding: 0.9rem 0 3rem; scroll-margin-top: calc(var(--navbar-alto, 62px) + 4.5rem); }
 .catalogo-cabecera { margin-bottom: 1rem; }

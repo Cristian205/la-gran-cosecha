@@ -75,6 +75,9 @@ export function desempaquetar<T>(datos: Paginated<T> | T[]): T[] {
 /** Tamaño de tanda del catálogo: lo que se ve y lo que trae cada "Cargar más". */
 export const PRODUCTOS_POR_TANDA = 24;
 
+/** El orden de «Recomendados»: por categoría y, dentro, el natural del catálogo. */
+export const ORDEN_RECOMENDADOS = "categoria__orden,categoria__nombre_categoria,orden,nombre_producto";
+
 export type OrdenCatalogo =
   | "recomendados"
   | "mas_pedidos"
@@ -93,7 +96,12 @@ export type OrdenCatalogo =
  * todavía no se han vendido.
  */
 const ORDERING: Record<OrdenCatalogo, string | undefined> = {
-  recomendados: undefined, // orden natural del catálogo (orden, nombre_producto)
+  // Agrupado por categoría, en el orden de las categorías, y dentro de cada una
+  // el orden natural del catálogo: así «Todos» se puede separar por secciones
+  // (ver `GridProductos`). Debe coincidir con la primera tanda que resuelve el
+  // servidor (`grid-productos` en `lib/pagina.ts`), o la segunda tanda
+  // repetiría o saltaría productos.
+  recomendados: ORDEN_RECOMENDADOS,
   mas_pedidos: "-unidades_vendidas,orden,nombre_producto",
   nombre: "nombre_producto",
   precio_asc: "precio_desde",
