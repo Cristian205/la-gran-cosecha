@@ -28,8 +28,21 @@ from math import floor
 # pie (el modelo predice bien, pero un redondeo no debe pisar el total).
 ALTO_UTIL_PT = 436.5
 
-# Ancho útil de la fila de columnas (~16cm), para repartirlo entre columnas.
-ANCHO_UTIL_PT = 450.0
+# Ancho de la fila de columnas, medido sobre el PDF: de 34,0 a 488,0pt.
+ANCHO_UTIL_PT = 454.0
+# Lo que la fila NO da a las tablas: el `gap: 10px` de `.main-columns-container`
+# entre columna y columna, y el borde de 1px de cada tarjeta (`.category-section`)
+# a cada lado. Repartir el ancho de la fila a partes iguales sin descontarlos
+# suponía tablas de 150pt donde había 144,8 (con 3 columnas): la columna de
+# precio salía un 3,5% más estrecha de lo calculado y cortaba "$ 170.000".
+HUECO_COLUMNAS_PT = 7.5
+BORDE_TARJETA_PT = 0.75
+
+
+def ancho_tabla_pt(n_columnas: int) -> float:
+    """El ancho real de la tabla de una columna, dentro de su tarjeta."""
+    return (ANCHO_UTIL_PT - HUECO_COLUMNAS_PT * (n_columnas - 1)) / n_columnas - 2 * BORDE_TARJETA_PT
+
 
 # Cuando el pedido no cabe en una hoja se reparte en varias (ver
 # `_plan_varias_hojas`). Ahí el pie con el total deja de ir anclado abajo y
@@ -303,7 +316,7 @@ class Plan:
 
     @property
     def ancho_columna_pt(self) -> float:
-        return ANCHO_UTIL_PT / self.n_columnas
+        return ancho_tabla_pt(self.n_columnas)
 
     @property
     def aprovechamiento(self) -> float:
@@ -320,7 +333,7 @@ def _contar_recortes(bloques, n_columnas: int, densidad: Densidad, fraccion_arti
     con letra algo menor": repartir 100 productos en cinco columnas deja cada
     una tan estrecha que solo entran diez caracteres del nombre.
     """
-    disponible = (ANCHO_UTIL_PT / n_columnas) * fraccion_articulo - _pad_celda_pt(densidad)
+    disponible = ancho_tabla_pt(n_columnas) * fraccion_articulo - _pad_celda_pt(densidad)
     if disponible <= 0:
         return sum(len(items) for _, items in bloques)
 
@@ -352,7 +365,7 @@ def _anchos_celdas(bloques, n_columnas: int, densidad: Densidad):
     este número de columnas el nombre se quedara con menos del mínimo, el
     reparto se descarta.
     """
-    ancho_columna = ANCHO_UTIL_PT / n_columnas
+    ancho_columna = ancho_tabla_pt(n_columnas)
     fuente = densidad.fuente_pt
     pequena = fuente * 0.85  # la unidad y los títulos van en letra al 85%
     pad = _pad_celda_pt(densidad)

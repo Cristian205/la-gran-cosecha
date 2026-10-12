@@ -101,6 +101,10 @@ class ProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     # por precio sobre el catálogo completo, solo sobre la página ya cargada.
     ordering_fields = [
         "orden",
+        # «Recomendados» en la tienda agrupa por categoría (en su orden) para
+        # poder separar el catálogo completo por secciones.
+        "categoria__orden",
+        "categoria__nombre_categoria",
         "nombre_producto",
         "fecha_creacion",
         "id",

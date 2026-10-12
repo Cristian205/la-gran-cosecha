@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { pedirAlBackend } from "./api";
-import { desempaquetar, idsElegidos, ordenarPorIds } from "./datos";
+import { ORDEN_RECOMENDADOS, desempaquetar, idsElegidos, ordenarPorIds } from "./datos";
 import type { Paginated, PaginaTienda, Producto } from "./tipos";
 
 /**
@@ -51,7 +51,9 @@ export const RESUELVE_EN_SERVIDOR: Record<string, string> = {
   // interactivo sin que el rastreador vea un esqueleto de carga. Un
   // `grid-productos` fuera de una página de catálogo (la vitrina fija de
   // siempre) sencillamente no usa este dato.
-  "grid-productos": "/catalog/products/?page_size=24",
+  // Con el orden de «Recomendados»: si no coincidiera con el que pide el
+  // navegador para la segunda tanda, esta repetiría o saltaría productos.
+  "grid-productos": `/catalog/products/?page_size=24&ordering=${ORDEN_RECOMENDADOS}`,
   // Sin esto, `CatalogoProvider` sembraba productos y total desde el servidor
   // pero categorías las pedía solo el navegador: la primera pintura —y lo que
   // veía el rastreador— decía "190 productos · 0 categorías" hasta que ese

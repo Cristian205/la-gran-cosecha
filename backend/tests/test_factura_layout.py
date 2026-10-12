@@ -104,3 +104,36 @@ def test_el_precio_mas_largo_cabe_entero_en_su_celda():
     relleno = pad_horizontal_px(plan.densidad.fuente_pt) * 2 * 0.75
     assert _ancho_texto("$ 1,068,000", plan.densidad.fuente_pt, negrita=True) <= ancho_celda - relleno
     assert abs(sum(plan.anchos) - 1) < 1e-6
+
+
+def test_la_columna_de_precio_cabe_en_el_ancho_real_de_la_tarjeta():
+    """
+    Pedido 18 (~96 artículos, tres columnas): "$ 170.000" salía "$ 170.0…".
+
+    El reparto suponía tablas de ANCHO_UTIL_PT / n, sin descontar el hueco entre
+    columnas ni el borde de cada tarjeta. Se comprueba contra el ancho medido en
+    el PDF (146,3pt por tarjeta con tres columnas) que la cifra más ancha cabe.
+    """
+    from apps.orders.factura_layout import _ancho_texto, _pad_celda_pt, ancho_tabla_pt
+
+    assert ancho_tabla_pt(3) == pytest.approx(146.33 - 1.5, abs=0.1)
+
+    cn, ce = _pedido({"Frutas": 25, "Tuberculos": 25, "Granos": 26, "Verduras": 20}, {})
+    for items in cn.values():
+        items[0]["subtotal"] = Decimal("170000")
+    plan = planificar(cn, ce)
+
+    f_precio = plan.anchos[2]
+    contenido = f_precio * ancho_tabla_pt(plan.n_columnas) - _pad_celda_pt(plan.densidad)
+    assert contenido >= _ancho_texto("$ 170.000", plan.densidad.fuente_pt, negrita=True)
+
+
+def test_las_celdas_de_cifras_no_dejan_espacio_al_final():
+    """Un salto de línea dentro de la celda se pinta como espacio y no se mide."""
+    from pathlib import Path
+
+    plantilla = (
+        Path(__file__).resolve().parents[1] / "apps/orders/templates/orders/pdf/_factura_body.html"
+    ).read_text(encoding="utf-8")
+    assert "intcomma }}</td>" in plantilla
+    assert "|lower }}</span></td>" in plantilla
