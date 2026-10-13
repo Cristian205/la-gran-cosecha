@@ -11,7 +11,7 @@
  * rango declarado, porque teclear 500 en «cuántos productos» y descubrirlo al
  * guardar es una fricción tonta.
  */
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import type { CampoEsquema } from "../api/tienda";
 import { Boton } from "../ui/basicos";
 
@@ -84,7 +84,7 @@ function CampoDeEsquema({
         >
           {(campo.opciones ?? []).map((opcion) => (
             <option key={opcion} value={opcion}>
-              {opcion}
+              {campo.opciones_etiquetas?.[opcion] ?? opcion}
             </option>
           ))}
         </select>
@@ -175,6 +175,15 @@ function ListaDeEsquema({
     onCambio(valor.map((v, j) => (j === i ? nuevo : v)));
   }
 
+  /** Cambia un elemento de sitio: el orden de la lista es el orden en la tienda. */
+  function mover(i: number, delta: number) {
+    const j = i + delta;
+    if (j < 0 || j >= valor.length) return;
+    const copia = [...valor];
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+    onCambio(copia);
+  }
+
   return (
     <div className="lista-esquema">
       <div className="lista-esquema__cabecera">
@@ -223,6 +232,24 @@ function ListaDeEsquema({
                     />
                   ))}
                 </div>
+                <button
+                  type="button"
+                  className="icono-boton"
+                  aria-label={`Subir el elemento ${i + 1}`}
+                  disabled={i === 0}
+                  onClick={() => mover(i, -1)}
+                >
+                  <ArrowUp size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="icono-boton"
+                  aria-label={`Bajar el elemento ${i + 1}`}
+                  disabled={i === valor.length - 1}
+                  onClick={() => mover(i, 1)}
+                >
+                  <ArrowDown size={14} />
+                </button>
                 <button
                   type="button"
                   className="icono-boton"

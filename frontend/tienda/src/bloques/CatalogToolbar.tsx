@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { ActiveFilters, FilterDrawer, SortControl } from "@/componentes/tienda/Filtros";
 import { SearchBar } from "@/componentes/tienda/SearchBar";
 import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
@@ -33,6 +34,24 @@ interface Props {
 
 export function CatalogToolbar({ variante, titulo = "", mostrar_buscador = false }: Props) {
   const catalogo = useCatalogoContexto();
+  const barra = useRef<HTMLDivElement>(null);
+
+  // La barra no tiene un alto fijo: crece con los chips de filtros, con el
+  // buscador o al partirse en dos líneas. Su alto real queda en `--tbar-alto`
+  // para que lo que se pega debajo (el panel de filtros, el destino de los
+  // saltos del catálogo) empiece donde ella termina y no por debajo de ella.
+  useEffect(() => {
+    const el = barra.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const raiz = document.documentElement;
+    const obs = new ResizeObserver(() => raiz.style.setProperty("--tbar-alto", `${el.offsetHeight}px`));
+    obs.observe(el);
+    return () => {
+      obs.disconnect();
+      raiz.style.removeProperty("--tbar-alto");
+    };
+  }, [catalogo !== null]);
+
   if (!catalogo) return null;
 
   const clase = claseDeVariante(variante, VARIANTES, "catalogo-toolbar", "completa");
@@ -53,7 +72,7 @@ export function CatalogToolbar({ variante, titulo = "", mostrar_buscador = false
   }
 
   return (
-    <div className={`tbar ${clase}`}>
+    <div className={`tbar ${clase}`} ref={barra}>
       {mostrar_buscador && (
         <div className="tbar-buscador">
           <SearchBar />

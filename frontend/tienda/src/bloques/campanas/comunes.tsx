@@ -13,6 +13,7 @@ export function Boton({
   flecha = true,
   onClick,
   disabled,
+  icono,
 }: {
   href?: string;
   children: ReactNode;
@@ -20,10 +21,13 @@ export function Boton({
   flecha?: boolean;
   onClick?: () => void;
   disabled?: boolean;
+  /** Un icono antes del texto (el carrito de «Comprar ahora»). */
+  icono?: ReactNode;
 }) {
   const clase = `cmp-btn cmp-btn--${variante}`;
   const contenido = (
     <>
+      {icono && <span className="cmp-btn-icono" aria-hidden="true">{icono}</span>}
       <span>{children}</span>
       {flecha && <ArrowRight size={17} aria-hidden="true" />}
     </>

@@ -3,10 +3,11 @@
 import { useEnvoltorio } from "@/componentes/CapaCliente";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, LayoutGrid, Search, ShoppingCart, X } from "lucide-react";
+import { ChevronDown, LayoutGrid, Search, ShoppingBag, ShoppingCart, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSiteConfig } from "@/componentes/CapaCliente";
-import { ENLACES, enlaceActivo } from "@/lib/navegacion";
+import { ENLACES, enlaceActivo, tiendaConCuenta, type OpcionNavMovil } from "@/lib/navegacion";
+import { BottomNav } from "@/componentes/BottomNav";
 import { useCart } from "@/estado/carrito";
 import { BusquedaGlobal } from "@/componentes/BusquedaGlobal";
 import { icono } from "@/bloques/iconos";
@@ -55,11 +56,23 @@ interface Props {
   categorias_href?: string;
   /** Ensenar cuanto lleva el carrito, no solo cuantas lineas. */
   mostrar_total?: boolean;
+  /** La franja de arriba (avisos y, en `comercio`, los enlaces informativos). */
+  mostrar_avisos?: boolean;
+  /** «automatico»: «Mi cuenta» aparece solo si el negocio identifica a sus
+   *  clientes. «oculta»: nunca. Sin valor: automático en `comercio`, oculta en
+   *  las demás (que no la tenían y no deben cambiar de aspecto solas). */
+  cuenta_modo?: "automatico" | "oculta";
+  cuenta_texto?: string;
+  cuenta_href?: string;
+  /** Las opciones de la barra inferior del móvil, en orden. Vacío: las de siempre. */
+  nav_movil?: OpcionNavMovil[];
+  /** `clasica` (oscura, de borde a borde) o `flotante` (blanca y redondeada). */
+  nav_movil_estilo?: string;
   variante?: string;
 }
 
 /** Los aspectos que esta hoja de estilos sabe dibujar para la cabecera. */
-const VARIANTES = ["clasica", "boutique"] as const;
+const VARIANTES = ["clasica", "boutique", "comercio"] as const;
 
 /**
  * La cabecera de la tienda. Es tambien el bloque «cabecera».
@@ -83,6 +96,12 @@ export function Navbar({
   categorias_texto = "",
   categorias_href = "/tienda",
   mostrar_total = false,
+  mostrar_avisos = true,
+  cuenta_modo,
+  cuenta_texto = "Mi cuenta",
+  cuenta_href = "/tienda/mis-pedidos",
+  nav_movil = [],
+  nav_movil_estilo = "clasica",
   variante,
 }: Props = {}) {
   // El texto buscado y el carrito viven en la capa cliente: con el enrutado de
@@ -120,12 +139,30 @@ export function Navbar({
   }, [pathname]);
 
   const clase = claseDeVariante(variante, VARIANTES, "navbar", "clasica");
+  const comercio = clase === "navbar--comercio";
   const izquierda = avisos.filter((a) => a.lado !== "derecha");
   const derecha = avisos.filter((a) => a.lado === "derecha");
 
+  // «Mi cuenta» depende de cómo identifica el negocio a sus clientes, no de
+  // una casilla visual: con «solo nombre» no hay pedidos que consultar.
+  const conCuenta =
+    (cuenta_modo ?? (comercio ? "automatico" : "oculta")) === "automatico" &&
+    tiendaConCuenta(config.identificacion_clientes);
+
+  const conFranja = mostrar_avisos && avisos.length > 0;
+
+  // El botón de compra no repite un destino que el menú ya tiene: «Tienda» en
+  // los enlaces y «Comprar» al lado llevando al mismo sitio son dos puertas a
+  // la misma habitación, y quien entra por primera vez duda cuál usar.
+  const destinoBoton = boton_href || "/tienda";
+  const conBoton = Boolean(boton_texto) && !menu.some((e) => e.href === destinoBoton);
+
+  // Lo que ya está en la barra inferior no se repite arriba en el móvil.
+  const enNavMovil = (tipo: string) => nav_movil.some((o) => o.tipo === tipo);
+
   return (
     <>
-      {avisos.length > 0 && (
+      {conFranja && (
         // La barra fina de arriba. Solo existe si el negocio la llena: sin
         // avisos no se dibuja una franja vacia, que ocuparia alto y no diria
         // nada — el mismo criterio que el encabezado de `Seccion`.
@@ -148,7 +185,18 @@ export function Navbar({
         </div>
       )}
 
-    <nav className={`navbar ${clase} ${conScroll ? "con-scroll" : ""}`}>
+    <nav
+      className={[
+        "navbar",
+        clase,
+        conScroll ? "con-scroll" : "",
+        enNavMovil("buscar") ? "navbar--buscar-abajo" : "",
+        enNavMovil("pedido") ? "navbar--pedido-abajo" : "",
+        enNavMovil("cuenta") ? "navbar--cuenta-abajo" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <Link href="/" className="marca">
         <span className={`logo-circ ${config.logo_url ? "sin-fondo" : ""}`}>
           {config.logo_url ? (
@@ -200,14 +248,24 @@ export function Navbar({
       </button>
       )}
 
-      {boton_texto && (
-        <Link className="navbar-comprar" href={boton_href || "/tienda"}>
+      {conBoton && (
+        <Link className="navbar-comprar" href={destinoBoton}>
           {boton_texto}
         </Link>
       )}
 
+      {conCuenta && (
+        <Link
+          className={`navbar-cuenta ${enlaceActivo(pathname, cuenta_href || "/tienda/mis-pedidos") ? "activo" : ""}`}
+          href={cuenta_href || "/tienda/mis-pedidos"}
+        >
+          <UserRound size={18} aria-hidden="true" />
+          <span>{cuenta_texto}</span>
+        </Link>
+      )}
+
       <button className="btn-carrito" onClick={abrirCarrito}>
-        <ShoppingCart size={18} />
+        {comercio ? <ShoppingBag size={18} aria-hidden="true" /> : <ShoppingCart size={18} />}
         <span className="btn-carrito-txt">
           {cta_texto}
           {/* El importe solo si el negocio lo pide: en una tienda donde el
@@ -231,6 +289,16 @@ export function Navbar({
         </div>
       )}
     </nav>
+
+      {/* Fuera del <nav>: su `backdrop-filter` haría de la barra el marco de
+          cualquier hijo `fixed`, y la barra inferior se pegaría a la cabecera. */}
+      <BottomNav
+        opciones={nav_movil}
+        estilo={nav_movil_estilo}
+        conCuenta={conCuenta}
+        buscando={buscadorMovilAbierto}
+        onBuscar={mostrar_buscador ? () => setBuscadorMovilAbierto((v) => !v) : undefined}
+      />
     </>
   );
 }

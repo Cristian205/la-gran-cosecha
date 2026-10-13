@@ -47,6 +47,12 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: nombre,
       ...(config.logo_url ? { images: [config.logo_url] } : {}),
     },
+    // El favicon es el logo del negocio, el mismo de la cabecera: con una
+    // tienda por negocio, un ícono fijo en el código pondría la misma marca
+    // en la pestaña de todas. `apple` es el que usa iOS al anclarla al inicio.
+    ...(config.logo_url
+      ? { icons: { icon: config.logo_url, shortcut: config.logo_url, apple: config.logo_url } }
+      : {}),
     alternates: { canonical: "/" },
   };
 }
