@@ -6,7 +6,6 @@ import { BarraPedidoEscritorio } from "./BarraPedidoEscritorio";
 import { CartDrawer } from "./CartDrawer";
 import { MobileCartBar } from "./MobileCartBar";
 import { WhatsAppButton } from "./WhatsAppButton";
-import { BottomNav } from "./BottomNav";
 import { AvisoAgregado } from "./tienda/AvisoAgregado";
 import { ProductQuickView } from "./tienda/ProductQuickView";
 import { useCart } from "@/estado/carrito";
@@ -99,7 +98,6 @@ export function CapaCliente({
           }}
         >
           {children}
-          <BottomNav />
           <WhatsAppButton />
           <MobileCartBar onAbrir={() => setCarritoAbierto(true)} />
           <BarraPedidoEscritorio onAbrir={() => setCarritoAbierto(true)} />

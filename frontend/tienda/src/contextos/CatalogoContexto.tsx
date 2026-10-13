@@ -73,9 +73,15 @@ const ORDENES_VALIDOS = new Set<string>(OPCIONES_ORDEN.map((o) => o.valor));
  * la cabecera y la barra del catálogo fijas. Solo NO se mueve si el comienzo
  * ya está a la vista en la mitad de arriba de la pantalla: ahí el cambio se
  * ve sin saltar.
+ *
+ * La llama `GridProductos` DESPUÉS de pintar la lista nueva (no aquí, al
+ * cambiar la URL): antes de pintar, el documento todavía mide lo de la lista
+ * vieja. Y busca la sección por su clase si el bloque no tiene el ancla
+ * `#catalogo`: el `id` es una propiedad del bloque que el negocio puede
+ * cambiar o dejar vacía, y sin ella el cliente se quedaba mirando el pie.
  */
-function volverAlInicioDelCatalogo() {
-  const destino = document.getElementById("catalogo");
+export function volverAlInicioDelCatalogo() {
+  const destino = document.getElementById("catalogo") ?? document.querySelector<HTMLElement>("section.catalogo");
   if (!destino) return;
   const margen = parseFloat(getComputedStyle(destino).scrollMarginTop) || 0;
   const arriba = destino.getBoundingClientRect().top - margen;
@@ -128,10 +134,9 @@ export function CatalogoProvider({ children, datosIniciales, categoriasIniciales
   const orden: OrdenCatalogo =
     ordenUrl && ORDENES_VALIDOS.has(ordenUrl) ? (ordenUrl as OrdenCatalogo) : "recomendados";
 
-  /** Cambia un filtro y vuelve al inicio de la lista: ver `volverAlInicioDelCatalogo`. */
+  /** Cambia un filtro; la vuelta al inicio de la lista la hace `GridProductos` al pintarla. */
   function filtrar(cambios: Record<string, string | null>) {
     cambiarParametros(cambios);
-    volverAlInicioDelCatalogo();
   }
 
   /** Reescribe uno o varios parámetros de la URL; `null` los quita. */

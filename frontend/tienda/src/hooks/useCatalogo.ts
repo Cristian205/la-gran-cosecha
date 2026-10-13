@@ -101,16 +101,19 @@ export function useCatalogo(filtros: Filtros, semilla?: SemillaCatalogo): Estado
   const [cargandoMas, setCargandoMas] = useState(false);
   const [error, setError] = useState(false);
 
-  // Al cambiar cualquier filtro volvemos a la primera tanda. Se hace en un
-  // estado combinado para que el efecto de carga nunca vea una clave nueva
-  // junto a una página vieja y pida la página 3 de un filtro recién cambiado.
-  useEffect(() => {
-    setCtx((actual) =>
-      actual.clave === clave ? actual : { clave, filtros: filtrosAplicados, pagina: 1 }
-    );
-    // `filtrosAplicados` se reconstruye en cada render; `clave` es su identidad.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clave]);
+  // Al cambiar cualquier filtro volvemos a la primera tanda, y se hace DURANTE
+  // el render, no en un efecto. Con un efecto había un render intermedio con
+  // el filtro nuevo pero la lista vieja (y `hayMas` de la lista vieja): si el
+  // cliente estaba al fondo, la carga automática pedía "la siguiente" sobre el
+  // filtro recién elegido — la página 3 de una categoría de 29 productos —, el
+  // backend respondía 404 y el catálogo mostraba «No pudimos traer más».
+  if (ctx.clave !== clave) {
+    setCtx({ clave, filtros: filtrosAplicados, pagina: 1 });
+    setCargando(true);
+    setCargandoMas(false);
+    setHayMas(false);
+    setError(false);
+  }
 
   useEffect(() => {
     if (ctx.clave !== clave) return;
@@ -162,7 +165,16 @@ export function useCatalogo(filtros: Filtros, semilla?: SemillaCatalogo): Estado
     return () => controlador.abort();
   }, [ctx, clave, intento]);
 
+  // "Cargar más" solo vale sobre una lista quieta que tiene más. El botón y la
+  // carga automática pueden pedirlo a la vez; sin este cerrojo cada uno sumaba
+  // una página y se saltaba (o pedía una que no existe). `cargandoMas` se pone
+  // aquí mismo, no en el efecto, para que el render siguiente ya lo vea.
+  const puedeCargarMas = useRef(false);
+  puedeCargarMas.current = hayMas && !cargando && !cargandoMas && !error && ctx.clave === clave;
   const cargarMas = useCallback(() => {
+    if (!puedeCargarMas.current) return;
+    puedeCargarMas.current = false;
+    setCargandoMas(true);
     setCtx((actual) => ({ ...actual, pagina: actual.pagina + 1 }));
   }, []);
 

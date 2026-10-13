@@ -1,5 +1,19 @@
 "use client";
 
+import {
+  Leaf,
+  MapPin,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  ShoppingBasket,
+  ShoppingCart,
+  Sparkles,
+  Store,
+  Clock,
+  Truck,
+  type LucideIcon,
+} from "lucide-react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Boton, TipografiaEditorial, useSinMovimiento } from "./comunes";
@@ -15,12 +29,51 @@ import { Boton, TipografiaEditorial, useSinMovimiento } from "./comunes";
  *
  * El titular sale en el HTML del servidor y entra con CSS puro: si el
  * JavaScript tarda, el mensaje ya está ahí.
+ *
+ * Todo lo que se ve es una propiedad del bloque (textos, iconos, beneficios,
+ * degradado): se edita desde el panel y ningún texto vive en el código.
  */
+
+/** Los iconos que el banner puede nombrar desde el panel. De trazo (lucide):
+ *  siguen el color del texto y se leen a 18 px sobre una foto. */
+const ICONOS_HERO: Record<string, LucideIcon> = {
+  ubicacion: MapPin,
+  carrito: ShoppingCart,
+  canasta: ShoppingBasket,
+  tienda: Store,
+  camion: Truck,
+  hoja: Leaf,
+  escudo: ShieldCheck,
+  reloj: Clock,
+  chispa: Sparkles,
+  telefono: Phone,
+  mensaje: MessageCircle,
+};
+
+function IconoHero({ nombre, size = 18 }: { nombre?: string; size?: number }) {
+  const Icono = ICONOS_HERO[nombre ?? ""];
+  return Icono ? <Icono size={size} strokeWidth={1.8} aria-hidden="true" /> : null;
+}
+
+/** Un beneficio de la fila de abajo: «Productos» + «frescos del día». */
+interface Beneficio {
+  texto?: string;
+  detalle?: string;
+  icono?: string;
+}
 interface Props {
   kicker?: string;
   titulo?: string;
   titulo_resaltado?: string;
   subtitulo?: string;
+  /** Una segunda línea, más tenue, bajo el subtítulo. */
+  subtitulo_secundario?: string;
+  /** Icono antes del antetítulo (la ubicación). Vacío: sin icono. */
+  kicker_icono?: string;
+  cta_icono?: string;
+  cta2_icono?: string;
+  /** La fila de beneficios al pie del banner. Vacía: no se dibuja. */
+  beneficios?: Beneficio[];
   imagen?: string;
   imagen_movil?: string;
   /** Entre 781 y 1024 px. Vacía: la de escritorio. */
@@ -42,7 +95,7 @@ interface Props {
   posicion?: "arriba" | "centro" | "abajo";
   /** Capa oscura extra sobre la foto, 0–80 (%). */
   oscurecer?: number;
-  degradado?: "editorial" | "inferior" | "lateral" | "ninguno";
+  degradado?: "editorial" | "inferior" | "lateral" | "bosque" | "ninguno";
   tono_texto?: "claro" | "oscuro";
   cta_visible?: boolean;
   cta_estilo?: "ambar" | "oscuro" | "fantasma";
@@ -62,6 +115,11 @@ export function HeroCampaign({
   titulo = "",
   titulo_resaltado = "",
   subtitulo = "",
+  subtitulo_secundario = "",
+  kicker_icono = "",
+  cta_icono = "",
+  cta2_icono = "",
+  beneficios = [],
   imagen = "",
   imagen_movil = "",
   imagen_tablet = "",
@@ -121,14 +179,19 @@ export function HeroCampaign({
     `hc--alto-${uno(altura, ["completa", "alta", "media"] as const, "completa")}`,
     `hc--alinear-${uno(alineacion, ["izquierda", "centro", "derecha"] as const, "izquierda")}`,
     `hc--posicion-${uno(posicion, ["arriba", "centro", "abajo"] as const, "arriba")}`,
-    `hc--degradado-${uno(degradado, ["editorial", "inferior", "lateral", "ninguno"] as const, "editorial")}`,
+    `hc--degradado-${uno(degradado, ["editorial", "inferior", "lateral", "bosque", "ninguno"] as const, "editorial")}`,
     `hc--texto-${uno(tono_texto, ["claro", "oscuro"] as const, "claro")}`,
   ].join(" ");
   const verCta = Boolean(cta_texto) && cta_visible !== false;
   const verCta2 = Boolean(cta2_texto) && cta2_visible !== false;
+  const listaBeneficios = (Array.isArray(beneficios) ? beneficios : []).filter((b) => b?.texto?.trim());
 
   return (
-    <section ref={ref} className={clases} style={variables}>
+    <section
+      ref={ref}
+      className={`${clases} ${listaBeneficios.length > 0 ? "hc--con-beneficios" : ""}`}
+      style={variables}
+    >
       <TipografiaEditorial />
       <motion.div
         className="hc-media"
@@ -168,20 +231,30 @@ export function HeroCampaign({
         className="hc-contenido"
         style={quieto ? undefined : { y: textoY, opacity: textoOpacidad }}
       >
-        {kicker && <p className="cmp-kicker hc-in" style={{ "--i": 0 } as CSSProperties}>{kicker}</p>}
+        {kicker && (
+          <p className="cmp-kicker hc-kicker hc-in" style={{ "--i": 0 } as CSSProperties}>
+            <IconoHero nombre={kicker_icono} size={15} />
+            {kicker}
+          </p>
+        )}
         <h1 className="hc-in" style={{ "--i": 1 } as CSSProperties}>
           {titulo}
           {titulo_resaltado && <em>{titulo_resaltado}</em>}
         </h1>
-        {subtitulo && (
+        {(subtitulo || subtitulo_secundario) && (
           <p className="hc-sub hc-in" style={{ "--i": 2 } as CSSProperties}>
             {subtitulo}
+            {subtitulo_secundario && <span className="hc-sub-2">{subtitulo_secundario}</span>}
           </p>
         )}
         {(verCta || verCta2) && (
           <div className="hc-acciones hc-in" style={{ "--i": 3 } as CSSProperties}>
             {verCta && (
-              <Boton href={cta_href || "/tienda"} variante={uno(cta_estilo, ESTILOS_BOTON, "ambar")}>
+              <Boton
+                href={cta_href || "/tienda"}
+                variante={uno(cta_estilo, ESTILOS_BOTON, "ambar")}
+                icono={ICONOS_HERO[cta_icono] ? <IconoHero nombre={cta_icono} /> : undefined}
+              >
                 {cta_texto}
               </Boton>
             )}
@@ -190,11 +263,28 @@ export function HeroCampaign({
                 href={cta2_href || "/contacto"}
                 variante={uno(cta2_estilo, ESTILOS_BOTON, "fantasma")}
                 flecha={false}
+                icono={ICONOS_HERO[cta2_icono] ? <IconoHero nombre={cta2_icono} /> : undefined}
               >
                 {cta2_texto}
               </Boton>
             )}
           </div>
+        )}
+
+        {listaBeneficios.length > 0 && (
+          <ul className="hc-beneficios hc-in" style={{ "--i": 4 } as CSSProperties}>
+            {listaBeneficios.map((b, i) => (
+              <li key={`${b.texto}-${i}`}>
+                <span className="hc-beneficio-icono">
+                  <IconoHero nombre={b.icono || "hoja"} size={26} />
+                </span>
+                <span className="hc-beneficio-texto">
+                  {b.texto}
+                  {b.detalle && <span>{b.detalle}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </motion.div>
 

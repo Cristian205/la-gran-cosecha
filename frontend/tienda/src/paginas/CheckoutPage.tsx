@@ -257,7 +257,7 @@ export function CheckoutPage() {
                     <div className="resumen-item-info">
                       <span className="resumen-item-nombre">{p.nombre}</span>
                       <span className="resumen-item-variante">
-                        {p.cantidad} {p.unidadNombre || "unid."} · fuera de catálogo
+                        {formatoCantidad(p.cantidad, true)} {p.unidadNombre || "unid."} · fuera de catálogo
                       </span>
                     </div>
                     <span className="resumen-item-subtotal">Por confirmar</span>

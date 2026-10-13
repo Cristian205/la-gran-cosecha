@@ -1628,54 +1628,363 @@ h1, h2, h3 {
 }
 .custom-prod-toggle:hover { border-color: var(--marca-400); color: var(--marca-700); }
 
-.custom-prod-card {
+/* El formulario: cabecera con insignia, campos con etiqueta e ícono, y
+   sugerencias del catálogo bajo el nombre. Se reparte por el ancho de SU
+   contenedor (vive en el estado vacío y en el cierre del catálogo). */
+.cpf {
+  container-type: inline-size;
   margin-top: 1.2rem;
-  border-radius: var(--radio);
-  padding: 1.1rem 1.2rem;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.85rem;
+  padding: 1rem 1.1rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--marca-500) 22%, var(--borde));
+  border-radius: var(--radio);
+  background:
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--marca-100) 70%, transparent), transparent 60%),
+    var(--superficie);
+  box-shadow:
+    0 1px 2px rgba(var(--sombra-tinte), 0.05),
+    0 14px 32px -22px rgba(var(--sombra-tinte), 0.35);
+  text-align: left;
+  animation: cpf-entra 0.25s ease both;
 }
-.custom-prod-titulo {
+@keyframes cpf-entra { from { opacity: 0; transform: translateY(6px); } }
+
+.cpf-cabecera { display: flex; align-items: flex-start; gap: 0.75rem; }
+.cpf-insignia {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--marca-100);
+  color: var(--marca-700);
+}
+.cpf-cabecera-texto { flex: 1; min-width: 0; }
+.cpf-titulo { margin: 0; font-size: 1rem; font-weight: 800; color: var(--gris-900); line-height: 1.25; }
+.cpf-subtitulo { margin: 0.15rem 0 0; font-size: 0.83rem; color: var(--gris-600); line-height: 1.4; }
+.cpf-cerrar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin: -0.25rem -0.35rem 0 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--gris-600);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.cpf-cerrar:hover { background: color-mix(in srgb, var(--marca-100) 60%, transparent); color: var(--gris-900); }
+
+/* Contenedor estrecho (móvil): apilado; cantidad y unidad comparten fila. */
+.cpf-campos {
+  display: grid;
+  align-items: end;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "nombre nombre"
+    "cantidad unidad"
+    "categoria categoria";
+  gap: 0.65rem;
+}
+.cpf-campo--nombre { grid-area: nombre; position: relative; }
+.cpf-campo--cantidad { grid-area: cantidad; }
+.cpf-campo--unidad { grid-area: unidad; }
+.cpf-campo--categoria { grid-area: categoria; }
+@container (min-width: 520px) {
+  .cpf-campos {
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "nombre nombre nombre"
+      "cantidad unidad categoria";
+  }
+}
+@container (min-width: 860px) {
+  .cpf-campos {
+    grid-template-columns: minmax(0, 2.2fr) auto minmax(0, 1fr) minmax(0, 1.2fr);
+    grid-template-areas: "nombre cantidad unidad categoria";
+  }
+}
+
+.cpf-campo { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.cpf-etiqueta { font-size: 0.75rem; font-weight: 700; color: var(--gris-900); letter-spacing: 0.01em; }
+
+.cpf-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 38px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--superficie);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cpf-control:focus-within,
+.cpf-paso:focus-within {
+  border-color: var(--marca-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--marca-500) 18%, transparent);
+}
+.cpf-control.is-abierto { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+.cpf-icono { position: absolute; left: 0.8rem; color: var(--marca-600); pointer-events: none; }
+.cpf-flecha { position: absolute; right: 0.75rem; color: var(--gris-600); pointer-events: none; }
+.cpf-control input,
+.cpf-control select {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0 0.8rem 0 2.35rem;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: var(--gris-900);
+  font: inherit;
+  font-size: 0.87rem;
+  outline: none;
+}
+.cpf-control select { padding-right: 2.2rem; appearance: none; cursor: pointer; text-overflow: ellipsis; }
+.cpf-control input::placeholder { color: var(--gris-400); }
+
+.cpf-paso {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: var(--superficie);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cpf-paso button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 100%;
+  border: 0;
+  background: color-mix(in srgb, var(--marca-100) 55%, transparent);
+  color: var(--marca-700);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cpf-paso button:hover:not(:disabled) { background: var(--marca-100); }
+.cpf-paso button:disabled { color: var(--gris-400); cursor: not-allowed; background: transparent; }
+.cpf-paso input {
+  flex: 1;
+  width: 3.5rem;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--gris-900);
+  outline: none;
+  font-variant-numeric: tabular-nums;
+}
+.cpf-paso input[aria-invalid="true"] { color: #b91c1c; }
+
+/* Sugerencias: un panel pegado al campo, por encima del resto del formulario. */
+.cpf-sugerencias {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin-top: 2px;
+  padding: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--marca-500) 30%, var(--borde));
+  border-radius: 4px 4px 14px 14px;
+  background: var(--superficie);
+  box-shadow: 0 18px 36px -18px rgba(var(--sombra-tinte), 0.45);
+}
+.cpf-sugerencias-titulo { margin: 0.2rem 0.5rem 0.35rem; font-size: 0.75rem; font-weight: 700; color: var(--gris-600); }
+.cpf-lista { margin: 0; padding: 0; list-style: none; max-height: 300px; overflow-y: auto; }
+.cpf-op {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.cpf-op.is-activa { background: color-mix(in srgb, var(--marca-100) 65%, transparent); }
+.cpf-op .pimg.cpf-op-img { width: 40px; height: 40px; flex: none; border-radius: 9px; }
+.cpf-op-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cpf-op-nombre { font-size: 0.88rem; font-weight: 700; color: var(--gris-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpf-op-detalle { font-size: 0.75rem; color: var(--gris-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpf-op-precio { flex: none; font-size: 0.82rem; font-weight: 800; color: var(--marca-700); white-space: nowrap; }
+.cpf-op-precio small { font-weight: 600; color: var(--gris-600); }
+.cpf-op--manual { margin-top: 0.3rem; border-top: 1px dashed var(--borde); border-radius: 0 0 10px 10px; padding-top: 0.6rem; }
+.cpf-op-manual-icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  border: 1.5px dashed var(--marca-500);
+  color: var(--marca-700);
+}
+
+.cpf-nota {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.1rem 0 0;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--marca-700);
+}
+
+.cpf-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--borde);
+}
+.cpf-aviso { margin: 0; font-size: 0.76rem; color: var(--gris-600); }
+.cpf-acciones { display: flex; gap: 0.5rem; margin-left: auto; }
+.cpf-acciones .btn { padding: 0.6rem 1.15rem; font-size: 0.86rem; }
+.cpf-acciones .btn.is-confirmado { animation: cpf-confirma 0.35s ease; }
+@keyframes cpf-confirma { 50% { transform: scale(1.04); } }
+
+@media (max-width: 560px) {
+  .cpf { padding: 1rem; }
+  .cpf-pie { flex-direction: column-reverse; align-items: stretch; }
+  .cpf-acciones { margin-left: 0; }
+  .cpf-acciones .btn { flex: 1; justify-content: center; min-height: 46px; }
+  .cpf-aviso { text-align: center; }
+  /* 16px evita que iOS haga zoom al enfocar el campo. */
+  .cpf-control input,
+  .cpf-control select,
+  .cpf-paso input { font-size: 16px; }
+  .cpf-paso button { width: 40px; }
+  .cpf-control,
+  .cpf-paso { height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpf,
+  .cpf-acciones .btn.is-confirmado { animation: none; }
+}
+
+/* Las listas del formulario (sugerencias del nombre, unidad, categoría) salen
+   por debajo de él. `.cpf` es su propia capa (`container-type` la crea) y el
+   pie, que va después en la página, se pintaba encima y las tapaba. Mientras
+   hay una lista abierta, el formulario sube apenas por encima del pie, sin
+   llegar a la barra fija del catálogo (z-index 30) ni a la cabecera. */
+.cpf { position: relative; }
+.cpf:has(.cpf-sugerencias, .sbus-lista) { z-index: 5; }
+
+/* ---------- Selector con búsqueda (unidad, categoría) ---------- */
+.sbus { position: relative; }
+.sbus-control { cursor: text; }
+.sbus-control .cpf-icono { display: grid; place-items: center; }
+.sbus.is-abierto .sbus-control {
+  border-color: var(--marca-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--marca-500) 18%, transparent);
+}
+.sbus.is-abierto .sbus-flecha { transform: rotate(180deg); }
+.sbus-flecha { transition: transform var(--t-rapido) ease; }
+.sbus-control input { padding-right: 2.1rem; text-overflow: ellipsis; }
+.sbus-vaciar {
+  position: absolute;
+  right: 0.45rem;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--gris-600);
+  cursor: pointer;
+}
+.sbus-vaciar:hover { background: color-mix(in srgb, var(--marca-100) 70%, transparent); color: var(--gris-900); }
+.sbus-vaciar:focus-visible { outline: none; box-shadow: var(--t-foco); }
+
+/* La lista: corta y con su propio scroll, fino, para no tapar el formulario. */
+.sbus-lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 25;
+  max-height: 13.5rem;
   margin: 0;
+  padding: 0.3rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  border: 1px solid color-mix(in srgb, var(--marca-500) 28%, var(--borde));
+  border-radius: 12px;
+  background: var(--superficie);
+  box-shadow: 0 18px 36px -18px rgba(var(--sombra-tinte), 0.45);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--gris-400) 50%, transparent) transparent;
+  animation: sbus-entra 0.14s ease both;
+}
+.sbus-lista::-webkit-scrollbar { width: 6px; }
+.sbus-lista::-webkit-scrollbar-thumb { border-radius: 999px; background: color-mix(in srgb, var(--gris-400) 45%, transparent); }
+@keyframes sbus-entra { from { opacity: 0; transform: translateY(-4px); } }
+.sbus-op {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.95rem;
+  min-height: 2.1rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.86rem;
   color: var(--gris-900);
+  cursor: pointer;
 }
-.custom-prod-hint { margin: 0; font-size: 0.82rem; color: var(--gris-600); }
+.sbus-op.is-activa { background: color-mix(in srgb, var(--marca-100) 65%, transparent); }
+.sbus-op.is-elegida { color: var(--marca-800); font-weight: 700; }
+.sbus-op-texto { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sbus-op-detalle {
+  flex: none;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--borde) 60%, transparent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--gris-600);
+}
+.sbus-op-check { flex: none; color: var(--marca-600); }
+.sbus-vacio { padding: 0.6rem; font-size: 0.8rem; color: var(--gris-600); }
 
-.custom-prod-campos {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1.2fr;
-  gap: 0.6rem;
+/* Resumen en vivo del pie: lo que va a quedar en el pedido. */
+.cpf-resumen { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.cpf-resumen-linea {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--gris-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: sbus-entra 0.2s ease both;
 }
-.custom-prod-campos input,
-.custom-prod-campos select {
-  border: 1px solid var(--borde);
-  border-radius: 10px;
-  padding: 0.6rem 0.7rem;
-  font-size: 0.88rem;
-  background: white;
-  width: 100%;
-}
-.custom-prod-campos input:focus,
-.custom-prod-campos select:focus {
-  outline: 2px solid var(--marca-400);
-  outline-offset: 1px;
-  border-color: var(--marca-400);
-}
+.cpf-resumen-linea b { color: var(--marca-800); font-weight: 800; }
 
-.custom-prod-acciones {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.6rem;
-}
-.custom-prod-acciones .btn { padding: 0.6rem 1.2rem; font-size: 0.85rem; }
+/* Dentro del cierre del catálogo, abierto el formulario, su cabecera ya dice
+   lo mismo que «¿Te falta algo?»: una sola tarjeta y un solo título. */
+.cierre-cat-pedido:has(> .cpf) > div:first-child { display: none; }
+.cierre-cat-pedido:has(> .cpf) { padding: 0; border: 0; background: none; box-shadow: none; }
+.cierre-cat .cpf { margin-top: 0; }
 
-@media (max-width: 560px) {
-  .custom-prod-campos { grid-template-columns: 1fr; }
+@media (prefers-reduced-motion: reduce) {
+  .sbus-lista,
+  .cpf-resumen-linea { animation: none; }
+  .sbus-flecha { transition: none; }
 }
 
 /* Objetivos táctiles más grandes en móvil: la mayoría de pedidos se arman
@@ -5627,6 +5936,187 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   body.con-barra-carrito .whatsapp-flotante { bottom: calc(1.35rem + 4.9rem); }
 }
 
+/* ==========================================================================
+   Cabecera «comercio»: la barra pensada para comprar.
+   Conserva el verde de la cabecera de siempre (el degradado de
+   `--navbar-fondo`). Encima, una franja más oscura con los avisos; en la
+   barra, logo, los enlaces (Inicio, Tienda, Nosotros, Contacto), el buscador
+   blanco como protagonista, «Mi cuenta» (si el negocio identifica clientes)
+   y «Mi pedido». Colores y radios salen de tokens del bloque
+   (`--navbar-avisos-fondo`, `--navbar-pedido-fondo`, `--navbar-radio`).
+   Las otras variantes no cambian.
+   ========================================================================== */
+.navbar--comercio-avisos {
+  /* Un punto más oscuro que la barra, para que se lean como dos franjas. */
+  background: var(--navbar-avisos-fondo, color-mix(in srgb, var(--navbar-fondo, #062e1a) 72%, black));
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+.navbar--comercio-avisos .navbar-avisos-cara { align-items: center; padding-block: 0.45rem; }
+.navbar--comercio-avisos svg { opacity: 1; }
+
+.navbar--comercio { gap: 0.9rem; }
+.navbar--comercio .nav-links { margin-left: 0.25rem; }
+
+/* «Mi cuenta»: discreto, solo cuando la tienda lo tiene. */
+.navbar-cuenta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+  height: 42px;
+  padding: 0 0.8rem;
+  border-radius: var(--navbar-radio, 12px);
+  color: var(--navbar-texto, white);
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition: background-color var(--t-rapido, 0.16s) ease;
+}
+.navbar-cuenta svg { color: var(--marca-300); }
+.navbar-cuenta:hover,
+.navbar-cuenta.activo { background: rgba(255, 255, 255, 0.12); }
+.navbar-cuenta:focus-visible { outline: none; box-shadow: var(--t-foco); }
+
+/* «Mi pedido»: el verde vivo de la marca, que resalta sobre el verde oscuro
+   de la barra, con su contador. */
+.navbar--comercio .btn-carrito {
+  height: 44px;
+  padding: 0 1.15rem;
+  background: var(--navbar-pedido-fondo, var(--marca-500));
+  color: #fff;
+  box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.45);
+}
+.navbar--comercio .btn-carrito:hover {
+  background: color-mix(in srgb, var(--navbar-pedido-fondo, var(--marca-500)) 88%, white);
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.5);
+}
+.navbar--comercio .btn-carrito:focus-visible { outline: none; box-shadow: var(--t-foco); }
+
+@media (min-width: 901px) {
+  /* El buscador manda: ocupa el centro y todo el ancho que sobra. */
+  .navbar--comercio .buscador-cont { flex: 1 1 auto; max-width: 560px; margin-left: auto; }
+  .navbar--comercio .buscador-cont:focus-within { max-width: 600px; }
+  .navbar--comercio .buscador {
+    height: 46px;
+    padding: 0 0.9rem 0 1.05rem;
+    border: 1px solid transparent;
+    border-radius: var(--navbar-radio, 12px);
+    background: var(--superficie);
+    color: var(--gris-900);
+    box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.5);
+  }
+  .navbar--comercio .buscador:focus-within {
+    background: var(--superficie);
+    border-color: var(--marca-400);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--marca-400) 35%, transparent);
+  }
+  .navbar--comercio .buscador svg { color: var(--marca-600); opacity: 1; }
+  .navbar--comercio .buscador input { color: var(--gris-900); font-size: 0.95rem; }
+  .navbar--comercio .buscador input::placeholder { color: var(--gris-600); }
+  .navbar--comercio .buscador-atajo {
+    color: var(--gris-600);
+    border-color: var(--borde);
+    background: var(--superficie);
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 901px) {
+  /* Ventanas medianas: «Mi cuenta» se queda en su icono para que el buscador
+     no se aplaste. El texto sigue para el lector de pantalla. */
+  .navbar--comercio .navbar-cuenta span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .navbar--comercio .navbar-cuenta { width: 42px; padding: 0; justify-content: center; }
+}
+
+@media (max-width: 900px) {
+  .navbar--comercio { padding-block: 0.55rem; }
+  .navbar-cuenta { width: 42px; padding: 0; justify-content: center; }
+  .navbar-cuenta span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .navbar--comercio .btn-carrito { height: 42px; padding: 0.5rem; }
+  /* Lo que ya está en la barra inferior no se repite arriba. */
+  .navbar--buscar-abajo .btn-buscar-movil,
+  .navbar--pedido-abajo .btn-carrito,
+  .navbar--cuenta-abajo .navbar-cuenta { display: none; }
+}
+@media (max-width: 780px) {
+  .navbar--comercio-avisos .navbar-avisos-cara > div { flex-wrap: nowrap; overflow: hidden; justify-content: center; }
+  .navbar--comercio-avisos .navbar-avisos-cara > div > span:not(:first-child) { display: none; }
+}
+
+/* --- Barra inferior: contador del pedido (las dos variantes) ----------- */
+.nav-inferior-icono { position: relative; }
+.nav-inferior-contador {
+  position: absolute;
+  top: -5px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 2px solid var(--superficie);
+  border-radius: 999px;
+  background: var(--navbar-pedido-fondo, var(--marca-700));
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+  animation: nav-contador-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes nav-contador-pop { from { transform: scale(0.4); } }
+/* Los botones de la barra (Buscar, Pedido) sin el aspecto de botón del
+   navegador. Solo la familia de letra: el tamaño y el grosor los pone la
+   barra, y `font: inherit` los pisaba también en los enlaces. */
+button.nav-inferior-item { border: 0; background: none; padding: 0; font-family: inherit; cursor: pointer; }
+
+/* --- Barra inferior «flotante»: blanca, redondeada y separada del borde -- */
+@media (max-width: 900px) {
+  :root:has(.nav-inferior--flotante) { --alto-nav-inferior: 4.35rem; }
+
+  .nav-inferior--flotante {
+    left: 0.6rem;
+    right: 0.6rem;
+    bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    height: calc(var(--alto-nav-inferior) - 0.5rem);
+    padding: 0.3rem 0.25rem;
+    border: 1px solid color-mix(in srgb, var(--borde) 85%, transparent);
+    border-radius: var(--nav-inferior-radio, 22px);
+    background: color-mix(in srgb, var(--superficie) 96%, transparent);
+    box-shadow:
+      0 1px 2px rgba(var(--sombra-tinte), 0.06),
+      0 14px 34px -14px rgba(var(--sombra-tinte), 0.38);
+  }
+  .nav-inferior--flotante .nav-inferior-item {
+    min-height: 0;
+    gap: 0.18rem;
+    color: var(--gris-600);
+    font-size: 0.68rem;
+    font-weight: 600;
+    transition: color 0.18s ease;
+  }
+  .nav-inferior--flotante .nav-inferior-icono {
+    width: 54px;
+    height: 30px;
+    transition: background-color 0.22s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .nav-inferior--flotante .nav-inferior-item.activo { color: var(--marca-800); font-weight: 800; }
+  .nav-inferior--flotante .nav-inferior-item.activo .nav-inferior-icono {
+    background: var(--nav-inferior-activo, var(--marca-100));
+    color: var(--marca-700);
+  }
+  .nav-inferior--flotante .nav-inferior-item:active .nav-inferior-icono { transform: scale(0.92); }
+  .nav-inferior--flotante .nav-inferior-item:focus-visible { outline: none; }
+  .nav-inferior--flotante .nav-inferior-item:focus-visible .nav-inferior-icono { box-shadow: var(--t-foco); }
+}
+@media (max-width: 900px) and (max-height: 560px) {
+  :root:has(.nav-inferior--flotante) { --alto-nav-inferior: 3.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-inferior-contador { animation: none; }
+  .nav-inferior--flotante .nav-inferior-icono,
+  .nav-inferior--flotante .nav-inferior-item { transition: none; }
+}
+
 /* ---------- Encabezado (catalogo-hero) ---------- */
 .shero {
   background:
@@ -6000,6 +6490,8 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   border-radius: calc(var(--t-radio-card) - 6px);
 }
 .pcard:hover .pimg img:not(.pimg-icono) { transform: scale(1.045); }
+/* La foto de otra presentación entra con el mismo fundido que la galería de la ficha. */
+.pcard-media > .pimg--cambio { animation: galeria-entra 0.35s ease both; }
 .pcard:hover .pimg-icono { transform: translateY(-3px) scale(1.06); }
 .pcard-cinta {
   position: absolute;
@@ -6335,7 +6827,10 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   .catalogo-layout--con-panel .pgrid { grid-template-columns: repeat(var(--columnas-catalogo-movil, 2), minmax(0, 1fr)); gap: 0.6rem; }
   .pcard-media { margin: 0.35rem 0.35rem 0; }
 }
-.pgrid-centinela { height: 1px; }
+.pgrid-centinela { height: 1px; overflow-anchor: none; }
+/* «Cargar más» lleva aquí al primer producto nuevo: que quede bajo la
+   cabecera y la barra del catálogo fijas, igual que el inicio del catálogo. */
+.pgrid > .pcard { scroll-margin-top: calc(var(--navbar-alto, 62px) + var(--tbar-alto, 4.5rem) + 0.75rem); }
 /* Separador de categoría en «Todos»: ocupa la fila entera de la rejilla. */
 .pgrid-separador {
   grid-column: 1 / -1;
@@ -6356,24 +6851,25 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   .pgrid-separador { margin-top: 1rem; font-size: 1rem; }
 }
 
-.catalogo { padding: 0.9rem 0 3rem; scroll-margin-top: calc(var(--navbar-alto, 62px) + 4.5rem); }
+.catalogo { padding: 0.9rem 0 3rem; scroll-margin-top: calc(var(--navbar-alto, 62px) + var(--tbar-alto, 4.5rem)); }
 .catalogo-cabecera { margin-bottom: 1rem; }
 .catalogo-kicker { margin: 0; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--marca-700); }
 .catalogo-cabecera h2 { margin: 0.2rem 0 0; font-size: clamp(1.35rem, 2.2vw, 1.75rem); color: var(--tinta); }
 .catalogo-subtitulo { margin: 0.3rem 0 0; color: var(--gris-600); }
 .catalogo-layout--con-panel {
   display: grid;
-  grid-template-columns: 228px minmax(0, 1fr);
-  gap: 1.9rem;
+  grid-template-columns: 244px minmax(0, 1fr);
+  gap: 1.75rem;
   align-items: start;
 }
+/* El scroll lo lleva `.fpanel-cuerpo`: así la cabecera del panel no se va. */
 .catalogo-panel {
   position: sticky;
-  top: calc(var(--navbar-alto, 62px) + 5rem);
-  max-height: calc(100vh - var(--navbar-alto, 62px) - 6rem);
-  overflow-y: auto;
-  padding: 0.2rem 0.3rem 1rem 0;
-  scrollbar-width: thin;
+  top: calc(var(--navbar-alto, 62px) + var(--tbar-alto, 4.5rem) + 1rem);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - var(--navbar-alto, 62px) - var(--tbar-alto, 4.5rem) - 2rem);
+  transition: top 0.2s ease;
 }
 @media (max-width: 1100px) {
   .catalogo-layout--con-panel { display: block; }
@@ -6456,6 +6952,12 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   font-size: 0.7rem;
 }
 .tbar-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0 0; padding: 0; }
+/* En escritorio, con el panel lateral en la página, los filtros activos ya se
+   ven (y se quitan) allí: repetirlos en la barra la hacía crecer y montarse
+   sobre el panel. En móvil el panel no existe y los chips siguen aquí. */
+@media (min-width: 1101px) {
+  body:has(.catalogo-panel) .tbar-chips { display: none; }
+}
 .tbar-chip {
   display: inline-flex;
   align-items: center;
@@ -6498,86 +7000,248 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   .tbar-btn { padding: 0 0.75rem; font-size: 0.8rem; }
 }
 
-/* ---------- Filtros (panel lateral y hoja del móvil) ---------- */
-.fpanel { display: flex; flex-direction: column; gap: 1.4rem; }
-.fpanel-grupo { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; margin: 0; padding: 0; border: 0; }
-.fpanel-grupo legend {
-  margin-bottom: 0.5rem;
-  padding: 0;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--gris-600);
+/* ---------- Filtros (panel lateral y hoja del móvil) ----------
+   Una tarjeta blanca con cabecera fija y el cuerpo con su propio scroll
+   (fino y discreto). Cada opción es una fila entera: sin radios a la vista,
+   la elegida lleva fondo verde claro, barra de acento y un ✓. */
+.fpanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  border: 1px solid color-mix(in srgb, var(--borde) 85%, transparent);
+  border-radius: 18px;
+  background: var(--superficie);
+  box-shadow: 0 1px 2px rgba(var(--sombra-tinte), 0.04), 0 10px 28px -22px rgba(var(--sombra-tinte), 0.35);
+  overflow: hidden;
 }
-.fpanel-opcion {
-  position: relative;
+.fpanel-cabecera {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  min-height: 2.35rem;
-  padding: 0.3rem 0.55rem;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  color: var(--gris-900);
-  cursor: pointer;
-  transition: background-color var(--t-rapido) ease;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.85rem 0.9rem 0.75rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--borde) 70%, transparent);
 }
-.fpanel-opcion:hover { background: var(--t-fondo-suave); }
-.fpanel-opcion input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
-.fpanel-opcion:focus-within { box-shadow: var(--t-foco); }
-.fpanel-marca {
-  flex: none;
-  width: 1.05rem;
-  height: 1.05rem;
-  border: 2px solid var(--gris-400);
-  border-radius: 50%;
-  transition: border-color var(--t-rapido) ease, background-color var(--t-rapido) ease;
-}
-.fpanel-texto { flex: 1; min-width: 0; }
-.fpanel-cuenta {
-  padding: 0.05rem 0.45rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--borde) 55%, transparent);
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: var(--gris-600);
-  font-variant-numeric: tabular-nums;
-}
-.fpanel-opcion.is-activa { background: var(--marca-100); color: var(--marca-800); font-weight: 700; }
-.fpanel-opcion.is-activa .fpanel-marca {
-  border-color: var(--marca-600);
-  background: var(--marca-600);
-  box-shadow: inset 0 0 0 3px var(--marca-100);
-}
-.fpanel-opcion.is-activa .fpanel-cuenta { background: var(--superficie); color: var(--marca-700); }
-.fpanel-mas,
-.fpanel-limpiar {
+.fpanel-titulo {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  align-self: flex-start;
-  margin-top: 0.3rem;
-  padding: 0.35rem 0.55rem;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--tinta);
+}
+.fpanel-titulo svg { color: var(--marca-600); }
+.fpanel-titulo-cuenta {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--marca-600);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.fpanel-limpiar {
+  padding: 0.3rem 0.55rem;
   border: 0;
   border-radius: 8px;
   background: none;
   color: var(--marca-700);
   font: inherit;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) ease;
 }
-.fpanel-mas[aria-expanded="true"] svg { transform: rotate(180deg); }
-.fpanel-mas:hover,
 .fpanel-limpiar:hover { background: var(--t-fondo-suave); }
-.fpanel-limpiar { color: var(--gris-600); padding-left: 0.55rem; }
+.fpanel-limpiar:focus-visible { outline: none; box-shadow: var(--t-foco); }
+
+.fpanel-resumen {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.7rem 1rem 0.1rem;
+  list-style: none;
+}
+.fpanel-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  padding: 0.25rem 0.5rem 0.25rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--marca-500) 30%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--marca-100) 70%, var(--superficie));
+  color: var(--marca-800);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) ease;
+}
+.fpanel-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fpanel-chip svg { flex: none; opacity: 0.7; }
+.fpanel-chip:hover { background: var(--marca-100); }
+.fpanel-chip:focus-visible { outline: none; box-shadow: var(--t-foco); }
+
+/* El scroll vive aquí y no en la tarjeta: la cabecera con «Limpiar» queda
+   siempre a la vista. `scrollbar-gutter` reserva el carril para que la barra
+   no se monte sobre los conteos. */
+.fpanel-cuerpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.35rem 0.45rem 0.6rem 0.55rem;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--gris-400) 45%, transparent) transparent;
+}
+.fpanel-cuerpo::-webkit-scrollbar { width: 6px; }
+.fpanel-cuerpo::-webkit-scrollbar-track { background: transparent; }
+.fpanel-cuerpo::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gris-400) 40%, transparent);
+}
+.fpanel-cuerpo:hover::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--gris-400) 70%, transparent); }
+
+.fpanel-grupo { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin: 0; padding: 0.55rem 0 0.35rem; border: 0; }
+.fpanel-grupo + .fpanel-grupo { margin-top: 0.35rem; border-top: 1px solid color-mix(in srgb, var(--borde) 70%, transparent); padding-top: 0.85rem; }
+.fpanel-grupo legend {
+  float: left; /* sin esto, una <legend> no respeta el padding del fieldset */
+  width: 100%;
+  margin: 0 0 0.35rem;
+  padding: 0 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--gris-600);
+}
+
+.fpanel-opcion {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.3rem;
+  padding: 0.3rem 0.5rem 0.3rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--gris-900);
+  cursor: pointer;
+  transition: background-color var(--t-rapido) ease, color var(--t-rapido) ease;
+}
+/* Barra de acento: aparece desde el centro al elegir la fila. */
+.fpanel-opcion::before {
+  content: "";
+  position: absolute;
+  left: 0.25rem;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--marca-600);
+  transform: scaleY(0);
+  transition: transform 0.2s ease;
+}
+.fpanel-opcion:hover { background: var(--t-fondo-suave); }
+.fpanel-opcion input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.fpanel-opcion:has(input:focus-visible) { box-shadow: var(--t-foco); }
+.fpanel-texto { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fpanel-cuenta {
+  flex: none;
+  min-width: 1.6rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--borde) 60%, transparent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--gris-600);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--t-rapido) ease, color var(--t-rapido) ease;
+}
+.fpanel-marca {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--marca-600);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity var(--t-rapido) ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.fpanel-opcion.is-activa { background: var(--marca-100); color: var(--marca-800); font-weight: 700; }
+.fpanel-opcion.is-activa::before { transform: scaleY(1); }
+.fpanel-opcion.is-activa .fpanel-marca { opacity: 1; transform: scale(1); }
+.fpanel-opcion.is-activa .fpanel-cuenta { background: var(--superficie); color: var(--marca-700); }
+.fpanel-opcion.is-vacia { color: var(--gris-400); cursor: not-allowed; }
+.fpanel-opcion.is-vacia:hover { background: none; }
+.fpanel-opcion.is-vacia input { cursor: not-allowed; }
+
+.fpanel-mas {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  align-self: flex-start;
+  margin: 0.2rem 0 0 0.35rem;
+  padding: 0.35rem 0.45rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--marca-700);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.fpanel-mas svg { transition: transform var(--t-rapido) ease; }
+.fpanel-mas[aria-expanded="true"] svg { transform: rotate(180deg); }
+.fpanel-mas:hover { background: var(--t-fondo-suave); }
+.fpanel-mas:focus-visible { outline: none; box-shadow: var(--t-foco); }
+
+/* En la hoja del móvil: sin tarjeta (la hoja ya lo es) y filas más altas para el pulgar. */
+.fpanel--hoja { border: 0; border-radius: 0; box-shadow: none; overflow: visible; max-height: none; }
+.fpanel--hoja .fpanel-resumen { padding: 0.2rem 0 0.4rem; }
+.fpanel--hoja .fpanel-cuerpo { overflow: visible; padding: 0; scrollbar-gutter: auto; }
+.fpanel--hoja .fpanel-opcion { min-height: 2.9rem; font-size: 0.95rem; }
+.fpanel--hoja .fpanel-grupo legend { padding: 0 0.5rem; }
+
 .fdrawer-pie {
   position: sticky;
   bottom: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
   margin-top: 1rem;
   padding-top: 0.8rem;
   background: var(--superficie);
   box-shadow: 0 -10px 16px -8px rgba(var(--superficie-rgb), 1);
+}
+.fdrawer-pie .btn { min-height: 48px; justify-content: center; }
+.fdrawer-pie .btn-outline { padding-inline: 1.2rem; }
+.fdrawer-pie .btn-outline:disabled { opacity: 0.45; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fpanel-opcion,
+  .fpanel-opcion::before,
+  .fpanel-marca,
+  .fpanel-cuenta,
+  .fpanel-mas svg { transition: none; }
 }
 
 /* ---------- Favoritos de los negocios ---------- */
@@ -6932,6 +7596,9 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   max-width: 22rem;
   margin: 2.2rem auto 0.5rem;
   text-align: center;
+  /* El navegador no debe usar el botón como ancla: al entrar la tanda encima,
+     arrastraría la vista con él y se saltaría los productos nuevos. */
+  overflow-anchor: none;
 }
 .cargar-mas-v2 .btn { min-width: 15rem; }
 .cargar-mas-progreso { display: flex; flex-direction: column; gap: 0.45rem; width: 100%; font-size: 0.85rem; color: var(--gris-600); }
@@ -6954,7 +7621,7 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
 }
 .cierre-cat-kicker { margin: 0; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--marca-700); }
 .cierre-cat-titulo { margin: 0.15rem 0 0; font-size: 1.1rem; font-weight: 700; color: var(--tinta); }
-.cierre-cat .custom-prod-card { flex-basis: 100%; }
+.cierre-cat .cpf { flex-basis: 100%; }
 
 /* ---------- Ficha de producto (/productos/<slug>) ---------- */
 /* Compacta: en escritorio foto, nombre, precio, selectores y botón caben en
@@ -7042,6 +7709,7 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
 .galeria-mini:focus-visible { outline: 2px solid var(--marca-600, #15803d); outline-offset: 2px; opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .galeria-principal { animation: none; }
+  .pcard-media > .pimg--cambio { animation: none; }
   .galeria-mini { transition: none; }
   .galeria-mini:hover { transform: none; }
 }
@@ -7857,4 +8525,38 @@ body.buscador-tienda-visible .navbar .btn-buscar-movil {
   .vista-tienda .tbar-btn svg { width: 17px; height: 17px; }
   .vista-tienda .tbar-btn-cuenta { position: absolute; top: -0.3rem; right: -0.3rem; font-size: 0.65rem; }
   .vista-tienda .tbar-btn { position: relative; }
+}
+
+/* Móvil: la barra del catálogo, compacta. Título y conteo en una sola línea
+   ("Frutas · 29 productos"), botones y chips más bajos, y los chips en una
+   fila que se desliza de lado en vez de partirse en varias: la barra va fija
+   arriba y cada píxel suyo se le quita a los productos. */
+@media (max-width: 767px) {
+  .tbar,
+  .vista-tienda .tbar { margin-top: 0.6rem; padding: 0.35rem 0; }
+  .tbar-fila,
+  .vista-tienda .tbar-fila { min-height: 2.1rem; gap: 0.5rem; }
+  .tbar-titulo,
+  .vista-tienda .tbar-titulo { flex-direction: row; align-items: baseline; flex-wrap: nowrap; gap: 0.4rem; overflow: hidden; }
+  .tbar-titulo h2,
+  .vista-tienda .tbar-titulo h2 { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tbar-conteo { flex: none; font-size: 0.76rem; }
+  .tbar-btn,
+  .vista-tienda .tbar-btn { height: 2.1rem; }
+  .tbar-chips {
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+    margin: 0.3rem 0 0;
+    padding: 0 0 1px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tbar-chips::-webkit-scrollbar { display: none; }
+  .tbar-chips li { flex: none; }
+  .tbar-chip,
+  .tbar-limpiar { height: 1.6rem; font-size: 0.74rem; }
+  .tbar-chip { padding: 0 0.55rem; gap: 0.25rem; }
+}
+@media (max-width: 400px) {
+  .vista-tienda .tbar-btn { width: 2.1rem; }
 }

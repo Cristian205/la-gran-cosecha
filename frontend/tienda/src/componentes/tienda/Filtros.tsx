@@ -22,9 +22,38 @@ import { OPCIONES_ORDEN, type OrdenCatalogo } from "@/lib/datos";
 
 const UNIDADES_VISIBLES = 6;
 
-/** El contenido del filtro, compartido entre el panel lateral y el drawer. */
-export function FilterPanel() {
+interface FiltroActivo {
+  clave: string;
+  texto: string;
+  quitar: () => void;
+}
+
+/**
+ * Los filtros aplicados ahora mismo, cada uno con cómo quitarlo. Lo usan la
+ * barra del catálogo (chips) y el resumen del panel: un solo sitio que dice
+ * qué cuenta como "filtro activo" y cómo se quita.
+ */
+function useFiltrosActivos(): FiltroActivo[] {
   const catalogo = useCatalogoContexto();
+  if (!catalogo) return [];
+  const categoria = catalogo.categorias.find((c) => c.id === catalogo.categoriaActiva);
+  const unidad = catalogo.unidades.find((u) => u.id === catalogo.unidadActiva);
+  const q = catalogo.busqueda.trim();
+  return [
+    q && { clave: "q", texto: `“${q}”`, quitar: () => catalogo.buscar("") },
+    categoria && { clave: "c", texto: categoria.nombre_categoria, quitar: () => catalogo.cambiarCategoria(null) },
+    unidad && { clave: "u", texto: `Por ${unidad.nombre_unidad}`, quitar: () => catalogo.cambiarUnidad(null) },
+  ].filter(Boolean) as FiltroActivo[];
+}
+
+/**
+ * El contenido del filtro, compartido entre el panel lateral y la hoja del
+ * móvil. En la hoja (`enHoja`) no lleva cabecera propia: el título lo pone la
+ * hoja y «Limpiar» va en su pie, junto a «Ver productos».
+ */
+export function FilterPanel({ enHoja = false }: { enHoja?: boolean }) {
+  const catalogo = useCatalogoContexto();
+  const activos = useFiltrosActivos();
   const [todasUnidades, setTodasUnidades] = useState(false);
   const id = useId();
   if (!catalogo) return null;
@@ -41,71 +70,102 @@ export function FilterPanel() {
     : unidadesVisibles;
 
   return (
-    <div className="fpanel">
-      <fieldset className="fpanel-grupo">
-        <legend>Categoría</legend>
-        <Opcion
-          nombre={`${id}-cat`}
-          activa={categoriaActiva === null}
-          onElegir={() => catalogo.cambiarCategoria(null)}
-          etiqueta="Todas"
-          cuenta={catalogo.totalCatalogo}
-        />
-        {categorias.map((c) => (
-          <Opcion
-            key={c.id}
-            nombre={`${id}-cat`}
-            activa={categoriaActiva === c.id}
-            onElegir={() => catalogo.cambiarCategoria(c.id)}
-            etiqueta={c.nombre_categoria}
-            cuenta={c.num_productos ?? null}
-          />
-        ))}
-      </fieldset>
-
-      {unidades.length > 0 && (
-        <fieldset className="fpanel-grupo">
-          <legend>Se vende por</legend>
-          <Opcion
-            nombre={`${id}-uni`}
-            activa={unidadActiva === null}
-            onElegir={() => catalogo.cambiarUnidad(null)}
-            etiqueta="Cualquier unidad"
-            cuenta={null}
-          />
-          {listaUnidades.map((u) => (
-            <Opcion
-              key={u.id}
-              nombre={`${id}-uni`}
-              activa={unidadActiva === u.id}
-              onElegir={() => catalogo.cambiarUnidad(u.id)}
-              etiqueta={u.nombre_unidad}
-              cuenta={u.num_productos ?? null}
-            />
-          ))}
-          {unidades.length > UNIDADES_VISIBLES && (
-            <button
-              type="button"
-              className="fpanel-mas"
-              onClick={() => setTodasUnidades((v) => !v)}
-              aria-expanded={todasUnidades}
-            >
-              {todasUnidades ? "Ver menos" : `Ver ${unidades.length - UNIDADES_VISIBLES} más`}
-              <ChevronDown size={14} aria-hidden="true" />
+    <div className={`fpanel ${enHoja ? "fpanel--hoja" : ""}`}>
+      {!enHoja && (
+        <header className="fpanel-cabecera">
+          <h2 className="fpanel-titulo">
+            <SlidersHorizontal size={16} aria-hidden="true" /> Filtros
+            {activos.length > 0 && <span className="fpanel-titulo-cuenta">{activos.length}</span>}
+          </h2>
+          {catalogo.hayFiltros && (
+            <button type="button" className="fpanel-limpiar" onClick={catalogo.limpiarFiltros}>
+              Limpiar
             </button>
           )}
-        </fieldset>
+        </header>
       )}
 
-      {catalogo.hayFiltros && (
-        <button type="button" className="fpanel-limpiar" onClick={catalogo.limpiarFiltros}>
-          <X size={14} aria-hidden="true" /> Limpiar filtros
-        </button>
+      {/* Qué está aplicado y cómo quitar cada uno. En escritorio desde el primero
+          (la barra de arriba ya no repite estos chips); en la hoja, desde dos. */}
+      {activos.length > (enHoja ? 1 : 0) && (
+        <ul className="fpanel-resumen" aria-label="Filtros aplicados">
+          {activos.map((f) => (
+            <li key={f.clave}>
+              <button type="button" className="fpanel-chip" onClick={f.quitar} aria-label={`Quitar filtro ${f.texto}`}>
+                <span>{f.texto}</span> <X size={12} aria-hidden="true" />
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
+
+      <div className="fpanel-cuerpo">
+        <fieldset className="fpanel-grupo">
+          <legend>Categoría</legend>
+          <Opcion
+            nombre={`${id}-cat`}
+            activa={categoriaActiva === null}
+            onElegir={() => catalogo.cambiarCategoria(null)}
+            etiqueta="Todas"
+            cuenta={catalogo.totalCatalogo}
+          />
+          {categorias.map((c) => (
+            <Opcion
+              key={c.id}
+              nombre={`${id}-cat`}
+              activa={categoriaActiva === c.id}
+              onElegir={() => catalogo.cambiarCategoria(c.id)}
+              etiqueta={c.nombre_categoria}
+              cuenta={c.num_productos ?? null}
+            />
+          ))}
+        </fieldset>
+
+        {unidades.length > 0 && (
+          <fieldset className="fpanel-grupo">
+            <legend>Se vende por</legend>
+            <Opcion
+              nombre={`${id}-uni`}
+              activa={unidadActiva === null}
+              onElegir={() => catalogo.cambiarUnidad(null)}
+              etiqueta="Cualquier unidad"
+              cuenta={null}
+            />
+            {listaUnidades.map((u) => (
+              <Opcion
+                key={u.id}
+                nombre={`${id}-uni`}
+                activa={unidadActiva === u.id}
+                onElegir={() => catalogo.cambiarUnidad(u.id)}
+                etiqueta={u.nombre_unidad}
+                cuenta={u.num_productos ?? null}
+              />
+            ))}
+            {unidades.length > UNIDADES_VISIBLES && (
+              <button
+                type="button"
+                className="fpanel-mas"
+                onClick={() => setTodasUnidades((v) => !v)}
+                aria-expanded={todasUnidades}
+              >
+                {todasUnidades ? "Ver menos" : `Ver ${unidades.length - UNIDADES_VISIBLES} más`}
+                <ChevronDown size={14} aria-hidden="true" />
+              </button>
+            )}
+          </fieldset>
+        )}
+      </div>
     </div>
   );
 }
 
+/**
+ * Una fila del filtro. Sigue siendo un radio nativo (teclado con flechas,
+ * lector de pantalla, un solo valor por grupo), solo que invisible: lo que se
+ * ve es la fila entera, con una barra de acento y un ✓ cuando está elegida.
+ * Una opción sin productos (cuenta 0) se muestra pero no se puede elegir,
+ * salvo que ya esté elegida: así siempre se puede volver a ver y quitar.
+ */
 function Opcion({
   nombre,
   activa,
@@ -119,12 +179,15 @@ function Opcion({
   etiqueta: string;
   cuenta: number | null;
 }) {
+  const vacia = cuenta === 0 && !activa;
   return (
-    <label className={`fpanel-opcion ${activa ? "is-activa" : ""}`}>
-      <input type="radio" name={nombre} checked={activa} onChange={onElegir} />
-      <span className="fpanel-marca" aria-hidden="true" />
+    <label className={`fpanel-opcion ${activa ? "is-activa" : ""} ${vacia ? "is-vacia" : ""}`}>
+      <input type="radio" name={nombre} checked={activa} onChange={onElegir} disabled={vacia} />
       <span className="fpanel-texto">{etiqueta}</span>
-      {cuenta !== null && cuenta > 0 && <span className="fpanel-cuenta">{cuenta}</span>}
+      {cuenta !== null && <span className="fpanel-cuenta">{cuenta}</span>}
+      <span className="fpanel-marca" aria-hidden="true">
+        <Check size={13} strokeWidth={3} />
+      </span>
     </label>
   );
 }
@@ -155,10 +218,21 @@ export function FilterDrawer() {
       </button>
 
       {abierta && (
-        <BottomSheet titulo="Filtrar productos" onCerrar={() => setAbierta(false)}>
-          <FilterPanel />
+        <BottomSheet
+          titulo={activos > 0 ? `Filtros · ${activos} ${activos === 1 ? "activo" : "activos"}` : "Filtros"}
+          onCerrar={() => setAbierta(false)}
+        >
+          <FilterPanel enHoja />
           <div className="fdrawer-pie">
-            <button type="button" className="btn btn-verde btn-block" onClick={() => setAbierta(false)}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={catalogo.limpiarFiltros}
+              disabled={!catalogo.hayFiltros}
+            >
+              Limpiar
+            </button>
+            <button type="button" className="btn btn-verde" onClick={() => setAbierta(false)}>
               {catalogo.cargando
                 ? "Cargando…"
                 : catalogo.total === null
@@ -240,21 +314,8 @@ export function SortControl() {
 /** Los filtros aplicados, cada uno con su ✕: se ven y se quitan de a uno. */
 export function ActiveFilters() {
   const catalogo = useCatalogoContexto();
+  const chips = useFiltrosActivos();
   if (!catalogo || !catalogo.hayFiltros) return null;
-
-  const categoria = catalogo.categorias.find((c) => c.id === catalogo.categoriaActiva);
-  const unidad = catalogo.unidades.find((u) => u.id === catalogo.unidadActiva);
-  const q = catalogo.busqueda.trim();
-
-  const chips = [
-    q && { clave: "q", texto: `“${q}”`, quitar: () => catalogo.buscar("") },
-    categoria && {
-      clave: "c",
-      texto: categoria.nombre_categoria,
-      quitar: () => catalogo.cambiarCategoria(null),
-    },
-    unidad && { clave: "u", texto: `Por ${unidad.nombre_unidad}`, quitar: () => catalogo.cambiarUnidad(null) },
-  ].filter(Boolean) as { clave: string; texto: string; quitar: () => void }[];
 
   return (
     <ul className="tbar-chips" aria-label="Filtros aplicados">

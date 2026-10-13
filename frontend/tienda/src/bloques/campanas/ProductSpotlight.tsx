@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Check, Pause, Play } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Crown, Pause, Play, ShoppingCart } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { agruparPresentaciones } from "@/componentes/PresentationSelector";
 import { useAgregarAlCarrito } from "@/hooks/useAgregarAlCarrito";
@@ -10,6 +10,7 @@ import { idsElegidos, obtenerProductosMasVendidos, obtenerProductosPorIds } from
 import type { Producto } from "@/lib/tipos";
 import { cantidadInicial, formatoPrecio, reglaCantidad } from "@/lib/utiles";
 import { Boton, TipografiaEditorial, useParallax, useSinMovimiento } from "./comunes";
+import { DecoracionBotanica } from "./DecoracionBotanica";
 
 /**
  * Los más vendidos del mercado, como carrusel publicitario.
@@ -35,6 +36,15 @@ import { Boton, TipografiaEditorial, useParallax, useSinMovimiento } from "./com
  * pantalla o con el botón de pausa (contenido que se mueve solo necesita
  * poder pararse). Con `prefers-reduced-motion` no avanza solo y las
  * transiciones son un simple cambio.
+ *
+ * # Variantes
+ *
+ * Sin variante, el aspecto de siempre. «botanico» es el rediseño premium:
+ * fondo blanco, ramas de trazo fino en las esquinas, curvas doradas,
+ * flechas a los lados y pestañas tipo tarjeta. Es una variante y no un cambio
+ * del aspecto base para que ninguna otra tienda cambie sin pedirlo. Sus
+ * colores salen de tokens del bloque (`--ps-fondo`, `--ps-acento`,
+ * `--ps-dorado`) y todos los textos, de sus propiedades.
  */
 interface Props {
   datos?: Producto[];
@@ -49,6 +59,17 @@ interface Props {
   intervalo?: number;
   /** Productos elegidos a mano, en orden. Vacío: el ranking real de ventas. */
   productos?: number[];
+  /** El final del texto en serif cursiva y color de acento («como el tuyo.»). */
+  texto_resaltado?: string;
+  /** Las ramas y curvas de la variante «botanico». */
+  decoracion?: boolean;
+  /** La etiqueta «N.º X» sobre la foto (solo existe si el puesto es real). */
+  mostrar_puesto?: boolean;
+  /** El marco de hojas y cinta dorada alrededor del bloque (variante «botanico»). */
+  mostrar_marco?: boolean;
+  /** Otra imagen de marco (PNG/WebP con fondo transparente). Vacía: la de la variante. */
+  marco?: string;
+  variante?: string;
 }
 
 type ConVentas = Producto & { por_ventas?: boolean };
@@ -61,6 +82,9 @@ interface Diapositiva {
 
 const UMBRAL_DESLIZAR = 50;
 
+/** El marco de hojas que trae la variante «botanico» (WebP con transparencia). */
+const MARCO_BOTANICO = "/img/marco-botanico.webp";
+
 export function ProductSpotlight({
   datos = [],
   omitir = "",
@@ -70,7 +94,15 @@ export function ProductSpotlight({
   cantidad = 5,
   intervalo = 7,
   productos: elegidos,
+  texto_resaltado = "",
+  decoracion = true,
+  mostrar_puesto = true,
+  mostrar_marco = true,
+  marco = "",
+  variante,
 }: Props) {
+  const botanico = variante === "botanico";
+  const conMarco = botanico && mostrar_marco;
   const ids = idsElegidos(elegidos);
   const aMano = ids.length > 0;
   const [productos, setProductos] = useState<ConVentas[]>(datos);
@@ -168,7 +200,7 @@ export function ProductSpotlight({
   return (
     <section
       ref={ref}
-      className="ps ps--carrusel"
+      className={`ps ps--carrusel ${botanico ? "ps--botanico" : ""} ${conMarco ? "ps--con-marco" : ""}`}
       aria-roledescription="carrusel"
       aria-label={conRanking ? "Los más vendidos" : "Productos de nuestro mercado"}
       onMouseEnter={() => setEnPausaTemporal(true)}
@@ -183,6 +215,18 @@ export function ProductSpotlight({
       }}
     >
       <TipografiaEditorial />
+      {botanico && decoracion && <DecoracionBotanica />}
+      {conMarco && (
+        // Un fondo y no un <img>: es decoración, no contenido, y así no entra
+        // en el árbol de accesibilidad ni compite por la carga con las fotos.
+        <div
+          className="ps-marco"
+          aria-hidden="true"
+          // Una variable y no `backgroundImage`: en escritorio el CSS la usa
+          // de fondo y en el móvil como `border-image` (ver campanas.css).
+          style={{ "--ps-marco": `url("${(marco || MARCO_BOTANICO).replace(/"/g, "%22")}")` } as CSSProperties}
+        />
+      )}
       <AnimatePresence initial={false} mode="popLayout">
         <motion.span
           key={`gigante-${producto.id}`}
@@ -196,6 +240,17 @@ export function ProductSpotlight({
           {producto.nombre_producto}
         </motion.span>
       </AnimatePresence>
+
+      {botanico && total > 1 && (
+        <>
+          <button type="button" className="ps-lado ps-lado--anterior" onClick={() => ir(actual - 1, -1)} aria-label="Producto anterior">
+            <ChevronLeft size={22} />
+          </button>
+          <button type="button" className="ps-lado ps-lado--siguiente" onClick={() => ir(actual + 1, 1)} aria-label="Producto siguiente">
+            <ChevronRight size={22} />
+          </button>
+        </>
+      )}
 
       <div className="cmp-inner">
         <div
@@ -238,8 +293,9 @@ export function ProductSpotlight({
                 )}
               </motion.div>
             </AnimatePresence>
-            {puesto !== null && (
+            {puesto !== null && mostrar_puesto && (
               <span className="ps-puesto" aria-hidden="true">
+                {botanico && <Crown size={18} strokeWidth={2.2} className="ps-puesto-corona" />}
                 <small>N.º</small>
                 {puesto}
               </span>
@@ -267,7 +323,16 @@ export function ProductSpotlight({
                   )}
                 </p>
                 <h2>{producto.nombre_producto}</h2>
-                <p className="ps-parrafo">{puesto !== null || aMano ? texto : "Disponible en nuestro catálogo para tu próximo pedido."}</p>
+                <p className="ps-parrafo">
+                  {puesto !== null || aMano ? (
+                    <>
+                      {texto}
+                      {texto_resaltado && <> <em>{texto_resaltado}</em></>}
+                    </>
+                  ) : (
+                    "Disponible en nuestro catálogo para tu próximo pedido."
+                  )}
+                </p>
                 {producto.precio_desde && (
                   <p className="ps-precio">
                     <span>Desde</span> <strong>{formatoPrecio(producto.precio_desde)}</strong>
@@ -275,7 +340,12 @@ export function ProductSpotlight({
                   </p>
                 )}
                 <div className="ps-acciones">
-                  <Boton onClick={comprar} disabled={!presentacion} flecha={!agregado}>
+                  <Boton
+                    onClick={comprar}
+                    disabled={!presentacion}
+                    flecha={!agregado}
+                    icono={botanico && !agregado ? <ShoppingCart size={18} /> : undefined}
+                  >
                     {agregado ? (
                       <>
                         Agregado <Check size={17} aria-hidden="true" />
@@ -284,8 +354,9 @@ export function ProductSpotlight({
                       cta_texto
                     )}
                   </Boton>
-                  <Link className="ps-enlace" href={`/productos/${producto.slug}`}>
+                  <Link className={`ps-enlace ${botanico ? "ps-enlace--boton" : ""}`} href={`/productos/${producto.slug}`}>
                     Ver detalle
+                    {botanico && <ArrowRight size={17} aria-hidden="true" />}
                   </Link>
                 </div>
               </motion.div>
@@ -337,13 +408,22 @@ export function ProductSpotlight({
                   {pausadoPorUsuario ? <Play size={16} /> : <Pause size={16} />}
                 </button>
               )}
-              <button type="button" className="ps-flecha" onClick={() => ir(actual - 1, -1)} aria-label="Producto anterior">
+              <button type="button" className="ps-flecha ps-flecha--paso" onClick={() => ir(actual - 1, -1)} aria-label="Producto anterior">
                 <ArrowLeft size={18} />
               </button>
-              <span className="ps-contador" aria-hidden="true">
-                <strong>{String(actual + 1).padStart(2, "0")}</strong> / {String(total).padStart(2, "0")}
-              </span>
-              <button type="button" className="ps-flecha" onClick={() => ir(actual + 1, 1)} aria-label="Producto siguiente">
+              {botanico ? (
+                // Indicadores, no controles: elegir ya se hace con las pestañas.
+                <span className="ps-puntos" aria-hidden="true">
+                  {diapositivas.map((d, i) => (
+                    <i key={d.producto.id} className={i === actual ? "activo" : ""} />
+                  ))}
+                </span>
+              ) : (
+                <span className="ps-contador" aria-hidden="true">
+                  <strong>{String(actual + 1).padStart(2, "0")}</strong> / {String(total).padStart(2, "0")}
+                </span>
+              )}
+              <button type="button" className="ps-flecha ps-flecha--paso" onClick={() => ir(actual + 1, 1)} aria-label="Producto siguiente">
                 <ArrowRight size={18} />
               </button>
             </div>

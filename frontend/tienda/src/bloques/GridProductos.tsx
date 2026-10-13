@@ -6,7 +6,7 @@ import { obtenerProductos } from "@/lib/datos";
 import type { Producto } from "@/lib/tipos";
 import { ProductCard } from "@/componentes/ProductCard";
 import { Seccion, claseDeVariante } from "./Seccion";
-import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
+import { useCatalogoContexto, volverAlInicioDelCatalogo } from "@/contextos/CatalogoContexto";
 import { FilterPanel } from "@/componentes/tienda/Filtros";
 import {
   CierreCatalogo,
@@ -199,9 +199,47 @@ function CatalogoInteractivo({
   const [automaticas, setAutomaticas] = useState(0);
   const { hayMas, cargandoMas, error, cargarMas } = catalogo;
 
-  // Un filtro nuevo es un catálogo nuevo: vuelve a tener sus cargas solas.
+  // Un filtro nuevo es un catálogo nuevo: vuelve a tener sus cargas solas y
+  // se empieza a leer por arriba (ver `volverAlInicioDelCatalogo`). Va en un
+  // efecto para que el salto ocurra con la lista nueva ya pintada; la primera
+  // pintura no cuenta, porque ahí nadie cambió nada.
   const claveFiltro = `${catalogo.categoriaActiva}|${catalogo.unidadActiva}|${catalogo.orden}|${catalogo.busqueda}`;
-  useEffect(() => setAutomaticas(0), [claveFiltro]);
+  const primeraPintura = useRef(true);
+  /** Desde qué posición empieza la tanda pedida con el botón (ver `cargarMasAqui`). */
+  const pendienteDesde = useRef<number | null>(null);
+  useEffect(() => {
+    setAutomaticas(0);
+    pendienteDesde.current = null;
+    if (primeraPintura.current) {
+      primeraPintura.current = false;
+      return;
+    }
+    volverAlInicioDelCatalogo();
+  }, [claveFiltro]);
+
+  /**
+   * «Cargar más» deja al cliente en el primer producto NUEVO (el 25.º, si ya
+   * veía 24), no en el pie. Sin esto, el navegador mantenía el botón quieto en
+   * pantalla mientras la tanda entraba encima (scroll anchoring) y la vista
+   * saltaba por delante de todo lo recién cargado. El foco va también ahí:
+   * quien navega con teclado sigue leyendo donde lo dejó.
+   */
+  function cargarMasAqui() {
+    pendienteDesde.current = catalogo.productos.length;
+    cargarMas();
+  }
+  useEffect(() => {
+    const desde = pendienteDesde.current;
+    if (desde === null || cargandoMas) return;
+    pendienteDesde.current = null;
+    const nuevo = catalogo.productos[desde];
+    if (!nuevo) return;
+    const tarjeta = document.getElementById(`producto-${nuevo.id}`);
+    if (!tarjeta) return;
+    const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    tarjeta.scrollIntoView({ behavior: quieto ? "auto" : "smooth", block: "start" });
+    tarjeta.querySelector<HTMLElement>(".pcard-nombre a")?.focus({ preventScroll: true });
+  }, [cargandoMas, catalogo.productos]);
 
   // Carga progresiva: la siguiente tanda se pide ANTES de llegar al final
   // (800px de margen), para que el cliente casi nunca vea el esqueleto.
@@ -295,7 +333,7 @@ function CatalogoInteractivo({
             <button
               type="button"
               className="btn btn-outline"
-              onClick={error ? catalogo.reintentar : cargarMas}
+              onClick={error ? catalogo.reintentar : cargarMasAqui}
               disabled={cargandoMas}
             >
               {cargandoMas ? (
@@ -321,7 +359,8 @@ function CatalogoInteractivo({
   }
 
   return (
-    <section id={id} className="catalogo" aria-labelledby={titulo ? "catalogo-titulo" : undefined}>
+    // Sin `id` propio, el ancla de siempre: la usan el CTA del hero y el buscador.
+    <section id={id || "catalogo"} className="catalogo" aria-labelledby={titulo ? "catalogo-titulo" : undefined}>
       {(kicker || titulo || subtitulo) && (
         <header className="catalogo-cabecera">
           {kicker && <p className="catalogo-kicker">{kicker}</p>}

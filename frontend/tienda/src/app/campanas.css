@@ -201,6 +201,115 @@
   .hc--alto-media { min-height: max(24rem, 62svh); }
 }
 
+/* --- Piezas opcionales: icono del antetítulo, segunda línea, iconos de los
+       botones y la fila de beneficios. Sin datos no se dibujan. --- */
+.hc-kicker { display: inline-flex; align-items: center; gap: 0.5rem; }
+.hc-kicker svg { flex: none; color: var(--marca-300); }
+.hc-sub-2 {
+  display: block;
+  margin-top: 0.2rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.74);
+}
+.cmp-btn-icono { display: inline-flex; flex: none; }
+.cmp-btn:active { transform: translateY(0) scale(0.98); }
+.cmp-btn--fantasma { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.hc .cmp-btn--fantasma { background: rgba(255, 255, 255, 0.06); }
+.hc .cmp-btn--fantasma:hover { background: rgba(255, 255, 255, 0.14); }
+
+.hc-beneficios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 0;
+  margin: clamp(2rem, 5vh, 3.4rem) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.hc-beneficios li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1.5rem;
+}
+.hc-beneficios li:first-child { padding-left: 0; }
+.hc-beneficios li + li { border-left: 1px solid rgba(255, 255, 255, 0.22); }
+.hc-beneficio-icono { display: grid; place-items: center; flex: none; color: var(--marca-300); }
+.hc-beneficio-texto {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #fff;
+}
+.hc-beneficio-texto span { color: var(--marca-300); font-weight: 500; }
+/* La línea del scroll compite con los beneficios: con ellos, sobra. */
+.hc--con-beneficios .hc-scroll { display: none; }
+.hc--con-beneficios .hc-contenido { padding-bottom: clamp(2rem, 6vh, 3.5rem); }
+
+/* Degradado «Bosque»: verde bosque desde la izquierda que se desvanece hacia
+   el centro, para que el texto se lea y la foto conserve su luz y su color a
+   la derecha. Un velo suave abajo sostiene la fila de beneficios. */
+.hc--degradado-bosque .hc-velo {
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--marca-900) 55%, transparent) 0%, transparent 28%),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--marca-900) 96%, transparent) 0%,
+      color-mix(in srgb, var(--marca-900) 86%, transparent) 26%,
+      color-mix(in srgb, var(--marca-900) 45%, transparent) 46%,
+      transparent 64%
+    );
+}
+.hc--alinear-derecha.hc--degradado-bosque .hc-velo {
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--marca-900) 55%, transparent) 0%, transparent 28%),
+    linear-gradient(
+      270deg,
+      color-mix(in srgb, var(--marca-900) 96%, transparent) 0%,
+      color-mix(in srgb, var(--marca-900) 86%, transparent) 26%,
+      color-mix(in srgb, var(--marca-900) 45%, transparent) 46%,
+      transparent 64%
+    );
+}
+
+@media (max-width: 780px) {
+  .hc-sub { font-size: 1.05rem; }
+  /* En el móvil el texto va arriba y ocupa todo el ancho: el degradado baja
+     desde arriba y deja libre la parte de abajo de la foto. */
+  .hc--degradado-bosque .hc-velo,
+  .hc--alinear-derecha.hc--degradado-bosque .hc-velo {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--marca-900) 94%, transparent) 0%,
+      color-mix(in srgb, var(--marca-900) 82%, transparent) 45%,
+      color-mix(in srgb, var(--marca-900) 40%, transparent) 72%,
+      color-mix(in srgb, var(--marca-900) 20%, transparent) 100%
+    );
+  }
+  /* Los tres beneficios en una fila de tres columnas, icono encima. */
+  .hc-beneficios {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 1.6rem;
+  }
+  .hc-beneficios li {
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0 0.3rem;
+    text-align: center;
+  }
+  .hc-beneficios li:first-child { padding-left: 0.3rem; }
+  .hc-beneficio-icono svg { width: 22px; height: 22px; }
+  .hc-beneficio-texto { font-size: 0.72rem; align-items: center; }
+}
+@media (max-width: 380px) {
+  .hc-beneficio-texto span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cmp-btn:active { transform: none; }
+}
 /* ==========================================================================
    SPOTLIGHT — ProductSpotlight
    ========================================================================== */
@@ -392,6 +501,357 @@
   .ps-foto { aspect-ratio: 5 / 6; }
   .ps-gigante { top: 6%; translate: 0 0; }
   .ps-acciones .cmp-btn { width: 100%; justify-content: space-between; }
+}
+
+/* ---------- Variante «botánico» -------------------------------------------
+   Fondo blanco (ver «Fondo blanco» más abajo), ramas de trazo fino arriba, curvas
+   doradas abajo, foto apaisada a la izquierda, flechas en los bordes y
+   pestañas tipo tarjeta. Colores desde tokens del bloque, con la marca de
+   respaldo: `--ps-fondo`, `--ps-acento`, `--ps-dorado`. Ningún adorno
+   anima en bucle: solo cambian con la diapositiva. */
+.ps--botanico {
+  --ps-fondo-base: var(--ps-fondo, var(--marca-900));
+  --ps-acento-base: var(--ps-acento, var(--acento-400));
+  --ps-dorado-base: var(--ps-dorado, #c9a227);
+  --ps-salvia: color-mix(in srgb, var(--marca-300) 55%, var(--ps-fondo-base));
+  padding-block: clamp(2rem, 4.5vh, 3.4rem) clamp(1.6rem, 4vh, 2.6rem);
+  background:
+    radial-gradient(55% 70% at 78% 30%, color-mix(in srgb, var(--marca-600) 38%, transparent), transparent 70%),
+    radial-gradient(45% 60% at 18% 85%, color-mix(in srgb, var(--marca-700) 35%, transparent), transparent 70%),
+    linear-gradient(160deg, color-mix(in srgb, var(--ps-fondo-base) 92%, white) 0%, var(--ps-fondo-base) 45%, color-mix(in srgb, var(--ps-fondo-base) 80%, black) 100%);
+}
+.ps--botanico .ps-gigante {
+  left: auto;
+  right: -2vw;
+  font-size: clamp(6rem, 22vw, 20rem);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--ps-salvia) 22%, transparent);
+}
+
+/* Adornos: detrás de todo y sin puntero. */
+.psd { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.psd-rama { position: absolute; top: -18px; width: clamp(160px, 20vw, 300px); height: auto; }
+.psd-rama--izquierda { left: -36px; transform: scaleX(-1) rotate(8deg); }
+.psd-rama--derecha { right: -30px; transform: rotate(-4deg); }
+.psd-tallo,
+.psd-hoja,
+.psd-nervio,
+.psd-curva { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; }
+.psd-tallo { stroke: color-mix(in srgb, var(--ps-dorado-base) 55%, transparent); stroke-width: 1.4; }
+.psd-hoja { stroke: color-mix(in srgb, var(--ps-dorado-base) 70%, transparent); stroke-width: 1.2; }
+.psd-hoja--rellena { fill: color-mix(in srgb, var(--marca-500) 22%, transparent); stroke: color-mix(in srgb, var(--ps-salvia) 80%, transparent); }
+.psd-nervio { stroke: color-mix(in srgb, var(--ps-dorado-base) 45%, transparent); stroke-width: 0.9; }
+.psd-nervio--fino { stroke-width: 0.6; }
+.psd-curvas { position: absolute; left: 30%; right: 0; bottom: 0; width: 70%; height: clamp(110px, 18vw, 220px); }
+.psd-curva { stroke-width: 1.2; }
+.psd-curva--dorada { stroke: color-mix(in srgb, var(--ps-dorado-base) 55%, transparent); }
+.psd-curva--salvia { stroke: color-mix(in srgb, var(--ps-salvia) 45%, transparent); }
+.psd-curva--tenue { opacity: 0.5; }
+.ps--botanico .cmp-inner { position: relative; z-index: 1; }
+
+/* Foto apaisada, amplia, con esquinas redondeadas. */
+.ps--botanico .ps-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 4.5rem); }
+.ps--botanico.ps--carrusel .ps-foto {
+  aspect-ratio: 16 / 11;
+  height: auto;
+  min-height: 0;
+  max-height: min(50vh, 440px);
+  border-radius: clamp(1.2rem, 2.4vw, 2rem);
+  background: color-mix(in srgb, var(--ps-fondo-base) 70%, black);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ps-dorado-base) 18%, transparent),
+    0 40px 70px -30px rgba(0, 0, 0, 0.75);
+}
+.ps--botanico .ps-foto-capa { inset: -5% 0; }
+.ps--botanico .ps-puesto {
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem 0.45rem 0.7rem;
+  font-size: 1.45rem;
+  background: var(--ps-acento-base);
+}
+.ps-puesto-corona { flex: none; }
+
+/* Texto: jerarquía del mockup. */
+.ps--botanico .ps-texto .cmp-kicker { color: var(--ps-acento-base); letter-spacing: 0.22em; }
+.ps--botanico .ps-kicker-puesto { color: rgba(255, 255, 255, 0.72); }
+.ps--botanico .ps-texto h2 {
+  margin-top: 0.55rem;
+  font-size: clamp(2.4rem, 5.4vw, 5.4rem);
+  line-height: 0.92;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  text-wrap: balance;
+  text-shadow: 0 0 40px color-mix(in srgb, var(--marca-300) 25%, transparent);
+}
+.ps--botanico .ps-parrafo {
+  max-width: 28ch;
+  margin-top: 0.8rem;
+  font-size: clamp(1.1rem, 1.6vw, 1.45rem);
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.86);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ps--botanico .ps-parrafo em {
+  font-family: var(--fuente-editorial);
+  font-style: italic;
+  color: var(--ps-acento-base);
+}
+.ps--botanico .ps-precio { align-items: center; gap: 0.75rem; margin-top: 1rem; }
+.ps--botanico .ps-precio > span { padding-right: 0.75rem; border-right: 1px solid rgba(255, 255, 255, 0.3); font-size: 1.05rem; }
+.ps--botanico .ps-precio strong {
+  position: relative;
+  padding-bottom: 0.2rem;
+  font-size: clamp(2rem, 3.6vw, 2.9rem);
+}
+.ps--botanico .ps-precio strong::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -0.15rem;
+  width: 55%;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--ps-dorado-base), transparent);
+}
+.ps--botanico .ps-precio em { font-size: 0.85rem; color: rgba(255, 255, 255, 0.65); }
+.ps--botanico .ps-acciones { gap: 0.9rem; margin-top: 1.2rem; }
+.ps--botanico .cmp-btn--ambar { background: var(--ps-acento-base); }
+.ps-enlace--boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2rem;
+  min-height: 3.1rem;
+  padding: 0 1.4rem 0 1.6rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  text-decoration: none;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.ps-enlace--boton svg { transition: transform 0.2s var(--ease-cine); }
+.ps-enlace--boton:hover { background: rgba(255, 255, 255, 0.08); border-color: #fff; }
+.ps-enlace--boton:hover svg { transform: translateX(4px); }
+.ps-enlace--boton:active { transform: scale(0.98); }
+.ps-enlace--boton:focus-visible { outline: 2px solid var(--ps-acento-base); outline-offset: 3px; }
+
+/* Flechas a los bordes: círculos discretos, centrados en altura. */
+.ps-lado {
+  position: absolute;
+  top: 44%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  color: #fff;
+  background: color-mix(in srgb, var(--ps-fondo-base) 55%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  translate: 0 -50%;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s var(--ease-cine);
+}
+.ps-lado--anterior { left: clamp(0.6rem, 2vw, 2rem); }
+.ps-lado--siguiente { right: clamp(0.6rem, 2vw, 2rem); }
+.ps-lado:hover { background: rgba(255, 255, 255, 0.14); border-color: #fff; }
+.ps-lado:active { transform: scale(0.94); }
+.ps-lado:focus-visible { outline: 2px solid var(--ps-acento-base); outline-offset: 3px; }
+/* Con flechas a los lados, abajo quedan la pausa y los indicadores. */
+.ps--botanico .ps-flecha--paso { display: none; }
+
+/* Pestañas tipo tarjeta: miniatura, puesto y nombre. */
+.ps--botanico .ps-controles {
+  margin-top: clamp(1.3rem, 2.6vw, 2rem);
+  padding-top: 1rem;
+  border-top-color: color-mix(in srgb, var(--ps-salvia) 25%, transparent);
+}
+.ps--botanico .ps-pestana {
+  gap: 0.7rem;
+  padding: 0.45rem 1.1rem 0.45rem 0.45rem;
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 1.1rem;
+  background: color-mix(in srgb, var(--ps-fondo-base) 70%, black);
+  transition: color 0.25s, background-color 0.25s, border-color 0.25s, transform 0.25s var(--ease-cine);
+}
+.ps--botanico .ps-pestana:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.28); }
+.ps--botanico .ps-pestana.activa {
+  border-color: var(--ps-acento-base);
+  background: color-mix(in srgb, var(--marca-600) 30%, var(--ps-fondo-base));
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.7);
+}
+.ps--botanico .ps-pestana-foto { width: 2.7rem; height: 2.7rem; }
+.ps--botanico .ps-pestana-texto small { font-size: 0.78rem; letter-spacing: 0.04em; color: var(--ps-acento-base); }
+.ps--botanico .ps-pestana-barra { background: var(--ps-acento-base); }
+
+.ps-puntos { display: flex; align-items: center; gap: 0.35rem; padding-inline: 0.4rem; }
+.ps-puntos i {
+  display: block;
+  width: 1.1rem;
+  height: 0.38rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  transition: width 0.3s var(--ease-cine), background-color 0.3s;
+}
+.ps-puntos i.activo { width: 1.8rem; background: var(--ps-acento-base); }
+
+@media (max-width: 1024px) {
+  .ps-lado { top: 32%; width: 2.6rem; height: 2.6rem; }
+}
+@media (max-width: 780px) {
+  .ps--botanico .ps-grid { grid-template-columns: 1fr; gap: 1.4rem; }
+  .ps--botanico.ps--carrusel .ps-foto { aspect-ratio: 4 / 3; max-height: none; }
+  .ps--botanico .ps-texto h2 { font-size: clamp(2.3rem, 11vw, 3.4rem); }
+  .ps--botanico .ps-parrafo { font-size: 1.1rem; }
+  /* En el móvil se desliza la foto o se usan las flechas de abajo: las de
+     los bordes taparían la imagen. */
+  .ps-lado { display: none; }
+  .ps--botanico .ps-flecha--paso { display: grid; }
+  .ps--botanico .ps-acciones .ps-enlace--boton { width: 100%; justify-content: space-between; }
+  /* Menos adorno: solo una rama pequeña y tenue arriba a la derecha. */
+  .psd-rama--izquierda,
+  .psd-curvas { display: none; }
+  .psd-rama--derecha { width: 120px; opacity: 0.6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ps--botanico .ps-pestana,
+  .ps-puntos i,
+  .ps-lado,
+  .ps-enlace--boton svg { transition: none; }
+  .ps--botanico .ps-pestana:hover { transform: none; }
+}
+
+/* --- Fondo blanco: la variante «botánico» va sobre blanco (o el color del
+       token `--ps-fondo`). Todo lo que estaba pensado en claro sobre verde
+       pasa a oscuro sobre blanco, y el amarillo de los textos se oscurece
+       hasta tener contraste suficiente. El botón principal sigue amarillo
+       con texto oscuro. --- */
+.ps--botanico {
+  --ps-fondo-base: var(--ps-fondo, #fff);
+  --ps-acento-texto: color-mix(in srgb, var(--acento-600) 78%, black);
+  --ps-linea: color-mix(in srgb, var(--tinta) 14%, transparent);
+  color: var(--tinta);
+  background:
+    radial-gradient(50% 70% at 80% 25%, color-mix(in srgb, var(--marca-100) 55%, transparent), transparent 70%),
+    var(--ps-fondo-base);
+}
+.ps--botanico .ps-gigante { -webkit-text-stroke: 1px color-mix(in srgb, var(--marca-600) 12%, transparent); }
+.ps--botanico .psd-hoja--rellena { fill: color-mix(in srgb, var(--marca-500) 14%, transparent); stroke: color-mix(in srgb, var(--marca-600) 45%, transparent); }
+
+.ps--botanico.ps--carrusel .ps-foto {
+  background: var(--marca-100);
+  box-shadow:
+    0 0 0 1px var(--ps-linea),
+    0 30px 60px -32px rgba(var(--sombra-tinte), 0.55);
+}
+.ps--botanico .ps-foto-vacia { color: color-mix(in srgb, var(--marca-700) 25%, transparent); background: var(--marca-100); }
+
+.ps--botanico .ps-texto .cmp-kicker { color: var(--ps-acento-texto); }
+.ps--botanico .ps-kicker-puesto { color: var(--gris-600); }
+.ps--botanico .ps-texto h2 { color: var(--tinta); text-shadow: none; }
+.ps--botanico .ps-parrafo { color: color-mix(in srgb, var(--tinta) 78%, transparent); }
+.ps--botanico .ps-parrafo em { color: var(--ps-acento-texto); }
+.ps--botanico .ps-precio { color: var(--gris-600); }
+.ps--botanico .ps-precio > span { border-right-color: var(--ps-linea); }
+.ps--botanico .ps-precio strong { color: var(--tinta); }
+.ps--botanico .ps-precio em { color: var(--gris-600); }
+
+.ps--botanico .ps-enlace--boton { color: var(--tinta); border-color: color-mix(in srgb, var(--tinta) 28%, transparent); }
+.ps--botanico .ps-enlace--boton:hover { background: color-mix(in srgb, var(--marca-100) 60%, transparent); border-color: var(--marca-600); }
+.ps--botanico .ps-enlace--boton:focus-visible,
+.ps--botanico .cmp-btn:focus-visible { outline-color: var(--marca-600); }
+
+.ps--botanico .ps-lado {
+  color: var(--tinta);
+  border-color: var(--ps-linea);
+  background: color-mix(in srgb, var(--superficie) 88%, transparent);
+  box-shadow: 0 8px 20px -12px rgba(var(--sombra-tinte), 0.35);
+}
+.ps--botanico .ps-lado:hover { background: var(--marca-100); border-color: var(--marca-600); }
+.ps--botanico .ps-lado:focus-visible { outline-color: var(--marca-600); }
+
+.ps--botanico .ps-controles { border-top-color: var(--ps-linea); }
+.ps--botanico .ps-flecha { color: var(--tinta); border-color: var(--ps-linea); }
+.ps--botanico .ps-flecha:hover { background: var(--marca-100); border-color: var(--marca-600); }
+.ps--botanico .ps-pestana {
+  color: var(--gris-600);
+  border-color: var(--ps-linea);
+  background: var(--superficie);
+}
+.ps--botanico .ps-pestana:hover { color: var(--tinta); border-color: color-mix(in srgb, var(--marca-600) 40%, transparent); }
+.ps--botanico .ps-pestana.activa {
+  color: var(--tinta);
+  border-color: var(--ps-acento-base);
+  background: color-mix(in srgb, var(--marca-100) 55%, var(--superficie));
+  box-shadow: 0 10px 22px -16px rgba(var(--sombra-tinte), 0.5);
+}
+.ps--botanico .ps-pestana-foto { color: var(--marca-700); background: var(--marca-100); }
+.ps--botanico .ps-pestana-texto small { color: var(--ps-acento-texto); }
+.ps--botanico .ps-pestana:focus-visible,
+.ps--botanico .ps-flecha:focus-visible { outline-color: var(--marca-600); }
+.ps--botanico .ps-puntos i { background: color-mix(in srgb, var(--tinta) 16%, transparent); }
+.ps--botanico .ps-puntos i.activo { background: var(--ps-acento-base); }
+
+/* --- Marco de hojas y cinta dorada (`mostrar_marco`) ------------------
+       Una imagen con transparencia, detrás del contenido. El contenido se
+       mete dentro de la línea dorada y por encima de la cinta.
+       · Escritorio: la imagen entera estirada al bloque (las proporciones son
+         parecidas, ≈16:9).
+       · Tablet y móvil: el bloque es alto y estirarla deformaría las hojas.
+         Ahí va como `border-image`: las cuatro esquinas a escala y, en los
+         lados, solo se estira una franja donde hay línea dorada y nada más
+         (filas 345–372 de la imagen, medidas sobre el archivo). */
+.ps-marco {
+  position: absolute;
+  inset: clamp(0.3rem, 0.8vw, 0.9rem);
+  z-index: 0;
+  pointer-events: none;
+}
+@media (min-width: 901px) {
+  /* El marco se ciñe a un ancho máximo centrado (no a toda la ventana) y el
+     contenido va justo por dentro de él: menos aire muerto a los lados. */
+  .ps--con-marco {
+    --ps-marco-ancho: min(100% - 1.5rem, 1360px);
+    --ps-marco-margen: calc((100% - var(--ps-marco-ancho)) / 2);
+    padding-block: clamp(2.8rem, 4vw, 3.8rem) clamp(4.2rem, 6.5vw, 5.8rem);
+  }
+  .ps-marco {
+    inset: 0.35rem auto 0.35rem var(--ps-marco-margen);
+    width: var(--ps-marco-ancho);
+    background-image: var(--ps-marco);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
+  }
+  /* El marco ya trae las hojas: las ramas SVG sobrarían. */
+  .ps--con-marco .psd { display: none; }
+  /* Por dentro de la línea dorada (≈3 % del ancho del marco), con el aire justo
+     para que las flechas laterales no pisen la foto ni el texto. */
+  .ps--con-marco .cmp-inner { width: calc(var(--ps-marco-ancho) - 10.5rem); }
+  .ps--con-marco .ps-lado--anterior { left: calc(var(--ps-marco-margen) + 2.5rem); }
+  .ps--con-marco .ps-lado--siguiente { right: calc(var(--ps-marco-margen) + 2.5rem); }
+  .ps--con-marco .ps-lado { width: 2.6rem; height: 2.6rem; }
+  /* El nombre gigante de fondo, dentro del marco y aún más tenue. */
+  .ps--con-marco .ps-gigante { right: calc(var(--ps-marco-margen) + 3rem); opacity: 0.7; }
+}
+@media (max-width: 900px) {
+  /* Cortes en píxeles de la imagen (1677×938): arriba, derecha, abajo,
+     izquierda. Los anchos son esos cortes por 0.25: las hojas se ven a escala. */
+  .ps-marco {
+    border-style: solid;
+    border-color: transparent;
+    border-width: 86px 90px 142px 90px;
+    border-image-source: var(--ps-marco);
+    border-image-slice: 345 360 566 360;
+    border-image-repeat: stretch;
+  }
+  /* Con marco, las ramas SVG sobran, y el contenido se aleja del borde. */
+  .ps--con-marco .psd { display: none; }
+  .ps--con-marco { padding-block: 3.8rem 4.8rem; }
+  .ps--con-marco .cmp-inner { width: calc(100% - 3.4rem); }
 }
 
 /* ==========================================================================

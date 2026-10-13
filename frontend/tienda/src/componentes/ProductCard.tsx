@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties, MouseEvent } from "react";
+import { useState, type CSSProperties, type MouseEvent } from "react";
 import { claseDeVariante } from "@/bloques/Seccion";
 import { useTienda } from "@/estado/tienda";
 import { useSeleccionProducto } from "@/hooks/useSeleccionProducto";
@@ -48,6 +48,10 @@ interface Props {
  *
  * Una tarjeta cuyo producto ya está en el pedido lleva un borde de marca: en
  * un pedido de cuarenta líneas, ver de un vistazo qué ya se agregó importa.
+ *
+ * La foto sigue a la presentación elegida, igual que la galería de la ficha:
+ * pasar de "Libra" a "Bulto" en el desplegable muestra el bulto, con el mismo
+ * fundido. Lo que se ve y lo que se va a agregar nunca se contradicen.
  */
 export function ProductCard({ producto, variante, etiqueta, indice = 0, unidadPreferida = null }: Props) {
   const seleccion = useSeleccionProducto(producto, unidadPreferida);
@@ -56,7 +60,11 @@ export function ProductCard({ producto, variante, etiqueta, indice = 0, unidadPr
   const clase = claseDeVariante(variante, VARIANTES, "producto-card", "estandar");
   const esCompacta = clase.endsWith("compacta");
   const href = `/productos/${producto.slug}`;
-  const { presentacion, sinPresentaciones, agotado, enCarrito, agregado } = seleccion;
+  const { presentacion, sinPresentaciones, agotado, enCarrito, agregado, imagenUrl } = seleccion;
+  // El fundido solo cuando la foto cambia por una elección, no al montar la
+  // rejilla: ahí ya está la entrada escalonada de la tarjeta.
+  const [fotoInicial] = useState(imagenUrl);
+  const fotoCambiada = imagenUrl !== fotoInicial;
 
   function abrir(e: MouseEvent<HTMLAnchorElement>) {
     // Solo el clic "normal": con Ctrl/⌘/Mayús o el botón central el cliente
@@ -90,7 +98,12 @@ export function ProductCard({ producto, variante, etiqueta, indice = 0, unidadPr
   return (
     <article className={claseEstado} id={`producto-${producto.id}`} style={estilo}>
       <Link href={href} className="pcard-media" onClick={abrir} tabIndex={-1} aria-hidden="true">
-        <ImagenProducto producto={producto} tamanoIcono={esCompacta ? 30 : 76} />
+        <ImagenProducto
+          key={imagenUrl ?? "sin-foto"}
+          producto={{ ...producto, imagen_url: imagenUrl ?? null }}
+          tamanoIcono={esCompacta ? 30 : 76}
+          className={fotoCambiada ? "pimg--cambio" : ""}
+        />
         {!esCompacta && cinta}
       </Link>
 
