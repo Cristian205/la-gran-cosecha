@@ -27,6 +27,19 @@ class Archivo(ModeloConTenant):
     ancho = models.PositiveIntegerField(null=True, blank=True)
     alto = models.PositiveIntegerField(null=True, blank=True)
 
+    # Lo que dejó el optimizador (apps/media/optimizador.py). Vacío en videos,
+    # PDF, SVG y en lo subido antes de que existiera.
+    CALIDADES = [
+        ("BUENA", "Buena"),
+        ("ACEPTABLE", "Aceptable"),
+        ("BAJA", "Baja: pixelada, borrosa o pequeña"),
+    ]
+    calidad = models.CharField(max_length=10, choices=CALIDADES, blank=True, default="")
+    diagnostico = models.JSONField(default=dict, blank=True)
+    tamano_original = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Bytes del archivo tal como se subió, antes de optimizarlo."
+    )
+
     subido_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
     )

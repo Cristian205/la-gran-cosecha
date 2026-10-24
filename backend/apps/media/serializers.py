@@ -1,7 +1,9 @@
+from django.core.files.base import ContentFile
 from PIL import Image
 from rest_framework import serializers
 
 from .models import Archivo
+from .optimizador import procesar
 
 # content_type permitido -> (tipo derivado, límite en MB)
 TIPOS_PERMITIDOS = {
@@ -39,6 +41,9 @@ class ArchivoSerializer(serializers.ModelSerializer):
             "tamano",
             "ancho",
             "alto",
+            "calidad",
+            "diagnostico",
+            "tamano_original",
             "fecha_creacion",
             "subido_por_nombre",
         ]
@@ -46,7 +51,16 @@ class ArchivoSerializer(serializers.ModelSerializer):
             "archivo": {"write_only": True},
             "nombre_original": {"required": False},
         }
-        read_only_fields = ["tipo", "content_type", "tamano", "ancho", "alto"]
+        read_only_fields = [
+            "tipo",
+            "content_type",
+            "tamano",
+            "ancho",
+            "alto",
+            "calidad",
+            "diagnostico",
+            "tamano_original",
+        ]
 
     def get_url(self, obj):
         if not obj.archivo:
@@ -81,12 +95,25 @@ class ArchivoSerializer(serializers.ModelSerializer):
         validated_data["tamano"] = archivo.size
 
         if tipo == "IMAGEN" and archivo.content_type != "image/svg+xml":
-            try:
-                with Image.open(archivo) as img:
-                    validated_data["ancho"], validated_data["alto"] = img.size
-            except Exception:  # noqa: BLE001 — no bloquea la subida si Pillow no puede leerla
-                pass
-            archivo.seek(0)
+            resultado = procesar(archivo, archivo.name)
+            if resultado is not None:
+                # Se guarda la versión optimizada; el nombre que ve el panel
+                # sigue siendo el que eligió quien la subió.
+                if resultado.optimizada:
+                    validated_data["archivo"] = ContentFile(resultado.contenido, name=resultado.nombre)
+                validated_data["content_type"] = resultado.content_type
+                validated_data["tamano"] = resultado.tamano
+                validated_data["tamano_original"] = resultado.tamano_original
+                validated_data["ancho"], validated_data["alto"] = resultado.ancho, resultado.alto
+                validated_data["calidad"] = resultado.diagnostico.calidad
+                validated_data["diagnostico"] = resultado.diagnostico.como_dict()
+            else:
+                try:
+                    with Image.open(archivo) as img:
+                        validated_data["ancho"], validated_data["alto"] = img.size
+                except Exception:  # noqa: BLE001 — no bloquea la subida si Pillow no puede leerla
+                    pass
+                archivo.seek(0)
 
         request = self.context.get("request")
         if request and request.user and request.user.is_authenticated:
