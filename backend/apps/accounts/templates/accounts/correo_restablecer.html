@@ -1,0 +1,6 @@
+{% extends "accounts/correo_base.html" %}
+{% block asunto %}Restablecer contraseña{% endblock %}
+{% block preheader %}Su código para crear una contraseña nueva en {{ nombre_empresa }}. Vence en {{ minutos }} minutos.{% endblock %}
+{% block etiqueta %}Restablecer contraseña{% endblock %}
+{% block introduccion %}Recibimos una solicitud para restablecer la contraseña de su cuenta en el panel de {{ nombre_empresa }}. Escriba este código para continuar y elegir una contraseña nueva:{% endblock %}
+{% block cierre %}¿No pidió restablecer su contraseña? Ignore este mensaje: sin el código nadie puede cambiarla y su contraseña actual sigue funcionando.{% endblock %}

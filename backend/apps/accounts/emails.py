@@ -7,12 +7,35 @@ su propia identidad en el correo.
 """
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from apps.content.models import StoreSettings
 
+COLOR_POR_DEFECTO = "#16a34a"
 
-def enviar_codigo_otp(user, otp_code, tenant=None):
+
+def _es_hex(valor: str) -> bool:
+    """Solo un hexadecimal llega al HTML: el color se escribe en atributos."""
+    v = (valor or "").strip()
+    return v.startswith("#") and len(v) in (4, 7) and all(c in "0123456789abcdefABCDEF" for c in v[1:])
+
+
+def _oscurecer(color: str, cuanto: float = 0.62) -> str:
+    """
+    El color de la marca, oscurecido para el encabezado (verde oscuro con el
+    verde de La Gran Cosecha): el blanco del nombre contrasta sea cual sea el
+    color del negocio. Recibe un hexadecimal ya validado con `_es_hex`.
+    """
+    valor = color.strip().lstrip("#")
+    if len(valor) == 3:
+        valor = "".join(c * 2 for c in valor)
+    r, g, b = (int(valor[i : i + 2], 16) for i in (0, 2, 4))
+    return "#{:02x}{:02x}{:02x}".format(*(round(c * (1 - cuanto)) for c in (r, g, b)))
+
+
+def _contexto_de_marca(user, tenant):
+    """Nombre, colores y logo del negocio, y el nombre de la persona."""
     # El correo lleva la marca del negocio desde el que se inicia sesión. Sin
     # tenant (login antes de que la fase 4 lo resuelva) cae al puente de
     # get_para, que acierta mientras solo haya un negocio dado de alta.
@@ -20,14 +43,9 @@ def enviar_codigo_otp(user, otp_code, tenant=None):
     if config is None:
         config = StoreSettings()  # valores por defecto del modelo
     nombre_empresa = config.nombre_empresa or "Panel Administrativo"
-    color = config.color_primario or "#16a34a"
-
-    asunto = f"🔐 Código de Verificación - {nombre_empresa}"
-    mensaje_texto = (
-        f"Hola {user.nombre_usuario},\n"
-        f"Su código OTP es: {otp_code}\n"
-        f"Este código expirará en {settings.OTP_EXPIRY_MINUTES} minutos."
-    )
+    color = config.color_primario or COLOR_POR_DEFECTO
+    if not _es_hex(color):
+        color = COLOR_POR_DEFECTO
 
     # El logo se referencia por su URL publica en vez de incrustarlo como
     # adjunto con cid:. Motivos: la API de Brevo (ver
@@ -36,7 +54,8 @@ def enviar_codigo_otp(user, otp_code, tenant=None):
     #
     # Solo sirve si la URL es absoluta, que es lo que devuelve el storage de
     # Cloudflare R2. Con almacenamiento local es relativa ("/media/...") y no
-    # se puede resolver desde el correo, asi que se cae al placeholder.
+    # se puede resolver desde el correo: entonces el encabezado lleva solo el
+    # nombre, que se lee igual con las imágenes desactivadas.
     logo_url = ""
     if config.logo:
         try:
@@ -46,57 +65,23 @@ def enviar_codigo_otp(user, otp_code, tenant=None):
         except Exception:  # noqa: BLE001 - cada storage falla distinto
             logo_url = ""
 
-    if logo_url:
-        marca_html = (
-            f'<img src="{logo_url}" alt="" style="height:60px;border-radius:14px;" />'
-        )
-    else:
-        marca_html = (
-            '<div style="width:90px;height:90px;margin:auto;border-radius:50%;'
-            'background:rgba(255,255,255,.12);line-height:90px;font-size:42px;color:white;">🔒</div>'
-        )
+    return {
+        "nombre_empresa": nombre_empresa,
+        "nombre_usuario": user.nombre_usuario,
+        "color": color,
+        "color_oscuro": _oscurecer(color),
+        "logo_url": logo_url,
+        "anio": timezone.now().year,
+    }
 
-    html = f"""
-    <div style="margin:0;padding:50px 20px;background:#edf2f7;font-family:'Segoe UI',Arial,sans-serif;">
-      <div style="max-width:650px;margin:auto;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.12);">
-        <div style="height:8px;background:linear-gradient(90deg,{color},#0f172a);"></div>
-        <div style="background:linear-gradient(135deg,#0f172a,{color});text-align:center;padding:50px 30px;">
-          {marca_html}
-          <h1 style="color:white;margin:25px 0 10px;font-size:32px;font-weight:700;letter-spacing:1px;">{nombre_empresa}</h1>
-          <p style="color:rgba(255,255,255,.85);font-size:15px;margin:0;">Plataforma Administrativa Segura</p>
-        </div>
-        <div style="padding:50px 45px;">
-          <div style="display:inline-block;background:#e8fff1;color:{color};padding:8px 18px;border-radius:50px;font-size:13px;font-weight:600;margin-bottom:25px;">VERIFICACIÓN DE IDENTIDAD</div>
-          <h2 style="margin-top:0;color:#0f172a;font-size:28px;">Hola {user.nombre_usuario}</h2>
-          <p style="font-size:16px;color:#4b5563;line-height:1.8;">
-            Detectamos una solicitud de acceso a su cuenta. Para proteger la información
-            de la organización, confirme su identidad utilizando el siguiente código de verificación:
-          </p>
-          <div style="margin:40px 0;text-align:center;">
-            <div style="display:inline-block;padding:28px 45px;background:{color};border-radius:20px;box-shadow:0 12px 35px rgba(0,0,0,.2);">
-              <div style="color:white;font-size:14px;letter-spacing:2px;margin-bottom:10px;">CÓDIGO OTP</div>
-              <div style="color:white;font-size:44px;font-weight:800;letter-spacing:12px;">{otp_code}</div>
-            </div>
-          </div>
-          <div style="background:#fff8e1;border-left:5px solid #ffc107;padding:18px;border-radius:12px;margin-bottom:25px;">
-            <strong style="color:#856404;">Importante:</strong>
-            <div style="margin-top:6px;color:#856404;line-height:1.6;">
-              Este código expirará en <strong>{settings.OTP_EXPIRY_MINUTES} minutos</strong>.
-            </div>
-          </div>
-          <p style="font-size:15px;color:#6b7280;line-height:1.8;">
-            Si usted no realizó esta solicitud, puede ignorar este mensaje de forma segura.
-          </p>
-        </div>
-        <div style="background:#0f172a;text-align:center;padding:35px 20px;">
-          <div style="color:white;font-size:16px;font-weight:600;margin-bottom:10px;">{nombre_empresa}</div>
-          <div style="color:#94a3b8;font-size:13px;line-height:1.8;">Este correo fue generado automáticamente por el sistema de autenticación segura.</div>
-          <div style="margin-top:15px;color:#64748b;font-size:12px;">© {timezone.now().year} {nombre_empresa}. Todos los derechos reservados.</div>
-        </div>
-      </div>
-    </div>
+
+def _enviar(user, asunto: str, plantilla: str, contexto: dict) -> None:
     """
-
+    Envía `templates/accounts/<plantilla>.html` y su versión `.txt`. Las
+    plantillas escapan los datos: un nombre con «<» no inyecta HTML.
+    """
+    mensaje_texto = render_to_string(f"accounts/{plantilla}.txt", contexto).strip() + "\n"
+    html = render_to_string(f"accounts/{plantilla}.html", contexto)
     email = EmailMultiAlternatives(
         subject=asunto,
         body=mensaje_texto,
@@ -105,3 +90,24 @@ def enviar_codigo_otp(user, otp_code, tenant=None):
     )
     email.attach_alternative(html, "text/html")
     email.send(fail_silently=False)
+
+
+def enviar_codigo_otp(user, otp_code, tenant=None):
+    contexto = _contexto_de_marca(user, tenant)
+    contexto.update(otp_code=otp_code, minutos=settings.OTP_EXPIRY_MINUTES)
+    _enviar(user, f"🔐 Código de Verificación - {contexto['nombre_empresa']}", "correo_otp", contexto)
+
+
+def enviar_codigo_restablecer(user, codigo, tenant=None):
+    """El código para restablecer la contraseña («¿Olvidó su contraseña?»)."""
+    contexto = _contexto_de_marca(user, tenant)
+    contexto.update(otp_code=codigo, minutos=settings.OTP_EXPIRY_MINUTES)
+    _enviar(user, f"🔑 Restablecer contraseña - {contexto['nombre_empresa']}", "correo_restablecer", contexto)
+
+
+def enviar_aviso_password_cambiada(user, tenant=None):
+    """Aviso de que la contraseña cambió: si no fue la persona, se entera."""
+    contexto = _contexto_de_marca(user, tenant)
+    ahora = timezone.localtime()
+    contexto["cuando"] = f"{ahora:%Y-%m-%d} a las {ahora:%H:%M}"
+    _enviar(user, f"Su contraseña cambió - {contexto['nombre_empresa']}", "correo_password_cambiada", contexto)

@@ -1,0 +1,5 @@
+{% extends "accounts/correo_base.html" %}
+{% block asunto %}Código de verificación{% endblock %}
+{% block preheader %}Su código para entrar al panel de {{ nombre_empresa }}. Vence en {{ minutos }} minutos.{% endblock %}
+{% block introduccion %}Recibimos una solicitud para iniciar sesión en el panel de {{ nombre_empresa }}. Escriba este código para confirmar que es usted:{% endblock %}
+{% block cierre %}¿No intentó iniciar sesión? Ignore este mensaje: sin el código nadie puede entrar. Como este correo solo se envía después de escribir la contraseña correcta, le recomendamos cambiarla.{% endblock %}

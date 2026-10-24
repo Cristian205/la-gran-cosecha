@@ -1,0 +1,19 @@
+{% autoescape off %}{{ nombre_empresa }} · Panel administrativo
+Restablecer contraseña
+
+Hola, {{ nombre_usuario }}:
+
+Recibimos una solicitud para restablecer la contraseña de su cuenta en el panel de {{ nombre_empresa }}. Escriba este código para continuar y elegir una contraseña nueva:
+
+Su código de restablecimiento es: {{ otp_code }}
+
+Vence en {{ minutos }} minutos y solo sirve una vez.
+
+No comparta este código. Nadie de {{ nombre_empresa }} se lo pedirá por teléfono, chat ni correo.
+
+¿No pidió restablecer su contraseña? Ignore este mensaje: sin el código nadie puede cambiarla y su contraseña actual sigue funcionando.
+
+—
+{{ nombre_empresa }}
+Correo automático de seguridad. No responda a este mensaje.
+{% endautoescape %}

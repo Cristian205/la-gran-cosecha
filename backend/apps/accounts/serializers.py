@@ -156,6 +156,26 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, style={"input_type": "password"})
 
 
+class SolicitarResetSerializer(serializers.Serializer):
+    """Restablecimiento, paso 1: el correo de la cuenta."""
+
+    email_usuario = serializers.EmailField()
+
+
+class VerificarResetSerializer(serializers.Serializer):
+    """Restablecimiento, paso 2: el ticket del paso 1 y el código del correo."""
+
+    reset_ticket = serializers.CharField()
+    codigo = serializers.RegexField(r"^\d{6}$", error_messages={"invalid": "El código tiene 6 dígitos."})
+
+
+class NuevaPasswordSerializer(serializers.Serializer):
+    """Restablecimiento, paso 3: la contraseña nueva, con las reglas de siempre."""
+
+    cambio_ticket = serializers.CharField()
+    password_nueva = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+
 class VerifyOtpSerializer(serializers.Serializer):
     """Paso 2: ticket firmado + código OTP."""
 

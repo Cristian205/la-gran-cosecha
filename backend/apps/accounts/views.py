@@ -7,7 +7,10 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import Permission
+from django.contrib.auth.password_validation import validate_password
 from django.core import signing
+from django.core.exceptions import ValidationError as ErrorDeValidacion
+from django.utils.crypto import salted_hmac
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -21,13 +24,16 @@ from apps.common.permissions import EsAdministrador, es_owner, es_owner_de, requ
 from apps.tenancy.models import Membership
 from apps.tenancy.viewsets import ExigeNegocioMixin
 
-from .emails import enviar_codigo_otp
+from .emails import enviar_aviso_password_cambiada, enviar_codigo_otp, enviar_codigo_restablecer
 from .permisos import CATALOGO_PERMISOS
 from .serializers import (
     CambiarPasswordSerializer,
     CrearUsuarioSerializer,
     EditarUsuarioSerializer,
     LoginSerializer,
+    NuevaPasswordSerializer,
+    SolicitarResetSerializer,
+    VerificarResetSerializer,
     PermisosUsuarioSerializer,
     PreferenciasSerializer,
     UsuarioSerializer,
@@ -40,6 +46,12 @@ Usuario = get_user_model()
 # cuenta según la semántica anterior a la fase 3, y lo sigue siendo.
 ROL_A_PERTENENCIA = {"GERENTE": "OWNER", "ADMIN": "ADMIN", "ANALISTA": "STAFF"}
 logger = logging.getLogger(__name__)
+
+MENSAJE_CUENTA_BLOQUEADA = (
+    "Demasiados intentos con un código incorrecto. Por seguridad, la cuenta queda bloqueada "
+    f"{settings.OTP_BLOQUEO_MINUTOS} minutos. Si no fue usted, restablezca su contraseña desde "
+    "«¿Olvidó su contraseña?»."
+)
 
 
 def _generar_password_seguro(longitud=12):
@@ -212,6 +224,15 @@ class VerifyOtpView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        # El bloqueo se mira ANTES de comparar el código: si se mirara después,
+        # una cuenta bloqueada seguiría aceptando intentos y diciendo cuál
+        # acierta, que es justo lo que el bloqueo existe para impedir.
+        if user.esta_bloqueado():
+            return Response(
+                {"success": False, "message": MENSAJE_CUENTA_BLOQUEADA},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         if not user.token_expiracion:
             return Response(
                 {"success": False, "message": "El código OTP no existe."},
@@ -226,16 +247,38 @@ class VerifyOtpView(APIView):
 
         if not check_password(otp_ingresado, user.token_verificacion):
             user.intentos_fallidos += 1
+            if user.intentos_fallidos >= settings.OTP_MAX_INTENTOS:
+                # Seis dígitos son un millón de combinaciones: sin tope se
+                # adivinan probando. Al llegar al tope el código se anula y la
+                # cuenta se bloquea un rato. Llegar aquí exige haber escrito
+                # la contraseña correcta, así que el aviso sugiere cambiarla.
+                user.token_verificacion = None
+                user.token_expiracion = None
+                user.intentos_fallidos = 0
+                user.bloqueado_hasta = timezone.now() + timezone.timedelta(
+                    minutes=settings.OTP_BLOQUEO_MINUTOS
+                )
+                user.save(
+                    update_fields=[
+                        "intentos_fallidos",
+                        "token_verificacion",
+                        "token_expiracion",
+                        "bloqueado_hasta",
+                    ]
+                )
+                return Response(
+                    {"success": False, "message": MENSAJE_CUENTA_BLOQUEADA},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             user.save(update_fields=["intentos_fallidos"])
+            restantes = settings.OTP_MAX_INTENTOS - user.intentos_fallidos
             return Response(
-                {"success": False, "message": "Código de seguridad incorrecto."},
+                {
+                    "success": False,
+                    "message": f"Código de seguridad incorrecto. Le quedan {restantes} "
+                    f"{'intento' if restantes == 1 else 'intentos'}.",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if user.esta_bloqueado():
-            return Response(
-                {"success": False, "message": "Cuenta bloqueada temporalmente."},
-                status=status.HTTP_403_FORBIDDEN,
             )
 
         # Éxito: limpiar OTP y emitir tokens
@@ -611,3 +654,198 @@ class UsuarioViewSet(ExigeNegocioMixin, viewsets.ViewSet):
         pertenencia.permisos = sorted(codenames)
         pertenencia.save(update_fields=["permisos"])
         return Response({"success": True, "permisos": pertenencia.permisos})
+
+
+# ==========================================================================
+# RESTABLECER LA CONTRASEÑA («¿Olvidó su contraseña?»)
+# ==========================================================================
+# Tres pasos, sin sesión:
+#
+#   1. password-reset/           correo → si la cuenta existe y está activa,
+#                                se le envía un código de 6 dígitos. La
+#                                respuesta es SIEMPRE la misma: no dice qué
+#                                correos están registrados.
+#   2. password-reset/verificar/ ticket del paso 1 + código → ticket de cambio.
+#                                Máximo RESET_MAX_INTENTOS intentos por código.
+#   3. password-reset/nueva/     ticket de cambio + contraseña nueva, con los
+#                                mismos validadores que el resto del sistema.
+#
+# El código vive en sus propios campos (reset_*), separado del OTP del login:
+# uno no sirve para lo del otro. Vence con la misma vigencia que el del login
+# (OTP_EXPIRY_MINUTES) y se borra al usarse.
+
+MENSAJE_RESET_ENVIADO = (
+    "Si el correo pertenece a una cuenta activa, le enviamos un código para restablecer la contraseña."
+)
+MENSAJE_CODIGO_INVALIDO = "El código es incorrecto o ya venció."
+
+
+def _huella_password(user) -> str:
+    """
+    Cambia en cuanto cambia la contraseña: el ticket del paso 3 la lleva, así
+    que deja de servir después de usarse. Es un HMAC y no un trozo del hash:
+    el ticket viaja al navegador (firmado, pero legible).
+    """
+    return salted_hmac("accounts.reset.huella", user.password).hexdigest()[:20]
+
+
+class SolicitarResetView(APIView):
+    """Paso 1: enviar el código de restablecimiento al correo."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = SolicitarResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email_usuario"].strip().lower()
+
+        user = Usuario.objects.filter(email_usuario__iexact=email).first()
+        # Una cuenta bloqueada SÍ puede restablecer: el bloqueo salta cuando
+        # alguien que ya tiene la contraseña prueba códigos, y lo que su dueño
+        # necesita entonces es cambiarla cuanto antes.
+        if user is not None and user.is_active:
+            self._enviar_codigo(user)
+
+        return Response(
+            {
+                "success": True,
+                "message": MENSAJE_RESET_ENVIADO,
+                "reset_ticket": signing.dumps({"email": email}, salt=settings.RESET_TICKET_SALT),
+            }
+        )
+
+    def _enviar_codigo(self, user):
+        ahora = timezone.now()
+        vigencia = timezone.timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
+        # Pedirlo una y otra vez no llena la bandeja de nadie: entre dos
+        # envíos al mismo correo pasa al menos RESET_REENVIO_SEGUNDOS.
+        if user.reset_expira:
+            enviado_en = user.reset_expira - vigencia
+            if ahora - enviado_en < timezone.timedelta(seconds=settings.RESET_REENVIO_SEGUNDOS):
+                return
+
+        codigo = f"{secrets.randbelow(1_000_000):06d}"
+        user.reset_codigo = make_password(codigo)
+        user.reset_expira = ahora + vigencia
+        user.reset_intentos = 0
+        user.save(update_fields=["reset_codigo", "reset_expira", "reset_intentos"])
+        try:
+            enviar_codigo_restablecer(user, codigo, _negocio_por_defecto(user))
+        except Exception:  # noqa: BLE001
+            # La respuesta no cambia (no puede delatar que la cuenta existe),
+            # pero el fallo de envío queda en el registro.
+            logger.exception("Fallo al enviar el código de restablecimiento a %s", user.email_usuario)
+
+
+class VerificarResetView(APIView):
+    """Paso 2: comprobar el código y entregar el ticket para cambiar la contraseña."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = VerificarResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            payload = signing.loads(
+                serializer.validated_data["reset_ticket"],
+                salt=settings.RESET_TICKET_SALT,
+                max_age=settings.OTP_EXPIRY_MINUTES * 60,
+            )
+        except signing.BadSignature:  # incluye SignatureExpired
+            return Response(
+                {"success": False, "message": "La solicitud venció. Pida un código nuevo."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = Usuario.objects.filter(email_usuario__iexact=payload.get("email", ""), is_active=True).first()
+        if user is None or not user.reset_codigo or not user.reset_expira or timezone.now() > user.reset_expira:
+            return Response({"success": False, "message": MENSAJE_CODIGO_INVALIDO}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not check_password(serializer.validated_data["codigo"], user.reset_codigo):
+            user.reset_intentos += 1
+            campos = ["reset_intentos"]
+            mensaje = MENSAJE_CODIGO_INVALIDO
+            if user.reset_intentos >= settings.RESET_MAX_INTENTOS:
+                # Se anula: adivinar 6 dígitos con intentos ilimitados es
+                # cuestión de tiempo.
+                user.reset_codigo = None
+                user.reset_expira = None
+                campos += ["reset_codigo", "reset_expira"]
+                mensaje = "Demasiados intentos. Pida un código nuevo."
+            user.save(update_fields=campos)
+            return Response({"success": False, "message": mensaje}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Bien: el código se consume (solo sirve una vez).
+        user.reset_codigo = None
+        user.reset_expira = None
+        user.reset_intentos = 0
+        user.save(update_fields=["reset_codigo", "reset_expira", "reset_intentos"])
+        cambio_ticket = signing.dumps(
+            {"uid": str(user.uid), "huella": _huella_password(user)}, salt=settings.RESET_CAMBIO_SALT
+        )
+        return Response({"success": True, "cambio_ticket": cambio_ticket})
+
+
+class NuevaPasswordResetView(APIView):
+    """Paso 3: guardar la contraseña nueva."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = NuevaPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            payload = signing.loads(
+                serializer.validated_data["cambio_ticket"],
+                salt=settings.RESET_CAMBIO_SALT,
+                max_age=settings.OTP_EXPIRY_MINUTES * 60,
+            )
+        except signing.BadSignature:
+            return Response(
+                {"success": False, "message": "La verificación venció. Pida un código nuevo."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = Usuario.objects.filter(uid=payload.get("uid"), is_active=True).first()
+        if user is None or payload.get("huella") != _huella_password(user):
+            return Response(
+                {"success": False, "message": "Esta verificación ya se usó. Pida un código nuevo."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        nueva = serializer.validated_data["password_nueva"]
+        try:
+            validate_password(nueva, user=user)
+        except ErrorDeValidacion as error:
+            return Response(
+                {"success": False, "message": " ".join(error.messages), "password_nueva": error.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(nueva)
+        user.debe_cambiar_password = False
+        # Quien demuestra que controla el correo recupera el acceso: se limpian
+        # el bloqueo y los intentos, y cualquier OTP de login pendiente.
+        user.intentos_fallidos = 0
+        user.bloqueado_hasta = None
+        user.token_verificacion = None
+        user.token_expiracion = None
+        user.save(
+            update_fields=[
+                "password",
+                "debe_cambiar_password",
+                "intentos_fallidos",
+                "bloqueado_hasta",
+                "token_verificacion",
+                "token_expiracion",
+            ]
+        )
+        try:
+            enviar_aviso_password_cambiada(user, _negocio_por_defecto(user))
+        except Exception:  # noqa: BLE001
+            logger.exception("Fallo al enviar el aviso de contraseña cambiada a %s", user.email_usuario)
+
+        return Response({"success": True, "message": "Su contraseña se cambió. Ya puede iniciar sesión."})
