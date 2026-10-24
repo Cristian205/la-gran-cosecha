@@ -243,3 +243,17 @@ def test_el_comando_solo_diagnostica_la_biblioteca(api_owner):
     archivo.refresh_from_db()
     assert archivo.calidad == BAJA
     assert archivo.diagnostico["ampliada"] is True
+
+
+@pytest.mark.django_db
+def test_el_logo_se_guarda_en_png_para_que_salga_en_los_correos(negocio):
+    """Outlook de escritorio no muestra WebP; el logo va en el correo del OTP."""
+    from apps.content.models import StoreSettings
+
+    config = StoreSettings.get_para(negocio) or StoreSettings.objects.create()
+    config.logo = ContentFile(_bytes(_foto(2400, 2400).convert("RGBA")), name="logo.png")
+    config.save()
+    assert config.logo.name.endswith(".png")
+    with config.logo.open("rb") as f:
+        imagen = Image.open(f)
+        assert imagen.format == "PNG" and max(imagen.size) == 2000

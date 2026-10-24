@@ -18,6 +18,8 @@ from django.db.models import ImageField
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
+from apps.tenancy.almacenamiento import ruta_identidad
+
 from .optimizador import BAJA, procesar
 
 logger = logging.getLogger(__name__)
@@ -37,7 +39,10 @@ def optimizar_imagenes_subidas(sender, instance, raw=False, update_fields=None, 
         # guardado no se vuelve a procesar en cada save().
         if not archivo or archivo._committed:
             continue
-        resultado = procesar(archivo.file, archivo.name)
+        # El logo también viaja en correos (el del código OTP) y Outlook de
+        # escritorio no muestra WebP: la identidad se guarda en PNG.
+        formato = "PNG" if getattr(campo, "upload_to", None) is ruta_identidad else "WEBP"
+        resultado = procesar(archivo.file, archivo.name, formato)
         if resultado is None:
             continue
         if resultado.diagnostico.calidad == BAJA:

@@ -28,6 +28,7 @@ from django.db.models import ImageField
 
 from apps.media.models import Archivo
 from apps.media.optimizador import BAJA, procesar
+from apps.tenancy.almacenamiento import ruta_identidad
 
 
 def _kb(n: int) -> str:
@@ -75,10 +76,10 @@ class Command(BaseCommand):
             filas = filas.filter(tenant__slug=self.negocio)
         return filas
 
-    def _abrir(self, archivo):
+    def _abrir(self, archivo, formato="WEBP"):
         try:
             with archivo.open("rb") as f:
-                return procesar(f, archivo.name)
+                return procesar(f, archivo.name, formato)
         except (FileNotFoundError, OSError) as error:
             self.stdout.write(self.style.ERROR(f"  no se pudo leer {archivo.name}: {error}"))
             return None
@@ -87,11 +88,14 @@ class Command(BaseCommand):
         etiqueta = f"{modelo._meta.label}.{campo.name}"
         for fila in self._filas(modelo).exclude(**{campo.name: ""}).exclude(**{f"{campo.name}__isnull": True}):
             archivo = getattr(fila, campo.attname)
-            resultado = self._abrir(archivo)
+            # Los logos en PNG: también van en correos, y Outlook no muestra WebP.
+            formato = "PNG" if campo.upload_to is ruta_identidad else "WEBP"
+            resultado = self._abrir(archivo, formato)
             if resultado is None:
                 continue
             self._anotar(f"{etiqueta} #{fila.pk}", archivo.name, resultado)
-            if not resultado.optimizada or resultado.tamano >= resultado.tamano_original:
+            convertir_logo = formato == "PNG" and not archivo.name.lower().endswith(".png")
+            if not resultado.optimizada or (resultado.tamano >= resultado.tamano_original and not convertir_logo):
                 continue
             if self.dry_run:
                 continue
