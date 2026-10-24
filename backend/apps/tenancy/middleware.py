@@ -14,7 +14,11 @@ Tres fuentes, en orden de prioridad:
    no sirve para identificarlo. La clave compartida es lo que distingue esa
    llamada de servidor a servidor de cualquiera hecha desde un navegador; nunca
    sale al cliente.
-4. La cabecera `X-Tenant` a secas — solo si `TENANCY_ACEPTA_CABECERA` está
+4. El `Origin` de un panel administrativo conocido (`TENANCY_ORIGENES_PANEL`)
+   — la pantalla de acceso, que se viste con el logo y los colores del
+   negocio antes de que haya sesión. Solo en lecturas (GET/HEAD) y sin
+   token: no da acceso a nada que la tienda pública no muestre ya.
+5. La cabecera `X-Tenant` a secas — solo si `TENANCY_ACEPTA_CABECERA` está
    activo (desarrollo y tests). En producción va apagada: sin clave ni
    comprobación de pertenencia, sería un cambio de negocio a voluntad.
 
@@ -87,6 +91,7 @@ class TenantMiddleware:
         for fuente in (
             self._tenant_del_jwt,
             self._tenant_del_host,
+            self._tenant_del_origen,
             self._tenant_de_cabecera,
         ):
             tenant = fuente(request)
@@ -208,6 +213,27 @@ class TenantMiddleware:
             return dominio.tenant if dominio else None
 
         return None
+
+    def _tenant_del_origen(self, request):
+        """
+        El negocio del panel desde el que se pide, para leer sin sesión.
+
+        Con un token no se mira: el negocio de quien ya entró lo dice el JWT,
+        y si el token no trae uno, no se le inventa por el origen. Solo en
+        lecturas, que es lo único que necesita la pantalla de acceso.
+        """
+        if request.method not in ("GET", "HEAD"):
+            return None
+        if request.META.get("HTTP_AUTHORIZATION", ""):
+            return None
+        origen = request.META.get("HTTP_ORIGIN", "")
+        if not origen:
+            return None
+        hostname = origen.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0].lower()
+        slug = getattr(settings, "TENANCY_ORIGENES_PANEL", {}).get(hostname)
+        if not slug:
+            return None
+        return Tenant.objects.filter(slug=slug).first()
 
     def _tenant_de_cabecera(self, request):
         if not getattr(settings, "TENANCY_ACEPTA_CABECERA", False):
