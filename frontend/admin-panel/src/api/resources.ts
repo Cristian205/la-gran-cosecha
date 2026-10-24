@@ -425,6 +425,57 @@ export interface ClientePayload {
   documento_cliente?: string;
   /** El equipo puede registrar el consentimiento que el cliente dio por teléfono o en persona. */
   acepta_whatsapp?: boolean;
+  /** Solo las alertas que cambian: `{código: true/false}`. */
+  alertas?: Record<string, boolean>;
+}
+
+/** Una alerta que la plataforma puede enviarle a un cliente (apps/orders/alertas_cliente.py). */
+export interface AlertaCliente {
+  codigo: string;
+  tipo: "UTILIDAD" | "MARKETING";
+  canal: "WHATSAPP" | "CORREO";
+  por_defecto: boolean;
+  nombre: string;
+  descripcion: string;
+}
+
+/** Lo que ha sido un cliente para el negocio (apps/orders/hoja_de_vida.py). Montos como texto decimal. */
+export interface HojaDeVidaCliente {
+  cliente_desde: string | null;
+  dias_como_cliente: number;
+  total_pedidos: number;
+  valor_total: string;
+  ticket_promedio: string | null;
+  primer_pedido: string | null;
+  ultimo_pedido: string | null;
+  dias_desde_ultimo: number | null;
+  frecuencia_dias: number | null;
+  dia_favorito: { dia: string; veces: number } | null;
+  pedido_mayor: { id: number; total: string; fecha: string } | null;
+  estados: Record<string, number>;
+  productos_favoritos: { nombre: string; veces: number }[];
+  productos_distintos: number;
+  lineas_fuera_de_catalogo: number;
+  relacion: { codigo: "SIN_PEDIDOS" | "NUEVO" | "FRECUENTE" | "OCASIONAL" | "INACTIVO"; etiqueta: string; regla: string };
+  hitos: { fecha: string; tipo: string; texto: string; valor?: string }[];
+  pedidos_recientes: {
+    id: number;
+    fecha: string;
+    estado: string;
+    estado_etiqueta: string;
+    total: string;
+    productos: number;
+  }[];
+}
+
+export async function obtenerHojaDeVidaCliente(id: number): Promise<HojaDeVidaCliente> {
+  const { data } = await api.get<HojaDeVidaCliente>(`/clients/${id}/hoja-de-vida/`);
+  return data;
+}
+
+export async function obtenerAlertasCliente(): Promise<AlertaCliente[]> {
+  const { data } = await api.get<AlertaCliente[]>("/clients/alertas/");
+  return data;
 }
 
 export async function crearCliente(payload: ClientePayload): Promise<Cliente> {

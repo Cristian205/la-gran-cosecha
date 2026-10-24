@@ -4,6 +4,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { obtenerEstadisticas } from "../api/resources";
 import { obtenerResumenNotificaciones } from "../api/notifications";
+import { ColumnasAjustables } from "./ColumnasAjustables";
 import { CommandPalette } from "./CommandPalette";
 import { Sidebar, useModoSidebar } from "./Sidebar";
 import type { Estadisticas } from "../types";
@@ -221,6 +222,7 @@ export function Layout() {
         </header>
 
         <Outlet />
+        <ColumnasAjustables />
       </div>
 
       {paletaAbierta && <CommandPalette onCerrar={() => setPaletaAbierta(false)} />}

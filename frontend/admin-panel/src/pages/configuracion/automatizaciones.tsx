@@ -18,6 +18,7 @@ import { alertaError, alertaExito } from "../../utils/alertas";
 import { rutaDe } from "./rutas";
 import { CabeceraVista, Cargando, ErrorCarga, Estado, Grupo, Interruptor, SoloLectura, type TipoEstado } from "./ui";
 import { ModalPlantilla, useWhatsApp } from "./whatsapp";
+import { fechaISO } from "../../utils/fechas";
 
 const ESTADO_MENSAJE: Record<EstadoMensaje, { tipo: TipoEstado; texto: string }> = {
   PENDIENTE: { tipo: "aviso", texto: "Pendiente" },
@@ -29,8 +30,7 @@ const ESTADO_MENSAJE: Record<EstadoMensaje, { tipo: TipoEstado; texto: string }>
 };
 
 function fecha(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" });
+  return fechaISO(iso, true);
 }
 
 /**

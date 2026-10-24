@@ -4,6 +4,7 @@ import { Modal } from "../../components/Modal";
 import { obtenerLote } from "../../api/resources";
 import type { LoteDetalle } from "../../types";
 import { formatoFecha, formatoPrecio } from "../../utils";
+import { fechaISO } from "../../utils/fechas";
 import { Tooltip } from "../../components/Tooltip";
 
 interface Props {
@@ -71,7 +72,7 @@ export function LoteDetailModal({ loteId, onCerrar, onVerPedido }: Props) {
                   <tr key={p.id}>
                     <td>#{p.id}</td>
                     <td>{p.cliente_nombre || "—"}</td>
-                    <td>{formatoFecha(p.fecha_pedido)}</td>
+                    <td className="celda-fecha">{fechaISO(p.fecha_pedido, true)}</td>
                     <td className="num">{p.num_items}</td>
                     <td className="num" style={{ fontWeight: 700 }}>{formatoPrecio(p.total_pedido)}</td>
                     <td>

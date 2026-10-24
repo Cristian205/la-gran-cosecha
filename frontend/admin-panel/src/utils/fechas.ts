@@ -6,6 +6,21 @@ export function fechaLocalISO(d: Date): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
+/**
+ * La fecha de una tabla en formato ISO 8601 y hora LOCAL: «2026-10-23» o, con
+ * `conHora`, «2026-10-23 14:05» (24 h). Ordena bien a la vista, no depende del
+ * idioma y se compara de un vistazo. Vacío o inválido: «—».
+ */
+export function fechaISO(iso: string | null | undefined, conHora = false): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  if (!conHora) return fechaLocalISO(d);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${fechaLocalISO(d)} ${hh}:${mi}`;
+}
+
 export function hoyISO(): string {
   return fechaLocalISO(new Date());
 }

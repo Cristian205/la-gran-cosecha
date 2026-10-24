@@ -9,11 +9,13 @@ import {
 import { PendingProductApprovalModal } from "./products/PendingProductApprovalModal";
 import { Tooltip } from "../components/Tooltip";
 import { ColumnPickerButton } from "../components/ColumnPickerButton";
+import { BotonFiltros, FilaFiltros, useFiltrosColumna, type DefsFiltros } from "../components/gestion/FiltrosColumna";
 import { ThOrdenable } from "../components/ThOrdenable";
 import { useColumnas } from "../hooks/useColumnas";
 import { useOrdenTabla, type ExtractoresOrden } from "../hooks/useOrdenTabla";
 import type { Categoria, ProductoPendiente, UnidadMedida } from "../types";
-import { extraerMensajeError, formatoFecha } from "../utils";
+import { extraerMensajeError } from "../utils";
+import { fechaISO } from "../utils/fechas";
 import { alertaError, confirmarRechazo } from "../utils/alertas";
 
 const DEFINICIONES_PENDIENTES: Record<string, { etiqueta: string; render: (p: ProductoPendiente) => ReactNode }> = {
@@ -22,7 +24,7 @@ const DEFINICIONES_PENDIENTES: Record<string, { etiqueta: string; render: (p: Pr
   categoria: { etiqueta: "Categoría", render: (p) => p.categoria_nombre || "—" },
   pedido: { etiqueta: "Pedido", render: (p) => `#${p.pedido}` },
   cliente: { etiqueta: "Cliente", render: (p) => p.cliente_nombre || "—" },
-  fecha: { etiqueta: "Fecha", render: (p) => formatoFecha(p.fecha_modificacion) },
+  fecha: { etiqueta: "Fecha", render: (p) => fechaISO(p.fecha_modificacion, true) },
 };
 const CLAVES_PENDIENTES = Object.keys(DEFINICIONES_PENDIENTES);
 const ETIQUETAS_PENDIENTES = Object.fromEntries(
@@ -38,7 +40,17 @@ const EXTRACTORES_PENDIENTES: ExtractoresOrden<ProductoPendiente> = {
   fecha: (p) => p.fecha_modificacion,
 };
 
+/** El filtro bajo cada columna (botón «Filtros»). */
+const FILTROS_PENDIENTES: DefsFiltros<ProductoPendiente> = {
+  producto: { tipo: "texto", valor: (p) => p.nombre_personalizado ?? "" },
+  categoria: { tipo: "texto", valor: (p) => p.categoria_nombre ?? "" },
+  pedido: { tipo: "texto", valor: (p) => String(p.pedido), placeholder: "N.º…" },
+  cliente: { tipo: "texto", valor: (p) => p.cliente_nombre ?? "" },
+  fecha: { tipo: "fecha", valor: (p) => p.fecha_modificacion },
+};
+
 export function PendingProductsPage() {
+  const filtros = useFiltrosColumna(FILTROS_PENDIENTES);
   const [pendientes, setPendientes] = useState<ProductoPendiente[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
@@ -95,12 +107,15 @@ export function PendingProductsPage() {
         <div className="panel">
           <div className="cabecera">
             <h2>Sugeridos por clientes ({pendientes.length})</h2>
+            <div className="barra-derecha">
+            <BotonFiltros abiertos={filtros.abiertos} activos={filtros.activos} onAlternar={filtros.alternar} />
             <ColumnPickerButton
               estado={columnasEstado}
               etiquetas={ETIQUETAS_PENDIENTES}
               onAlternar={alternarColumna}
               onRestablecer={restablecerColumnas}
             />
+            </div>
           </div>
 
           <div className="tabla-scroll">
@@ -120,6 +135,15 @@ export function PendingProductsPage() {
                   ))}
                   <th>Acciones</th>
                 </tr>
+                {filtros.abiertos && (
+                  <FilaFiltros
+                    columnas={columnasVisibles}
+                    defs={FILTROS_PENDIENTES}
+                    etiquetas={ETIQUETAS_PENDIENTES}
+                    valores={filtros.valores}
+                    onCambiar={filtros.cambiar}
+                  />
+                )}
               </thead>
               <tbody>
                 {cargando ? (
@@ -141,7 +165,7 @@ export function PendingProductsPage() {
                     </td>
                   </tr>
                 ) : (
-                  ordenar(pendientes, EXTRACTORES_PENDIENTES).map((p) => (
+                  ordenar(filtros.aplicar(pendientes), EXTRACTORES_PENDIENTES).map((p) => (
                     <tr key={p.id}>
                       {columnasVisibles.map((clave) => (
                         <td key={clave}>{DEFINICIONES_PENDIENTES[clave].render(p)}</td>

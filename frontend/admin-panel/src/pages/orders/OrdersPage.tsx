@@ -50,7 +50,7 @@ import {
   TarjetaKpi,
   type AccionMenu,
 } from "../../components/gestion/Gestion";
-import { fechaCorta, fechaLocalISO, hoyISO } from "../../utils/fechas";
+import { fechaISO, fechaLocalISO, hoyISO } from "../../utils/fechas";
 import {
   ETIQUETAS_ESTADO,
   EstadoPedido,
@@ -59,6 +59,7 @@ import {
   rangoDelPeriodo,
   type Periodo,
 } from "./pedidosUi";
+import { BotonFiltros, FilaFiltros, useFiltrosColumna, type DefsFiltros } from "../../components/gestion/FiltrosColumna";
 import "./pedidos.css";
 
 /** Lo que devuelve `obtenerPedidos` como máximo (su `page_size`). */
@@ -86,7 +87,7 @@ const DEFINICIONES_PEDIDOS: Record<
     etiqueta: "Fecha",
     render: (p) => (
       <time className="celda-fecha" dateTime={p.fecha_pedido} title={formatoFecha(p.fecha_pedido)}>
-        {fechaCorta(p.fecha_pedido)}
+        {fechaISO(p.fecha_pedido, true)}
       </time>
     ),
   },
@@ -110,6 +111,24 @@ const CLAVES_PEDIDOS = Object.keys(DEFINICIONES_PEDIDOS);
 const ETIQUETAS_PEDIDOS = Object.fromEntries(
   Object.entries(DEFINICIONES_PEDIDOS).map(([clave, def]) => [clave, def.etiqueta])
 );
+
+/**
+ * El filtro bajo cada columna (botón «Filtros»). El de estado, además, viaja
+ * al servidor (como antes el selector de la barra): por eso los indicadores
+ * siguen funcionando igual.
+ */
+const FILTROS_PEDIDOS: DefsFiltros<Pedido> = {
+  id: { tipo: "texto", valor: (p) => String(p.id), placeholder: "N.º…" },
+  cliente: { tipo: "texto", valor: (p) => p.cliente_nombre ?? "" },
+  fecha: { tipo: "fecha", valor: (p) => p.fecha_pedido },
+  items: { tipo: "numero", valor: (p) => p.num_items },
+  total: { tipo: "numero", valor: (p) => parseFloat(p.total_pedido) },
+  estado: {
+    tipo: "opciones",
+    valor: (p) => p.estado,
+    opciones: Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) => ({ valor, etiqueta })),
+  },
+};
 
 const EXTRACTORES_PEDIDOS: ExtractoresOrden<Pedido> = {
   id: (p) => p.id,
@@ -154,6 +173,7 @@ interface TablaPedidosProps {
   onImprimir: (id: number) => void;
   onEntregar: (id: number) => void;
   onEliminar: (id: number) => void;
+  filtros: { abiertos: boolean; valores: Record<string, string>; onCambiar: (clave: string, valor: string) => void };
 }
 
 function TablaPedidos({
@@ -177,6 +197,7 @@ function TablaPedidos({
   onImprimir,
   onEntregar,
   onEliminar,
+  filtros,
 }: TablaPedidosProps) {
   const idsVisibles = lista.map((p) => p.id);
   const todosSeleccionados = idsVisibles.length > 0 && idsVisibles.every((id) => seleccion.has(id));
@@ -249,6 +270,16 @@ function TablaPedidos({
               <span className="sr-only">Acciones</span>
             </th>
           </tr>
+          {filtros.abiertos && (
+            <FilaFiltros
+              columnas={columnasVisibles}
+              defs={FILTROS_PEDIDOS}
+              etiquetas={ETIQUETAS_PEDIDOS}
+              valores={filtros.valores}
+              onCambiar={filtros.onCambiar}
+              antes={1}
+            />
+          )}
         </thead>
         <tbody>
           {cargando && lista.length === 0 ? (
@@ -347,7 +378,14 @@ export function OrdersPage() {
   // Filtros. Si se llega buscando (desde la paleta de comandos), se busca en
   // todas las fechas: el pedido que se busca rara vez es de hoy.
   const [busqueda, setBusqueda] = useState(qInicial);
-  const [estado, setEstado] = useState("");
+  const filtros = useFiltrosColumna(FILTROS_PEDIDOS);
+  // El estado es el filtro de su columna, y también se le pide al servidor.
+  const estado = filtros.valores.estado ?? "";
+  const setEstado = (valor: string) => {
+    filtros.cambiar("estado", valor);
+    // Si un indicador lo fija, la fila de filtros se abre para que se vea.
+    if (valor) filtros.abrir();
+  };
   const [periodo, setPeriodo] = useState<Periodo>(qInicial ? "todas" : "hoy");
   const [rangoDesde, setRangoDesde] = useState(hoyISO);
   const [rangoHasta, setRangoHasta] = useState(hoyISO);
@@ -508,11 +546,11 @@ export function OrdersPage() {
 
   // ---------- Filtros ----------
 
-  const hayFiltros = Boolean(busqueda || estado || periodo !== "hoy");
+  const hayFiltros = Boolean(busqueda || filtros.activos || periodo !== "hoy");
 
   function limpiarFiltros() {
     setBusqueda("");
-    setEstado("");
+    filtros.limpiar();
     setPeriodo("hoy");
     setKpiPulsado(null);
   }
@@ -677,9 +715,9 @@ export function OrdersPage() {
   // ---------- Render ----------
 
   const listaOrdenada = useMemo(
-    () => ordenar(pedidos, EXTRACTORES_PEDIDOS),
+    () => ordenar(filtros.aplicar(pedidos), EXTRACTORES_PEDIDOS),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pedidos, columnaOrden, direccionOrden]
+    [pedidos, filtros.aplicar, columnaOrden, direccionOrden]
   );
   const nombrePeriodo = etiquetaPeriodo(periodo, rangoDesde, rangoHasta);
   const puedeEntregar = tienePermiso(actual, "orders.change_pedido");
@@ -737,6 +775,14 @@ export function OrdersPage() {
     onImprimir: imprimir,
     onEntregar: entregarUno,
     onEliminar: eliminar,
+    filtros: {
+      abiertos: filtros.abiertos,
+      valores: filtros.valores,
+      onCambiar: (clave: string, valor: string) => {
+        filtros.cambiar(clave, valor);
+        setKpiPulsado(null);
+      },
+    },
   };
 
   return (
@@ -871,19 +917,6 @@ export function OrdersPage() {
                   )}
                 </div>
                 <select
-                  className={`select-filtro ${estado ? "con-valor" : ""}`}
-                  value={estado}
-                  onChange={(e) => setEstado(e.target.value)}
-                  aria-label="Filtrar por estado"
-                >
-                  <option value="">Todos los estados</option>
-                  {Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) => (
-                    <option key={valor} value={valor}>
-                      {etiqueta}
-                    </option>
-                  ))}
-                </select>
-                <select
                   className={`select-filtro ${periodo !== "hoy" ? "con-valor" : ""}`}
                   value={periodo}
                   onChange={(e) => setPeriodo(e.target.value as Periodo)}
@@ -919,6 +952,7 @@ export function OrdersPage() {
                     <X size={14} /> Limpiar filtros
                   </button>
                 )}
+                <BotonFiltros abiertos={filtros.abiertos} activos={filtros.activos} onAlternar={filtros.alternar} />
                 <ColumnPickerButton
                   estado={columnasEstado}
                   etiquetas={ETIQUETAS_PEDIDOS}
@@ -1059,7 +1093,7 @@ export function OrdersPage() {
                         </td>
                         <td>
                           <time className="celda-fecha" dateTime={l.fecha_creacion} title={formatoFecha(l.fecha_creacion)}>
-                            {fechaCorta(l.fecha_creacion)}
+                            {fechaISO(l.fecha_creacion, true)}
                           </time>
                         </td>
                         <td className="col-acciones">
@@ -1117,7 +1151,7 @@ export function OrdersPage() {
               <div className="pedidos-historial-cuerpo">
                 <TablaPedidos
                   {...propsTabla}
-                  lista={ordenar(historial, EXTRACTORES_PEDIDOS)}
+                  lista={ordenar(filtros.aplicar(historial), EXTRACTORES_PEDIDOS)}
                   cargando={cargandoHistorial}
                   error={errorHistorial}
                   onReintentar={() => setRecargaHistorial((n) => n + 1)}
