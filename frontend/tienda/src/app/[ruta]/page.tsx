@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { CapaEditor } from "@/bloques/CapaEditor";
 import { Lienzo } from "@/bloques/Lienzo";
 import { composicionDe, datosDeLosBloques, RUTA_LAYOUT } from "@/lib/pagina";
-import { configuracionDeLaTienda } from "@/lib/negocio";
+import { configuracionDeLaTienda, tituloDePagina } from "@/lib/negocio";
 
 /**
  * Cualquier página que el negocio haya compuesto.
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!pagina) return {};
 
   return {
-    title: pagina.seo_titulo || pagina.titulo || undefined,
+    title: tituloDePagina(pagina.seo_titulo || pagina.titulo, config?.nombre_empresa),
     description:
       pagina.seo_descripcion ||
       `${pagina.titulo} · ${config?.nombre_empresa ?? ""}`.trim(),

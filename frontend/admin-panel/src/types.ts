@@ -231,6 +231,8 @@ export interface Cliente {
   whatsapp_decidido_en: string | null;
   fecha_registro_cliente: string;
   total_pedidos: number;
+  /** Cada alerta del catálogo ya resuelta: encendida o apagada para este cliente. */
+  alertas: Record<string, boolean>;
 }
 
 export interface Paginated<T> {
@@ -488,8 +490,28 @@ export interface Archivo {
   tamano: number;
   ancho: number | null;
   alto: number | null;
+  /** Vacío: no se diagnosticó (video, PDF, SVG o subido antes del optimizador). */
+  calidad: "" | "BUENA" | "ACEPTABLE" | "BAJA";
+  /** `{}` cuando no hay diagnóstico. */
+  diagnostico: Partial<DiagnosticoImagen>;
+  /** Bytes tal como se subió, antes de optimizarlo. */
+  tamano_original: number | null;
   fecha_creacion: string;
   subido_por_nombre: string;
+}
+
+/** Lo que dice el optimizador del backend (apps/media/optimizador.py). */
+export interface DiagnosticoImagen {
+  calidad: "BUENA" | "ACEPTABLE" | "BAJA";
+  pixelada: boolean;
+  ampliada: boolean;
+  ancho: number;
+  alto: number;
+  ancho_efectivo: number;
+  alto_efectivo: number;
+  bloque: number | null;
+  motivos: string[];
+  recomendacion: string;
 }
 
 export interface Notificacion {

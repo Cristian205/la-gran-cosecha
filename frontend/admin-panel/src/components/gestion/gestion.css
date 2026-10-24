@@ -384,10 +384,12 @@
   transition: opacity var(--p-dur) ease;
 }
 .gestion-tabla-scroll.actualizando { opacity: 0.6; }
-.gestion-tabla { min-width: 760px; }
+/* Ancho mínimo solo donde de verdad no cabe (tableta y móvil): en escritorio la
+   tabla se ajusta a su carril, sin scroll horizontal. */
+@media (max-width: 900px) { .gestion-tabla { min-width: 760px; } }
 .gestion-tabla.sin-filas { min-width: 0; }
 .gestion-tabla th,
-.gestion-tabla td { padding: 0.7rem 0.8rem; font-size: 0.875rem; vertical-align: middle; }
+.gestion-tabla td { padding: 0.55rem 0.65rem; font-size: 0.875rem; vertical-align: middle; }
 .gestion-tabla thead th {
   padding-top: 0.6rem;
   padding-bottom: 0.6rem;
@@ -496,7 +498,7 @@
 
 .gestion-tabla th.num,
 .gestion-tabla td.num { text-align: right; }
-.gestion-tabla th.num span { justify-content: flex-end; }
+.gestion-tabla th.num span { justify-content: center; }
 
 .gestion-nota {
   margin: 0;

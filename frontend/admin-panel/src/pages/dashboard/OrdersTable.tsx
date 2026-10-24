@@ -2,28 +2,17 @@ import { ArrowRight, Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatoPrecio } from "../../utils";
 import { EmptyState, ErrorState, LoadingState, StatusBadge, Tarjeta } from "./estados";
-import { fechaCorta, fechaLocal } from "./periodo";
+import { fechaISO } from "../../utils/fechas";
 import type { EstadoPanel } from "./usePanel";
 
 /**
  * Los últimos pedidos, sin importar el período: es "qué acaba de entrar".
  * "Ver" abre el mismo detalle que la página de Pedidos, sin salir de aquí.
  */
-const HORA = new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit" });
-
-/** ["Hoy" | "Ayer" | "13 sept", "1:45 p. m."], en la fecha LOCAL del pedido. */
+/** ["2026-09-13", "13:45"]: la fecha del pedido en ISO y su hora (24 h), en hora LOCAL. */
 function cuando(iso: string): [string, string] {
-  const fecha = new Date(iso);
-  const hoy = new Date();
-  const ayer = new Date(hoy);
-  ayer.setDate(hoy.getDate() - 1);
-  const mismo = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  const dia = mismo(fecha, hoy)
-    ? "Hoy"
-    : mismo(fecha, ayer)
-      ? "Ayer"
-      : fechaCorta(fechaLocal(fecha));
-  return [dia, HORA.format(fecha)];
+  const [dia, hora] = fechaISO(iso, true).split(" ");
+  return [dia, hora ?? ""];
 }
 
 export function OrdersTable({

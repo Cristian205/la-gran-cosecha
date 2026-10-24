@@ -96,7 +96,7 @@ def _pedido_creado(pedido_id):
         return
     cliente = pedido.cliente
     nombre = cliente.nombre_cliente if cliente else "Cliente"
-    if cliente and cliente.telefono_cliente and servicio.puede_escribir_a(pedido.tenant, cliente):
+    if cliente and cliente.telefono_cliente and servicio.puede_escribir_a(pedido.tenant, cliente, "PEDIDO_RECIBIDO"):
         servicio.encolar(
             pedido.tenant,
             "PEDIDO_RECIBIDO",
@@ -131,7 +131,7 @@ def _avisar_estado(pedido_id, evento):
     pedido = Pedido.all_tenants.select_related("cliente", "tenant").filter(pk=pedido_id).first()
     if pedido is None or not pedido.cliente or not pedido.cliente.telefono_cliente:
         return
-    if not servicio.puede_escribir_a(pedido.tenant, pedido.cliente):
+    if not servicio.puede_escribir_a(pedido.tenant, pedido.cliente, evento):
         return
     servicio.encolar(
         pedido.tenant,
@@ -168,7 +168,7 @@ def _avisar_envio(envio_id, estado):
         return
     referencia = envio.pedido_id or envio.pk
     if estado == Envio.Estado.EN_RUTA:
-        if not servicio.puede_escribir_a(envio.tenant, envio.cliente):
+        if not servicio.puede_escribir_a(envio.tenant, envio.cliente, "PEDIDO_EN_CAMINO"):
             return
         telefono = envio.telefono_contacto or (envio.cliente and envio.cliente.telefono_cliente)
         servicio.encolar(

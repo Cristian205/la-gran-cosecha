@@ -85,3 +85,9 @@ export async function cambiarPassword(
     password_nueva: passwordNueva,
   });
 }
+
+/** El nombre propio, desde el perfil. El correo y el rol no se cambian aquí. */
+export async function actualizarNombre(nombre: string): Promise<Usuario> {
+  const { data } = await api.patch<Usuario>("/auth/me/", { nombre_usuario: nombre });
+  return data;
+}

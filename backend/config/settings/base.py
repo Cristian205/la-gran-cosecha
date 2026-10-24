@@ -160,6 +160,11 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = env("MEDIA_ROOT", default=str(BASE_DIR / "media"))
 
+# Imágenes subidas (apps/media/optimizador.py): se reducen a este lado máximo
+# y se guardan en WebP con esta calidad.
+IMAGENES_LADO_MAXIMO = env.int("IMAGENES_LADO_MAXIMO", default=2000)
+IMAGENES_CALIDAD_WEBP = env.int("IMAGENES_CALIDAD_WEBP", default=80)
+
 # WhiteNoise: sirve estáticos comprimidos en producción sin depender de nginx.
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
@@ -231,6 +236,17 @@ if USE_R2:
 # tests: sin la comprobacion de pertenencia que trae la fase 4, en produccion
 # seria un cambio de negocio a voluntad. Ver apps/tenancy/middleware.py.
 TENANCY_ACEPTA_CABECERA = env.bool("TENANCY_ACEPTA_CABECERA", default=False)
+
+# Qué negocio es cada panel administrativo, por el hostname desde el que se
+# sirve: `host=slug,host=slug`. Solo vale para LEER sin sesión —la pantalla de
+# acceso pide el logo, el color y el fondo antes de que haya token—; con
+# sesión manda el negocio del JWT. Hace falta porque el panel llama al backend
+# directamente, así que el `Host` de la petición es el de Render y no dice de
+# qué negocio es. Ver `_tenant_del_origen` en apps/tenancy/middleware.py.
+TENANCY_ORIGENES_PANEL = env.dict(
+    "TENANCY_ORIGENES_PANEL",
+    default={"panel-administrativo-la-gran-cosech.vercel.app": "la-gran-cosecha"},
+)
 
 # Clave compartida con el servidor de la tienda (Next.js). Ese servidor
 # renderiza la pagina del visitante y pide el catalogo del negocio que toca,

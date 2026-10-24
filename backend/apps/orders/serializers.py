@@ -32,8 +32,13 @@ def reservar_o_400(pedido, *, usuario=None):
 # ==========================================================================
 # CLIENTE
 # ==========================================================================
+from . import alertas_cliente
+
 class ClienteSerializer(serializers.ModelSerializer):
     total_pedidos = serializers.IntegerField(source="pedidos.count", read_only=True)
+    # Se lee con todas las alertas ya resueltas (lo guardado o su valor por
+    # defecto) y se escribe parcial: solo los códigos que cambian.
+    alertas = serializers.JSONField(required=False)
 
     class Meta:
         model = Cliente
@@ -49,11 +54,29 @@ class ClienteSerializer(serializers.ModelSerializer):
             "whatsapp_decidido_en",
             "fecha_registro_cliente",
             "total_pedidos",
+            "alertas",
         ]
         # La autorización de datos solo la da el cliente (en la tienda). El
         # consentimiento de WhatsApp sí lo puede registrar el equipo: lo pidió
         # por teléfono o en el mostrador. Lo que nunca se edita es la fecha.
         read_only_fields = ["acepto_precios_en", "autorizo_datos_en", "whatsapp_decidido_en"]
+
+    def to_representation(self, instance):
+        datos = super().to_representation(instance)
+        datos["alertas"] = alertas_cliente.efectivas(instance.alertas)
+        return datos
+
+    def validate_alertas(self, valor):
+        if not isinstance(valor, dict):
+            raise serializers.ValidationError("Envía las alertas como {código: true/false}.")
+        desconocidas = [c for c in valor if c not in alertas_cliente.POR_CODIGO]
+        if desconocidas:
+            raise serializers.ValidationError(f"Alertas desconocidas: {', '.join(desconocidas)}.")
+        if not all(isinstance(v, bool) for v in valor.values()):
+            raise serializers.ValidationError("Cada alerta se activa con true o se desactiva con false.")
+        # Se mezcla con lo ya guardado: cambiar una no reinicia las demás.
+        anteriores = dict(getattr(self.instance, "alertas", None) or {})
+        return {**anteriores, **valor}
 
     def create(self, validated_data):
         if validated_data.get("acepta_whatsapp"):

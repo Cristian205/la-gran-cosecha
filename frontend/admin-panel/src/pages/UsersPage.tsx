@@ -29,9 +29,9 @@ import { ThOrdenable } from "../components/ThOrdenable";
 import { useColumnas } from "../hooks/useColumnas";
 import { useOrdenTabla, type ExtractoresOrden } from "../hooks/useOrdenTabla";
 import { EstadoVacio, MenuFila, Pastilla, TarjetaKpi, type AccionMenu, type Tono } from "../components/gestion/Gestion";
-import { diaRelativo } from "../utils/fechas";
-import { UserFormModal } from "./users/UserFormModal";
-import { UserPermissionsModal } from "./users/UserPermissionsModal";
+import { fechaISO } from "../utils/fechas";
+import { BotonFiltros, FilaFiltros, useFiltrosColumna, type DefsFiltros } from "../components/gestion/FiltrosColumna";
+import { UserEditorModal } from "./users/UserEditorModal";
 import "./users/usuarios.css";
 
 type Segmento = "todos" | "activos" | "inactivos" | "administradores";
@@ -121,7 +121,7 @@ function definiciones(actualId: number | undefined): Record<
       render: (u) =>
         u.ultimo_login_exitoso ? (
           <time className="celda-fecha" dateTime={u.ultimo_login_exitoso} title={formatoFecha(u.ultimo_login_exitoso)}>
-            {diaRelativo(u.ultimo_login_exitoso)}
+            {fechaISO(u.ultimo_login_exitoso, true)}
           </time>
         ) : (
           <span className="celda-tenue">Nunca</span>
@@ -131,7 +131,7 @@ function definiciones(actualId: number | undefined): Record<
       etiqueta: "Alta",
       render: (u) => (
         <time className="celda-fecha" dateTime={u.fecha_creacion} title={formatoFecha(u.fecha_creacion)}>
-          {diaRelativo(u.fecha_creacion)}
+          {fechaISO(u.fecha_creacion)}
         </time>
       ),
     },
@@ -142,6 +142,32 @@ const CLAVES_USUARIOS = Object.keys(definiciones(undefined));
 const ETIQUETAS_USUARIOS = Object.fromEntries(
   Object.entries(definiciones(undefined)).map(([clave, def]) => [clave, def.etiqueta])
 );
+
+/** El filtro bajo cada columna (botón «Filtros»). Rol, estado y acceso, combobox. */
+const FILTROS_USUARIOS: DefsFiltros<Usuario> = {
+  nombre: { tipo: "texto", valor: (u) => `${u.nombre_usuario} ${u.email_usuario}` },
+  rol: { tipo: "opciones", valor: (u) => u.rol_usuario, opciones: ROLES.map((r) => ({ valor: r.valor, etiqueta: r.etiqueta })) },
+  acceso: {
+    tipo: "opciones",
+    valor: (u) => (u.es_administrador ? "total" : u.permisos.length > 0 ? "delegado" : "sin"),
+    opciones: [
+      { valor: "total", etiqueta: "Acceso total" },
+      { valor: "delegado", etiqueta: "Con permisos" },
+      { valor: "sin", etiqueta: "Sin permisos" },
+    ],
+  },
+  estado: {
+    tipo: "opciones",
+    valor: (u) => (!u.is_active ? "inactivo" : u.debe_cambiar_password ? "temporal" : "activo"),
+    opciones: [
+      { valor: "activo", etiqueta: "Activo" },
+      { valor: "temporal", etiqueta: "Contraseña temporal" },
+      { valor: "inactivo", etiqueta: "Inactivo" },
+    ],
+  },
+  ultimo_acceso: { tipo: "fecha", valor: (u) => u.ultimo_login_exitoso },
+  alta: { tipo: "fecha", valor: (u) => u.fecha_creacion },
+};
 
 const EXTRACTORES_USUARIOS: ExtractoresOrden<Usuario> = {
   nombre: (u) => normalizarTexto(u.nombre_usuario),
@@ -160,7 +186,9 @@ export function UsersPage() {
 
   const [busqueda, setBusqueda] = useState("");
   const [segmento, setSegmento] = useState<Segmento>("todos");
-  const [rolFiltro, setRolFiltro] = useState("");
+  const filtros = useFiltrosColumna(FILTROS_USUARIOS);
+  // El filtro de rol es el de su columna.
+  const rolFiltro = filtros.valores.rol ?? "";
   const [kpiPulsado, setKpiPulsado] = useState<ClaveKpi | null>(null);
 
   const {
@@ -175,7 +203,6 @@ export function UsersPage() {
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState<Usuario | null>(null);
-  const [permisosDe, setPermisosDe] = useState<Usuario | null>(null);
 
   const esOwner = actual?.es_administrador ?? false;
   const puedeCrear = !actual || tienePermiso(actual, "accounts.add_usuario");
@@ -240,7 +267,7 @@ export function UsersPage() {
 
   function aplicarKpi(clave: ClaveKpi) {
     setBusqueda("");
-    setRolFiltro("");
+    filtros.cambiar("rol", "");
     if (kpiActivo === clave) {
       setKpiPulsado(null);
       setSegmento("todos");
@@ -261,18 +288,18 @@ export function UsersPage() {
     if (segmento === "activos") l = l.filter((u) => u.is_active);
     else if (segmento === "inactivos") l = l.filter((u) => !u.is_active);
     else if (segmento === "administradores") l = l.filter((u) => u.es_administrador);
-    if (rolFiltro) l = l.filter((u) => u.rol_usuario === rolFiltro);
+    l = filtros.aplicar(l);
     if (soloDelegados) l = l.filter((u) => !u.es_administrador && u.permisos.length > 0);
     return ordenar(l, EXTRACTORES_USUARIOS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usuarios, busqueda, segmento, rolFiltro, soloDelegados, columnaOrden, direccionOrden]);
+  }, [usuarios, busqueda, segmento, filtros.aplicar, soloDelegados, columnaOrden, direccionOrden]);
 
-  const hayFiltros = Boolean(busqueda || segmento !== "todos" || rolFiltro || soloDelegados);
+  const hayFiltros = Boolean(busqueda || segmento !== "todos" || filtros.activos || soloDelegados);
 
   function limpiarFiltros() {
     setBusqueda("");
     setSegmento("todos");
-    setRolFiltro("");
+    filtros.limpiar();
     setSoloDelegados(false);
     setKpiPulsado(null);
   }
@@ -324,9 +351,6 @@ export function UsersPage() {
 
   function accionesDe(u: Usuario): AccionMenu[] {
     const acciones: AccionMenu[] = [];
-    if (puedeGestionarPermisos(u)) {
-      acciones.push({ clave: "permisos", etiqueta: "Gestionar permisos", icono: <Key size={15} />, onSeleccionar: () => setPermisosDe(u) });
-    }
     acciones.push({
       clave: "correo",
       etiqueta: "Escribir un correo",
@@ -545,27 +569,12 @@ export function UsersPage() {
                 </button>
               )}
             </div>
-            <select
-              className={`select-filtro ${rolFiltro ? "con-valor" : ""}`}
-              value={rolFiltro}
-              onChange={(e) => {
-                setRolFiltro(e.target.value);
-                setKpiPulsado(null);
-              }}
-              aria-label="Filtrar por rol"
-            >
-              <option value="">Rol: todos</option>
-              {ROLES.map((r) => (
-                <option key={r.valor} value={r.valor}>
-                  {r.etiqueta}
-                </option>
-              ))}
-            </select>
             {hayFiltros && (
               <button type="button" className="btn-limpiar" onClick={limpiarFiltros}>
                 <X size={14} /> Limpiar filtros
               </button>
             )}
+            <BotonFiltros abiertos={filtros.abiertos} activos={filtros.activos} onAlternar={filtros.alternar} />
             <ColumnPickerButton
               estado={columnasEstado}
               etiquetas={ETIQUETAS_USUARIOS}
@@ -597,6 +606,18 @@ export function UsersPage() {
                     <span className="sr-only">Acciones</span>
                   </th>
                 </tr>
+                {filtros.abiertos && (
+                  <FilaFiltros
+                    columnas={columnasVisibles}
+                    defs={FILTROS_USUARIOS}
+                    etiquetas={ETIQUETAS_USUARIOS}
+                    valores={filtros.valores}
+                    onCambiar={(clave, valor) => {
+                      filtros.cambiar(clave, valor);
+                      setKpiPulsado(null);
+                    }}
+                  />
+                )}
               </thead>
               <tbody>
                 {cargandoInicial ? (
@@ -624,7 +645,7 @@ export function UsersPage() {
                         <td className="col-acciones">
                           <div className="acciones">
                             {puedeEditar(u) && (
-                              <Tooltip label="Editar usuario">
+                              <Tooltip label={puedeGestionarPermisos(u) ? "Editar usuario y permisos" : "Editar usuario"}>
                                 <button
                                   type="button"
                                   className="btn-icon editar"
@@ -654,23 +675,13 @@ export function UsersPage() {
       </div>
 
       {modalAbierto && (
-        <UserFormModal
+        <UserEditorModal
           usuario={editando}
           puedeEditarRol={esOwner}
+          puedeGestionarPermisos={editando ? puedeGestionarPermisos(editando) : esOwner}
           onCerrar={() => setModalAbierto(false)}
           onGuardado={() => {
             setModalAbierto(false);
-            cargar();
-          }}
-        />
-      )}
-
-      {permisosDe && (
-        <UserPermissionsModal
-          usuario={permisosDe}
-          onCerrar={() => setPermisosDe(null)}
-          onGuardado={() => {
-            setPermisosDe(null);
             cargar();
           }}
         />

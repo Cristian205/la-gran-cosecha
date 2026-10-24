@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CapaEditor } from "@/bloques/CapaEditor";
 import { Lienzo } from "@/bloques/Lienzo";
 import { composicionDe, datosDeLosBloques } from "@/lib/pagina";
-import { configuracionDeLaTienda } from "@/lib/negocio";
+import { configuracionDeLaTienda, tituloDePagina } from "@/lib/negocio";
 import { CatalogoProvider } from "@/contextos/CatalogoContexto";
 import { desempaquetar } from "@/lib/datos";
 import type { Categoria, Paginated, Producto } from "@/lib/tipos";
@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
     composicionDe("/tienda"),
   ]);
 
-  const titulo = pagina?.seo_titulo || "Catálogo";
+  const titulo = tituloDePagina(pagina?.seo_titulo, config?.nombre_empresa) ?? "Catálogo";
   const descripcion =
     pagina?.seo_descripcion ||
     `Explora el catálogo completo de ${

@@ -1,8 +1,14 @@
 import { ImagePlus, Library, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { descargarArchivo, subirArchivo } from "../api/media";
-import type { Archivo } from "../types";
+import type { Archivo, DiagnosticoImagen } from "../types";
 import { MediaPickerModal } from "./MediaPickerModal";
+
+/** El diagnóstico si la imagen salió de baja calidad; si no, null. */
+function diagnosticoBajo(archivo: Archivo): DiagnosticoImagen | null {
+  const d = archivo.diagnostico;
+  return archivo.calidad === "BAJA" && d.motivos ? (d as DiagnosticoImagen) : null;
+}
 
 interface Props {
   valor: File | null;
@@ -26,6 +32,9 @@ const ACCEPT_DEFAULT = "image/png,image/jpeg,image/webp,image/svg+xml";
 export function MediaField({ valor, urlActual, onCambiar, ayuda, accept = ACCEPT_DEFAULT, quitada = false, onQuitarActual }: Props) {
   const [previewLocal, setPreviewLocal] = useState<string | null>(null);
   const [pickerAbierto, setPickerAbierto] = useState(false);
+  // Lo dice el backend al recibirla en la biblioteca: si está pixelada,
+  // borrosa o es pequeña, se avisa aquí mismo, antes de guardar el formulario.
+  const [aviso, setAviso] = useState<DiagnosticoImagen | null>(null);
 
   useEffect(() => {
     if (!valor) {
@@ -39,8 +48,11 @@ export function MediaField({ valor, urlActual, onCambiar, ayuda, accept = ACCEPT
 
   function elegirArchivo(file: File | null) {
     onCambiar(file);
+    setAviso(null);
     if (file) {
-      subirArchivo(file).catch(() => {});
+      subirArchivo(file)
+        .then((archivo) => setAviso(diagnosticoBajo(archivo)))
+        .catch(() => {});
     }
   }
 
@@ -50,6 +62,7 @@ export function MediaField({ valor, urlActual, onCambiar, ayuda, accept = ACCEPT
       const blob = await descargarArchivo(archivo.id);
       const file = new File([blob], archivo.nombre_original, { type: archivo.content_type });
       onCambiar(file);
+      setAviso(diagnosticoBajo(archivo));
     } catch {
       // si la descarga falla, simplemente no se selecciona nada — no rompe el formulario
     }
@@ -80,7 +93,10 @@ export function MediaField({ valor, urlActual, onCambiar, ayuda, accept = ACCEPT
             <button
               type="button"
               className="btn-icon peligro"
-              onClick={() => onCambiar(null)}
+              onClick={() => {
+                onCambiar(null);
+                setAviso(null);
+              }}
               aria-label="Quitar selección"
             >
               <X size={14} />
@@ -100,6 +116,12 @@ export function MediaField({ valor, urlActual, onCambiar, ayuda, accept = ACCEPT
           <p className="media-field-ayuda">La imagen se quitará al guardar.</p>
         ) : (
           ayuda && <p className="media-field-ayuda">{ayuda}</p>
+        )}
+        {valor && aviso && (
+          <p className="media-field-aviso" role="status">
+            <strong>{aviso.motivos[0]}</strong>
+            {aviso.recomendacion}
+          </p>
         )}
       </div>
 

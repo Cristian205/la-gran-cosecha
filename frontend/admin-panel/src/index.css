@@ -352,7 +352,8 @@ input, select, textarea { font-family: inherit; }
 
 .tabla-scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-th, td { padding: .8rem 1rem; text-align: left; font-size: .9rem; white-space: nowrap; }
+/* Compactas: menos relleno lateral para que quepan más columnas sin scroll. */
+th, td { padding: .6rem .7rem; text-align: left; font-size: .9rem; white-space: nowrap; }
 thead th { color: var(--gris); font-size: .78rem; font-weight: 600; border-bottom: 1px solid var(--borde); }
 tbody tr { border-top: 1px solid var(--borde); }
 tbody tr:hover { background: var(--superficie-2); }
@@ -747,13 +748,101 @@ td .input:focus, td select:focus {
 }
 
 /* ---------- Perfil ---------- */
-.cabecera-perfil {
-  display: flex; align-items: center; gap: 1rem; padding: 1.4rem 1.2rem;
-  border-bottom: 1px solid var(--borde);
+/* Ocupa todo el ancho del área de trabajo, como el resto de vistas del panel. */
+.contenido.perfil { display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; }
+.contenido.perfil .panel { margin-bottom: 0; }
+.perfil .btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 40px; white-space: nowrap; }
+.perfil .btn:focus-visible,
+.perfil-ajuste:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 2px; }
+
+.perfil-hero {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1.25rem;
+  padding: 1.5rem; position: relative;
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--verde) 12%, transparent), transparent 55%),
+    var(--superficie);
 }
-.cabecera-perfil h2 { margin: 0 0 .35rem; font-size: 1.2rem; }
-.cabecera-perfil .avatar.grande { font-size: 1.2rem; }
-.perfil-datos { padding: .5rem 1.2rem 1.2rem; display: flex; flex-direction: column; gap: .2rem; }
+.perfil-avatar {
+  width: 72px; height: 72px; border-radius: 22px; display: grid; place-items: center;
+  font-size: 1.6rem; font-weight: 800; color: #fff; letter-spacing: .02em;
+  background: linear-gradient(135deg, var(--verde), var(--verde-osc));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--verde) 30%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, .18);
+}
+.perfil-identidad { min-width: 0; }
+.perfil-identidad h2 { margin: 0; font-size: 1.45rem; line-height: 1.2; color: var(--dark); overflow-wrap: anywhere; }
+.perfil-correo { margin: .2rem 0 0; color: var(--gris); font-size: .9rem; overflow-wrap: anywhere; }
+.perfil-chips { list-style: none; display: flex; flex-wrap: wrap; gap: .4rem; margin: .75rem 0 0; padding: 0; }
+.perfil-chip {
+  display: inline-flex; align-items: center; gap: .35rem; padding: .28rem .65rem; border-radius: 999px;
+  font-size: .76rem; font-weight: 700; background: var(--gris-claro); color: var(--dark);
+  border: 1px solid var(--borde);
+}
+.perfil-chip.rol, .perfil-chip.activa { background: var(--verde-claro); color: var(--verde-texto); border-color: transparent; }
+.perfil-chip.inactiva { background: var(--rojo-claro); color: var(--rojo-texto); border-color: transparent; }
+.perfil-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent); }
+.perfil-acciones { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
+
+.perfil-seccion-titulo { margin: 0 0 .75rem; font-size: .8rem; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .06em; }
+/* auto-fit: las cinco tarjetas se estiran hasta llenar la fila en vez de dejar
+   huecos vacíos a la derecha en pantallas anchas. */
+.perfil-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: .85rem; margin: 0; }
+/* En escritorio, una sola fila: el correo (el dato más largo) se lleva más
+   ancho para leerse entero, sin partirse a mitad de palabra. */
+@media (min-width: 1180px) {
+  .perfil-grid { grid-template-columns: 1.7fr 1.15fr 1fr 1fr 1fr; }
+}
+.perfil-tarjeta {
+  display: flex; flex-direction: column; gap: .7rem; align-items: flex-start; padding: 1rem 1.05rem; min-width: 0;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
+  box-shadow: var(--sombra); transition: border-color .15s;
+}
+.perfil-tarjeta:hover { border-color: color-mix(in srgb, var(--verde) 35%, var(--borde)); }
+.perfil-tarjeta-icono {
+  width: 38px; height: 38px; min-width: 38px; border-radius: 11px; display: grid; place-items: center;
+  background: var(--verde-claro); color: var(--verde-texto);
+}
+.perfil-tarjeta-texto { min-width: 0; width: 100%; }
+.perfil-tarjeta dt { font-size: .74rem; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .04em; }
+.perfil-tarjeta dd { margin: .2rem 0 0; font-size: .95rem; font-weight: 650; color: var(--dark); overflow-wrap: break-word; }
+/* Un correo solo se corta si de verdad no cabe, y por el final con «…»; el
+   completo queda en el título y en el encabezado del perfil. */
+.perfil-tarjeta .perfil-correo-valor { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.perfil-tarjeta dd.perfil-tarjeta-nota { font-size: .78rem; font-weight: 500; color: var(--gris); }
+
+.perfil-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 1.5rem; align-items: start; }
+.perfil-ajustes, .perfil-negocios { list-style: none; margin: 0; padding: .4rem; }
+.perfil-ajuste {
+  width: 100%; display: flex; align-items: center; gap: .85rem; padding: .8rem .75rem; min-height: 56px;
+  border: none; background: none; color: var(--dark); text-align: left; border-radius: var(--radio-sm);
+  transition: background .15s;
+}
+.perfil-ajuste:hover { background: var(--gris-claro); }
+.perfil-ajuste-icono {
+  width: 38px; height: 38px; min-width: 38px; border-radius: 11px; display: grid; place-items: center;
+  background: var(--gris-claro); color: var(--dark); border: 1px solid var(--borde);
+}
+.perfil-ajuste-texto { display: flex; flex-direction: column; gap: .1rem; min-width: 0; flex: 1; }
+.perfil-ajuste-texto strong { font-size: .92rem; overflow-wrap: anywhere; }
+.perfil-ajuste-texto span { font-size: .8rem; color: var(--gris); }
+.perfil-ajuste-flecha { color: var(--gris); transition: transform .15s; }
+.perfil-ajuste:hover .perfil-ajuste-flecha { transform: translateX(2px); color: var(--dark); }
+.perfil-negocios li { display: flex; align-items: center; gap: .85rem; padding: .7rem .75rem; border-radius: var(--radio-sm); }
+.perfil-negocios li + li { border-top: 1px solid var(--borde); }
+.perfil-negocios li.activo .perfil-ajuste-icono { background: var(--verde-claro); color: var(--verde-texto); border-color: transparent; }
+
+@media (max-width: 760px) {
+  .perfil-hero { grid-template-columns: auto 1fr; padding: 1.15rem; gap: 1rem; }
+  .perfil-avatar { width: 60px; height: 60px; border-radius: 18px; font-size: 1.3rem; }
+  .perfil-identidad h2 { font-size: 1.2rem; }
+  .perfil-acciones { grid-column: 1 / -1; justify-content: stretch; }
+  .perfil-acciones .btn { flex: 1 1 0; padding-inline: .8rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .perfil-tarjeta, .perfil-ajuste, .perfil-ajuste-flecha { transition: none; }
+}
+
+/* Lista de datos de la ayuda (misma pieza que usaba el perfil). */
 .perfil-dato { display: flex; align-items: center; gap: .8rem; padding: .8rem 0; border-top: 1px solid var(--borde); }
 .perfil-dato:first-child { border-top: none; }
 .perfil-dato .icono {
@@ -1121,7 +1210,14 @@ td .input:focus, td select:focus {
   aspect-ratio: 1 / 1; background: var(--gris-claro); display: grid; place-items: center;
   color: var(--gris); overflow: hidden;
 }
+.archivo-thumb { position: relative; }
 .archivo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.archivo-calidad {
+  position: absolute; top: .4rem; left: .4rem; padding: .12rem .45rem; border-radius: 999px;
+  font-size: .68rem; font-weight: 700; cursor: help;
+}
+.archivo-calidad.BAJA { background: var(--rojo-claro); color: var(--rojo-texto); }
+.archivo-calidad.ACEPTABLE { background: var(--ambar-claro); color: var(--ambar-texto); }
 .archivo-info { padding: .55rem .65rem; display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
 .archivo-info .nombre {
   font-size: .82rem; font-weight: 600; color: var(--dark); white-space: nowrap;
@@ -1141,6 +1237,11 @@ td .input:focus, td select:focus {
 .media-field-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .media-field-acciones label.btn { cursor: pointer; }
 .media-field-ayuda { margin: 0; font-size: .82rem; color: var(--gris); }
+.media-field-aviso {
+  margin: .1rem 0 0; padding: .45rem .6rem; border-radius: 8px; font-size: .8rem; line-height: 1.4;
+  background: var(--rojo-claro); color: var(--rojo-texto);
+}
+.media-field-aviso strong { display: block; }
 
 
 /* ==========================================================================
@@ -1315,13 +1416,6 @@ td .input:focus, td select:focus {
   margin-top: 0.75rem;
 }
 
-
-/* Aviso discreto junto al negocio en el perfil, para quien trabaja en varios. */
-.perfil-nota {
-  font-weight: 400;
-  opacity: 0.7;
-  font-size: 0.85em;
-}
 
 /* ==========================================================================
    LA CAJA, VESTIDA POR EL TEMA DEL NEGOCIO
@@ -1848,3 +1942,88 @@ button.pres-mas:hover { text-decoration: underline; }
 @media (max-width: 640px) {
   .modal.amplio.medio { width: 100vw; }
 }
+
+
+/* ---------- Columnas de ancho ajustable (components/ColumnasAjustables.tsx) ---------- */
+th[data-col-ajustable] { position: relative; }
+.col-manija {
+  position: absolute; top: 0; right: -4px; bottom: 0; width: 9px; z-index: 2;
+  cursor: col-resize; touch-action: none; outline: none;
+}
+.col-manija::after {
+  content: ""; position: absolute; top: 25%; bottom: 25%; left: 4px; width: 1px;
+  background: var(--borde); transition: background .15s, top .15s, bottom .15s;
+}
+th:hover > .col-manija::after { background: color-mix(in srgb, var(--gris) 55%, transparent); }
+.col-manija:hover::after, .col-manija:focus-visible::after, body.redimensionando-columna .col-manija:active::after {
+  top: 0; bottom: 0; width: 2px; left: 3.5px; background: var(--verde);
+}
+body.redimensionando-columna { cursor: col-resize; user-select: none; }
+/* Con anchos fijados, lo que no cabe se corta con «…» en vez de ensanchar la tabla. */
+table.tabla-ajustada th, table.tabla-ajustada td { overflow: hidden; text-overflow: ellipsis; }
+/* Acciones y casillas nunca se recortan: su ancho lo marca su contenido. */
+table.tabla-ajustada .col-acciones, table.tabla-ajustada .col-check { overflow: visible; }
+
+
+/* ---------- Tablas que caben en su carril ----------
+   En escritorio (menú expandido o contraído) ninguna tabla debe pedir scroll
+   horizontal: el texto largo pasa a un segundo renglón en vez de ensanchar la
+   tabla. Lo que no conviene partir —cifras, fechas, pastillas, acciones— sigue
+   en una línea. En el móvil se conserva el scroll, que ahí es lo legible. */
+thead th { text-align: center; }
+.th-ordenable span { justify-content: center; }
+@media (min-width: 901px) {
+  th, td { white-space: normal; overflow-wrap: break-word; }
+  td.num, th.num, .celda-fecha, .celda-id, .celda-cifra, .celda-cifra-suave,
+  .col-acciones, .col-check, .badge, .pastilla { white-space: nowrap; }
+}
+
+/* El agarre para reordenar columnas flota en el margen izquierdo del
+   encabezado en vez de ocupar ancho: así las columnas angostas caben. */
+.th-ordenable { position: relative; }
+.th-ordenable .th-orden-agarre { position: absolute; left: 3px; top: 50%; transform: translateY(-50%); }
+/* En la última columna (acciones), el tooltip se alinea a la derecha: centrado
+   sobresalía del carril de la tabla y, aun oculto, creaba scroll horizontal. */
+.col-acciones .tooltip-bubble.tooltip-arriba { left: auto; right: 0; transform: translate(0, 3px); }
+.col-acciones .tooltip-bubble.tooltip-arriba.visible { transform: translate(0, 0); }
+.col-acciones .tooltip-bubble.tooltip-arriba::after { left: auto; right: 12px; margin-left: 0; }
+
+
+/* ---------- Filtros por columna (components/gestion/FiltrosColumna.tsx) ---------- */
+.barra-derecha { display: inline-flex; align-items: center; gap: .5rem; }
+.btn-filtros {
+  display: inline-flex; align-items: center; gap: .45rem; min-height: 38px; padding: 0 .9rem;
+  border: 1px solid var(--borde); border-radius: var(--radio-boton); background: var(--superficie);
+  color: var(--dark); font-weight: 700; font-size: .85rem; white-space: nowrap;
+}
+.btn-filtros:hover { background: var(--gris-claro); }
+.btn-filtros:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 2px; }
+.btn-filtros.abierto { background: var(--gris-claro); border-color: color-mix(in srgb, var(--verde) 45%, var(--borde)); }
+.btn-filtros.con-valor svg { color: var(--verde-texto); }
+.btn-filtros-num {
+  min-width: 1.25rem; padding: 0 .35rem; border-radius: 999px; background: var(--verde); color: #fff;
+  font-size: .7rem; line-height: 1.25rem; text-align: center;
+}
+
+thead tr.fila-filtros th {
+  padding: .35rem .4rem; background: var(--superficie); border-bottom: 1px solid var(--borde);
+  text-transform: none; letter-spacing: 0; font-weight: 500;
+}
+.filtro-col { position: relative; display: flex; align-items: center; }
+.filtro-col input, .filtro-col select {
+  width: 100%; min-width: 0; height: 30px; padding: 0 1.4rem 0 .5rem; border: 1px solid var(--borde);
+  border-radius: 8px; background: var(--superficie); color: var(--dark); font-size: .78rem; font-weight: 500;
+}
+.filtro-col select { padding-right: .3rem; cursor: pointer; }
+.filtro-col input::-webkit-search-cancel-button { display: none; }
+.filtro-col input:focus, .filtro-col select:focus {
+  outline: none; border-color: var(--verde); box-shadow: 0 0 0 3px color-mix(in srgb, var(--verde) 18%, transparent);
+}
+.filtro-col.con-valor input, .filtro-col.con-valor select {
+  border-color: color-mix(in srgb, var(--verde) 55%, var(--borde)); background: var(--verde-claro); color: var(--verde-texto); font-weight: 650;
+}
+.filtro-col-limpiar {
+  position: absolute; right: 4px; display: grid; place-items: center; width: 18px; height: 18px;
+  border: none; border-radius: 50%; background: transparent; color: var(--gris);
+}
+.filtro-col-limpiar:hover { background: var(--gris-claro); color: var(--dark); }

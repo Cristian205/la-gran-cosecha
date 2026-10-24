@@ -264,7 +264,17 @@ export function Navbar({
         </Link>
       )}
 
-      <button className="btn-carrito" onClick={abrirCarrito}>
+      <button
+        className="btn-carrito"
+        onClick={abrirCarrito}
+        // En el móvil el texto se oculta y queda solo el icono: el nombre va
+        // aquí para que el lector de pantalla no anuncie un botón sin nombre.
+        aria-label={
+          totalLineas > 0
+            ? `${cta_texto}: ${totalLineas} ${totalLineas === 1 ? "producto" : "productos"}`
+            : cta_texto
+        }
+      >
         {comercio ? <ShoppingBag size={18} aria-hidden="true" /> : <ShoppingCart size={18} />}
         <span className="btn-carrito-txt">
           {cta_texto}

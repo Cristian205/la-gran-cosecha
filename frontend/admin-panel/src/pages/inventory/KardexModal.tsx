@@ -5,7 +5,8 @@ import {
   type Existencia,
   type Movimiento,
 } from "../../api/inventario";
-import { extraerMensajeError, formatoFecha } from "../../utils";
+import { extraerMensajeError } from "../../utils";
+import { fechaISO } from "../../utils/fechas";
 
 interface Props {
   existencia: Existencia;
@@ -107,7 +108,7 @@ export function KardexModal({ existencia, onCerrar }: Props) {
                 const cantidad = Number(m.cantidad);
                 return (
                   <tr key={m.id}>
-                    <td>{formatoFecha(m.fecha)}</td>
+                    <td className="celda-fecha">{fechaISO(m.fecha, true)}</td>
                     <td>{m.tipo_display}</td>
                     <td
                       style={{

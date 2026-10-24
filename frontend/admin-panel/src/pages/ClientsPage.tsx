@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Loader2,
   MessageCircle,
+  Eye,
   Pencil,
   Phone,
   Plus,
@@ -29,8 +30,10 @@ import { useColumnas } from "../hooks/useColumnas";
 import { useOrdenTabla, type ExtractoresOrden } from "../hooks/useOrdenTabla";
 import { useAuth } from "../auth/AuthContext";
 import { EstadoVacio, MenuFila, Pastilla, TarjetaKpi, type AccionMenu } from "../components/gestion/Gestion";
-import { diaRelativo } from "../utils/fechas";
+import { fechaISO } from "../utils/fechas";
+import { BotonFiltros, FilaFiltros, useFiltrosColumna, type DefsFiltros } from "../components/gestion/FiltrosColumna";
 import { ClientFormModal } from "./clients/ClientFormModal";
+import { ClientViewModal } from "./clients/ClientViewModal";
 import "./clients/clientes.css";
 
 type Segmento = "todos" | "con" | "sin" | "nuevos";
@@ -44,8 +47,7 @@ const OPCIONES_SEGMENTO: { valor: Segmento; etiqueta: string }[] = [
   { valor: "nuevos", etiqueta: "Nuevos este mes" },
 ];
 
-const OPCIONES_WHATSAPP: { valor: FiltroWhatsapp; etiqueta: string }[] = [
-  { valor: "", etiqueta: "WhatsApp: todos" },
+const OPCIONES_WHATSAPP: { valor: Exclude<FiltroWhatsapp, "">; etiqueta: string }[] = [
   { valor: "acepta", etiqueta: "Aceptan avisos" },
   { valor: "no", etiqueta: "No aceptan" },
   { valor: "sin_respuesta", etiqueta: "Sin respuesta" },
@@ -151,7 +153,7 @@ const DEFINICIONES_CLIENTES: Record<
         dateTime={c.fecha_registro_cliente}
         title={formatoFecha(c.fecha_registro_cliente)}
       >
-        {diaRelativo(c.fecha_registro_cliente)}
+        {fechaISO(c.fecha_registro_cliente)}
       </time>
     ),
   },
@@ -160,6 +162,17 @@ const CLAVES_CLIENTES = Object.keys(DEFINICIONES_CLIENTES);
 const ETIQUETAS_CLIENTES = Object.fromEntries(
   Object.entries(DEFINICIONES_CLIENTES).map(([clave, def]) => [clave, def.etiqueta])
 );
+
+/** El filtro que va bajo cada columna (botón «Filtros»). WhatsApp, combobox. */
+const FILTROS_CLIENTES: DefsFiltros<Cliente> = {
+  nombre: { tipo: "texto", valor: (c) => c.nombre_cliente },
+  cedula: { tipo: "texto", valor: (c) => c.documento_cliente },
+  telefono: { tipo: "texto", valor: (c) => c.telefono_cliente },
+  direccion: { tipo: "texto", valor: (c) => c.direccion_cliente },
+  whatsapp: { tipo: "opciones", valor: (c) => decisionWhatsapp(c), opciones: OPCIONES_WHATSAPP },
+  pedidos: { tipo: "numero", valor: (c) => c.total_pedidos },
+  registro: { tipo: "fecha", valor: (c) => c.fecha_registro_cliente },
+};
 
 const EXTRACTORES_CLIENTES: ExtractoresOrden<Cliente> = {
   nombre: (c) => normalizarTexto(c.nombre_cliente),
@@ -189,7 +202,10 @@ export function ClientsPage() {
   const turnoBusqueda = useRef(0);
 
   const [segmento, setSegmento] = useState<Segmento>("todos");
-  const [whatsapp, setWhatsapp] = useState<FiltroWhatsapp>("");
+  const filtros = useFiltrosColumna(FILTROS_CLIENTES);
+  // El filtro de WhatsApp es el de su columna; el indicador «Aceptan WhatsApp» lo usa.
+  const whatsapp = (filtros.valores.whatsapp ?? "") as FiltroWhatsapp;
+  const setWhatsapp = (valor: FiltroWhatsapp) => filtros.cambiar("whatsapp", valor);
   const [kpiPulsado, setKpiPulsado] = useState<ClaveKpi | null>(null);
 
   const {
@@ -204,6 +220,7 @@ export function ClientsPage() {
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState<Cliente | null>(null);
+  const [viendo, setViendo] = useState<Cliente | null>(null);
 
   const puedeEditar = tienePermiso(actual, "orders.change_cliente");
   const puedeEliminar = tienePermiso(actual, "orders.delete_cliente");
@@ -299,6 +316,7 @@ export function ClientsPage() {
     setKpiPulsado(clave);
     setSegmento(clave === "nuevos" ? "nuevos" : clave === "con" ? "con" : clave === "sin" ? "sin" : "todos");
     setWhatsapp(clave === "whatsapp" ? "acepta" : "");
+    if (clave === "whatsapp") filtros.abrir();
   }
 
   // ---------- Lista ----------
@@ -313,17 +331,17 @@ export function ClientsPage() {
     if (segmento === "con") l = l.filter((c) => c.total_pedidos > 0);
     else if (segmento === "sin") l = l.filter((c) => c.total_pedidos === 0);
     else if (segmento === "nuevos") l = l.filter(esNuevoEsteMes);
-    if (whatsapp) l = l.filter((c) => decisionWhatsapp(c) === whatsapp);
+    l = filtros.aplicar(l);
     return ordenar(l, EXTRACTORES_CLIENTES);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, segmento, whatsapp, columnaOrden, direccionOrden]);
+  }, [base, segmento, filtros.aplicar, columnaOrden, direccionOrden]);
 
-  const hayFiltros = Boolean(busqueda || segmento !== "todos" || whatsapp);
+  const hayFiltros = Boolean(busqueda || segmento !== "todos" || filtros.activos);
 
   function limpiarFiltros() {
     setBusqueda("");
     setSegmento("todos");
-    setWhatsapp("");
+    filtros.limpiar();
     setKpiPulsado(null);
   }
 
@@ -576,26 +594,12 @@ export function ClientsPage() {
                 )
               )}
             </div>
-            <select
-              className={`select-filtro ${whatsapp ? "con-valor" : ""}`}
-              value={whatsapp}
-              onChange={(e) => {
-                setWhatsapp(e.target.value as FiltroWhatsapp);
-                setKpiPulsado(null);
-              }}
-              aria-label="Filtrar por avisos de WhatsApp"
-            >
-              {OPCIONES_WHATSAPP.map((o) => (
-                <option key={o.valor} value={o.valor}>
-                  {o.etiqueta}
-                </option>
-              ))}
-            </select>
             {hayFiltros && (
               <button type="button" className="btn-limpiar" onClick={limpiarFiltros}>
                 <X size={14} /> Limpiar filtros
               </button>
             )}
+            <BotonFiltros abiertos={filtros.abiertos} activos={filtros.activos} onAlternar={filtros.alternar} />
             <ColumnPickerButton
               estado={columnasEstado}
               etiquetas={ETIQUETAS_CLIENTES}
@@ -627,6 +631,18 @@ export function ClientsPage() {
                     <span className="sr-only">Acciones</span>
                   </th>
                 </tr>
+                {filtros.abiertos && (
+                  <FilaFiltros
+                    columnas={columnasVisibles}
+                    defs={FILTROS_CLIENTES}
+                    etiquetas={ETIQUETAS_CLIENTES}
+                    valores={filtros.valores}
+                    onCambiar={(clave, valor) => {
+                      filtros.cambiar(clave, valor);
+                      setKpiPulsado(null);
+                    }}
+                  />
+                )}
               </thead>
               <tbody>
                 {cargando ? (
@@ -645,7 +661,16 @@ export function ClientsPage() {
                   lista.map((c) => {
                     const acciones = accionesDe(c);
                     return (
-                      <tr key={c.id}>
+                      <tr
+                        key={c.id}
+                        className="fila-clicable"
+                        // El clic en cualquier parte de la fila abre la ficha; con
+                        // teclado se llega por el botón «Ver ficha» de acciones.
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest("button, a, input, [role=menu]")) return;
+                          setViendo(c);
+                        }}
+                      >
                         {columnasVisibles.map((clave) => (
                           <td key={clave} className={DEFINICIONES_CLIENTES[clave].clase}>
                             {DEFINICIONES_CLIENTES[clave].render(c)}
@@ -653,6 +678,16 @@ export function ClientsPage() {
                         ))}
                         <td className="col-acciones">
                           <div className="acciones">
+                            <Tooltip label="Ver ficha">
+                              <button
+                                type="button"
+                                className="btn-icon"
+                                onClick={() => setViendo(c)}
+                                aria-label={`Ver la ficha de ${c.nombre_cliente}`}
+                              >
+                                <Eye size={16} />
+                              </button>
+                            </Tooltip>
                             {puedeEditar && (
                               <Tooltip label="Editar cliente">
                                 <button
@@ -682,6 +717,19 @@ export function ClientsPage() {
           </div>
         </section>
       </div>
+
+      {viendo && (
+        <ClientViewModal
+          cliente={viendo}
+          puedeEditar={puedeEditar}
+          onCerrar={() => setViendo(null)}
+          onEditar={() => {
+            setEditando(viendo);
+            setViendo(null);
+            setModalAbierto(true);
+          }}
+        />
+      )}
 
       {modalAbierto && (
         <ClientFormModal

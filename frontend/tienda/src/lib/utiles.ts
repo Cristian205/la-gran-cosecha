@@ -16,8 +16,20 @@ export function telHref(telefono: string): string {
   return `tel:${telefono.replace(/[^\d+]/g, "")}`;
 }
 
+/**
+ * El enlace a un chat de WhatsApp. `wa.me` exige el número completo con
+ * indicativo de país y sin símbolos; un número guardado como en Colombia se
+ * marca a diario («300 212 4562», 10 dígitos) abría un chat con un número que
+ * no existe. Los negocios de la plataforma son colombianos (ver `jsonld.ts`):
+ * a 10 dígitos se les antepone el 57. Con indicativo ya puesto, se respeta.
+ */
+export function numeroWhatsapp(numero: string): string {
+  const digitos = numero.replace(/\D/g, "");
+  return digitos.length === 10 ? `57${digitos}` : digitos;
+}
+
 export function whatsappHref(numero: string, mensaje = ""): string {
-  const base = `https://wa.me/${numero}`;
+  const base = `https://wa.me/${numeroWhatsapp(numero)}`;
   return mensaje ? `${base}?text=${encodeURIComponent(mensaje)}` : base;
 }
 

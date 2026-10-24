@@ -43,6 +43,11 @@ class Cliente(ModeloConTenant):
 
     fecha_registro_cliente = models.DateTimeField(auto_now_add=True)
 
+    #: Qué alertas quiere recibir: `{codigo: bool}` con los códigos de
+    #: `apps/orders/alertas_cliente.py`. Solo se guarda lo que alguien cambió;
+    #: lo demás toma el valor por defecto de cada alerta.
+    alertas = models.JSONField(default=dict, blank=True)
+
     class Meta:
         db_table = "ui_cliente"
         ordering = ["nombre_cliente"]

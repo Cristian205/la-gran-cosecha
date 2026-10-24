@@ -312,6 +312,20 @@ class ClienteViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             return [requiere_permiso("orders.delete_cliente")()]
         return [requiere_permiso("orders.view_cliente")()]
 
+    @action(detail=True, methods=["get"], url_path="hoja-de-vida")
+    def hoja_de_vida(self, request, pk=None):
+        """Lo que ha sido este cliente para el negocio, para la ficha del panel."""
+        from .hoja_de_vida import calcular  # noqa: PLC0415
+
+        return Response(calcular(self.get_object()))
+
+    @action(detail=False, methods=["get"], url_path="alertas")
+    def catalogo_alertas(self, request):
+        """Las alertas que se le pueden activar a un cliente, para el panel."""
+        from .alertas_cliente import ALERTAS  # noqa: PLC0415
+
+        return Response(ALERTAS)
+
     def get_queryset(self):
         qs = Cliente.objects.all()
         query = self.request.query_params.get("q")

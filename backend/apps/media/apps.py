@@ -6,3 +6,6 @@ class MediaConfig(AppConfig):
     name = "apps.media"
     label = "media"
     verbose_name = "Biblioteca de medios"
+
+    def ready(self):
+        from . import signals  # noqa: F401
