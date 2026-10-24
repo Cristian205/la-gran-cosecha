@@ -63,3 +63,20 @@ export const configuracionDeLaTienda = cache(
     return pedirAlBackend<SiteConfig>("/content/site-config/");
   }
 );
+
+/**
+ * El título de una página tal como lo escribió el negocio en el panel.
+ *
+ * El layout le añade « · <nombre del negocio>» a todos los títulos. Si el
+ * negocio ya lo escribió dentro («Catálogo · La Gran Cosecha»), se respeta tal
+ * cual (`absolute`) en vez de salir «… · La Gran Cosecha · La Gran Cosecha»
+ * en Google y en la pestaña.
+ */
+export function tituloDePagina(
+  titulo: string | undefined,
+  nombreNegocio: string | undefined
+): string | { absolute: string } | undefined {
+  if (!titulo) return undefined;
+  const nombre = nombreNegocio?.trim().toLowerCase();
+  return nombre && titulo.toLowerCase().includes(nombre) ? { absolute: titulo } : titulo;
+}

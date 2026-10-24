@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { Lienzo } from "@/bloques/Lienzo";
 import { composicionDe, datosDeLosBloques } from "@/lib/pagina";
 import { AboutPage } from "@/paginas/AboutPage";
-import { configuracionDeLaTienda } from "@/lib/negocio";
+import { configuracionDeLaTienda, tituloDePagina } from "@/lib/negocio";
 
 export async function generateMetadata(): Promise<Metadata> {
   // `composicionDe` está memorizada por petición: la página la vuelve a pedir
   // para pintarse sin una segunda llamada al backend.
   const [config, pagina] = await Promise.all([configuracionDeLaTienda(), composicionDe("/nosotros")]);
   return {
-    title: pagina?.seo_titulo || "Nosotros",
+    title: tituloDePagina(pagina?.seo_titulo, config?.nombre_empresa) ?? "Nosotros",
     description:
       pagina?.seo_descripcion ||
       config?.historia?.slice(0, 160) ||
