@@ -50,3 +50,43 @@
 /* Quien no puede entrar se ve atenuado, sin desaparecer de la lista. */
 .usuario-fila-inactiva .usuario-textos { opacity: 0.65; }
 .pastilla svg { vertical-align: -2px; }
+
+/* --------------------------------------------------------------------------
+   Editor de usuario: «Información de usuario» y «Módulos y permisos» en un
+   solo modal (UserEditorModal).
+   -------------------------------------------------------------------------- */
+.usuario-editor-tabs { display: flex; width: 100%; margin-bottom: 1.1rem; }
+.usuario-editor-tabs button { flex: 1 1 0; justify-content: center; }
+.usuario-editor [role="tabpanel"][hidden] { display: none; }
+.usuario-editor-aviso { display: flex; gap: 0.6rem; align-items: flex-start; }
+.usuario-editor-aviso svg { flex-shrink: 0; margin-top: 2px; }
+.usuario-editor-resumen { margin: 0.9rem 0 0; font-size: 0.82rem; color: var(--gris); }
+.usuario-editor-resumen strong { color: var(--dark); }
+
+.permisos-modulo-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--borde);
+}
+.permisos-modulo .permisos-modulo-cab h3 { margin: 0; padding: 0; border: none; }
+.usuario-editor .permiso-chip svg { flex-shrink: 0; }
+.permisos-modulo-cuenta {
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--gris-claro);
+  color: var(--gris);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.usuario-editor fieldset.permisos-subgrupo { border: none; margin: 0 0 0.8rem; padding: 0; min-width: 0; }
+.usuario-editor fieldset.permisos-subgrupo legend { padding: 0; }
+
+@media (max-width: 560px) {
+  .usuario-editor-tabs button { padding-inline: 0.5rem; font-size: 0.8rem; }
+  .permisos-modulo-cab { flex-wrap: wrap; }
+}

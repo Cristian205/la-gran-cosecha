@@ -9,6 +9,7 @@ CATALOGO_PERMISOS = [
         "modulo": "Catálogo",
         "permisos": [
             {"codename": "catalog.view_producto", "etiqueta": "Ver catálogo"},
+            {"codename": "catalog.add_producto", "etiqueta": "Crear productos y aprobar los pendientes"},
             {"codename": "catalog.change_producto", "etiqueta": "Editar productos"},
             {"codename": "catalog.delete_producto", "etiqueta": "Eliminar / desactivar productos"},
         ],

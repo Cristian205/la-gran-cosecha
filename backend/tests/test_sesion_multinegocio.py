@@ -200,3 +200,27 @@ def test_suspender_un_negocio_corta_el_acceso(api, contadora, dos_negocios):
 
     # Sin negocio operativo no hay nada que servir.
     assert cliente.get("/api/catalog/products/").status_code == 404
+
+
+# ==========================================================================
+# EL NOMBRE PROPIO, DESDE EL PERFIL
+# ==========================================================================
+def test_cada_quien_cambia_su_nombre_y_nada_mas(api_owner, usuario_owner):
+    r = api_owner.patch(
+        "/api/auth/me/",
+        {"nombre_usuario": "  Ana   María Pérez ", "email_usuario": "otro@ejemplo.com", "rol_usuario": "ADMIN"},
+        format="json",
+    )
+    assert r.status_code == 200, r.data
+    assert r.data["nombre_usuario"] == "Ana María Pérez"
+    usuario_owner.refresh_from_db()
+    assert usuario_owner.nombre_usuario == "Ana María Pérez"
+    # El correo y el rol no se cambian por aquí.
+    assert usuario_owner.email_usuario != "otro@ejemplo.com"
+    assert r.data["email_usuario"] == usuario_owner.email_usuario
+
+
+def test_un_nombre_vacio_se_rechaza(api_owner):
+    r = api_owner.patch("/api/auth/me/", {"nombre_usuario": " a "}, format="json")
+    assert r.status_code == 400
+    assert "nombre_usuario" in r.data

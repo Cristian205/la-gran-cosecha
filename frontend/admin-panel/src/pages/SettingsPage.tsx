@@ -1,6 +1,6 @@
 import { Building2, KeyRound } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { cambiarPassword } from "../api/auth";
 import { useAuth } from "../auth/AuthContext";
 import { NotificationPreferences } from "./NotificationPreferences";
@@ -10,6 +10,17 @@ import { extraerMensajeError } from "../utils";
 
 export function SettingsPage() {
   const { marca } = useAuth();
+  const { hash } = useLocation();
+
+  // El perfil enlaza aquí con `#cambiar-contrasena`: React Router no baja
+  // solo hasta un ancla, así que se lleva la vista y el foco al formulario.
+  useEffect(() => {
+    if (!hash) return;
+    const destino = document.getElementById(hash.slice(1));
+    if (!destino) return;
+    destino.scrollIntoView({ behavior: "smooth", block: "start" });
+    destino.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+  }, [hash]);
 
   const [passwordActual, setPasswordActual] = useState("");
   const [passwordNueva, setPasswordNueva] = useState("");
@@ -78,7 +89,7 @@ export function SettingsPage() {
             <NotificationPreferences />
           </div>
 
-          <div className="config-area-password">
+          <div className="config-area-password" id="cambiar-contrasena">
             <div className="panel">
               <div className="cabecera">
                 <h2>

@@ -183,14 +183,25 @@ class CrearUsuarioSerializer(serializers.Serializer):
 class PreferenciasSerializer(serializers.Serializer):
     """
     Preferencias propias del usuario autenticado (estructura del sidebar,
-    tipos de notificación silenciados). Ambos campos son opcionales para que
-    `MeView.patch` pueda actualizar uno sin tocar el otro.
+    tipos de notificación silenciados) y su nombre. Todos los campos son
+    opcionales para que `MeView.patch` pueda actualizar uno sin tocar el resto.
+
+    El correo NO está: es la credencial de acceso y el destino del código de
+    verificación; cambiarlo sin confirmar el nuevo dejaría la cuenta en manos
+    de quien escriba la dirección. El rol tampoco: lo asigna el dueño.
     """
 
+    nombre_usuario = serializers.CharField(max_length=150, required=False, trim_whitespace=True)
     sidebar_layout = serializers.JSONField(required=False)
     notificaciones_silenciadas = serializers.ListField(
         child=serializers.CharField(), required=False
     )
+
+    def validate_nombre_usuario(self, value):
+        nombre = " ".join(value.split())
+        if len(nombre) < 2:
+            raise serializers.ValidationError("Escribe tu nombre completo.")
+        return nombre
 
 
 class CambiarPasswordSerializer(serializers.Serializer):
