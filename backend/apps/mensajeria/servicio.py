@@ -49,12 +49,21 @@ def configuracion(tenant) -> ConfiguracionWhatsApp | None:
     return ConfiguracionWhatsApp.all_tenants.filter(tenant=tenant).first()
 
 
-def puede_escribir_a(tenant, cliente) -> bool:
+def puede_escribir_a(tenant, cliente, evento: str | None = None) -> bool:
     """
     ¿Se le puede enviar un aviso a este cliente? Solo si aceptó recibirlos,
     salvo que el negocio haya apagado esa exigencia. Las alertas al equipo
     del negocio no pasan por aquí.
+
+    Con `evento`, además, ese aviso tiene que estar encendido en las alertas
+    del cliente (Clientes → Alertas en el panel). Eso manda siempre, aunque el
+    negocio no exija consentimiento: es una decisión sobre ESTE cliente.
     """
+    if evento and cliente is not None:
+        from apps.orders.alertas_cliente import activa  # noqa: PLC0415
+
+        if not activa(cliente.alertas, evento):
+            return False
     config = configuracion(tenant)
     if config is not None and not config.exige_consentimiento:
         return True

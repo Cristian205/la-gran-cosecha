@@ -26,3 +26,157 @@
   letter-spacing: 0.02em;
 }
 .cliente-identidad .celda-nombre { max-width: 100%; min-width: 0; }
+
+/* --------------------------------------------------------------------------
+   Editor de cliente: «Información del cliente» y «Alertas» en un solo modal.
+   -------------------------------------------------------------------------- */
+.cliente-editor-tabs { display: flex; width: 100%; margin-bottom: 1.1rem; }
+.cliente-editor-tabs button { flex: 1 1 0; justify-content: center; }
+.cliente-editor [role="tabpanel"][hidden] { display: none; }
+
+.cliente-alerta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.9rem;
+  min-height: 56px;
+}
+.cliente-alerta + .cliente-alerta { border-top: 1px solid var(--borde); }
+.cliente-alerta-texto { min-width: 0; }
+.cliente-alerta-texto label { display: block; cursor: pointer; }
+.cliente-alerta .switch input:focus-visible + .switch-riel { outline: 2px solid var(--verde-500); outline-offset: 2px; }
+
+.cliente-consentimiento {
+  margin-bottom: 1.2rem;
+  border-radius: var(--radio-sm);
+  border: 1px solid var(--borde);
+  background: var(--gris-claro);
+}
+.cliente-consentimiento.si { background: var(--verde-claro); border-color: transparent; }
+
+.cliente-alertas-grupo { margin-bottom: 1.2rem; }
+.cliente-alertas-grupo:last-child { margin-bottom: 0; }
+.cliente-alertas-grupo h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--gris);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cliente-alertas-grupo h3 svg { color: var(--verde-texto); }
+.cliente-alertas-lista {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  background: var(--superficie);
+}
+.cliente-alertas-nota {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  color: var(--gris);
+  line-height: 1.4;
+}
+.cliente-alertas-nota svg { flex-shrink: 0; margin-top: 0.1rem; color: var(--ambar-texto); }
+
+@media (max-width: 560px) {
+  .cliente-editor-tabs button { padding-inline: 0.5rem; font-size: 0.8rem; }
+}
+
+/* --------------------------------------------------------------------------
+   Ficha del cliente (ClientViewModal): hoja de vida, información y pedidos.
+   -------------------------------------------------------------------------- */
+.fila-clicable { cursor: pointer; }
+.fila-clicable:hover td { background: color-mix(in srgb, var(--verde) 5%, transparent); }
+
+.ficha-cliente [role="tabpanel"][hidden] { display: none; }
+.ficha-tabs { display: flex; width: 100%; margin-bottom: 1.1rem; }
+.ficha-tabs button { flex: 1 1 0; justify-content: center; }
+
+.ficha-portada {
+  display: flex; gap: 1rem; align-items: flex-start; padding: 1.1rem; margin-bottom: 1rem;
+  border-radius: var(--radio); border: 1px solid var(--borde);
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--verde) 10%, transparent), transparent 60%), var(--superficie);
+}
+.ficha-avatar {
+  flex: none; width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--verde), var(--verde-osc)); color: #fff; font-weight: 800; font-size: 1.2rem;
+}
+.ficha-portada-texto { min-width: 0; }
+.ficha-relacion {
+  display: inline-block; padding: .2rem .6rem; border-radius: 999px; font-size: .74rem; font-weight: 700;
+  background: var(--gris-claro); color: var(--dark); cursor: help;
+}
+.ficha-relacion.FRECUENTE, .ficha-relacion.NUEVO { background: var(--verde-claro); color: var(--verde-texto); }
+.ficha-relacion.OCASIONAL { background: var(--azul-claro); color: var(--azul-texto); }
+.ficha-relacion.INACTIVO { background: var(--ambar-claro); color: var(--ambar-texto); }
+.ficha-relato { margin: .55rem 0 0; font-size: .95rem; line-height: 1.6; color: var(--dark); }
+.ficha-regla { margin: .45rem 0 0; font-size: .76rem; color: var(--gris); }
+.ficha-regla strong { font-weight: 600; }
+
+.ficha-cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: .6rem; margin-bottom: 1rem; }
+.ficha-cifra { display: flex; gap: .6rem; align-items: flex-start; padding: .75rem .8rem; border: 1px solid var(--borde); border-radius: var(--radio-sm); background: var(--superficie); min-width: 0; }
+.ficha-cifra-icono { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--verde-claro); color: var(--verde-texto); }
+.ficha-cifra-etiqueta { font-size: .7rem; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .04em; }
+.ficha-cifra-valor { font-size: 1rem; font-weight: 750; color: var(--dark); overflow-wrap: anywhere; }
+.ficha-cifra-nota { font-size: .72rem; color: var(--gris); }
+
+.ficha-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1rem; }
+.ficha-bloque { padding: .9rem 1rem; border: 1px solid var(--borde); border-radius: var(--radio-sm); background: var(--superficie); margin-top: 1rem; }
+.ficha-columnas .ficha-bloque { margin-top: 0; }
+.ficha-bloque h3 { display: flex; align-items: center; gap: .4rem; margin: 0 0 .7rem; font-size: .8rem; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .04em; }
+.ficha-bloque h3 svg { color: var(--verde-texto); }
+.ficha-vacio { margin: .4rem 0 0; font-size: .8rem; color: var(--gris); }
+
+.ficha-favoritos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .55rem; }
+.ficha-favoritos li { display: grid; grid-template-columns: minmax(0, 1fr) 70px auto; align-items: center; gap: .6rem; font-size: .86rem; }
+.ficha-favorito-nombre { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ficha-barra { height: 6px; border-radius: 999px; background: var(--gris-claro); overflow: hidden; }
+.ficha-barra span { display: block; height: 100%; border-radius: inherit; background: var(--verde); }
+.ficha-favorito-veces { font-size: .76rem; color: var(--gris); white-space: nowrap; }
+
+.ficha-linea { list-style: none; margin: 0; padding: 0; position: relative; }
+.ficha-linea li { display: flex; gap: .65rem; position: relative; padding-bottom: .8rem; }
+.ficha-linea li:not(:last-child)::before { content: ""; position: absolute; left: 12px; top: 26px; bottom: 0; width: 2px; background: var(--borde); }
+.ficha-linea-punto { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--verde-claro); color: var(--verde-texto); }
+.ficha-linea-texto { font-size: .86rem; font-weight: 600; color: var(--dark); }
+.ficha-linea-fecha { font-size: .74rem; color: var(--gris); }
+
+.ficha-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: .6rem; margin: 0; }
+.ficha-dato { display: flex; gap: .6rem; align-items: flex-start; padding: .75rem .85rem; border: 1px solid var(--borde); border-radius: var(--radio-sm); background: var(--superficie); min-width: 0; }
+.ficha-dato > svg { flex: none; margin-top: .15rem; color: var(--verde-texto); }
+.ficha-dato dt { font-size: .7rem; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .04em; }
+.ficha-dato dd { margin: .15rem 0 0; font-size: .9rem; font-weight: 600; color: var(--dark); overflow-wrap: anywhere; }
+
+.ficha-chips { list-style: none; display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; }
+.ficha-chips li { padding: .25rem .65rem; border-radius: 999px; font-size: .78rem; font-weight: 600; background: var(--verde-claro); color: var(--verde-texto); }
+.ficha-chips li.marketing { background: var(--azul-claro); color: var(--azul-texto); }
+
+.ficha-pedidos { list-style: none; margin: .6rem 0 0; padding: 0; border: 1px solid var(--borde); border-radius: var(--radio-sm); background: var(--superficie); }
+.ficha-pedidos li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: .8rem; padding: .7rem .9rem; }
+.ficha-pedidos li + li { border-top: 1px solid var(--borde); }
+.ficha-pedidos li > div { display: flex; flex-direction: column; min-width: 0; }
+.ficha-pedidos li > div span { font-size: .78rem; color: var(--gris); }
+.ficha-pedido-total { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 560px) {
+  .ficha-tabs button { padding-inline: .45rem; font-size: .8rem; }
+  .ficha-portada { flex-direction: column; }
+  .ficha-pedidos li { grid-template-columns: minmax(0, 1fr) auto; }
+  .ficha-pedidos li .badge { grid-row: 2; justify-self: start; }
+}
+
+.btn-con-icono { display: inline-flex; align-items: center; gap: .4rem; }
+
+/* La ficha del cliente, más ancha que un modal «ancho» normal: hoja de vida a
+   dos columnas y las cinco cifras en una fila sin apretarse. */
+.modal.amplio.ancho:has(.ficha-cliente) { width: min(1240px, calc(100vw - 3rem)); }
+@media (max-width: 760px) {
+  .modal.amplio.ancho:has(.ficha-cliente) { width: 100vw; }
+}
