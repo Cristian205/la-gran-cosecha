@@ -421,3 +421,16 @@ WHATSAPP_ENVIO_EN_HILO = env.bool("WHATSAPP_ENVIO_EN_HILO", default=True)
 OTP_EXPIRY_MINUTES = env.int("OTP_EXPIRY_MINUTES", default=10)
 # Firma del ticket pre-auth entre paso 1 (password) y paso 2 (OTP)
 OTP_TICKET_SALT = "accounts.otp.ticket"
+#: Códigos de acceso incorrectos seguidos antes de anular el código y
+#: bloquear la cuenta, y cuánto dura ese bloqueo.
+OTP_MAX_INTENTOS = env.int("OTP_MAX_INTENTOS", default=5)
+OTP_BLOQUEO_MINUTOS = env.int("OTP_BLOQUEO_MINUTOS", default=15)
+# Restablecimiento de contraseña: un ticket para el paso del código y otro,
+# distinto, para el de la contraseña nueva. Sales propias: un ticket de un
+# paso no se puede presentar en otro.
+RESET_TICKET_SALT = "accounts.reset.ticket"
+RESET_CAMBIO_SALT = "accounts.reset.cambio"
+#: Intentos de código antes de anularlo (hay que pedir uno nuevo).
+RESET_MAX_INTENTOS = 5
+#: Tiempo mínimo entre dos envíos de código al mismo correo.
+RESET_REENVIO_SEGUNDOS = 60

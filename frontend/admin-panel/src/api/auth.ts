@@ -1,5 +1,8 @@
+import axios from "axios";
 import type { NodoSidebar, Usuario } from "../types";
 import { api, tokenStore } from "./client";
+
+const baseURL = import.meta.env.VITE_API_URL ?? "/api";
 
 export interface LoginPaso1 {
   success: boolean;
@@ -89,5 +92,30 @@ export async function cambiarPassword(
 /** El nombre propio, desde el perfil. El correo y el rol no se cambian aquí. */
 export async function actualizarNombre(nombre: string): Promise<Usuario> {
   const { data } = await api.patch<Usuario>("/auth/me/", { nombre_usuario: nombre });
+  return data;
+}
+
+// ---------- Restablecer la contraseña («¿Olvidó su contraseña?») ----------
+// Sin sesión: van con `axios` directo y no con `api`, para que el interceptor
+// no les ponga el token de una sesión anterior ni dispare un refresco.
+
+export async function solicitarRestablecimiento(email: string): Promise<{ message: string; reset_ticket: string }> {
+  const { data } = await axios.post(`${baseURL}/auth/password-reset/`, { email_usuario: email });
+  return data;
+}
+
+export async function verificarCodigoRestablecimiento(resetTicket: string, codigo: string): Promise<{ cambio_ticket: string }> {
+  const { data } = await axios.post(`${baseURL}/auth/password-reset/verificar/`, {
+    reset_ticket: resetTicket,
+    codigo,
+  });
+  return data;
+}
+
+export async function guardarPasswordRestablecida(cambioTicket: string, password: string): Promise<{ message: string }> {
+  const { data } = await axios.post(`${baseURL}/auth/password-reset/nueva/`, {
+    cambio_ticket: cambioTicket,
+    password_nueva: password,
+  });
   return data;
 }

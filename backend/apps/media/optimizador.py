@@ -321,9 +321,12 @@ def _con_extension(nombre: str, ext: str) -> str:
     return f"{raiz or 'imagen'}.{ext}"
 
 
-def procesar(archivo, nombre: str = "") -> Resultado | None:
+def procesar(archivo, nombre: str = "", formato: str = "WEBP") -> Resultado | None:
     """
     Optimiza y diagnostica un archivo de imagen (cualquier objeto con `read`).
+
+    `formato` es el de salida: WebP para la web, PNG para lo que también va
+    en correos (el logo): Outlook de escritorio no muestra WebP.
 
     Devuelve None cuando no es una imagen que convenga tocar —SVG, GIF
     (puede ser animado), algo que Pillow no lee o demasiado grande para
@@ -365,7 +368,7 @@ def procesar(archivo, nombre: str = "") -> Resultado | None:
     # Un WebP del tamaño justo se queda como está: recodificarlo solo le
     # restaría calidad. Pasa, por ejemplo, al reusar una imagen de la
     # biblioteca (ya optimizada) en otro formulario.
-    if not reducida and formato_original == "WEBP":
+    if not reducida and formato_original == formato:
         return original()
     if reducida:
         img.thumbnail((lado, lado), Image.LANCZOS)
@@ -382,7 +385,10 @@ def procesar(archivo, nombre: str = "") -> Resultado | None:
     salida = io.BytesIO()
     # Sin `exif` ni `icc_profile`: los metadatos se quedan fuera. `method=4`
     # es el punto medio de velocidad: 6 comprime un poco más y tarda el doble.
-    img.save(salida, "WEBP", quality=calidad_webp(), method=4)
+    if formato == "PNG":
+        img.save(salida, "PNG", optimize=True)
+    else:
+        img.save(salida, "WEBP", quality=calidad_webp(), method=4)
     nuevo = salida.getvalue()
 
     # Si el original ya era más liviano que su versión WebP, se queda: no se
@@ -393,8 +399,8 @@ def procesar(archivo, nombre: str = "") -> Resultado | None:
 
     return Resultado(
         contenido=nuevo,
-        nombre=_con_extension(nombre, "webp"),
-        content_type="image/webp",
+        nombre=_con_extension(nombre, formato.lower()),
+        content_type=f"image/{formato.lower()}",
         ancho=img.width,
         alto=img.height,
         tamano_original=len(datos),

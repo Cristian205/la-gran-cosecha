@@ -76,6 +76,13 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     token_verificacion = models.CharField(max_length=255, null=True, blank=True)
     token_expiracion = models.DateTimeField(null=True, blank=True)
 
+    # Restablecimiento de contraseña («¿Olvidó su contraseña?»). Campos propios
+    # y no los del OTP de login: un código pedido para restablecer no puede
+    # servir para entrar, ni al revés. Se guarda el hash, nunca el código.
+    reset_codigo = models.CharField(max_length=255, null=True, blank=True)
+    reset_expira = models.DateTimeField(null=True, blank=True)
+    reset_intentos = models.PositiveSmallIntegerField(default=0)
+
     # Auditoría
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     ultima_modificacion = models.DateTimeField(auto_now=True)

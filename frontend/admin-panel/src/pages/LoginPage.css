@@ -667,3 +667,21 @@
     gap: 10px;
   }
 }
+
+/* ---------- Restablecer la contraseña ---------- */
+.acceso__reenviar {
+  display: block;
+  margin: 14px auto 0;
+}
+.acceso__reenviar:disabled {
+  color: var(--texto-tenue);
+  cursor: default;
+  text-decoration: none;
+}
+.acceso__listo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  color: var(--marca);
+}

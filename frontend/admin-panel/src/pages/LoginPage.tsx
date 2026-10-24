@@ -2,14 +2,22 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
+  CheckCircle2,
   Eye,
   EyeOff,
   Headset,
+  KeyRound,
   Lock,
   Mail,
   ShieldCheck,
 } from "lucide-react";
-import { loginPaso1, verificarOtp } from "../api/auth";
+import {
+  guardarPasswordRestablecida,
+  loginPaso1,
+  solicitarRestablecimiento,
+  verificarCodigoRestablecimiento,
+  verificarOtp,
+} from "../api/auth";
 import { pilaFuente, radioPx } from "../api/apariencia";
 import { cargarMarca, type MarcaNegocio } from "../api/marca";
 import { useAuth } from "../auth/AuthContext";
@@ -19,6 +27,11 @@ import type { Usuario } from "../types";
 import "./LoginPage.css";
 
 const OTP_LENGTH = 6;
+/** Lo mismo que exige el backend (RESET_REENVIO_SEGUNDOS) entre dos envíos. */
+const ESPERA_REENVIO = 60;
+
+/** «¿Olvidó su contraseña?»: correo → código → contraseña nueva → listo. */
+type PasoRecuperar = "correo" | "codigo" | "clave" | "listo";
 
 export function LoginPage() {
   const { setUsuario } = useAuth();
@@ -34,7 +47,12 @@ export function LoginPage() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [ayudaClave, setAyudaClave] = useState(false);
+  const [recuperar, setRecuperar] = useState<PasoRecuperar | null>(null);
+  const [resetTicket, setResetTicket] = useState("");
+  const [cambioTicket, setCambioTicket] = useState("");
+  const [claveNueva, setClaveNueva] = useState("");
+  const [claveConfirmar, setClaveConfirmar] = useState("");
+  const [reenvioEn, setReenvioEn] = useState(0);
   const [usuarioPendiente, setUsuarioPendiente] = useState<Usuario | null>(null);
   const [marca, setMarca] = useState<MarcaNegocio | null>(null);
 
@@ -46,6 +64,99 @@ export function LoginPage() {
   useEffect(() => {
     cargarMarca().then(setMarca).catch(() => undefined);
   }, []);
+
+  // Cuenta regresiva para «Reenviar código».
+  useEffect(() => {
+    if (reenvioEn <= 0) return;
+    const t = setTimeout(() => setReenvioEn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [reenvioEn]);
+
+  // ---------- Restablecer la contraseña ----------
+
+  function abrirRecuperar() {
+    setRecuperar("correo");
+    setError(null);
+    setAviso(null);
+  }
+
+  function volverAlLogin(mensaje: string | null = null) {
+    setRecuperar(null);
+    setPaso(1);
+    setError(null);
+    setAviso(mensaje);
+    setPassword("");
+    setClaveNueva("");
+    setClaveConfirmar("");
+    setOtpDigits(Array(OTP_LENGTH).fill(""));
+  }
+
+  async function pedirCodigo(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!email.trim()) {
+      setError("Escriba el correo de su cuenta.");
+      return;
+    }
+    setError(null);
+    setCargando(true);
+    try {
+      const resp = await solicitarRestablecimiento(email.trim());
+      setResetTicket(resp.reset_ticket);
+      setAviso(resp.message);
+      setRecuperar("codigo");
+      setOtpDigits(Array(OTP_LENGTH).fill(""));
+      setReenvioEn(ESPERA_REENVIO);
+      setTimeout(() => otpRefs.current[0]?.focus(), 300);
+    } catch (err) {
+      setError(extraerMensajeError(err, "No se pudo enviar el código. Inténtelo de nuevo."));
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  async function comprobarCodigoReset(codigo: string) {
+    setError(null);
+    setCargando(true);
+    try {
+      const resp = await verificarCodigoRestablecimiento(resetTicket, codigo);
+      setCambioTicket(resp.cambio_ticket);
+      setRecuperar("clave");
+    } catch (err) {
+      setError(extraerMensajeError(err, "El código es incorrecto o ya venció."));
+      setOtpDigits(Array(OTP_LENGTH).fill(""));
+      setTimeout(() => otpRefs.current[0]?.focus(), 50);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  async function guardarClaveNueva(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (claveNueva.length < 8) {
+      setError("La contraseña nueva debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (claveNueva !== claveConfirmar) {
+      setError("La confirmación no coincide con la contraseña nueva.");
+      return;
+    }
+    setCargando(true);
+    try {
+      await guardarPasswordRestablecida(cambioTicket, claveNueva);
+      setRecuperar("listo");
+    } catch (err) {
+      setError(extraerMensajeError(err, "No se pudo guardar la contraseña."));
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  /** Las casillas del código sirven a los dos flujos: login y restablecer. */
+  function completarCodigo(codigo: string) {
+    if (recuperar === "codigo") comprobarCodigoReset(codigo);
+    else confirmarOtp(codigo);
+  }
 
   async function enviarCredenciales(e: React.FormEvent) {
     e.preventDefault();
@@ -91,7 +202,7 @@ export function LoginPage() {
       setError("Debe ingresar los 6 dígitos.");
       return;
     }
-    confirmarOtp(codigo);
+    completarCodigo(codigo);
   }
 
   function cambiarDigito(index: number, valor: string) {
@@ -120,7 +231,7 @@ export function LoginPage() {
       e.preventDefault();
       setOtpDigits(pegado.split(""));
       otpRefs.current[OTP_LENGTH - 1]?.focus();
-      confirmarOtp(pegado);
+      completarCodigo(pegado);
     }
   }
 
@@ -212,12 +323,20 @@ export function LoginPage() {
             <ShieldCheck size={24} />
           </span>
 
-          <h2>{paso === 1 ? "Identificación" : "Verificación"}</h2>
+          <h2>{recuperar ? "Restablecer contraseña" : paso === 1 ? "Identificación" : "Verificación"}</h2>
           <span className="acceso__subrayado" aria-hidden="true" />
-          <p className="acceso__intro">
-            {paso === 1
-              ? "Inicie sesión para acceder al panel de control."
-              : aviso || "Hemos enviado un código de acceso a su correo."}
+          <p className="acceso__intro" aria-live="polite">
+            {recuperar === "correo"
+              ? "Escriba el correo de su cuenta y le enviaremos un código para crear una contraseña nueva."
+              : recuperar === "codigo"
+                ? `${aviso ?? ""} Escriba el código de 6 dígitos que llegó a ${email.trim()}.`
+                : recuperar === "clave"
+                  ? "Código verificado. Elija su contraseña nueva."
+                  : recuperar === "listo"
+                    ? "Su contraseña se cambió. Le enviamos un aviso a su correo."
+                    : paso === 1
+                      ? aviso || "Inicie sesión para acceder al panel de control."
+                      : aviso || "Hemos enviado un código de acceso a su correo."}
           </p>
 
           {error && (
@@ -226,7 +345,90 @@ export function LoginPage() {
             </p>
           )}
 
-          {paso === 1 ? (
+          {recuperar === "correo" ? (
+            <form onSubmit={pedirCodigo} noValidate>
+              <label className="acceso__campo">
+                <span className="acceso__rotulo">Correo electrónico</span>
+                <span className="acceso__entrada">
+                  <Mail size={17} aria-hidden="true" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="usuario@empresa.com"
+                    autoComplete="username"
+                    required
+                    autoFocus
+                  />
+                </span>
+              </label>
+              <button type="submit" className="acceso__enviar" disabled={cargando}>
+                {cargando ? "Enviando…" : "Enviarme el código"}
+                {!cargando && <ArrowRight size={18} />}
+              </button>
+              <button type="button" className="acceso__volver" onClick={() => volverAlLogin()}>
+                Volver a iniciar sesión
+              </button>
+            </form>
+          ) : recuperar === "clave" ? (
+            <form onSubmit={guardarClaveNueva} noValidate>
+              <label className="acceso__campo">
+                <span className="acceso__rotulo">Contraseña nueva</span>
+                <span className="acceso__entrada">
+                  <Lock size={17} aria-hidden="true" />
+                  <input
+                    type={verClave ? "text" : "password"}
+                    value={claveNueva}
+                    onChange={(e) => setClaveNueva(e.target.value)}
+                    autoComplete="new-password"
+                    aria-describedby="acceso-reglas-clave"
+                    required
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="acceso__ojo"
+                    onClick={() => setVerClave((v) => !v)}
+                    aria-label={verClave ? "Ocultar la clave" : "Mostrar la clave"}
+                  >
+                    {verClave ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </span>
+              </label>
+              <label className="acceso__campo">
+                <span className="acceso__rotulo">Confirmar contraseña nueva</span>
+                <span className="acceso__entrada">
+                  <KeyRound size={17} aria-hidden="true" />
+                  <input
+                    type={verClave ? "text" : "password"}
+                    value={claveConfirmar}
+                    onChange={(e) => setClaveConfirmar(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                  />
+                </span>
+              </label>
+              <p className="acceso__nota" id="acceso-reglas-clave">
+                Al menos 8 caracteres, que no sean solo números ni una clave común, y distinta de su nombre o correo.
+              </p>
+              <button type="submit" className="acceso__enviar" disabled={cargando}>
+                {cargando ? "Guardando…" : "Guardar contraseña nueva"}
+                {!cargando && <ArrowRight size={18} />}
+              </button>
+            </form>
+          ) : recuperar === "listo" ? (
+            <div className="acceso__listo">
+              <CheckCircle2 size={44} aria-hidden="true" />
+              <button
+                type="button"
+                className="acceso__enviar"
+                onClick={() => volverAlLogin("Inicie sesión con su contraseña nueva.")}
+                autoFocus
+              >
+                Iniciar sesión <ArrowRight size={18} />
+              </button>
+            </div>
+          ) : paso === 1 && !recuperar ? (
             <form onSubmit={enviarCredenciales} noValidate>
               <label className="acceso__campo">
                 <span className="acceso__rotulo">Correo electrónico</span>
@@ -277,25 +479,10 @@ export function LoginPage() {
                   <span>Recordar sesión</span>
                 </label>
 
-                {/* No es un enlace: la API no tiene restablecimiento, y un
-                    enlace que no lleva a ninguna parte enseña a desconfiar de
-                    los demás. Dice lo único que hoy es cierto. */}
-                <button
-                  type="button"
-                  className="acceso__olvido"
-                  onClick={() => setAyudaClave((v) => !v)}
-                >
+                <button type="button" className="acceso__olvido" onClick={abrirRecuperar}>
                   ¿Olvidó su contraseña?
                 </button>
               </div>
-
-              {ayudaClave && (
-                <p className="acceso__nota">
-                  Todavía no hay restablecimiento automático. Pídale a un
-                  administrador de su empresa que le asigne una clave nueva; el
-                  sistema le obligará a cambiarla al entrar.
-                </p>
-              )}
 
               <button type="submit" className="acceso__enviar" disabled={cargando}>
                 {cargando ? "Verificando…" : "Entrar al sistema"}
@@ -328,21 +515,36 @@ export function LoginPage() {
               </fieldset>
 
               <button type="submit" className="acceso__enviar" disabled={cargando}>
-                {cargando ? "Validando…" : "Confirmar identidad"}
+                {cargando ? "Validando…" : recuperar === "codigo" ? "Verificar código" : "Confirmar identidad"}
                 {!cargando && <ArrowRight size={18} />}
               </button>
+
+              {recuperar === "codigo" && (
+                <button
+                  type="button"
+                  className="acceso__olvido acceso__reenviar"
+                  onClick={() => pedirCodigo()}
+                  disabled={cargando || reenvioEn > 0}
+                >
+                  {reenvioEn > 0 ? `Reenviar código en ${reenvioEn} s` : "Reenviar código"}
+                </button>
+              )}
 
               <button
                 type="button"
                 className="acceso__volver"
                 onClick={() => {
+                  if (recuperar) {
+                    volverAlLogin();
+                    return;
+                  }
                   setPaso(1);
                   setOtpDigits(Array(OTP_LENGTH).fill(""));
                   setError(null);
                   setAviso(null);
                 }}
               >
-                Volver al inicio
+                {recuperar ? "Volver a iniciar sesión" : "Volver al inicio"}
               </button>
             </form>
           )}
