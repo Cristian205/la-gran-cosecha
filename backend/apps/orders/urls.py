@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .pdf import GenerarPdfPedidoView, GenerarPdfPedidosLoteView
+from .pdf import GenerarPdfPedidosLoteView, GenerarPdfPedidoView, VistaPreviaFacturaView
 from .stats import PanelEstadisticasView, ReporteVentasView, ResumenEstadisticasView
 from .views import (
     ClienteViewSet,
@@ -34,6 +34,7 @@ urlpatterns = [
         name="productos-mas-vendidos",
     ),
     path("orders/pdf-lote/", GenerarPdfPedidosLoteView.as_view(), name="pedidos-pdf-lote"),
+    path("orders/factura/vista-previa/", VistaPreviaFacturaView.as_view(), name="factura-vista-previa"),
     # La tienda pública, para el cliente que se identifica con su cédula.
     path("orders-cliente/consultar/", ConsultarClienteView.as_view(), name="cliente-tienda-consultar"),
     path("orders-cliente/historial/", HistorialClienteView.as_view(), name="cliente-tienda-historial"),

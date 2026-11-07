@@ -1,11 +1,11 @@
 "use client";
 
-import { ArrowRight, LayoutGrid, Loader2, Search, X } from "lucide-react";
+import { ArrowRight, Flame, LayoutGrid, Loader2, Search, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useEnvoltorio } from "@/componentes/CapaCliente";
 import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
 import { useTienda } from "@/estado/tienda";
-import { obtenerProductos } from "@/lib/datos";
+import { obtenerProductos, obtenerProductosMasVendidos } from "@/lib/datos";
 import type { Categoria, Producto } from "@/lib/tipos";
 import { formatoPrecio, normalizarTexto } from "@/lib/utiles";
 import { ImagenProducto } from "./ImagenProducto";
@@ -14,7 +14,15 @@ interface Props {
   placeholder?: string;
   /** Una pregunta visible encima del campo ("¿Qué estás buscando?"). */
   etiqueta?: string;
+  /**
+   * Sugerencias de lo más pedido: al enfocar el campo vacío, la lista las
+   * muestra, y debajo del campo van como atajos ("Papa", "Tomate"…). Salen
+   * del mismo ranking de ventas que "Los favoritos de los negocios".
+   */
+  populares?: boolean;
 }
+
+const POPULARES = 5;
 
 type Opcion =
   | { tipo: "categoria"; categoria: Categoria }
@@ -46,7 +54,7 @@ function irAlCatalogo() {
  * se oculta (clase en `<body>`): dos campos idénticos uno encima del otro
  * solo obligan a elegir cuál usar.
  */
-export function SearchBar({ placeholder = "Buscar productos…", etiqueta }: Props) {
+export function SearchBar({ placeholder = "Buscar productos…", etiqueta, populares: conPopulares = false }: Props) {
   const catalogo = useCatalogoContexto();
   const envoltorio = useEnvoltorio();
   const busqueda = catalogo?.busqueda ?? envoltorio.busqueda;
@@ -64,6 +72,33 @@ export function SearchBar({ placeholder = "Buscar productos…", etiqueta }: Pro
   const idLista = useId();
 
   const q = busqueda.trim();
+
+  // Lo más pedido: se pide cuando el navegador queda libre tras la primera
+  // pintura, no antes — son sugerencias, y no pueden competir con la foto ni
+  // con el catálogo por la red (Core Web Vitals). Su fila tiene alto
+  // reservado, así que llegar tarde no mueve nada.
+  const [populares, setPopulares] = useState<Producto[]>([]);
+  useEffect(() => {
+    if (!conPopulares) return;
+    let vivo = true;
+    const pedir = () =>
+      obtenerProductosMasVendidos()
+        .then((lista) => {
+          if (vivo) setPopulares(lista.filter((p) => p.presentaciones.length > 0).slice(0, POPULARES));
+        })
+        .catch(() => undefined);
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const id = w.requestIdleCallback ? w.requestIdleCallback(pedir, { timeout: 2500 }) : window.setTimeout(pedir, 1200);
+    return () => {
+      vivo = false;
+      if (w.cancelIdleCallback) w.cancelIdleCallback(id);
+      else window.clearTimeout(id);
+    };
+  }, [conPopulares]);
+  const sugerirPopulares = q.length < MINIMO && populares.length > 0;
 
   // Sugerencias de productos: el backend recorta a 5 y trae `count`, que es
   // el número real de coincidencias en todo el catálogo.
@@ -126,20 +161,28 @@ export function SearchBar({ placeholder = "Buscar productos…", etiqueta }: Pro
   }, [q, catalogo]);
 
   const opciones: Opcion[] = useMemo(() => {
+    if (sugerirPopulares) return populares.map((producto) => ({ tipo: "producto" as const, producto }));
     const lista: Opcion[] = [
       ...categorias.map((categoria) => ({ tipo: "categoria" as const, categoria })),
       ...productos.map((producto) => ({ tipo: "producto" as const, producto })),
     ];
     if (total !== null && total > 0) lista.push({ tipo: "todos" });
     return lista;
-  }, [categorias, productos, total]);
+  }, [categorias, productos, total, sugerirPopulares, populares]);
 
   useEffect(() => setActiva(-1), [q]);
   useEffect(() => {
     if (!abierto) setActiva(-1);
   }, [abierto]);
 
-  const mostrarLista = abierto && q.length >= MINIMO;
+  const mostrarLista = abierto && (q.length >= MINIMO || sugerirPopulares);
+
+  /** Un atajo de "Populares": busca ese producto (nombre y variedades) y baja al catálogo. */
+  function buscarPopular(p: Producto) {
+    setAbierto(false);
+    buscar(p.nombre_producto);
+    irAlCatalogo();
+  }
 
   function elegir(opcion: Opcion) {
     setAbierto(false);
@@ -227,7 +270,12 @@ export function SearchBar({ placeholder = "Buscar productos…", etiqueta }: Pro
       </div>
 
       {mostrarLista && (
-        <div className="sbar-lista" id={idLista} role="listbox" aria-label="Sugerencias">
+        <div className="sbar-lista" id={idLista} role="listbox" aria-label={sugerirPopulares ? "Lo más pedido" : "Sugerencias"}>
+          {sugerirPopulares && (
+            <p className="sbar-lista-titulo" role="presentation">
+              <Flame size={14} aria-hidden="true" /> Lo más pedido
+            </p>
+          )}
           {opciones.length === 0 ? (
             <p className="sbar-vacio">
               {buscando ? "Buscando…" : <>No encontramos “{q}”. Prueba con otra palabra.</>}
@@ -289,6 +337,23 @@ export function SearchBar({ placeholder = "Buscar productos…", etiqueta }: Pro
                 </div>
               );
             })
+          )}
+        </div>
+      )}
+
+      {/* Atajos a lo más pedido. La fila existe (con su alto) aunque los
+          datos aún no lleguen: así no empuja el contenido al aparecer. */}
+      {conPopulares && (
+        <div className="sbar-populares" aria-label="Búsquedas populares">
+          {populares.length > 0 && (
+            <>
+              <span className="sbar-populares-rotulo">Populares</span>
+              {populares.map((p) => (
+                <button key={p.id} type="button" className="sbar-chip" onClick={() => buscarPopular(p)}>
+                  {p.nombre_producto}
+                </button>
+              ))}
+            </>
           )}
         </div>
       )}

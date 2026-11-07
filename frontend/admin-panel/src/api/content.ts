@@ -20,6 +20,43 @@ export async function obtenerSiteConfig(): Promise<SiteConfig> {
   return data;
 }
 
+/** Los campos de la configuración que cambian cómo se ve la factura. */
+export const CAMPOS_FACTURA = [
+  "nombre_empresa",
+  "factura_eslogan",
+  "factura_nit",
+  "factura_proveedor",
+  "factura_telefono",
+  "factura_direccion",
+  "factura_chip_secundario",
+  "factura_nota_pie",
+  "factura_aplicar_tinte_logo",
+  "factura_marca_agua_activa",
+  "factura_marca_agua_texto",
+  "factura_marca_agua_opacidad",
+] as const satisfies readonly (keyof SiteConfig)[];
+
+/**
+ * La factura en PDF de un pedido de prueba con estos datos, aunque aún no se
+ * hayan guardado. La genera el backend con la misma plantilla que la factura
+ * real, así que lo que se ve es lo que saldrá impreso.
+ */
+export async function vistaPreviaFactura(
+  config: SiteConfig,
+  facturaLogo: File | null,
+  signal?: AbortSignal
+): Promise<Blob> {
+  const form = new FormData();
+  for (const campo of CAMPOS_FACTURA) form.append(campo, String(config[campo] ?? ""));
+  if (facturaLogo) form.append("factura_logo", facturaLogo);
+  const { data } = await api.post<Blob>("/orders/factura/vista-previa/", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+    responseType: "blob",
+    signal,
+  });
+  return data;
+}
+
 export async function actualizarSiteConfig(
   cambios: Partial<SiteConfig>,
   logo?: File | null,

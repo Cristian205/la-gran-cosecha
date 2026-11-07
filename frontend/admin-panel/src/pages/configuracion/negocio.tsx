@@ -18,22 +18,26 @@ import {
   SoloLectura,
 } from "./ui";
 import { useSiteConfig, type EditorSiteConfig } from "./usarSiteConfig";
+import { VistaPreviaFactura } from "./VistaPreviaFactura";
 
 /** Envoltorio común de las vistas que editan la configuración del sitio. */
 function VistaSiteConfig({
   clave,
   titulo,
   descripcion,
+  ancha = false,
   children,
 }: {
   clave: string;
   titulo: string;
   descripcion: string;
+  /** Más ancho que el de un formulario: para vistas con vista previa al lado. */
+  ancha?: boolean;
   children: (editor: EditorSiteConfig & { config: SiteConfig }) => React.ReactNode;
 }) {
   const editor = useSiteConfig(clave);
   return (
-    <div className="cfg-vista">
+    <div className={`cfg-vista ${ancha ? "cfg-vista--ancha" : ""}`}>
       <CabeceraVista titulo={titulo} descripcion={descripcion} />
       {editor.cargando ? (
         <Cargando />
@@ -278,9 +282,11 @@ export function FacturacionVista() {
       clave="negocio/facturacion"
       titulo="Facturación"
       descripcion="Los datos y el aspecto de la factura en PDF de cada pedido."
+      ancha
     >
       {({ config, campo, facturaLogo, setFacturaLogo }) => (
-        <>
+        <div className="factura-config">
+          <div className="factura-config-campos">
           <Grupo titulo="Datos fiscales">
             <div className="cfg-rejilla-2">
               <Texto id="cfg-f-empresa" etiqueta="Nombre en el encabezado" valor={config.nombre_empresa} onCambiar={(v) => campo("nombre_empresa", v)} ayuda="Es el mismo nombre del negocio." />
@@ -339,7 +345,9 @@ export function FacturacionVista() {
               </div>
             )}
           </Grupo>
-        </>
+          </div>
+          <VistaPreviaFactura config={config} facturaLogo={facturaLogo} />
+        </div>
       )}
     </VistaSiteConfig>
   );

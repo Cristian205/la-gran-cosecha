@@ -40,6 +40,28 @@ interface CatalogoContextoValor {
   reintentar: () => void;
   hayFiltros: boolean;
   limpiarFiltros: () => void;
+  /** Lleva la vista a la tarjeta de un producto en la rejilla y la resalta
+   *  (ver `irAProducto` en el proveedor). */
+  irAProducto: (producto: { id: number; categoria: number }) => void;
+}
+
+/**
+ * Desplaza hasta la tarjeta `#producto-<id>` y la resalta un momento. `false`
+ * si la tarjeta no está pintada (todavía no cargó, u otro filtro).
+ */
+export function resaltarProducto(id: number): boolean {
+  const tarjeta = document.getElementById(`producto-${id}`);
+  if (!tarjeta) return false;
+  const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  tarjeta.scrollIntoView({ behavior: quieto ? "auto" : "smooth", block: "center" });
+  tarjeta.classList.remove("pcard--resaltada");
+  // Forzar el reflow reinicia la animación si se pide dos veces seguidas.
+  void tarjeta.offsetWidth;
+  tarjeta.classList.add("pcard--resaltada");
+  window.setTimeout(() => tarjeta.classList.remove("pcard--resaltada"), 2200);
+  // El foco va al nombre: quien navega con teclado sigue desde la tarjeta.
+  tarjeta.querySelector<HTMLElement>(".pcard-nombre a")?.focus({ preventScroll: true });
+  return true;
 }
 
 const Contexto = createContext<CatalogoContextoValor | null>(null);
@@ -176,6 +198,47 @@ export function CatalogoProvider({ children, datosIniciales, categoriasIniciales
   const hayFiltros =
     Boolean(busqueda.trim()) || categoriaActiva !== null || unidadActiva !== null;
 
+  /**
+   * Ir a un producto dentro del catálogo (el banner de favoritos, un enlace
+   * `/tienda?categoria=5&producto=42` desde el Inicio).
+   *
+   * Si su tarjeta ya está pintada, se va ahí. Si no, se filtra por su
+   * categoría —la lista más corta donde seguro está— y se espera a que
+   * aparezca, pidiendo más tandas si hace falta. La espera vive aquí y no en
+   * quien la pide: el banner que dispara esto se oculta en cuanto hay un
+   * filtro, y con él se iría cualquier efecto suyo.
+   */
+  const [pendiente, setPendiente] = useState<number | null>(() => numeroDe(searchParams.get("producto")));
+
+  function irAProducto(producto: { id: number; categoria: number }) {
+    if (resaltarProducto(producto.id)) return;
+    setPendiente(producto.id);
+    if (categoriaActiva !== producto.categoria || unidadActiva !== null || busqueda.trim()) {
+      buscar("");
+      filtrar({ categoria: String(producto.categoria), unidad: null });
+    }
+  }
+
+  useEffect(() => {
+    if (pendiente === null || estado.cargando || estado.cargandoMas) return;
+    // Un respiro tras pintar: `GridProductos` sube al inicio del catálogo al
+    // cambiar el filtro, y este desplazamiento tiene que ir después.
+    const t = window.setTimeout(() => {
+      if (resaltarProducto(pendiente)) {
+        setPendiente(null);
+        if (searchParams.get("producto")) cambiarParametros({ producto: null });
+      } else if (estado.hayMas && !estado.error) {
+        estado.cargarMas();
+      } else {
+        // No está en el catálogo (inactivo, sin precio): se deja de buscar.
+        setPendiente(null);
+        if (searchParams.get("producto")) cambiarParametros({ producto: null });
+      }
+    }, 150);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendiente, estado.productos, estado.cargando, estado.cargandoMas, estado.hayMas, estado.error]);
+
   return (
     <Contexto.Provider
       value={{
@@ -204,6 +267,7 @@ export function CatalogoProvider({ children, datosIniciales, categoriasIniciales
           buscar("");
           filtrar({ categoria: null, unidad: null });
         },
+        irAProducto,
       }}
     >
       {children}

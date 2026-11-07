@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronDown, Home } from "lucide-react";
+import { ChevronDown, Home, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 import { tienePermiso } from "../../utils";
 import { confirmarDescartar } from "../../utils/alertas";
+import { TooltipFlotante } from "../../components/Sidebar";
 import { InicioConfiguracion } from "./Inicio";
 import { CATEGORIAS, PESTANAS_ANTIGUAS, type CategoriaConfig } from "./registro";
 import { PendientesContexto } from "./ui";
 import "./configuracion.css";
+
+const CLAVE_CONTRAIDO = "kryonx-cfg-menu-contraido";
 
 /**
  * El centro de configuración: un menú corto a la izquierda (cinco categorías)
@@ -22,6 +25,26 @@ export function ConfiguracionPage() {
   const [params, setParams] = useSearchParams();
   const navegar = useNavigate();
   const [menuAbierto, setMenuAbierto] = useState(false);
+  // En escritorio, el menú es una segunda barra lateral que se puede contraer
+  // a una franja de íconos. Se recuerda en este navegador.
+  const [contraido, setContraido] = useState(() => {
+    try {
+      return localStorage.getItem(CLAVE_CONTRAIDO) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const menuRef = useRef<HTMLElement>(null);
+  function alternarContraido() {
+    setContraido((c) => {
+      try {
+        localStorage.setItem(CLAVE_CONTRAIDO, c ? "0" : "1");
+      } catch {
+        // Sin almacenamiento: dura lo que la pantalla.
+      }
+      return !c;
+    });
+  }
 
   // Solo lo que esta persona puede ver; una categoría vacía no se muestra.
   const categorias = useMemo<CategoriaConfig[]>(
@@ -123,8 +146,22 @@ export function ConfiguracionPage() {
         </div>
       </div>
 
-      <div className="contenido cfg">
-        <aside className={`cfg-menu ${menuAbierto ? "abierto" : ""}`}>
+      <div className={`contenido cfg ${contraido ? "cfg--contraido" : ""}`}>
+        <aside ref={menuRef} className={`cfg-menu ${menuAbierto ? "abierto" : ""}`}>
+          <button
+            type="button"
+            className="cfg-menu-contraer"
+            onClick={alternarContraido}
+            aria-expanded={!contraido}
+            aria-controls="cfg-menu-lista"
+            aria-label={contraido ? "Expandir opciones" : "Contraer opciones"}
+            data-tooltip={contraido ? "Expandir opciones" : undefined}
+          >
+            {contraido ? <PanelLeftOpen size={17} aria-hidden /> : <PanelLeftClose size={17} aria-hidden />}
+            <span className="cfg-menu-texto" aria-hidden>
+              Contraer opciones
+            </span>
+          </button>
           <button
             type="button"
             className="cfg-menu-alternar"
@@ -136,31 +173,46 @@ export function ConfiguracionPage() {
             <ChevronDown size={16} aria-hidden />
           </button>
           <nav id="cfg-menu-lista" className="cfg-menu-lista" aria-label="Secciones de configuración">
-            <button type="button" className={`cfg-menu-item ${!itemActual ? "activo" : ""}`} aria-current={!itemActual ? "page" : undefined} onClick={() => irA(null)}>
-              <Home size={16} aria-hidden /> Inicio
+            <button
+              type="button"
+              className={`cfg-menu-item ${!itemActual ? "activo" : ""}`}
+              aria-current={!itemActual ? "page" : undefined}
+              onClick={() => irA(null)}
+              data-tooltip={contraido ? "Inicio" : undefined}
+            >
+              <Home size={16} aria-hidden /> <span className="cfg-menu-texto">Inicio</span>
             </button>
             {categorias.map((c) => {
               const Icono = c.icono;
               return (
                 <div key={c.clave} className="cfg-menu-grupo">
                   <div className="cfg-menu-categoria">
-                    <Icono size={13} aria-hidden /> {c.titulo}
+                    <Icono size={13} aria-hidden /> <span className="cfg-menu-texto">{c.titulo}</span>
                   </div>
-                  {c.items.map((i) => (
-                    <button
-                      key={i.clave}
-                      type="button"
-                      className={`cfg-menu-item ${i.clave === pedida ? "activo" : ""}`}
-                      aria-current={i.clave === pedida ? "page" : undefined}
-                      onClick={() => irA(i.clave)}
-                    >
-                      {i.titulo}
-                    </button>
-                  ))}
+                  {c.items.map((i) => {
+                    const IconoItem = i.icono;
+                    return (
+                      <button
+                        key={i.clave}
+                        type="button"
+                        className={`cfg-menu-item ${i.clave === pedida ? "activo" : ""}`}
+                        aria-current={i.clave === pedida ? "page" : undefined}
+                        onClick={() => irA(i.clave)}
+                        // Contraído solo queda el ícono: el nombre sale en el mismo
+                        // tooltip de la barra principal (al pasar el cursor o con el
+                        // teclado), y el lector de pantalla sigue leyendo el texto.
+                        data-tooltip={contraido ? `${c.titulo} · ${i.titulo}` : undefined}
+                      >
+                        <IconoItem size={16} aria-hidden className="cfg-menu-icono" />
+                        <span className="cfg-menu-texto">{i.titulo}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               );
             })}
           </nav>
+          <TooltipFlotante raiz={menuRef} activo={contraido} />
         </aside>
 
         <main className="cfg-principal">

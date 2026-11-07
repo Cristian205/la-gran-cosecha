@@ -3,7 +3,9 @@
 import { Check, Minus, Plus, ShoppingBasket, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useEnvoltorio } from "@/componentes/CapaCliente";
+import { SelectorUnidad } from "@/componentes/tienda/SelectorPresentacion";
 import type { SeleccionProducto } from "@/hooks/useSeleccionProducto";
+import { pluralUnidad } from "@/lib/cantidadHumana";
 import { formatoCantidad, formatoPrecio, parsearCantidad } from "@/lib/utiles";
 
 interface CantidadProps {
@@ -80,6 +82,30 @@ interface QuickAddProps {
   tamano?: "normal" | "grande";
   /** Texto largo en el botón ("Agregar al pedido") donde hay espacio. */
   textoLargo?: boolean;
+  /**
+   * Junto al − + va la unidad de venta, en plural según la cantidad, y se
+   * lee de corrido: "[− 5 +] Kilogramos ▾". Si la variedad tiene varias
+   * unidades es el mismo desplegable de siempre (todas sus unidades); si
+   * tiene una, es texto. Lo usa la tarjeta del catálogo.
+   */
+  conUnidad?: boolean;
+}
+
+function UnidadDeCantidad({ seleccion, productoNombre }: { seleccion: SeleccionProducto; productoNombre: string }) {
+  const { cantidad, grupo, presentacion } = seleccion;
+  if (!grupo || !presentacion) return null;
+
+  if (grupo.opciones.length < 2) {
+    return <span className="qadd-etiqueta">{pluralUnidad(presentacion.unidad_venta_nombre, cantidad)}</span>;
+  }
+  return (
+    <SelectorUnidad
+      seleccion={seleccion}
+      productoNombre={productoNombre}
+      className="qadd-etiqueta qadd-etiqueta--sel"
+      pluralSegun={cantidad}
+    />
+  );
 }
 
 /**
@@ -91,7 +117,7 @@ interface QuickAddProps {
  *   ✓ En pedido  — ya está dentro; el − + de al lado edita esa línea, y
  *                  pulsar el botón abre el pedido.
  */
-export function QuickAdd({ seleccion, productoNombre, permiteFraccion, tamano = "normal", textoLargo = false }: QuickAddProps) {
+export function QuickAdd({ seleccion, productoNombre, permiteFraccion, tamano = "normal", textoLargo = false, conUnidad = false }: QuickAddProps) {
   const { abrirCarrito } = useEnvoltorio();
   const { puedePedir, agotado, recibePedidos, enCarrito, agregado, agregarAlPedido, precioUnitario, sinPresentaciones } =
     seleccion;
@@ -118,6 +144,7 @@ export function QuickAdd({ seleccion, productoNombre, permiteFraccion, tamano = 
         permiteFraccion={permiteFraccion}
         tamano={tamano}
       />
+      {conUnidad && <UnidadDeCantidad seleccion={seleccion} productoNombre={productoNombre} />}
       <button
         type="button"
         className={`qadd-btn qadd-btn--${estado}`}

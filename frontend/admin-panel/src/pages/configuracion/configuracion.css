@@ -19,8 +19,41 @@
 .cfg-migas button:hover { color: var(--verde-texto); text-decoration: underline; }
 .cfg-migas [aria-current] { color: var(--dark); font-weight: 600; }
 
-/* ---------- Menú ---------- */
-.cfg-menu { position: sticky; top: 1rem; }
+/* ---------- Menú: segunda barra lateral ---------- */
+.cfg { transition: grid-template-columns 0.22s ease; }
+.cfg.cfg--contraido { grid-template-columns: 58px minmax(0, 1fr); }
+.cfg-menu {
+  position: sticky; top: 1rem; max-height: calc(100vh - 7rem); overflow-y: auto; overflow-x: hidden;
+  padding: 0.5rem; border: 1px solid var(--cfg-borde); border-radius: var(--radio); background: var(--superficie);
+  overscroll-behavior: contain;
+}
+/* La barra de desplazamiento suave del panel (index.css), más fina aquí y
+   solo visible al pasar el cursor. Nada de `scrollbar-width`: en Chrome 121+
+   anula esos estilos y devuelve la barra nativa. */
+.cfg-menu::-webkit-scrollbar { width: 8px; }
+.cfg-menu::-webkit-scrollbar-thumb { border-width: 2px; background-color: transparent; }
+.cfg-menu:hover::-webkit-scrollbar-thumb { background-color: var(--scroll-visible); }
+.cfg-menu::-webkit-scrollbar-thumb:hover { border-width: 2px; background-color: var(--scroll-encima); }
+.cfg-menu-contraer {
+  display: flex; align-items: center; gap: 0.55rem; width: 100%; min-height: 34px; padding: 0 0.65rem;
+  border: 0; border-radius: 8px; background: none; color: var(--cfg-tenue); font: inherit; font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+}
+.cfg-menu-contraer:hover { background: var(--gris-claro); color: var(--dark); }
+.cfg-menu-contraer:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 1px; }
+.cfg-menu-contraer svg, .cfg-menu-item svg { flex-shrink: 0; }
+.cfg-menu-icono { color: var(--cfg-tenue); }
+.cfg-menu-item.activo .cfg-menu-icono { color: var(--verde-texto); }
+.cfg-menu-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Contraída: una franja de íconos centrados; las categorías, una raya. */
+.cfg--contraido .cfg-menu { padding: 0.5rem 0.35rem; }
+.cfg--contraido .cfg-menu-texto {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;
+}
+.cfg--contraido .cfg-menu-contraer, .cfg--contraido .cfg-menu-item { justify-content: center; padding: 0; }
+.cfg--contraido .cfg-menu-grupo { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--cfg-borde); }
+.cfg--contraido .cfg-menu-categoria { display: none; }
+.cfg--contraido .cfg-menu-item.activo::before { top: 6px; bottom: 6px; }
 .cfg-menu-alternar { display: none; }
 .cfg-menu-lista { display: flex; flex-direction: column; gap: 0.15rem; }
 .cfg-menu-grupo { margin-top: 0.9rem; }
@@ -318,7 +351,15 @@
   .cfg-apariencia-previa { position: static; }
 }
 @media (max-width: 900px) {
-  .cfg { grid-template-columns: 1fr; gap: 1rem; }
+  .cfg, .cfg.cfg--contraido { grid-template-columns: 1fr; gap: 1rem; }
+  /* En el celular no hay barra que contraer: vuelve el selector plegable,
+     con sus textos aunque en escritorio se hubiera contraído. */
+  .cfg-menu { max-height: none; overflow: visible; padding: 0; border: 0; background: none; }
+  .cfg-menu-contraer { display: none; }
+  .cfg--contraido .cfg-menu-texto { position: static; width: auto; height: auto; margin: 0; clip: auto; overflow: hidden; }
+  .cfg--contraido .cfg-menu-item { justify-content: flex-start; padding: 0 0.65rem; }
+  .cfg--contraido .cfg-menu-categoria { display: flex; }
+  .cfg--contraido .cfg-menu-grupo { margin-top: 0.9rem; padding-top: 0; border-top: 0; }
   /* El menú pasa a ser un selector plegable arriba de la vista. */
   .cfg-menu { position: static; z-index: 5; }
   .cfg-menu-alternar {
@@ -352,4 +393,42 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .cfg-barra, .cfg-girar { animation: none; }
+}
+
+
+/* ---------- Facturación: formulario y vista previa lado a lado ---------- */
+.cfg-vista.cfg-vista--ancha { max-width: 1480px; }
+.factura-config { display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, 0.95fr); gap: 1rem; align-items: start; }
+.factura-config-campos { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.factura-previa {
+  position: sticky; top: 1rem; display: flex; flex-direction: column; gap: .6rem; min-width: 0;
+  padding: .9rem; border: 1px solid var(--cfg-borde); border-radius: var(--radio); background: var(--superficie);
+}
+.factura-previa-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem; }
+.factura-previa-cab h3 { display: flex; align-items: center; gap: .4rem; margin: 0; font-size: .95rem; }
+.factura-previa-cab h3 svg { color: var(--verde-texto); }
+.factura-previa-cab p { margin: .2rem 0 0; font-size: .78rem; color: var(--gris); }
+.factura-previa-acciones { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+.factura-previa-acciones .btn { display: inline-flex; align-items: center; gap: .35rem; }
+.factura-previa-estado { display: inline-flex; align-items: center; gap: .3rem; font-size: .75rem; color: var(--gris); opacity: 0; transition: opacity .15s; }
+.factura-previa-estado.visible { opacity: 1; }
+/* La hoja: proporción del formato Ejecutivo (7,25 × 10,5 in), como el papel. */
+.factura-previa-hoja {
+  position: relative; aspect-ratio: 7.25 / 10.5; width: 100%; max-height: calc(100vh - 11rem);
+  border-radius: 8px; overflow: hidden; background: #525659;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .12), 0 12px 32px rgba(15, 23, 42, .18);
+  transition: opacity .2s;
+}
+.factura-previa-hoja.actualizando { opacity: .7; }
+.factura-previa-hoja iframe { display: block; width: 100%; height: 100%; border: 0; background: #525659; }
+.factura-previa-cargando, .factura-previa-error {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .6rem; color: #e5e7eb; font-size: .85rem; text-align: center; padding: 1rem;
+}
+.factura-previa-error p { margin: 0; }
+.factura-previa-nota { margin: 0; font-size: .74rem; color: var(--gris); }
+@media (max-width: 1180px) {
+  .factura-config { grid-template-columns: 1fr; }
+  .factura-previa { position: static; }
+  .factura-previa-hoja { max-height: none; }
 }

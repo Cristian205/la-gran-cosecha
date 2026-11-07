@@ -323,8 +323,10 @@ function Item({ seccion, n, compacto }: { seccion: SeccionDisponible; n: number;
  * cursor o al llegar con el teclado a un elemento con `data-tooltip`. Los del
  * dock salen siempre; los de las secciones, solo en modo compacto (expandido,
  * la etiqueta ya está a la vista).
+ *
+ * Se exporta: la barra de opciones de Configuración, contraída, usa el mismo.
  */
-function TooltipFlotante({ raiz, activo }: { raiz: RefObject<HTMLElement>; activo: boolean }) {
+export function TooltipFlotante({ raiz, activo }: { raiz: RefObject<HTMLElement>; activo: boolean }) {
   const [info, setInfo] = useState<{ texto: string; x: number; y: number; lateral: boolean } | null>(null);
 
   useEffect(() => {

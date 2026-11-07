@@ -9,7 +9,6 @@ import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
 import { useCart } from "@/estado/carrito";
 import { telHref, whatsappHref } from "@/lib/utiles";
 import { TipografiaEditorial } from "../campanas/comunes";
-import { ContactMobileBar } from "./ContactMobileBar";
 import { ENLACE_DE, intencionDelEnlace, type Intencion } from "./intenciones";
 import { CONVERSACION, COTIZACION, PRODUCTO_ESPECIAL, Solicitud } from "./Solicitud";
 
@@ -52,7 +51,9 @@ interface Props {
   titulo?: string;
   texto?: string;
   opciones?: OpcionIntencion[];
-  /** La barra inferior [Pedido] [WhatsApp] en móvil. */
+  /** Retirada: la barra flotante [Pedido] [WhatsApp] ya no se muestra (la
+   *  página tiene sus propios accesos). Se conserva para no romper las
+   *  composiciones guardadas que la traen. */
   barra_movil?: boolean;
 }
 
@@ -68,7 +69,6 @@ export function ContactIntentSelector({
   titulo = "¿Cómo podemos ayudarte?",
   texto = "",
   opciones = [],
-  barra_movil = true,
 }: Props) {
   const lista = opciones.filter((o) => o.clave && ENLACE_DE[o.clave] && o.titulo);
   const [activa, setActiva] = useState<Intencion | null>(null);
@@ -204,7 +204,6 @@ export function ContactIntentSelector({
           </AnimatePresence>
         </div>
       </div>
-      {barra_movil && <ContactMobileBar />}
     </section>
   );
 }

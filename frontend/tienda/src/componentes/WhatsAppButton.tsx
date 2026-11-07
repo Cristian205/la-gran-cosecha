@@ -33,16 +33,17 @@ export function WhatsAppButton() {
   const pathname = usePathname();
   const pieALaVista = usePieALaVista();
 
-  if (!config.whatsapp_numero) return null;
+  // En /contacto no hay flotante: la página ya tiene su sección de WhatsApp
+  // y sus accesos directos, y el botón solo tapaba contenido.
+  if (!config.whatsapp_numero || pathname.startsWith("/contacto")) return null;
 
   // En móvil, dentro de la tienda el flotante se posaba justo encima del botón
   // "Agregar" de la tarjeta derecha, tapando la acción principal. Ahí se retira:
   // WhatsApp sigue a un toque desde la pestaña Contacto y desde el pie.
-  // En /contacto lo reemplaza la barra [Pedido] [WhatsApp] de la página.
   // En la ficha de producto la acción principal es "Agregar al pedido": ahí
   // WhatsApp baja a secundario (más pequeño, sin pulso) y en móvil se retira.
   const enFicha = pathname.startsWith("/productos/");
-  const enFlujoDeCompra = enFicha || pathname.startsWith("/tienda") || pathname.startsWith("/contacto");
+  const enFlujoDeCompra = enFicha || pathname.startsWith("/tienda");
 
   return (
     <a

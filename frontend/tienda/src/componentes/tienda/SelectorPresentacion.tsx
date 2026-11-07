@@ -1,9 +1,9 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
-import { useId } from "react";
 import type { SeleccionProducto } from "@/hooks/useSeleccionProducto";
+import { pluralUnidad } from "@/lib/cantidadHumana";
 import { formatoPrecio } from "@/lib/utiles";
+import { SelectPersonalizado } from "./SelectPersonalizado";
 
 interface Props {
   seleccion: SeleccionProducto;
@@ -18,6 +18,78 @@ interface Props {
 }
 
 /**
+ * La variedad de un producto ("Tommy", "Isabella Pulpa") como select propio
+ * de la tienda. Un solo componente para todas las tarjetas: las opciones son
+ * los grupos que arma `useSeleccionProducto` desde la API y elegir llama a su
+ * `elegirVariante`, que recoloca unidad, precio, foto y cantidad igual que
+ * antes. Aquí no se decide nada de eso.
+ */
+export function SelectorVariedad({
+  seleccion,
+  productoNombre,
+  className = "",
+}: {
+  seleccion: SeleccionProducto;
+  productoNombre: string;
+  className?: string;
+}) {
+  const { grupos, grupo, elegirVariante } = seleccion;
+  if (!grupo) return null;
+  return (
+    <SelectPersonalizado
+      className={className}
+      opciones={grupos.map((g) => ({ valor: g.nombre, etiqueta: g.nombre }))}
+      valor={grupo.nombre}
+      onCambiar={elegirVariante}
+      etiqueta={`Variedad de ${productoNombre}`}
+      tituloHoja={`Elige la variedad de ${productoNombre}`}
+    />
+  );
+}
+
+/**
+ * La unidad de venta de la variedad elegida ("Libra", "Bulto") con el mismo
+ * select propio. Las opciones son las presentaciones reales de ese grupo
+ * (su `id` de la API) y cada una lleva su precio a la derecha, para comparar
+ * "Libra $3.000 · Caja $73.000" sin elegir a ciegas. Elegir llama al
+ * `elegirUnidad` de siempre: precio, foto y cantidad se recolocan igual.
+ *
+ * `pluralSegun`: la cantidad elegida, para leer "[− 5 +] Kilogramos ▾".
+ */
+export function SelectorUnidad({
+  seleccion,
+  productoNombre,
+  className = "",
+  prefijo,
+  pluralSegun,
+}: {
+  seleccion: SeleccionProducto;
+  productoNombre: string;
+  className?: string;
+  prefijo?: string;
+  pluralSegun?: number;
+}) {
+  const { grupo, presentacion, elegirUnidad } = seleccion;
+  if (!grupo || !presentacion) return null;
+  const nombre = (u: string) => (pluralSegun === undefined ? u : pluralUnidad(u, pluralSegun));
+  return (
+    <SelectPersonalizado
+      className={className}
+      prefijo={prefijo}
+      opciones={grupo.opciones.map((p) => ({
+        valor: String(p.id),
+        etiqueta: nombre(p.unidad_venta_nombre),
+        detalle: formatoPrecio(p.precio_unitario),
+      }))}
+      valor={String(presentacion.id)}
+      onCambiar={(v) => elegirUnidad(Number(v))}
+      etiqueta={`Unidad de venta de ${productoNombre}`}
+      tituloHoja={`¿Cómo quieres comprar ${productoNombre}?`}
+    />
+  );
+}
+
+/**
  * Qué se está comprando: la variante ("Tommy", "Común") y la unidad de venta
  * ("por Libra", "por Caja").
  *
@@ -27,7 +99,6 @@ interface Props {
  */
 export function SelectorPresentacion({ seleccion, productoNombre, modo = "compacto" }: Props) {
   const { grupos, grupo, presentacion, elegirVariante, elegirUnidad } = seleccion;
-  const id = useId();
   if (!grupo || !presentacion) return null;
 
   const variasVariantes = grupos.length > 1;
@@ -97,40 +168,13 @@ export function SelectorPresentacion({ seleccion, productoNombre, modo = "compac
   return (
     <div className="selpres">
       {variasVariantes ? (
-        <label className="selpres-campo" htmlFor={`${id}-v`}>
-          <span className="sr-only">Variedad de {productoNombre}</span>
-          <select id={`${id}-v`} value={grupo.nombre} onChange={(e) => elegirVariante(e.target.value)}>
-            {grupos.map((g) => (
-              <option key={g.nombre} value={g.nombre}>
-                {g.nombre}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={14} aria-hidden="true" />
-        </label>
+        <SelectorVariedad seleccion={seleccion} productoNombre={productoNombre} className="selp--fila" />
       ) : (
-        <span className="selpres-fijo">{grupo.nombre}</span>
+        <span className="selpres-fijo selpres-fijo--variedad">{grupo.nombre}</span>
       )}
 
       {variasUnidades ? (
-        <label className="selpres-campo" htmlFor={`${id}-u`}>
-          <span className="selpres-prefijo" aria-hidden="true">
-            Por
-          </span>
-          <span className="sr-only">Unidad de venta de {productoNombre}</span>
-          <select
-            id={`${id}-u`}
-            value={presentacion.id}
-            onChange={(e) => elegirUnidad(Number(e.target.value))}
-          >
-            {grupo.opciones.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.unidad_venta_nombre}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={14} aria-hidden="true" />
-        </label>
+        <SelectorUnidad seleccion={seleccion} productoNombre={productoNombre} className="selp--fila" prefijo="Por" />
       ) : (
         <span className="selpres-fijo">Por {presentacion.unidad_venta_nombre}</span>
       )}

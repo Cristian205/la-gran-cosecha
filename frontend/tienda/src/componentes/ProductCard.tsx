@@ -6,11 +6,12 @@ import { claseDeVariante } from "@/bloques/Seccion";
 import { useTienda } from "@/estado/tienda";
 import { useSeleccionProducto } from "@/hooks/useSeleccionProducto";
 import type { Producto } from "@/lib/tipos";
-import { colorCategoriaTematicoTinte } from "@/lib/utiles";
+import { colorCategoriaTematicoTinte, normalizarTexto } from "@/lib/utiles";
+import { BadgeCategoria } from "@/componentes/tienda/IdentidadCategoria";
 import { ImagenProducto } from "@/componentes/tienda/ImagenProducto";
 import { PrecioProducto } from "@/componentes/tienda/PrecioProducto";
 import { QuickAdd } from "@/componentes/tienda/QuickAdd";
-import { SelectorPresentacion } from "@/componentes/tienda/SelectorPresentacion";
+import { SelectorPresentacion, SelectorVariedad } from "@/componentes/tienda/SelectorPresentacion";
 
 /**
  * `estandar` es la tarjeta del catálogo. `compacta` es una fila —imagen chica,
@@ -30,6 +31,10 @@ interface Props {
   indice?: number;
   /** La unidad del filtro "Se vende por", para arrancar en ella. */
   unidadPreferida?: number | null;
+  /** El distintivo de categoría sobre la foto. Quien arma una rejilla de
+   *  una sola categoría (agrupada bajo su encabezado, o filtrada) lo apaga:
+   *  repetir "FRUTAS" en cada tarjeta bajo el título "Frutas" es ruido. */
+  mostrarCategoria?: boolean;
 }
 
 /**
@@ -53,7 +58,7 @@ interface Props {
  * pasar de "Libra" a "Bulto" en el desplegable muestra el bulto, con el mismo
  * fundido. Lo que se ve y lo que se va a agregar nunca se contradicen.
  */
-export function ProductCard({ producto, variante, etiqueta, indice = 0, unidadPreferida = null }: Props) {
+export function ProductCard({ producto, variante, etiqueta, indice = 0, unidadPreferida = null, mostrarCategoria = true }: Props) {
   const seleccion = useSeleccionProducto(producto, unidadPreferida);
   const abrirVistaRapida = useTienda((s) => s.abrirVistaRapida);
 
@@ -65,6 +70,14 @@ export function ProductCard({ producto, variante, etiqueta, indice = 0, unidadPr
   // rejilla: ahí ya está la entrada escalonada de la tarjeta.
   const [fotoInicial] = useState(imagenUrl);
   const fotoCambiada = imagenUrl !== fotoInicial;
+  // "Mango" + "Tommy": la variedad elegida va pegada al nombre. Si repite el
+  // nombre del producto no se agrega: "Papa Papa" no dice nada.
+  const variasVariantes = seleccion.grupos.length > 1;
+  const nombreVariedad = seleccion.grupo?.nombre?.trim() ?? "";
+  const variedad =
+    nombreVariedad && normalizarTexto(nombreVariedad) !== normalizarTexto(producto.nombre_producto)
+      ? nombreVariedad
+      : "";
 
   function abrir(e: MouseEvent<HTMLAnchorElement>) {
     // Solo el clic "normal": con Ctrl/⌘/Mayús o el botón central el cliente
@@ -104,6 +117,9 @@ export function ProductCard({ producto, variante, etiqueta, indice = 0, unidadPr
           tamanoIcono={esCompacta ? 30 : 76}
           className={fotoCambiada ? "pimg--cambio" : ""}
         />
+        {!esCompacta && mostrarCategoria && producto.categoria_nombre && (
+          <BadgeCategoria nombre={producto.categoria_nombre} />
+        )}
         {!esCompacta && cinta}
       </Link>
 
@@ -112,7 +128,15 @@ export function ProductCard({ producto, variante, etiqueta, indice = 0, unidadPr
         <h3 className="pcard-nombre">
           <Link href={href} onClick={abrir}>
             {producto.nombre_producto}
+            {!variasVariantes && variedad && <span className="pcard-variedad"> {variedad}</span>}
           </Link>
+          {/* Con varias variedades, el selector va pegado al nombre ("Mango
+              [Tommy ▾]"). Fuera del enlace: un <select> no puede vivir
+              dentro de un <a>. La fila de `SelectorPresentacion` queda
+              oculta por CSS en la tarjeta del catálogo. */}
+          {variasVariantes && seleccion.grupo && (
+            <SelectorVariedad seleccion={seleccion} productoNombre={producto.nombre_producto} className="pcard-variedad-sel" />
+          )}
         </h3>
 
         {sinPresentaciones ? (
@@ -129,6 +153,7 @@ export function ProductCard({ producto, variante, etiqueta, indice = 0, unidadPr
                 seleccion={seleccion}
                 productoNombre={producto.nombre_producto}
                 permiteFraccion={producto.permite_fraccion}
+                conUnidad
               />
             </div>
           </>
