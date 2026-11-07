@@ -1,4 +1,4 @@
-# Imagen del backend Django + DRF (pensada para Render, runtime Docker).
+# Imagen del backend Django + DRF (Railway con railway.json; vale tambien para Render).
 #
 # Se usa Docker y no el runtime nativo de Python de Render porque WeasyPrint
 # (facturas PDF) necesita librerias de sistema — Pango, Cairo, gdk-pixbuf — que
@@ -44,7 +44,13 @@ RUN DJANGO_SECRET_KEY=solo-para-el-build \
 
 EXPOSE 8000
 
-# Render inyecta PORT; hay que escucharlo o el servicio se marca como caido.
-# --timeout 120 porque generar facturas PDF con WeasyPrint puede pasar de 30s.
-# exec: gunicorn hereda el PID 1 y recibe el SIGTERM de Render al reiniciar.
-CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers ${WEB_CONCURRENCY:-2} --timeout 120 --access-logfile - --error-logfile -"]
+# Puerto, workers y timeout los fija gunicorn.conf.py a partir de PORT y
+# WEB_CONCURRENCY, que inyecta la plataforma.
+#
+# En Railway este CMD NO se usa: railway.json migra en el preDeployCommand
+# (un contenedor aparte, con su propio error si Supabase no responde) y arranca
+# solo gunicorn. Migrar aqui, antes de gunicorn, hace que un fallo de base de
+# datos se vea como "healthcheck service unavailable" y nada mas.
+# Se mantiene para Render y para un `docker run` local.
+# exec: gunicorn hereda el PID 1 y recibe el SIGTERM al reiniciar.
+CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn config.wsgi:application"]

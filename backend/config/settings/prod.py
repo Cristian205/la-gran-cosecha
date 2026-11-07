@@ -15,13 +15,19 @@ ALLOWED_HOSTS = [h.strip() for h in env.list("DJANGO_ALLOWED_HOSTS", default=[])
 # Render publica el dominio del servicio en RENDER_EXTERNAL_HOSTNAME. Anadirlo
 # solo evita el clasico DisallowedHost al desplegar y en cada health check, sin
 # tener que acordarse del dominio exacto que asigna Render.
-_render_host = env("RENDER_EXTERNAL_HOSTNAME", default="")
-if _render_host:
-    if _render_host not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(_render_host)
-    _render_origin = f"https://{_render_host}"
-    if _render_origin not in CSRF_TRUSTED_ORIGINS:  # noqa: F405
-        CSRF_TRUSTED_ORIGINS.append(_render_origin)  # noqa: F405
+# Railway hace lo mismo con RAILWAY_PUBLIC_DOMAIN (el *.up.railway.app). El
+# dominio propio (api.crafteech.com) sigue yendo en DJANGO_ALLOWED_HOSTS.
+# El healthcheck de Railway (Host: healthcheck.railway.app) NO necesita estar
+# aqui: lo responde HealthzMiddleware antes de validar el host.
+for _variable in ("RENDER_EXTERNAL_HOSTNAME", "RAILWAY_PUBLIC_DOMAIN"):
+    _host_plataforma = env(_variable, default="").strip()
+    if not _host_plataforma:
+        continue
+    if _host_plataforma not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host_plataforma)
+    _origen_plataforma = f"https://{_host_plataforma}"
+    if _origen_plataforma not in CSRF_TRUSTED_ORIGINS:  # noqa: F405
+        CSRF_TRUSTED_ORIGINS.append(_origen_plataforma)  # noqa: F405
 
 # Seguridad HTTPS
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -30,7 +36,7 @@ SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
 # El health check de Render entra por HTTP interno, sin X-Forwarded-Proto: con
 # SECURE_SSL_REDIRECT activo recibiria un 301 y Render daria el deploy por
 # fallido. Se exime esa unica ruta, que no expone nada sensible.
-SECURE_REDIRECT_EXEMPT = [r"^healthz$"]
+SECURE_REDIRECT_EXEMPT = [r"^healthz/?$"]
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True

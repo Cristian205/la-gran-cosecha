@@ -71,6 +71,9 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # MIDDLEWARE
 # ==========================================================================
 MIDDLEWARE = [
+    # Primero de todos: responde /healthz sin validar el host ni tocar la base
+    # de datos. Ver config/health.py.
+    "config.health.HealthzMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -121,6 +124,18 @@ DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=0)
 if str(DATABASES["default"].get("PORT")) == "6543":
     DATABASES["default"]["CONN_MAX_AGE"] = 0
     DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
+
+if DATABASES["default"].get("ENGINE", "").endswith("postgresql"):
+    _opciones_bd = DATABASES["default"].setdefault("OPTIONS", {})
+    # Sin tope, psycopg espera lo que tarde el TCP del sistema (minutos) cuando
+    # el host no responde: `migrate` se queda colgado y el despliegue muere por
+    # el healthcheck sin un solo error en los registros. Así falla en segundos
+    # y con el motivo a la vista.
+    _opciones_bd.setdefault("connect_timeout", env.int("DB_CONNECT_TIMEOUT", default=10))
+    # Supabase acepta TLS pero no lo exige por defecto. Si la URL no dice nada,
+    # se exige: las credenciales viajan por internet público hasta el pooler.
+    if str(DATABASES["default"].get("HOST", "")).endswith((".supabase.com", ".supabase.co")):
+        _opciones_bd.setdefault("sslmode", "require")
 
 # ==========================================================================
 # MODELO DE USUARIO PERSONALIZADO
