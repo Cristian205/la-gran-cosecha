@@ -8,10 +8,12 @@ from apps.business import urls as rutas_de_negocio
 from apps.mensajeria import urls as rutas_whatsapp
 from apps.storefront import urls as rutas_de_tienda
 
-from .health import healthz
+from .health import healthz_db
 
 urlpatterns = [
-    path("healthz", healthz),
+    # /healthz lo responde HealthzMiddleware antes de llegar aqui (health.py).
+    # Esta es la comprobacion completa, con base de datos, para diagnostico.
+    path("healthz/db", healthz_db),
     path("admin/", admin.site.urls),
 
     # API REST — un prefijo por dominio de negocio
