@@ -31,6 +31,9 @@ import { Reveal } from "@/componentes/animacion";
 /** Cuántas categorías caben en la columna "Compra" sin volverla un índice. */
 const MAX_CATEGORIAS_FOOTER = 4;
 
+/** Dueña de la plataforma sobre la que corren las tiendas (crédito en el pie). */
+const PROPIETARIO_PLATAFORMA = "CraftTech";
+
 /** Un solo trazo para todos los íconos del pie: el de lucide por defecto (2)
  *  se ve grueso a 15-16px sobre fondo oscuro. */
 const TRAZO = 1.75;
@@ -456,7 +459,10 @@ export function Footer({
 
       <div className="footer-bottom">
         <span className="footer-copyright">
-          © {new Date().getFullYear()} {nombre} — {nota_legal || "Todos los derechos reservados"}
+          {/* La tienda es del negocio; la plataforma sobre la que corre, de
+              CraftTech: el aviso nombra a los dos. */}
+          © {new Date().getFullYear()} {nombre} · Plataforma © {PROPIETARIO_PLATAFORMA} —{" "}
+          {nota_legal || "Todos los derechos reservados."}
         </span>
         {/* En el pie mínimo no hay columna: los enlaces legales van aquí,
             todos, porque son los que no se pueden quitar. */}

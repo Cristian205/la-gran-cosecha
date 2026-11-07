@@ -5,13 +5,16 @@ import { useId, useState } from "react";
 import { BottomSheet } from "@/componentes/BottomSheet";
 import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
 import { OPCIONES_ORDEN, type OrdenCatalogo } from "@/lib/datos";
+import { SelectPersonalizado } from "./SelectPersonalizado";
 
 /**
  * Los controles de filtrado del catálogo. Solo filtros que el backend aplica
  * sobre el catálogo COMPLETO (no sobre la tanda cargada):
  *
- *   Categoría     — `?categoria=`
  *   Se vende por  — `?unidad=`: "lo que venga por bulto", "por caja".
+ *
+ * La categoría (`?categoria=`) no es un filtro de aquí: se elige en las
+ * tarjetas de categorías de arriba del catálogo.
  *
  * Deliberadamente NO hay rango de precio: `precio_desde` mezcla unidades —la
  * libra y la caja del mismo producto— y un rango sobre eso no significaría
@@ -47,9 +50,12 @@ function useFiltrosActivos(): FiltroActivo[] {
 }
 
 /**
- * El contenido del filtro, compartido entre el panel lateral y la hoja del
- * móvil. En la hoja (`enHoja`) no lleva cabecera propia: el título lo pone la
- * hoja y «Limpiar» va en su pie, junto a «Ver productos».
+ * El contenido de la hoja «Filtrar» (móvil y tablet): «Se vende por».
+ *
+ * Las categorías NO van aquí: las tarjetas de categorías de arriba son la
+ * navegación por categoría, y repetirlas en un filtro era tener dos
+ * controles para lo mismo. Aquí quedan los criterios adicionales; si el
+ * backend gana otro filtro, este es su sitio.
  */
 export function FilterPanel({ enHoja = false }: { enHoja?: boolean }) {
   const catalogo = useCatalogoContexto();
@@ -58,7 +64,7 @@ export function FilterPanel({ enHoja = false }: { enHoja?: boolean }) {
   const id = useId();
   if (!catalogo) return null;
 
-  const { categorias, categoriaActiva, unidades, unidadActiva } = catalogo;
+  const { unidades, unidadActiva } = catalogo;
   const unidadesVisibles = todasUnidades ? unidades : unidades.slice(0, UNIDADES_VISIBLES);
   // Si la unidad elegida quedó escondida bajo "Ver más", se muestra igual.
   const elegidaOculta =
@@ -71,23 +77,9 @@ export function FilterPanel({ enHoja = false }: { enHoja?: boolean }) {
 
   return (
     <div className={`fpanel ${enHoja ? "fpanel--hoja" : ""}`}>
-      {!enHoja && (
-        <header className="fpanel-cabecera">
-          <h2 className="fpanel-titulo">
-            <SlidersHorizontal size={16} aria-hidden="true" /> Filtros
-            {activos.length > 0 && <span className="fpanel-titulo-cuenta">{activos.length}</span>}
-          </h2>
-          {catalogo.hayFiltros && (
-            <button type="button" className="fpanel-limpiar" onClick={catalogo.limpiarFiltros}>
-              Limpiar
-            </button>
-          )}
-        </header>
-      )}
-
-      {/* Qué está aplicado y cómo quitar cada uno. En escritorio desde el primero
-          (la barra de arriba ya no repite estos chips); en la hoja, desde dos. */}
-      {activos.length > (enHoja ? 1 : 0) && (
+      {/* Qué está aplicado (también la categoría, elegida arriba) y cómo
+          quitar cada uno, desde dos. */}
+      {activos.length > 1 && (
         <ul className="fpanel-resumen" aria-label="Filtros aplicados">
           {activos.map((f) => (
             <li key={f.clave}>
@@ -100,27 +92,6 @@ export function FilterPanel({ enHoja = false }: { enHoja?: boolean }) {
       )}
 
       <div className="fpanel-cuerpo">
-        <fieldset className="fpanel-grupo">
-          <legend>Categoría</legend>
-          <Opcion
-            nombre={`${id}-cat`}
-            activa={categoriaActiva === null}
-            onElegir={() => catalogo.cambiarCategoria(null)}
-            etiqueta="Todas"
-            cuenta={catalogo.totalCatalogo}
-          />
-          {categorias.map((c) => (
-            <Opcion
-              key={c.id}
-              nombre={`${id}-cat`}
-              activa={categoriaActiva === c.id}
-              onElegir={() => catalogo.cambiarCategoria(c.id)}
-              etiqueta={c.nombre_categoria}
-              cuenta={c.num_productos ?? null}
-            />
-          ))}
-        </fieldset>
-
         {unidades.length > 0 && (
           <fieldset className="fpanel-grupo">
             <legend>Se vende por</legend>
@@ -160,6 +131,33 @@ export function FilterPanel({ enHoja = false }: { enHoja?: boolean }) {
 }
 
 /**
+ * Escritorio: «Se vende por» como un desplegable en la barra del catálogo,
+ * junto a «Ordenar por» — sin panel lateral. El mismo select propio de las
+ * tarjetas (`SelectPersonalizado`).
+ */
+export function UnidadControl() {
+  const catalogo = useCatalogoContexto();
+  if (!catalogo || catalogo.unidades.length === 0) return null;
+  return (
+    <SelectPersonalizado
+      className="tbar-select tbar-select--unidad"
+      prefijo="Se vende por"
+      opciones={[
+        { valor: "", etiqueta: "Cualquier unidad" },
+        ...catalogo.unidades.map((u) => ({
+          valor: String(u.id),
+          etiqueta: u.nombre_unidad,
+          detalle: u.num_productos ? String(u.num_productos) : undefined,
+        })),
+      ]}
+      valor={catalogo.unidadActiva === null ? "" : String(catalogo.unidadActiva)}
+      onCambiar={(v) => catalogo.cambiarUnidad(v ? Number(v) : null)}
+      etiqueta="Filtrar por unidad de venta"
+    />
+  );
+}
+
+/**
  * Una fila del filtro. Sigue siendo un radio nativo (teclado con flechas,
  * lector de pantalla, un solo valor por grupo), solo que invisible: lo que se
  * ve es la fila entera, con una barra de acento y un ✓ cuando está elegida.
@@ -192,13 +190,14 @@ function Opcion({
   );
 }
 
-/** Móvil: [Filtrar] abre una hoja inferior con el mismo panel. */
+/** Móvil y tablet: [Filtrar] abre una hoja inferior con «Se vende por». */
 export function FilterDrawer() {
   const catalogo = useCatalogoContexto();
   const [abierta, setAbierta] = useState(false);
-  if (!catalogo) return null;
+  if (!catalogo || catalogo.unidades.length === 0) return null;
 
-  const activos = (catalogo.categoriaActiva !== null ? 1 : 0) + (catalogo.unidadActiva !== null ? 1 : 0);
+  // Solo lo que filtra esta hoja: la categoría se elige (y se ve) arriba.
+  const activos = catalogo.unidadActiva !== null ? 1 : 0;
 
   return (
     <>
@@ -246,7 +245,7 @@ export function FilterDrawer() {
   );
 }
 
-/** Ordenar: un `<select>` en escritorio, una hoja con opciones en móvil. */
+/** Ordenar: un desplegable en escritorio, una hoja con opciones en móvil. */
 export function SortControl() {
   const catalogo = useCatalogoContexto();
   const [hoja, setHoja] = useState(false);
@@ -256,20 +255,14 @@ export function SortControl() {
 
   return (
     <>
-      <label className="tbar-orden">
-        <span className="tbar-orden-txt">Ordenar por</span>
-        <select
-          value={catalogo.orden}
-          onChange={(e) => catalogo.cambiarOrden(e.target.value as OrdenCatalogo)}
-        >
-          {OPCIONES_ORDEN.map((o) => (
-            <option key={o.valor} value={o.valor}>
-              {o.etiqueta}
-            </option>
-          ))}
-        </select>
-        <ChevronDown size={15} aria-hidden="true" />
-      </label>
+      <SelectPersonalizado
+        className="tbar-select tbar-orden"
+        prefijo="Ordenar por"
+        opciones={OPCIONES_ORDEN.map((o) => ({ valor: o.valor, etiqueta: o.etiqueta }))}
+        valor={catalogo.orden}
+        onCambiar={(v) => catalogo.cambiarOrden(v as OrdenCatalogo)}
+        etiqueta="Ordenar productos"
+      />
 
       <button
         type="button"

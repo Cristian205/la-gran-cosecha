@@ -152,6 +152,42 @@ export function colorCategoriaTematico(nombre: string, id: number): string {
   return colorCategoria(id);
 }
 
+/**
+ * La familia de una categoría para el badge de la tarjeta móvil: cada una
+ * con su color (frutas verde, verduras verde fresco, tubérculos ámbar,
+ * granos índigo). Tubérculos va antes que verduras, igual que el icono, para
+ * que "Papa" no caiga en verduras. `null` → badge neutro.
+ */
+export type FamiliaCategoria = "fruta" | "verdura" | "tuberculo" | "grano";
+const REGLAS_FAMILIA_CATEGORIA: [RegExp, FamiliaCategoria][] = [
+  [/frut/, "fruta"],
+  [/tuberculo|papa|yuca|raiz/, "tuberculo"],
+  [/verdur|hortaliz|vegetal|ensalada/, "verdura"],
+  [/grano|cereal|legumbre|arroz/, "grano"],
+];
+export function familiaCategoria(nombre: string | null | undefined): FamiliaCategoria | null {
+  const texto = normalizarTexto(nombre ?? "");
+  return REGLAS_FAMILIA_CATEGORIA.find(([patron]) => patron.test(texto))?.[1] ?? null;
+}
+
+/**
+ * Subtítulo de respaldo del encabezado de una categoría, cuando el negocio
+ * no escribió uno propio (`Categoria.subtitulo` en el panel). Corto y
+ * genérico a propósito: describe la familia, no promete nada del producto.
+ */
+const SUBTITULO_FAMILIA: Record<FamiliaCategoria, string> = {
+  fruta: "Frescas y de temporada",
+  verdura: "Frescas del campo",
+  tuberculo: "De la tierra a tu cocina",
+  grano: "Secos y seleccionados",
+};
+export function subtituloCategoria(nombre: string, propio?: string | null): string {
+  const texto = propio?.trim();
+  if (texto) return texto;
+  const familia = familiaCategoria(nombre);
+  return familia ? SUBTITULO_FAMILIA[familia] : "";
+}
+
 export function colorCategoriaTematicoTinte(nombre: string, id: number): string {
   const texto = normalizarTexto(nombre);
   for (const [patron, , tinte] of REGLAS_COLOR_CATEGORIA) {

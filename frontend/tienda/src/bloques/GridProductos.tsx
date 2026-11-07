@@ -5,9 +5,9 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { obtenerProductos } from "@/lib/datos";
 import type { Producto } from "@/lib/tipos";
 import { ProductCard } from "@/componentes/ProductCard";
+import { EncabezadoCategoria } from "@/componentes/tienda/IdentidadCategoria";
 import { Seccion, claseDeVariante } from "./Seccion";
 import { useCatalogoContexto, volverAlInicioDelCatalogo } from "@/contextos/CatalogoContexto";
-import { FilterPanel } from "@/componentes/tienda/Filtros";
 import {
   CierreCatalogo,
   EmptySearch,
@@ -162,7 +162,8 @@ function Vitrina({
     <Seccion kicker={kicker} titulo={titulo} subtitulo={subtitulo} centrado={centrado} id={id}>
       <div className={`grid ${claseDeVariante(variante, VARIANTES, "grid", "rejilla")}`}>
         {productos.map((p, i) => (
-          <ProductCard key={p.id} producto={p} variante={tarjetaVariante} indice={i} />
+          // Una vitrina de una sola categoría ya la nombra en su título.
+          <ProductCard key={p.id} producto={p} variante={tarjetaVariante} indice={i} mostrarCategoria={!categoriaId} />
         ))}
       </div>
     </Seccion>
@@ -170,11 +171,6 @@ function Vitrina({
 }
 
 // ------------------------------------------------------ modo catálogo interactivo
-
-/** Cuántas tandas se cargan solas al acercarse al final. Después, un botón:
- *  el pie de página tiene que poder alcanzarse, y una rejilla que crece sin
- *  fin lo empuja para siempre. */
-const TANDAS_AUTOMATICAS = 2;
 
 function CatalogoInteractivo({
   kicker,
@@ -196,20 +192,15 @@ function CatalogoInteractivo({
 }) {
   const catalogo = useCatalogoContexto()!; // ya se comprobó en el padre
   const centinela = useRef<HTMLDivElement>(null);
-  const [automaticas, setAutomaticas] = useState(0);
   const { hayMas, cargandoMas, error, cargarMas } = catalogo;
 
-  // Un filtro nuevo es un catálogo nuevo: vuelve a tener sus cargas solas y
-  // se empieza a leer por arriba (ver `volverAlInicioDelCatalogo`). Va en un
-  // efecto para que el salto ocurra con la lista nueva ya pintada; la primera
-  // pintura no cuenta, porque ahí nadie cambió nada.
+  // Un filtro nuevo es un catálogo nuevo: se empieza a leer por arriba (ver
+  // `volverAlInicioDelCatalogo`). Va en un efecto para que el salto ocurra
+  // con la lista nueva ya pintada; la primera pintura no cuenta, porque ahí
+  // nadie cambió nada.
   const claveFiltro = `${catalogo.categoriaActiva}|${catalogo.unidadActiva}|${catalogo.orden}|${catalogo.busqueda}`;
   const primeraPintura = useRef(true);
-  /** Desde qué posición empieza la tanda pedida con el botón (ver `cargarMasAqui`). */
-  const pendienteDesde = useRef<number | null>(null);
   useEffect(() => {
-    setAutomaticas(0);
-    pendienteDesde.current = null;
     if (primeraPintura.current) {
       primeraPintura.current = false;
       return;
@@ -217,50 +208,28 @@ function CatalogoInteractivo({
     volverAlInicioDelCatalogo();
   }, [claveFiltro]);
 
-  /**
-   * «Cargar más» deja al cliente en el primer producto NUEVO (el 25.º, si ya
-   * veía 24), no en el pie. Sin esto, el navegador mantenía el botón quieto en
-   * pantalla mientras la tanda entraba encima (scroll anchoring) y la vista
-   * saltaba por delante de todo lo recién cargado. El foco va también ahí:
-   * quien navega con teclado sigue leyendo donde lo dejó.
-   */
-  function cargarMasAqui() {
-    pendienteDesde.current = catalogo.productos.length;
-    cargarMas();
-  }
-  useEffect(() => {
-    const desde = pendienteDesde.current;
-    if (desde === null || cargandoMas) return;
-    pendienteDesde.current = null;
-    const nuevo = catalogo.productos[desde];
-    if (!nuevo) return;
-    const tarjeta = document.getElementById(`producto-${nuevo.id}`);
-    if (!tarjeta) return;
-    const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    tarjeta.scrollIntoView({ behavior: quieto ? "auto" : "smooth", block: "start" });
-    tarjeta.querySelector<HTMLElement>(".pcard-nombre a")?.focus({ preventScroll: true });
-  }, [cargandoMas, catalogo.productos]);
-
-  // Carga progresiva: la siguiente tanda se pide ANTES de llegar al final
-  // (800px de margen), para que el cliente casi nunca vea el esqueleto.
+  // Sin paginación: la siguiente tanda se pide sola ANTES de llegar al final
+  // (800px de margen), hasta traer el catálogo entero, para que el cliente
+  // casi nunca vea el esqueleto ni tenga que pulsar nada. Al terminar,
+  // `CierreCatalogo` marca el final y el pie queda a la vista.
   useEffect(() => {
     const el = centinela.current;
-    if (!el || !hayMas || cargandoMas || error || automaticas >= TANDAS_AUTOMATICAS) return;
+    if (!el || !hayMas || cargandoMas || error) return;
     if (typeof IntersectionObserver === "undefined") return;
     const obs = new IntersectionObserver(
       ([e]) => {
-        if (e.isIntersecting) {
-          setAutomaticas((n) => n + 1);
-          cargarMas();
-        }
+        if (e.isIntersecting) cargarMas();
       },
       { rootMargin: "800px 0px" }
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [hayMas, cargandoMas, error, automaticas, cargarMas]);
+  }, [hayMas, cargandoMas, error, cargarMas]);
 
-  const conPanel = mostrarFiltros;
+  // Sin panel lateral: repetía las categorías de las tarjetas de arriba. Los
+  // filtros que no son categoría («Se vende por») y el orden viven en la
+  // barra del catálogo. `mostrar_filtros` se conserva por compatibilidad.
+  void mostrarFiltros;
   const claseGrid = `pgrid ${claseDeVariante(variante, VARIANTES, "grid", "rejilla")}`;
 
   let contenido: React.ReactNode;
@@ -275,9 +244,6 @@ function CatalogoInteractivo({
   } else if (catalogo.productos.length === 0) {
     contenido = <EmptySearch />;
   } else {
-    const restantes = catalogo.total !== null ? catalogo.total - catalogo.productos.length : null;
-    const progreso =
-      catalogo.total && catalogo.total > 0 ? (catalogo.productos.length / catalogo.total) * 100 : 100;
 
     // En «Todos» con el orden recomendado los productos llegan agrupados por
     // categoría (ver `ORDEN_RECOMENDADOS`): cada vez que cambia, un separador
@@ -285,29 +251,36 @@ function CatalogoInteractivo({
     // orden (precio, A-Z…) las categorías se mezclan y el separador saldría
     // a cada tarjeta, así que no se pinta.
     const separar = catalogo.categoriaActiva === null && catalogo.orden === "recomendados";
-    const totalPorCategoria = new Map(catalogo.categorias.map((c) => [c.id, c.num_productos ?? null]));
+    const categoriaPorId = new Map(catalogo.categorias.map((c) => [c.id, c]));
+    // El distintivo de categoría en cada tarjeta sobra cuando todo lo que se
+    // ve es de una categoría ya nombrada arriba: agrupado bajo su encabezado,
+    // o con una categoría elegida. En mezclas (otro orden, búsqueda sin
+    // categoría) se conserva: ahí es lo que dice de dónde es cada producto.
+    const badgeEnTarjeta = !separar && catalogo.categoriaActiva === null;
 
     contenido = (
       <>
         <div className={claseGrid} aria-busy={cargandoMas}>
           {catalogo.productos.map((p, i) => {
             const nuevaCategoria = separar && (i === 0 || catalogo.productos[i - 1].categoria !== p.categoria);
-            const cuantos = totalPorCategoria.get(p.categoria);
+            const cat = categoriaPorId.get(p.categoria);
             return (
               // La unidad en la clave: cambiar el filtro vuelve a elegir la
               // presentación inicial de cada tarjeta.
               <Fragment key={`${p.id}-${catalogo.unidadActiva ?? ""}`}>
                 {nuevaCategoria && (
-                  <h3 className="pgrid-separador">
-                    <span>{p.categoria_nombre}</span>
-                    {cuantos ? <small>{cuantos} {cuantos === 1 ? "producto" : "productos"}</small> : null}
-                  </h3>
+                  <EncabezadoCategoria
+                    nombre={p.categoria_nombre}
+                    subtitulo={cat?.subtitulo}
+                    cantidad={cat?.num_productos ?? null}
+                  />
                 )}
                 <ProductCard
                   producto={p}
                   variante={tarjetaVariante}
                   indice={i}
                   unidadPreferida={catalogo.unidadActiva}
+                  mostrarCategoria={badgeEnTarjeta}
                 />
               </Fragment>
             );
@@ -317,36 +290,19 @@ function CatalogoInteractivo({
 
         <div ref={centinela} className="pgrid-centinela" aria-hidden="true" />
 
-        {(hayMas || error) && (
+        {/* Solo si una tanda falló: sin esto la carga se quedaría quieta
+            sin decir por qué. */}
+        {error && (
           <div className="cargar-mas-v2">
-            {catalogo.total !== null && (
-              <div className="cargar-mas-progreso">
-                <span>
-                  Viste <b>{catalogo.productos.length}</b> de <b>{catalogo.total}</b> productos
-                </span>
-                <span className="cargar-mas-barra" aria-hidden="true">
-                  <i style={{ width: `${progreso}%` }} />
-                </span>
-              </div>
-            )}
-            {error && <p className="cargar-mas-error">No pudimos traer más productos.</p>}
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={error ? catalogo.reintentar : cargarMasAqui}
-              disabled={cargandoMas}
-            >
+            <p className="cargar-mas-error">No pudimos traer más productos.</p>
+            <button type="button" className="btn btn-outline" onClick={catalogo.reintentar} disabled={cargandoMas}>
               {cargandoMas ? (
                 <>
                   <Loader2 size={16} className="girando" aria-hidden="true" /> Cargando…
                 </>
-              ) : error ? (
-                <>
-                  <RotateCw size={15} aria-hidden="true" /> Reintentar
-                </>
               ) : (
                 <>
-                  Cargar más{restantes !== null && restantes > 0 ? ` · ${restantes} restantes` : ""}
+                  <RotateCw size={15} aria-hidden="true" /> Reintentar
                 </>
               )}
             </button>
@@ -368,12 +324,7 @@ function CatalogoInteractivo({
           {subtitulo && <p className="catalogo-subtitulo">{subtitulo}</p>}
         </header>
       )}
-      <div className={`catalogo-layout ${conPanel ? "catalogo-layout--con-panel" : ""}`}>
-        {conPanel && (
-          <aside className="catalogo-panel" aria-label="Filtros">
-            <FilterPanel />
-          </aside>
-        )}
+      <div className="catalogo-layout">
         <div className="catalogo-resultados">{contenido}</div>
       </div>
     </section>

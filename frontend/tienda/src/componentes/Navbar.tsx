@@ -3,7 +3,27 @@
 import { useEnvoltorio } from "@/componentes/CapaCliente";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, LayoutGrid, Search, ShoppingBag, ShoppingCart, UserRound, X } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  Clock,
+  LayoutGrid,
+  Leaf,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingBasket,
+  ShoppingCart,
+  Sprout,
+  Tag,
+  Truck,
+  UserRound,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSiteConfig } from "@/componentes/CapaCliente";
 import { ENLACES, enlaceActivo, tiendaConCuenta, type OpcionNavMovil } from "@/lib/navegacion";
@@ -12,6 +32,7 @@ import { useCart } from "@/estado/carrito";
 import { BusquedaGlobal } from "@/componentes/BusquedaGlobal";
 import { icono } from "@/bloques/iconos";
 import { claseDeVariante } from "@/bloques/Seccion";
+import { TipografiaEditorial } from "@/bloques/campanas/comunes";
 
 /**
  * Un enlace del menu, tal como lo guarda la composicion del armazon.
@@ -73,6 +94,52 @@ interface Props {
 
 /** Los aspectos que esta hoja de estilos sabe dibujar para la cabecera. */
 const VARIANTES = ["clasica", "boutique", "comercio"] as const;
+
+/**
+ * El filete bajo el nombre en «comercio»: dos trazos finos que se desvanecen
+ * hacia afuera y, al centro, un ramito de dos hojas con un grano dorado.
+ * Decorativo (`aria-hidden`); toma los colores de la paleta de la cabecera.
+ */
+function AdornoMarca() {
+  return (
+    <svg className="marca-adorno" viewBox="0 0 160 12" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="marca-adorno-izq" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stopColor="currentColor" stopOpacity="0" />
+          <stop offset="1" stopColor="currentColor" stopOpacity="0.75" />
+        </linearGradient>
+        <linearGradient id="marca-adorno-der" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stopColor="currentColor" stopOpacity="0.75" />
+          <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d="M4 6H64" stroke="url(#marca-adorno-izq)" strokeWidth="1" strokeLinecap="round" />
+      <path d="M96 6H156" stroke="url(#marca-adorno-der)" strokeWidth="1" strokeLinecap="round" />
+      <path d="M79 6C75.5 2.6 70.5 2.4 67 6C70.5 9.6 75.5 9.4 79 6Z" fill="currentColor" opacity="0.85" />
+      <path d="M81 6C84.5 2.6 89.5 2.4 93 6C89.5 9.6 84.5 9.4 81 6Z" fill="currentColor" opacity="0.85" />
+      <circle cx="80" cy="6" r="1.6" className="marca-adorno-grano" />
+    </svg>
+  );
+}
+
+/**
+ * Los avisos de la franja en «comercio»: el mismo nombre de icono que guarda
+ * el panel, dibujado con su equivalente de línea. Uno desconocido cae en un
+ * brote, neutro y del rubro.
+ */
+const ICONOS_AVISO_LINEA: Record<string, LucideIcon> = {
+  etiqueta: Tag,
+  canasta: ShoppingBasket,
+  camion: Truck,
+  envio: Truck,
+  reloj: Clock,
+  hoja: Leaf,
+  escudo: ShieldCheck,
+  telefono: Phone,
+  whatsapp: MessageCircle,
+  ubicacion: MapPin,
+  calendario: CalendarDays,
+};
 
 /**
  * La cabecera de la tienda. Es tambien el bloque «cabecera».
@@ -171,10 +238,12 @@ export function Navbar({
             {[izquierda, derecha].map((grupo, g) => (
               <div key={g}>
                 {grupo.map((a, i) => {
-                  const Icono = icono(a.icono);
+                  // «comercio» va con iconos de línea (Lucide), finos sobre el
+                  // verde claro; las demás variantes conservan los suyos.
+                  const Icono = comercio ? (ICONOS_AVISO_LINEA[a.icono ?? ""] ?? Sprout) : icono(a.icono);
                   return (
                     <span key={`${a.texto}-${i}`}>
-                      <Icono size={14} aria-hidden="true" />
+                      <Icono size={14} strokeWidth={1.75} aria-hidden="true" />
                       {a.texto}
                     </span>
                   );
@@ -197,6 +266,10 @@ export function Navbar({
         .filter(Boolean)
         .join(" ")}
     >
+      {/* «comercio» escribe el nombre en la serif editorial del sitio (la de
+          las campañas del Inicio): la hoja ya se usa allí y React la carga
+          una sola vez. */}
+      {comercio && <TipografiaEditorial />}
       <Link href="/" className="marca">
         <span className={`logo-circ ${config.logo_url ? "sin-fondo" : ""}`}>
           {config.logo_url ? (
@@ -209,7 +282,14 @@ export function Navbar({
             nombre.slice(0, 1).toUpperCase()
           )}
         </span>
-        <span className="marca-txt">{nombre}</span>
+        {comercio ? (
+          <span className="marca-nombre">
+            <span className="marca-txt">{nombre}</span>
+            <AdornoMarca />
+          </span>
+        ) : (
+          <span className="marca-txt">{nombre}</span>
+        )}
       </Link>
 
       {categorias_texto && (
@@ -275,7 +355,7 @@ export function Navbar({
             : cta_texto
         }
       >
-        {comercio ? <ShoppingBag size={18} aria-hidden="true" /> : <ShoppingCart size={18} />}
+        {comercio ? <ShoppingBag size={18} strokeWidth={1.9} aria-hidden="true" /> : <ShoppingCart size={18} />}
         <span className="btn-carrito-txt">
           {cta_texto}
           {/* El importe solo si el negocio lo pide: en una tienda donde el
@@ -285,7 +365,12 @@ export function Navbar({
             <em>{`$${Math.round(totalPrecio).toLocaleString("es-CO")}`}</em>
           )}
         </span>
-        {totalLineas > 0 && <span className="badge">{totalLineas}</span>}
+        {/* El `key` reinicia el "pop" del contador cada vez que cambia. */}
+        {totalLineas > 0 && (
+          <span className="badge" key={totalLineas}>
+            {totalLineas}
+          </span>
+        )}
       </button>
 
       {mostrar_buscador && buscadorMovilAbierto && (

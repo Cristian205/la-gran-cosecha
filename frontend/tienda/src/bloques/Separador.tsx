@@ -1,3 +1,4 @@
+import { OndaOrganica } from "@/componentes/decoracion/OndaOrganica";
 import { claseDeVariante } from "./Seccion";
 
 /**
@@ -20,7 +21,7 @@ import { claseDeVariante } from "./Seccion";
  * ningún negocio tenga un logo que repetir, así que sirve para cualquier
  * tienda del motor sin configurar nada.
  */
-const VARIANTES = ["linea", "aire", "punto", "ornamento"] as const;
+const VARIANTES = ["linea", "aire", "punto", "ornamento", "onda"] as const;
 
 interface Props {
   /** Cuánto separa, en múltiplos de la escala de densidad. La tienda apretada
@@ -28,10 +29,28 @@ interface Props {
    *  y acaban distintas, que es justo lo que se quiere. */
   espacio?: number;
   variante?: string;
+  /** Solo `onda`: la curva volteada, para alternarla entre secciones. */
+  espejo?: boolean;
 }
 
-export function Separador({ espacio = 2, variante }: Props) {
+export function Separador({ espacio = 2, variante, espejo = false }: Props) {
   const clase = claseDeVariante(variante, VARIANTES, "separador", "linea");
+
+  // `onda`: la onda orgánica de campo (`OndaOrganica`), a todo el ancho.
+  if (clase === "separador--onda") {
+    return (
+      // `--onda-espejo` también en el envoltorio: el CSS recorta la sección
+      // de abajo con la misma curva (volteada o no) que dibuja el trazo.
+      <div
+        className={`separador ${clase} ${espejo ? "separador--onda-espejo" : ""}`}
+        role="presentation"
+        aria-hidden="true"
+        style={{ "--separador-espacio": String(espacio) } as React.CSSProperties}
+      >
+        <OndaOrganica espejo={espejo} />
+      </div>
+    );
+  }
 
   return (
     <div

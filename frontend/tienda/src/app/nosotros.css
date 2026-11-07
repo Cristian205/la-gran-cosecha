@@ -709,3 +709,688 @@
   .ne-pieza .medio img,
   .medio video { transition: none !important; }
 }
+
+/* ==========================================================================
+   Escritorio más compacto
+   Las secciones de Nosotros se medían en pantallas enteras: el hero a alto
+   completo, ~9rem de aire arriba y abajo en las secciones de texto, y las
+   escenas fijas (proceso, lo invisible, el reloj, el manifiesto) pedían
+   mucho scroll por paso. Aquí se recortan. Las escenas calculan su avance en
+   proporción a su pista (`scrollYProgress`), así que acortarlas acelera el
+   relato sin romperlo; cada pista conserva al menos una pantalla para que
+   su escenario fijo tenga dónde quedarse. El móvil no cambia.
+   ========================================================================== */
+@media (min-width: 901px) {
+  /* Hero: ya no ocupa la pantalla entera. */
+  .nh { min-height: min(78svh, 760px); }
+  .nh-cuerpo { padding-block: 3.5rem 1.8rem; }
+
+  /* Secciones de texto: menos aire arriba y abajo. */
+  .no,
+  .ne,
+  .nn,
+  .nc,
+  .nx { padding-block: clamp(3.25rem, 8vh, 5rem); }
+  .no-datos { margin-top: 2rem; padding-top: 1.5rem; }
+  .nc-fila { padding-block: 1.4rem; }
+  .nx-grafico { padding-block: 1.25rem 2.25rem; }
+
+  /* Escenas fijas: menos recorrido por paso. */
+  .np-cabecera { padding: clamp(3rem, 8vh, 4.5rem) 0 1.75rem; }
+  .np-pista { height: max(100svh, calc(var(--escenas) * 72svh)); }
+  .np--estatico .np-panel { min-height: 65svh; }
+  .ni-pista-scroll { height: max(100svh, calc(40svh + var(--pasos) * 28svh)); }
+  .ni-escenario { padding-block: 3rem 2.25rem; }
+  .nt-pista { height: max(100svh, calc((var(--tareas) + 3) * 32svh)); }
+  .nt--todo .nt-escenario { padding-block: 3.5rem; }
+  .nt--todo .nt-respuesta { padding-block: 3rem; margin-top: 2rem; }
+  .nm-pista { height: 170svh; }
+  .nm--estatico .nm-escenario { min-height: 70svh; }
+}
+
+/* Escenas fijas en escritorio: empiezan bajo la cabecera (no detrás de
+   ella) y miden lo que queda de pantalla. Así su contenido se centra en lo
+   que de verdad se ve, sin la franja tapada arriba ni el hueco abajo. */
+@media (min-width: 901px) {
+  .np-escenario,
+  .ni-escenario,
+  .nt-escenario,
+  .nm-escenario {
+    top: var(--navbar-alto, 62px);
+    height: calc(100svh - var(--navbar-alto, 62px));
+  }
+
+  /* «¿Cuánto tiempo te toma abastecerte?»: menos vacío. Más ancho útil,
+     el reloj junto al título y más grande, y la lista de tareas a mayor
+     tamaño ocupando su columna. */
+  .nt .cmp-inner.nt-grid {
+    width: min(100% - 4rem, 1440px);
+    max-width: none;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: clamp(2.5rem, 5vw, 5rem);
+  }
+  .nt-izq {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "kicker kicker" "titulo reloj";
+    align-items: end;
+    column-gap: 2rem;
+  }
+  .nt-izq .cmp-kicker { grid-area: kicker; }
+  .nt-izq h2 { grid-area: titulo; max-width: 11ch; font-size: clamp(2.6rem, 4.6vw, 4.6rem); }
+  .nt-reloj { grid-area: reloj; width: clamp(9rem, 13vw, 12.5rem); margin: 0 0 0.4rem; }
+  .nt-tareas { gap: 0.55rem; }
+  .nt-tareas li { font-size: clamp(1.7rem, 3.1vw, 3rem); }
+  .nt-tarea-num { font-size: 0.78rem; min-width: 1.6rem; }
+  .nt-espera { margin-top: 1.4rem; }
+}
+
+/* «¿Cuánto tiempo te toma abastecerte?» en escritorio: la escena sigue fija
+   mientras se hace scroll, pero con un recorrido corto (~1 pantalla de
+   scroll para las 7 tareas, la espera y la respuesta, en vez de 3+). El
+   avance es proporcional a la pista, así que el relato es el mismo, más
+   ágil. Tiene al menos una pantalla para que el escenario fijo se quede. */
+@media (min-width: 901px) {
+  .nt-pista { height: max(100svh, calc((var(--tareas) + 3) * 26svh)); }
+}
+
+/* Escritorio: Nosotros usa el ancho del sitio, no 1240 px centrados. Y los
+   titulares grandes dejan de partirse a 12–14 letras por renglón: se
+   extienden a lo ancho (dos renglones en vez de cuatro), sin dejar media
+   pantalla vacía a la derecha. */
+@media (min-width: 901px) {
+  .np .cmp-inner,
+  .no .cmp-inner,
+  .ni .cmp-inner,
+  .ne .cmp-inner,
+  .nn .cmp-inner,
+  .nc .cmp-inner,
+  .nx .cmp-inner,
+  .nm .cmp-inner {
+    width: min(100% - 4rem, var(--contenedor-ancho, 1440px));
+  }
+  .np-cabecera h2 {
+    max-width: 26ch;
+    font-size: clamp(2.2rem, 4.2vw, 4.5rem);
+  }
+}
+
+/* «Así funciona La Gran Cosecha»: la cabecera sobre crema, con el titular en
+   tinta oscura y el antetítulo en verde. Solo cambia el fondo de la sección
+   (lo que se ve detrás de la cabecera): las escenas de abajo traen su propia
+   luz (`np-tono--*`) y su texto blanco, que no se toca. */
+.np {
+  /* Un crema más cálido y menos blanco solo para esta sección: lo toman el
+     fondo de la cabecera, las escenas en tono «claro» y sus velos. */
+  --n-crema: #f1e7d5;
+  background: var(--n-crema);
+}
+.np-cabecera { color: var(--tinta); }
+.np-cabecera .cmp-kicker { color: var(--marca-700); }
+.np-cabecera h2 { color: var(--tinta); }
+
+/* ==========================================================================
+   EL PROCESO — capítulos cinematográficos (ProcessStory)
+   Misma arquitectura (escenario fijo, escenas por tramos de scroll, ventana
+   de foto que se abre); encima, un lenguaje común: luz que se funde, número
+   que rueda, titular palabra a palabra, onda que cambia de forma y riel que
+   se llena. Cada capítulo con su composición (`data-composicion`).
+   ========================================================================== */
+
+/* --- La luz: cuatro capas que cruzan su opacidad --- */
+.np .np-escenario { background: var(--n-noche); }
+.np-luz {
+  position: absolute;
+  inset: 0;
+  z-index: -4;
+  opacity: 0;
+  /* La que se va, se va DESPUÉS de que la nueva llegó: nunca un hueco. */
+  transition: opacity 0.9s ease 0.45s;
+  pointer-events: none;
+}
+.np-luz.visible { z-index: -3; opacity: 1; transition: opacity 0.75s ease; }
+.np-luz--noche { background: radial-gradient(80% 70% at 70% 20%, var(--n-noche-2), var(--n-noche) 70%); }
+.np-luz--alba { background: radial-gradient(90% 80% at 80% 100%, var(--n-alba), var(--n-noche-2) 75%); }
+.np-luz--dia {
+  background: radial-gradient(120% 95% at 88% 0%, color-mix(in srgb, var(--n-ambar) 75%, var(--marca-500)), color-mix(in srgb, var(--marca-600) 80%, var(--n-ambar)) 38%, var(--marca-800) 92%);
+}
+.np-luz--claro {
+  background:
+    radial-gradient(70% 60% at 85% 15%, color-mix(in srgb, var(--n-ambar) 14%, transparent), transparent 70%),
+    var(--n-crema);
+}
+
+/* --- El número: uno solo, que rueda como un odómetro y se muda de lado --- */
+.np-escenario .np-texto .np-num { display: none; }
+.np-numero {
+  position: absolute;
+  z-index: 0;
+  top: 9%;
+  left: calc(94% - 1.15em);
+  height: 1em;
+  overflow: hidden;
+  font-size: clamp(7rem, 16vw, 14rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.32);
+  pointer-events: none;
+  transition: left 1s var(--n-ease), top 1s var(--n-ease), transform 1s var(--n-ease), opacity 0.6s ease, -webkit-text-stroke-color 0.6s ease;
+}
+.np-numero-rueda {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(calc(var(--i, 0) * -1em));
+  transition: transform 1s var(--n-ease);
+}
+.np-numero-rueda > span { display: block; height: 1em; }
+.np-escenario[data-composicion="der"] .np-numero { left: 6%; }
+.np-escenario[data-composicion="centro"] .np-numero {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -58%);
+  font-size: clamp(12rem, 30vw, 26rem);
+  opacity: 0.55;
+}
+.np-tono--claro .np-numero { -webkit-text-stroke-color: color-mix(in srgb, var(--tinta) 22%, transparent); }
+
+/* --- Composiciones --- */
+.np-escenario[data-composicion="der"] .np-textos { justify-items: end; }
+.np-escenario[data-composicion="der"] .np-texto { text-align: right; }
+.np-escenario[data-composicion="der"] .np-parrafo { margin-left: auto; }
+.np-escenario[data-composicion="centro"] .np-textos { justify-items: center; }
+.np-escenario[data-composicion="centro"] .np-texto { max-width: 62rem; text-align: center; }
+.np-escenario[data-composicion="centro"] .np-texto h3 { font-size: clamp(2.6rem, 6vw, 5.6rem); }
+.np-escenario[data-composicion="centro"] .np-parrafo { margin-inline: auto; }
+
+/* El velo sigue al texto: oscuro (o crema) del lado donde se lee. */
+.np-escenario[data-composicion="der"] .np-velo {
+  background:
+    linear-gradient(270deg, rgba(var(--sombra-tinte), 0.82) 0%, rgba(var(--sombra-tinte), 0.35) 55%, rgba(var(--sombra-tinte), 0.1) 100%),
+    linear-gradient(0deg, rgba(var(--sombra-tinte), 0.7), transparent 45%);
+}
+.np-escenario[data-composicion="centro"] .np-velo {
+  background:
+    radial-gradient(75% 70% at 50% 55%, rgba(var(--sombra-tinte), 0.72), rgba(var(--sombra-tinte), 0.3) 70%, rgba(var(--sombra-tinte), 0.15)),
+    linear-gradient(0deg, rgba(var(--sombra-tinte), 0.6), transparent 45%);
+}
+.np-escenario.np-tono--claro[data-composicion="der"] .np-velo {
+  background: linear-gradient(270deg, var(--n-crema) 0%, color-mix(in srgb, var(--n-crema) 70%, transparent) 42%, transparent 70%);
+}
+.np-escenario.np-tono--claro[data-composicion="centro"] .np-velo {
+  background: radial-gradient(70% 65% at 50% 55%, color-mix(in srgb, var(--n-crema) 85%, transparent), transparent 80%);
+}
+
+/* --- Tipografía cinética: palabra por palabra, y sale hacia arriba --- */
+.np-escenario .np-linea { overflow: visible; padding: 0; margin: 0; }
+.np-linea > .np-palabra {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  margin: -0.14em 0.24em 0 0;
+  padding: 0.14em 0.02em 0.06em;
+  transform: none;
+  transition: none;
+}
+.np-escenario[data-composicion="der"] .np-linea > .np-palabra { margin: -0.14em 0 0 0.24em; }
+.np-palabra > span {
+  display: inline-block;
+  transform: translateY(108%) rotate(5deg);
+  transform-origin: 0 100%;
+  transition: transform 0.85s var(--n-ease);
+  transition-delay: calc(0.08s + var(--j, 0) * 0.055s);
+}
+.np-texto.activo .np-palabra > span { transform: none; }
+.np-texto.pasado .np-palabra > span {
+  transform: translateY(-108%) rotate(-3deg);
+  transition-duration: 0.55s;
+  transition-delay: calc(var(--j, 0) * 0.02s);
+}
+
+/* --- El riel se llena dentro del capítulo activo --- */
+.np-riel i { position: relative; overflow: hidden; }
+.np-riel li.activo i { background: rgba(255, 255, 255, 0.2); }
+.np-riel li.activo i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--n-ambar);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--avance, 0));
+}
+.np-tono--claro .np-riel li.activo i { background: color-mix(in srgb, var(--tinta) 15%, transparent); }
+.np-tono--claro .np-riel li.activo i::after { background: var(--acento-600); }
+
+/* --- La onda del pie y su ramito --- */
+.np-onda {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  width: 100%;
+  height: clamp(46px, 8vh, 84px);
+  pointer-events: none;
+}
+.np-onda-relleno { fill: rgba(255, 255, 255, 0.05); transition: fill 0.8s ease; }
+.np-onda-trazo { fill: none; stroke: color-mix(in srgb, var(--n-ambar) 60%, transparent); stroke-width: 1.25; transition: stroke 0.8s ease; }
+.np-tono--claro .np-onda-relleno { fill: color-mix(in srgb, var(--marca-700) 6%, transparent); }
+.np-tono--claro .np-onda-trazo { stroke: color-mix(in srgb, var(--marca-600) 55%, transparent); }
+.np-ramito {
+  position: absolute;
+  z-index: 0;
+  right: 4%;
+  bottom: clamp(26px, 5vh, 56px);
+  width: 46px;
+  height: 31px;
+  color: var(--n-ambar);
+  opacity: 0.85;
+  pointer-events: none;
+  transition: color 0.8s ease;
+}
+.np-tono--claro .np-ramito { color: var(--marca-600); }
+
+/* --- Móvil: su propia composición, no la de escritorio encogida --- */
+@media (max-width: 780px) {
+  .np-pista { height: calc(var(--escenas) * 85svh); }
+
+  /* La foto arriba, con su borde inferior en onda; el texto abajo, sobre la luz. */
+  .np-ventana {
+    inset: 0 0 34% 0;
+    -webkit-mask:
+      linear-gradient(#000, #000) top / 100% calc(100% - 38px) no-repeat,
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V28C1320 18 1190 28 1030 40C840 54 700 39 520 26C330 12 150 22 0 38Z'/%3E%3C/svg%3E") bottom / 100% 38px no-repeat;
+    mask:
+      linear-gradient(#000, #000) top / 100% calc(100% - 38px) no-repeat,
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V28C1320 18 1190 28 1030 40C840 54 700 39 520 26C330 12 150 22 0 38Z'/%3E%3C/svg%3E") bottom / 100% 38px no-repeat;
+  }
+  .np-escenario .np-velo { background: linear-gradient(0deg, rgba(var(--sombra-tinte), 0.55) 0%, transparent 45%); }
+  .np-escenario.np-tono--claro .np-velo { background: none; }
+
+  /* Todas las composiciones se leen a la izquierda en el móvil; la de
+     apertura/cierre, centrada. El número va pequeño arriba a la derecha. */
+  .np-escenario[data-composicion] .np-textos { justify-items: start; }
+  .np-escenario[data-composicion] .np-texto { text-align: left; }
+  .np-escenario[data-composicion] .np-parrafo { margin-inline: 0; }
+  .np-escenario[data-composicion="der"] .np-linea > .np-palabra { margin: -0.14em 0.24em 0 0; }
+  .np-escenario[data-composicion="centro"] .np-textos { justify-items: center; }
+  .np-escenario[data-composicion="centro"] .np-texto { text-align: center; }
+  .np-escenario[data-composicion="centro"] .np-parrafo { margin-inline: auto; }
+  .np-escenario[data-composicion] .np-numero {
+    top: 1rem;
+    left: calc(100% - 1.2em - 1rem);
+    transform: none;
+    font-size: 4.5rem;
+    opacity: 1;
+    -webkit-text-stroke-width: 1px;
+  }
+  .np-escenario[data-composicion="centro"] .np-numero { top: 12%; left: 50%; transform: translateX(-50%); font-size: 8rem; opacity: 0.5; }
+  .np-escenario .np-texto h3,
+  .np-escenario[data-composicion="centro"] .np-texto h3 { font-size: clamp(1.9rem, 8.5vw, 2.6rem); }
+  .np-palabra > span { transition-duration: 0.65s; transition-delay: calc(0.05s + var(--j, 0) * 0.035s); }
+  .np-onda { height: 34px; }
+  .np-ramito { width: 30px; height: 20px; bottom: 22px; }
+}
+
+/* --- Móvil, v2: dos zonas que no se pisan ---
+   El escenario fijo va ENTRE la cabecera y la barra inferior (antes medía
+   la pantalla entera y ambas le tapaban arriba el número y abajo el riel).
+   Arriba, la zona de imagen (≈46%): la foto con su borde en onda, o —en los
+   capítulos sin foto— el número grande. Abajo, el texto, siempre sobre la
+   luz de la escena y nunca encima de la foto; al pie, el riel y la onda. */
+@media (max-width: 780px) {
+  .np-escenario {
+    top: var(--navbar-alto, 62px);
+    height: calc(100svh - var(--navbar-alto, 62px) - var(--alto-nav-inferior, 3.5rem) - env(safe-area-inset-bottom, 0px));
+  }
+  .np-ventana { inset: 0 0 54% 0; }
+  .np-escenario .np-velo,
+  .np-escenario.np-tono--claro .np-velo { display: none; }
+  /* La composición contenida (el camión) llena su zona, sin el margen que
+     tenía para la pantalla completa. */
+  .np-tono--claro .np-ventana .medio--contener img { padding: 0.75rem 1rem 2rem; object-position: 50% 55%; }
+
+  .np-marco {
+    grid-template-rows: 46% minmax(0, 1fr) auto;
+    padding-block: 0 0.9rem;
+  }
+  .np-marco::before { content: ""; }
+  .np-textos { align-items: start; padding: 1rem 0 0.5rem; overflow: hidden; }
+  .np-escenario .np-texto .cmp-kicker { font-size: 0.66rem; }
+  .np-escenario .np-texto h3,
+  .np-escenario[data-composicion="centro"] .np-texto h3 {
+    margin-top: 0.55rem;
+    font-size: clamp(1.65rem, 7.4vw, 2.3rem);
+    line-height: 1.02;
+  }
+  .np-escenario .np-parrafo { margin-top: 0.75rem; font-size: 0.95rem; line-height: 1.5; }
+
+  /* El número: pequeño sobre la foto; grande y centrado en la zona de arriba
+     cuando el capítulo no tiene foto. */
+  .np-escenario[data-composicion] .np-numero {
+    top: 0.75rem;
+    left: calc(100% - 1.2em - 1rem);
+    transform: none;
+    font-size: 3.6rem;
+    opacity: 1;
+  }
+  .np-escenario[data-composicion="centro"] .np-numero {
+    top: 23%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(7rem, 34vw, 10rem);
+    opacity: 0.6;
+  }
+
+  .np-onda { height: 28px; }
+  .np-ramito { bottom: 16px; }
+}
+
+/* --- Móvil, v3: una composición por capítulo (`data-movil`) ---
+   centro  · apertura y cierre: el número grande arriba, el texto centrado.
+   arriba  · la foto llena la mitad de arriba con borde en onda; texto abajo.
+   abajo   · al revés: el texto arriba y la foto abajo, con la onda en su
+             borde superior.
+   tarjeta · la foto como una tarjeta redondeada que flota sobre la luz,
+             con el ramito a su lado; el texto debajo.
+   Las cuatro comparten luz, número, onda y riel: la misma identidad. */
+@media (max-width: 780px) {
+  /* abajo: texto arriba, foto abajo */
+  .np-escenario[data-movil="abajo"] .np-ventana {
+    inset: 46% 0 0 0;
+    -webkit-mask:
+      linear-gradient(#000, #000) bottom / 100% calc(100% - 38px) no-repeat,
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0 38C150 22 330 12 520 26C700 39 840 54 1030 40C1190 28 1320 18 1440 28V60H0Z'/%3E%3C/svg%3E") top / 100% 38px no-repeat;
+    mask:
+      linear-gradient(#000, #000) bottom / 100% calc(100% - 38px) no-repeat,
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0 38C150 22 330 12 520 26C700 39 840 54 1030 40C1190 28 1320 18 1440 28V60H0Z'/%3E%3C/svg%3E") top / 100% 38px no-repeat;
+  }
+  .np-escenario[data-movil="abajo"] .np-marco { grid-template-rows: minmax(0, 1fr) 46% auto; }
+  .np-escenario[data-movil="abajo"] .np-marco::before { grid-row: 2; }
+  .np-escenario[data-movil="abajo"] .np-textos { grid-row: 1; align-items: end; padding: 3.6rem 0 1rem; }
+  .np-escenario[data-movil="abajo"] .np-riel { grid-row: 3; }
+  .np-escenario[data-movil="abajo"] .np-numero { left: 1rem; top: 0.75rem; }
+  /* El riel queda sobre la foto: un velo bajo para que se lea. */
+  .np-escenario[data-movil="abajo"] .np-velo {
+    display: block;
+    background: linear-gradient(0deg, rgba(var(--sombra-tinte), 0.6) 0%, transparent 22%);
+  }
+
+  /* tarjeta: la foto flota, redondeada, sobre la luz */
+  .np-escenario[data-movil="tarjeta"] .np-ventana {
+    inset: 1.25rem 1.25rem 52% 1.25rem;
+    overflow: hidden;
+    border-radius: 26px;
+    -webkit-mask: none;
+    mask: none;
+    box-shadow: 0 22px 40px -24px rgba(0, 0, 0, 0.55);
+  }
+  .np-escenario[data-movil="tarjeta"] .np-marco { grid-template-rows: 50% minmax(0, 1fr) auto; }
+  .np-escenario[data-movil="tarjeta"] .np-numero { top: auto; bottom: 52%; left: 1.6rem; font-size: 4.2rem; -webkit-text-stroke-width: 1.25px; }
+  .np-escenario[data-movil="tarjeta"] .np-ramito { top: calc(48% - 10px); right: 1.4rem; bottom: auto; width: 40px; height: 27px; }
+
+  /* centro: el número grande arriba, el texto centrado debajo */
+  .np-escenario[data-movil="centro"] .np-marco { grid-template-rows: 40% minmax(0, 1fr) auto; }
+  .np-escenario[data-movil="centro"] .np-numero { top: 20%; }
+  .np-escenario[data-movil="centro"] .np-textos { justify-items: center; }
+  .np-escenario[data-movil="centro"] .np-texto { text-align: center; }
+  .np-escenario[data-movil="centro"] .np-parrafo { margin-inline: auto; }
+  /* Si un capítulo centrado tiene foto, va de fondo completo con velo. */
+  .np-escenario[data-movil="centro"] .np-ventana { inset: 0; -webkit-mask: none; mask: none; }
+  .np-escenario[data-movil="centro"] .np-ventana.activa ~ .np-velo {
+    display: block;
+    background: linear-gradient(0deg, rgba(var(--sombra-tinte), 0.85) 0%, rgba(var(--sombra-tinte), 0.45) 55%, rgba(var(--sombra-tinte), 0.25) 100%);
+  }
+}
+
+/* ==========================================================================
+   HACER VISIBLE LO INVISIBLE — móvil
+   La cadena se apila en vertical dentro de una ventana de cinco filas y se
+   centra en el paso actual (`--actual`): los ya hechos arriba, apagándose;
+   el actual grande y blanco; los que faltan abajo, en contorno. Una línea
+   con puntos los une y se enciende hasta llegar a la última palabra — la
+   única que el cliente veía, en ámbar como «Una entrega.». El escenario va
+   entre la cabecera y la barra inferior, y pide menos scroll por paso.
+   ========================================================================== */
+@media (max-width: 780px) {
+  .ni-pista-scroll { height: calc(40svh + var(--pasos) * 26svh); }
+  .ni-escenario {
+    top: var(--navbar-alto, 62px);
+    height: calc(100svh - var(--navbar-alto, 62px) - var(--alto-nav-inferior, 3.5rem) - env(safe-area-inset-bottom, 0px));
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    padding-block: 1.6rem 1.2rem;
+  }
+  .ni-cuerpo {
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 1.1rem;
+    align-items: stretch;
+    padding-inline: 1.2rem;
+    min-height: 0;
+  }
+  .ni-ves { margin: 0; padding: 0 0 1rem; }
+  .ni-ves-texto { margin-top: 0.45rem; font-size: 2rem; }
+  .ni-hacemos { display: flex; flex-direction: column; min-height: 0; }
+  .ni-hacemos-titulo { margin-bottom: 0.6rem; }
+  .ni-linea { display: none; }
+
+  /* La ventana: cinco filas, con los bordes de arriba y abajo fundidos. */
+  .ni-ventana {
+    --fila: 3.2rem;
+    position: relative;
+    flex: 1 1 auto;
+    min-height: calc(var(--fila) * 4);
+    max-height: calc(var(--fila) * 5);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22%, #000 78%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 22%, #000 78%, transparent 100%);
+  }
+  .ni-ventana .ni-pasos { padding: 0; }
+  /* La cadena vertical: se centra en el paso actual (el `x` de escritorio
+     queda anulado). */
+  .ni-pasos {
+    flex-direction: column;
+    width: auto;
+    padding: 0;
+    transform: translateY(calc((2 - var(--actual, 0)) * var(--fila))) !important;
+    transition: transform 0.6s var(--n-ease);
+  }
+  .ni-pasos li {
+    position: relative;
+    align-items: center;
+    gap: 0.7rem;
+    height: var(--fila);
+    padding: 0 0 0 1.6rem;
+  }
+  /* La línea que une los pasos, y su punto. */
+  .ni-pasos li::before {
+    content: "";
+    position: absolute;
+    left: 0.32rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .ni-pasos li::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 0.7rem;
+    height: 0.7rem;
+    margin-top: -0.35rem;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    background: var(--n-noche-2);
+    transition: background-color 0.4s ease, border-color 0.4s ease, transform 0.4s var(--n-ease);
+  }
+  .ni-pasos li:first-child::before { top: 50%; }
+  .ni-pasos li:last-child::before { bottom: 50%; }
+  .ni-pasos li.encendido::before { background: var(--n-ambar); }
+  .ni-pasos li.encendido::after { border-color: var(--n-ambar); background: var(--n-ambar); }
+  .ni-pasos li.actual::after { transform: scale(1.35); box-shadow: 0 0 0 5px color-mix(in srgb, var(--n-ambar) 25%, transparent); }
+  .ni-flecha { display: none; }
+  .ni-paso-num { min-width: 1.4rem; font-size: 0.66rem; }
+  .ni-paso-texto {
+    font-size: 1.55rem;
+    -webkit-text-stroke-width: 1px;
+    transform-origin: 0 50%;
+    transition: color 0.5s ease, -webkit-text-stroke-color 0.5s ease, transform 0.5s var(--n-ease), opacity 0.5s ease;
+  }
+  .ni-pasos li.actual .ni-paso-texto { transform: scale(1.45); color: #fff; }
+  .ni-pasos li.pasado .ni-paso-texto { color: rgba(255, 255, 255, 0.5); }
+  .ni-paso--ves.actual .ni-paso-texto { color: var(--n-ambar); }
+
+  .ni-nota { margin-top: 0.4rem; font-size: 0.98rem; }
+
+  /* Menos movimiento: la cadena vertical completa, sin ventana. */
+  .ni--estatico .ni-ventana { max-height: none; -webkit-mask-image: none; mask-image: none; }
+  .ni--estatico .ni-pasos { transform: none !important; }
+  .ni--estatico .ni-pasos li::before,
+  .ni--estatico .ni-pasos li::after { border-color: var(--n-ambar); }
+}
+
+/* ==========================================================================
+   HACER VISIBLE LO INVISIBLE — capítulo con luz, contador y onda
+   Comparte el lenguaje de «Así funciona»: la luz amanece con el avance de la
+   cadena (`--avance`), un contador-odómetro dice en qué paso va (03 / 08) y
+   una onda orgánica cierra la escena por abajo.
+   ========================================================================== */
+.ni-escenario { isolation: isolate; }
+.ni-luz {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(55% 70% at 88% 92%, color-mix(in srgb, var(--n-ambar) 32%, transparent), transparent 70%),
+    radial-gradient(45% 55% at 10% 15%, rgba(255, 255, 255, 0.05), transparent 70%);
+  opacity: calc(0.12 + var(--avance, 0) * 0.88);
+  pointer-events: none;
+}
+.ni-onda { position: absolute; left: 0; right: 0; bottom: 0; z-index: -1; }
+
+/* El contador: el paso en curso rueda; el total, quieto. */
+.ni-cabecera { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.ni-contador {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: clamp(2.4rem, 3.8vw, 3.6rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.ni-contador-rueda { display: inline-flex; flex-direction: column; height: 1em; overflow: hidden; color: var(--n-ambar); }
+.ni-contador-rueda > span {
+  display: block;
+  height: 1em;
+  transform: translateY(calc(var(--actual, 0) * -1em));
+  transition: transform 0.7s var(--n-ease);
+}
+.ni-contador-total { font-size: 0.4em; letter-spacing: 0.04em; color: rgba(255, 255, 255, 0.5); }
+
+/* El pie de «lo que tú ves»: un momento contra todos los pasos detrás. */
+.ni-ves-pie {
+  margin: 1rem 0 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+.ni-ves-pie span { margin: 0 0.35rem; color: var(--n-ambar); }
+
+/* Los pasos: el que se está contando, lleno y subrayado en ámbar; los hechos
+   en blanco tenue; los que faltan, en contorno. */
+.ni-paso-texto { position: relative; }
+.ni-paso-texto::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.12em;
+  height: 0.06em;
+  border-radius: 1em;
+  background: var(--n-ambar);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.6s var(--n-ease);
+}
+.ni-pasos li.actual .ni-paso-texto::after { transform: scaleX(1); }
+.ni-pasos li.pasado .ni-paso-texto { color: rgba(255, 255, 255, 0.5); }
+.ni-pasos li.encendido .ni-flecha { color: var(--n-ambar); }
+.ni-flecha { transition: color 0.4s ease; }
+
+/* La línea de avance con una marca por paso. */
+.ni-linea { position: relative; }
+.ni-linea::before {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0 3px, transparent 3.5px) 0 50% / calc(100% / (var(--pasos, 2) - 1)) 10px repeat-x;
+}
+
+@media (min-width: 781px) {
+  .ni-escenario { padding-block: 3.25rem 3.5rem; }
+  .ni-cabecera { margin-bottom: 1rem; }
+  /* «Lo que tú ves», como una ficha: el único momento que el cliente veía. */
+  .ni-ves {
+    align-self: center;
+    margin-right: 2.5rem;
+    padding: 1.6rem 1.8rem 1.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.035);
+    box-shadow: 0 20px 44px -30px rgba(0, 0, 0, 0.6);
+  }
+  .ni-ves-texto { font-size: clamp(2.2rem, 3.6vw, 3.6rem); }
+  .ni-hacemos { padding-left: 0; }
+  /* Alineada con el ancho del resto de Nosotros (la cabecera ya va a 1440). */
+  .ni-cuerpo { padding-left: max(2rem, calc((100% - var(--contenedor-ancho, 1440px)) / 2)); }
+}
+
+@media (max-width: 780px) {
+  .ni-contador { font-size: 1.9rem; }
+  .ni-ves-pie { margin-top: 0.5rem; font-size: 0.64rem; }
+  .ni-paso-texto::after { bottom: -0.08em; }
+}
+
+/* ==========================================================================
+   DETRÁS DE CADA PEDIDO — móvil
+   El mosaico de escritorio, apilado en el teléfono, era una torre de fotos
+   (la primera a doble alto). Aquí es un carrusel: tarjetas verticales que se
+   deslizan de lado con imán, asomando la siguiente para invitar a pasar. El
+   encabezado se compacta y conserva sus márgenes a ambos lados.
+   ========================================================================== */
+@media (max-width: 780px) {
+  .ne { padding-block: 3rem 2.75rem; }
+  .ne .cmp-inner { width: calc(100% - 2.5rem); }
+  .ne-cabecera h2 { margin-top: 0.6rem; font-size: clamp(2rem, 9vw, 2.6rem); line-height: 1; }
+  .ne-texto { margin-top: 1rem; font-size: 1rem; }
+
+  .ne-mosaico,
+  .ne-mosaico[class*="ne-mosaico--"] {
+    display: flex;
+    gap: 0.75rem;
+    margin: 1.75rem -1.25rem 0;
+    padding: 0 1.25rem 0.4rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1.25rem;
+    scrollbar-width: none;
+  }
+  .ne-mosaico::-webkit-scrollbar { display: none; }
+  .ne-pieza,
+  .ne-pieza:nth-child(n) {
+    flex: 0 0 76%;
+    aspect-ratio: 4 / 5;
+    grid-column: auto;
+    grid-row: auto;
+    scroll-snap-align: start;
+  }
+  .ne-recorte { border-radius: 20px; }
+  .ne-pieza figcaption { left: 0.75rem; bottom: 0.75rem; font-size: 0.64rem; }
+}

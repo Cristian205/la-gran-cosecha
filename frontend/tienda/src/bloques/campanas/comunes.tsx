@@ -62,7 +62,7 @@ export function TipografiaEditorial() {
   return (
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,400;1,9..144,600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,600;1,9..144,800&display=swap"
       {...({ precedence: "default" } as object)}
     />
   );

@@ -5794,6 +5794,102 @@ a.footer-contacto-item:focus-visible,
   mask-size: auto 100%;
 }
 
+/* `onda`: la onda orgánica (componente OndaOrganica). Pegada a las secciones
+   vecinas: su respiro sale de `espacio` a medio rem por punto. */
+/* `onda`: la onda orgánica ES la costura entre la sección de arriba y la de
+   abajo, no una franja entre las dos:
+     · la sección de abajo sube `--onda-alto` por debajo de la de arriba y
+       su borde superior se recorta con la curva (máscara): encima de la
+       curva se ve el fondo REAL de la de arriba (foto, verde, crema…), debajo
+       el de la de abajo — ninguna línea recta, ningún color inventado;
+     · el separador (alto 0 en el flujo) dibuja encima el trazo fino y los
+       ramitos, justo sobre la costura.
+   La de abajo se recorta en su borde superior (y no la de arriba en el
+   inferior) para no cortar lo que cuelga hacia abajo de la de arriba, como
+   las sugerencias del buscador del encabezado. */
+:root { --onda-alto: 50px; }
+@media (max-width: 767px) {
+  :root { --onda-alto: 26px; }
+}
+body { overflow-x: clip; }
+.separador--onda {
+  position: relative;
+  z-index: 2;
+  height: var(--onda-alto);
+  margin: calc(-1 * var(--onda-alto)) 0 0;
+  /* A todo el ancho de la pantalla aunque viva dentro del contenedor de la
+     página (`body { overflow-x: clip }` evita el scroll lateral). */
+  margin-inline: calc(50% - 50vw);
+  border: 0;
+  pointer-events: none;
+}
+.separador--onda .onda-organica { height: 100%; }
+/* La costura muestra los fondos reales: sin el relleno salvia encima. */
+.separador--onda .onda-organica-relleno { display: none; }
+.onda-organica-arriba { fill: var(--onda-arriba, transparent); }
+
+/* Ninguna de las dos pone contenido bajo la curva: cada una alarga su FONDO
+   hacia la costura con un borde transparente del alto de la onda (el fondo
+   se pinta también bajo el borde), y su contenido se queda donde estaba.
+   La de arriba lo alarga por abajo… */
+*:has(+ .separador--onda),
+*:has(+ .contenedor > .separador--onda:first-child) {
+  border-bottom: var(--onda-alto) solid transparent;
+}
+/* …y la de abajo por arriba, sube ese mismo alto bajo la de arriba y se
+   recorta con la curva. */
+.separador--onda + *,
+.contenedor:has(> .separador--onda:last-child) + * {
+  position: relative;
+  z-index: 1;
+  margin-top: calc(-1 * var(--onda-alto));
+  border-top: var(--onda-alto) solid transparent;
+  -webkit-mask:
+    var(--onda-mascara) top / 100% var(--onda-alto) no-repeat,
+    linear-gradient(#000, #000) bottom / 100% calc(100% - var(--onda-alto) + 1px) no-repeat;
+  mask:
+    var(--onda-mascara) top / 100% var(--onda-alto) no-repeat,
+    linear-gradient(#000, #000) bottom / 100% calc(100% - var(--onda-alto) + 1px) no-repeat;
+}
+.separador--onda + *,
+.contenedor:has(> .separador--onda:last-child) + * {
+  --onda-mascara: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0 38C150 22 330 12 520 26C700 39 840 54 1030 40C1190 28 1320 18 1440 28V60H0Z'/%3E%3C/svg%3E");
+}
+.separador--onda-espejo + *,
+.contenedor:has(> .separador--onda-espejo:last-child) + * {
+  --onda-mascara: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath transform='translate(1440 0) scale(-1 1)' d='M0 38C150 22 330 12 520 26C700 39 840 54 1030 40C1190 28 1320 18 1440 28V60H0Z'/%3E%3C/svg%3E");
+}
+/* El encabezado del catálogo: su línea inferior la reemplaza el borde
+   transparente de arriba (misma especificidad que su regla de siempre, por
+   eso se repite aquí con la clase). */
+.shero.shero:has(+ .contenedor > .separador--onda:first-child) {
+  border-bottom: var(--onda-alto) solid transparent;
+}
+
+/* ---------- Onda orgánica (decoración reutilizable) ---------- */
+.onda-organica {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: 50px;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+.onda-organica--espejo { transform: scaleX(-1); }
+.onda-organica-curva { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+/* Los ramitos, de tamaño fijo, apoyados en la curva de cada extremo. */
+.onda-organica-hoja { position: absolute; width: 44px; height: 29px; }
+.onda-organica-hoja--izq { left: max(10px, 2.5%); bottom: 36%; }
+.onda-organica-hoja--der { right: max(10px, 2.5%); bottom: 50%; transform: scaleX(-1); }
+@media (max-width: 767px) {
+  .onda-organica { height: 26px; }
+  .separador--onda .onda-organica { height: 100%; }
+  .onda-organica-hoja { width: 26px; height: 17px; }
+  .onda-organica-hoja--izq { bottom: 30%; }
+  .onda-organica-hoja--der { bottom: 44%; }
+}
+
 /* ==========================================================================
    La ficha de producto — /productos/<slug>
    ========================================================================== */
@@ -6105,6 +6201,35 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
     color: var(--marca-700);
   }
   .nav-inferior--flotante .nav-inferior-item:active .nav-inferior-icono { transform: scale(0.92); }
+
+  /* Subrayado bajo el texto: crece desde el centro. Fijo en la opción
+     activa; en las demás aparece al pasar por encima (donde hay puntero),
+     al tocarla y con el foco del teclado. */
+  .nav-inferior-txt { position: relative; }
+  .nav-inferior-txt::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -4px;
+    width: 1.1rem;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    opacity: 0.55;
+    transform: translateX(-50%) scaleX(0);
+    transition: transform 0.28s var(--t-ease, ease), opacity 0.28s ease;
+  }
+  .nav-inferior--flotante .nav-inferior-txt::after { background: var(--marca-600); opacity: 0.6; }
+  .nav-inferior-item:active .nav-inferior-txt::after,
+  .nav-inferior-item:focus-visible .nav-inferior-txt::after { transform: translateX(-50%) scaleX(1); }
+  @media (hover: hover) {
+    .nav-inferior-item:hover .nav-inferior-txt::after { transform: translateX(-50%) scaleX(1); }
+  }
+  .nav-inferior-item.activo .nav-inferior-txt::after { opacity: 1; transform: translateX(-50%) scaleX(1); }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-inferior-txt::after { transition: none; }
+  }
+
   .nav-inferior--flotante .nav-inferior-item:focus-visible { outline: none; }
   .nav-inferior--flotante .nav-inferior-item:focus-visible .nav-inferior-icono { box-shadow: var(--t-foco); }
 }
@@ -6831,24 +6956,92 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
 /* «Cargar más» lleva aquí al primer producto nuevo: que quede bajo la
    cabecera y la barra del catálogo fijas, igual que el inicio del catálogo. */
 .pgrid > .pcard { scroll-margin-top: calc(var(--navbar-alto, 62px) + var(--tbar-alto, 4.5rem) + 0.75rem); }
-/* Separador de categoría en «Todos»: ocupa la fila entera de la rejilla. */
+/* ---------- Identidad de categoría (IdentidadCategoria.tsx) ----------
+   Una paleta por familia, compartida por el distintivo de la tarjeta y el
+   encabezado de grupo: fondo suave, tinta oscura del mismo tono y un acento
+   medio. Tonos apagados a propósito: identifican sin competir con la foto. */
+[data-familia] { --fam-fondo: #f1efe8; --fam-tinta: #4a4639; --fam-acento: #9a927c; }
+[data-familia="fruta"] { --fam-fondo: #e4efe2; --fam-tinta: #2c5535; --fam-acento: #5b8f63; }
+[data-familia="verdura"] { --fam-fondo: #ebf2dc; --fam-tinta: #46641f; --fam-acento: #84a845; }
+[data-familia="tuberculo"] { --fam-fondo: #f3e6d8; --fam-tinta: #74462a; --fam-acento: #b47b4f; }
+[data-familia="grano"] { --fam-fondo: #f5ecd2; --fam-tinta: #6f5413; --fam-acento: #c39b3a; }
+
+/* Encabezado de categoría en «Todos»: ocupa la fila entera de la rejilla.
+   Icono en su ficha de color · nombre con jerarquía y subtítulo discreto ·
+   contador en cápsula aparte · acento corto bajo la línea. */
 .pgrid-separador {
   grid-column: 1 / -1;
+  position: relative;
   display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  margin: 1.4rem 0 0.1rem;
-  padding-bottom: 0.55rem;
-  border-bottom: 2px solid var(--marca-100, rgba(10, 61, 35, 0.12));
-  font-size: 1.15rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--marca-800, #0a3d23);
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1.8rem 0 0.35rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--borde) 75%, transparent);
 }
-.pgrid-separador:first-child { margin-top: 0; }
-.pgrid-separador small { font-size: 0.8rem; font-weight: 600; color: var(--texto-suave, #64748b); }
+.pgrid-separador::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 3.25rem;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--fam-acento);
+}
+.pgrid-separador:first-child { margin-top: 0.2rem; }
+.pgrid-sep-icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 14px;
+  background: var(--fam-fondo);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fam-acento) 22%, transparent);
+}
+.pgrid-sep-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.pgrid-sep-nombre {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--tinta);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pgrid-sep-sub {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--gris-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pgrid-sep-cuenta {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: var(--fam-fondo);
+  color: var(--fam-tinta);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pgrid-sep-cuenta b { font-weight: 800; font-variant-numeric: tabular-nums; }
 @media (max-width: 767px) {
-  .pgrid-separador { margin-top: 1rem; font-size: 1rem; }
+  .pgrid-separador { gap: 0.6rem; margin-top: 1.25rem; padding-bottom: 0.55rem; }
+  .pgrid-separador::after { width: 2.5rem; }
+  .pgrid-sep-icono { width: 2.25rem; height: 2.25rem; border-radius: 11px; }
+  .pgrid-sep-icono img { width: 24px; height: 24px; }
+  .pgrid-sep-nombre { font-size: 1.05rem; }
+  .pgrid-sep-sub { font-size: 0.72rem; }
+  .pgrid-sep-cuenta { padding: 0.22rem 0.55rem; font-size: 0.68rem; }
 }
 
 .catalogo { padding: 0.9rem 0 3rem; scroll-margin-top: calc(var(--navbar-alto, 62px) + var(--tbar-alto, 4.5rem)); }
@@ -6858,10 +7051,30 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
 .catalogo-subtitulo { margin: 0.3rem 0 0; color: var(--gris-600); }
 .catalogo-layout--con-panel {
   display: grid;
-  grid-template-columns: 244px minmax(0, 1fr);
-  gap: 1.75rem;
+  /* Angosto: el panel solo lleva la lista de categorías y el espacio es de
+     los productos. */
+  grid-template-columns: 196px minmax(0, 1fr);
+  gap: 1.25rem;
   align-items: start;
 }
+/* Panel lateral de PC, más compacto (la hoja "Filtrar" del móvil no cambia). */
+.catalogo-panel .fpanel { border-radius: 14px; }
+.catalogo-panel .fpanel-cabecera { padding: 0.65rem 0.7rem 0.55rem 0.8rem; }
+.catalogo-panel .fpanel-titulo { gap: 0.35rem; font-size: 0.82rem; }
+.catalogo-panel .fpanel-titulo svg { width: 14px; height: 14px; }
+.catalogo-panel .fpanel-limpiar { font-size: 0.72rem; }
+.catalogo-panel .fpanel-cuerpo { padding: 0.25rem 0.3rem 0.45rem 0.35rem; }
+.catalogo-panel .fpanel-grupo { padding-top: 0.3rem; }
+.catalogo-panel .fpanel-opcion {
+  gap: 0.35rem;
+  min-height: 1.95rem;
+  padding: 0.2rem 0.35rem 0.2rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+.catalogo-panel .fpanel-cuenta { min-width: 1.4rem; padding: 0 0.3rem; font-size: 0.64rem; }
+.catalogo-panel .fpanel-marca { width: 1rem; height: 1rem; }
+.catalogo-panel .fpanel-marca svg { width: 11px; height: 11px; }
 /* El scroll lo lleva `.fpanel-cuerpo`: así la cabecera del panel no se va. */
 .catalogo-panel {
   position: sticky;
@@ -8559,4 +8772,1671 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
 }
 @media (max-width: 400px) {
   .vista-tienda .tbar-btn { width: 2.1rem; }
+}
+
+/* PC: la barra del catálogo es un encabezado compacto de la sección de
+   productos —título, contador, «Se vende por» y «Ordenar por»— que se queda
+   en su sitio (no fija: no tapa la rejilla al bajar). Las categorías se
+   eligen en las tarjetas de arriba; ya no hay panel lateral. */
+/* Especificidad a propósito (.tbar .selp…): el `display: inline-flex` de
+   `.selp` se declara más abajo y, con una regla más débil, los desplegables
+   de escritorio aparecían también en el móvil, ensanchaban la barra y el
+   navegador alejaba la página entera. */
+.tbar .selp.tbar-select--unidad { display: none; }
+@media (max-width: 767px) {
+  .tbar .selp.tbar-orden { display: none; }
+}
+.tbar-acciones { min-width: 0; }
+@media (min-width: 1101px) {
+  .tbar {
+    position: static;
+    margin-top: 1.1rem;
+    padding: 0.55rem 0;
+    border-image: none;
+    box-shadow: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--borde) 80%, transparent);
+  }
+  .tbar-fila { min-height: 2.4rem; gap: 1rem; }
+  .tbar-titulo h2 { font-size: 1.15rem; }
+  .tbar-acciones { gap: 0.5rem; }
+  .tbar .selp.tbar-select--unidad { display: inline-flex; }
+}
+/* Los desplegables de la barra (SelectPersonalizado): cápsulas claras. */
+.tbar .selp.tbar-select {
+  height: 2.4rem;
+  max-width: 17rem;
+  padding: 0 0.75rem 0 0.95rem;
+  gap: 0.35rem;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--tinta);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.tbar .selp.tbar-select:hover { border-color: var(--marca-400); background: var(--superficie); }
+.tbar .selp.tbar-select[aria-expanded="true"] { border-color: var(--marca-500); background: var(--superficie); }
+.tbar .selp.tbar-select .selp-prefijo { font-weight: 500; }
+/* El chevron va en línea (la regla vieja del <select> lo ponía absoluto). */
+.tbar .selp.tbar-select svg { position: static; color: var(--marca-600); }
+
+/* Móvil: la barra, más baja y pegada a la navbar sin franja entre las dos
+   (el −1px tapa la línea de medio píxel que dejan los altos fraccionarios). */
+@media (max-width: 767px) {
+  .tbar,
+  .vista-tienda .tbar {
+    top: calc(var(--navbar-alto, 62px) - 1px);
+    margin-top: 0.35rem;
+    padding: 0.2rem 0;
+  }
+  .tbar-fila,
+  .vista-tienda .tbar-fila { min-height: 1.9rem; gap: 0.4rem; }
+  .tbar-titulo h2,
+  .vista-tienda .tbar-titulo h2 { font-size: 0.86rem; }
+  .tbar-conteo { font-size: 0.7rem; }
+  .tbar-btn,
+  .vista-tienda .tbar-btn { height: 1.9rem; }
+  .tbar-chips { margin-top: 0.2rem; }
+  .tbar-chip,
+  .tbar-limpiar { height: 1.45rem; font-size: 0.7rem; }
+}
+@media (max-width: 400px) {
+  .vista-tienda .tbar-btn { width: 1.9rem; }
+}
+
+/* ==========================================================================
+   Tarjeta de producto — misma estructura en PC y en móvil
+   La foto manda (4:3) con la categoría en un badge sobre ella; el nombre
+   lleva la variedad pegada ("Mango [Tommy ▾]"); la unidad de venta va con
+   la cantidad, y la compra son dos filas parejas:
+     [− 5 +]  Kilogramos ▾
+     $12.000 aprox. / Kilogramo     [Agregar]
+   Aquí van las reglas comunes con medidas de escritorio; el bloque
+   `max-width: 767px` de abajo solo achica medidas para el teléfono.
+   ========================================================================== */
+.pcard-badge,
+.pcard-variedad,
+.pcard-variedad-sel,
+.qadd-etiqueta { display: none; }
+
+.pcard:not(.pcard--compacta) .pcard-media {
+  aspect-ratio: 4 / 3;
+  border-radius: calc(var(--t-radio-card) - 6px);
+}
+
+/* Badge de categoría: pequeño, en la esquina, sin tapar el producto. Hace
+   las veces de la línea de categoría, que deja de mostrarse. */
+.pcard:not(.pcard--compacta) .pcard-cat { display: none; }
+/* Distintivo: icono + nombre en mayúsculas sobre el fondo suave de su
+   familia (paleta `--fam-*`, la misma del encabezado de categoría). */
+.pcard:not(.pcard--compacta) .pcard-badge {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.55rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: calc(100% - 1.1rem);
+  height: 1.5rem;
+  padding: 0 0.55rem 0 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--fam-acento) 28%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fam-fondo) 92%, transparent);
+  color: var(--fam-tinta);
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px -2px rgba(30, 41, 20, 0.18);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+.pcard-badge-icono { flex: none; }
+.pcard-badge-texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* La cinta ("Agotado", "Más pedido") pasa a la otra esquina: la izquierda es del badge. */
+.pcard:not(.pcard--compacta) .pcard-cinta { left: auto; right: 0.55rem; }
+
+/* Nombre + variedad en UN renglón; si no cabe, puntos suspensivos — primero
+   se recorta el nombre largo, la variedad elegida se ve siempre que pueda. */
+.pcard:not(.pcard--compacta) .pcard-nombre {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  min-height: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  -webkit-line-clamp: unset;
+}
+.pcard:not(.pcard--compacta) .pcard-nombre > a {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pcard:not(.pcard--compacta) .pcard-variedad { display: inline; font-weight: 500; color: var(--gris-600); }
+/* La fila de selectores sobra: la variedad va con el nombre y la unidad de
+   venta con la cantidad ("[− 5 +] Kilogramos ▾"). */
+.pcard:not(.pcard--compacta) .pcard-cuerpo > .selpres { display: none; }
+/* Varias variedades: el select propio (SelectPersonalizado) va en el renglón
+   del nombre: "Uva [Isabella Pulpa ▾]". */
+.pcard:not(.pcard--compacta) .pcard-variedad-sel {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-self: center;
+  min-width: 3rem;
+  margin-left: 0.35em;
+}
+
+/* ---------- SelectPersonalizado (variedad) ----------
+   El botón: cápsula compacta verde muy tenue, borde verde suave, chevron.
+   Toma la letra de donde vive (em) para no agrandar el renglón. */
+.selp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  max-width: 100%;
+  min-width: 0;
+  height: 1.75em;
+  padding: 0 0.45em 0 0.6em;
+  border: 1px solid color-mix(in srgb, var(--marca-500) 32%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--marca-100) 45%, var(--superficie));
+  color: var(--marca-800);
+  font: inherit;
+  font-size: 0.86em;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color var(--t-rapido) ease, background-color var(--t-rapido) ease, box-shadow var(--t-rapido) ease;
+}
+.selp:hover { border-color: color-mix(in srgb, var(--marca-500) 60%, transparent); background: color-mix(in srgb, var(--marca-100) 70%, var(--superficie)); }
+.selp:focus-visible { outline: none; border-color: var(--marca-500); box-shadow: var(--t-foco); }
+.selp[aria-expanded="true"] { border-color: var(--marca-500); background: color-mix(in srgb, var(--marca-100) 80%, var(--superficie)); }
+.selp-valor { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.selp-prefijo { flex: none; font-weight: 500; color: var(--gris-600); }
+.selp-chevron { flex: none; color: var(--marca-600); transition: transform 0.2s var(--t-ease); }
+.selp[aria-expanded="true"] .selp-chevron { transform: rotate(180deg); }
+/* En la fila de selectores (tarjetas compactas): la altura de sus vecinos. */
+.selp.selp--fila { height: 2rem; padding: 0 0.6rem 0 0.75rem; font-size: 0.78rem; font-weight: 700; }
+.pcard--compacta .selp.selp--fila { height: 1.75rem; font-size: 0.72rem; }
+
+/* El menú flotante: vive en <body> con position: fixed (lo ubica el
+   componente), así ninguna tarjeta lo recorta. Sobre la barra fija del
+   catálogo y la navbar, debajo del carrito y las hojas. */
+.selp-panel {
+  position: fixed;
+  z-index: 60;
+  max-width: min(18rem, calc(100vw - 16px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--borde) 80%, transparent);
+  border-radius: 12px;
+  background: var(--superficie);
+  box-shadow: 0 14px 34px -14px rgba(var(--sombra-tinte), 0.35), 0 2px 6px rgba(var(--sombra-tinte), 0.08);
+  transform-origin: top center;
+  animation: selp-in 0.16s var(--t-ease) both;
+  scrollbar-width: thin;
+}
+.selp-panel--arriba { transform-origin: bottom center; }
+.selp-panel.is-cerrando { animation: selp-out 0.14s ease forwards; pointer-events: none; }
+@keyframes selp-in { from { opacity: 0; transform: translateY(-4px) scale(0.97); } }
+@keyframes selp-out { to { opacity: 0; transform: translateY(-4px) scale(0.97); } }
+.selp-panel--arriba { animation-name: selp-in-arriba; }
+@keyframes selp-in-arriba { from { opacity: 0; transform: translateY(4px) scale(0.97); } }
+
+.selp-lista { list-style: none; display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; outline: none; }
+.selp-opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.3rem;
+  padding: 0.35rem 0.55rem 0.35rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--tinta);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.12s ease;
+}
+.selp-opcion.is-activa { background: var(--t-fondo-suave); }
+.selp-lista:focus-visible .selp-opcion.is-activa { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--marca-500) 55%, transparent); }
+.selp-opcion[aria-selected="true"] {
+  background: color-mix(in srgb, var(--marca-100) 75%, var(--superficie));
+  color: var(--marca-800);
+  font-weight: 700;
+}
+.selp-opcion-texto { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.selp-opcion-detalle { flex: none; font-size: 0.76rem; font-weight: 500; color: var(--gris-600); font-variant-numeric: tabular-nums; }
+.selp-check { flex: none; color: var(--marca-600); opacity: 0; transform: scale(0.6); transition: opacity 0.15s ease, transform 0.15s ease; }
+.selp-opcion[aria-selected="true"] .selp-check { opacity: 1; transform: scale(1); }
+.selp-vacio { padding: 1rem 0.7rem; font-size: 0.86rem; color: var(--gris-600); text-align: center; }
+
+/* Hoja inferior (móvil, listas largas): buscador y filas más altas para el dedo. */
+.selp-buscar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  margin-bottom: 0.5rem;
+  padding: 0 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--marca-500) 30%, var(--borde));
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--gris-600);
+}
+.selp-buscar:focus-within { border-color: var(--marca-500); box-shadow: var(--t-foco); }
+.selp-buscar input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 1rem; color: var(--tinta); }
+.selp-lista--hoja { padding-bottom: 0.5rem; }
+.selp-lista--hoja .selp-opcion { min-height: 2.9rem; font-size: 0.95rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .selp-panel,
+  .selp-panel.is-cerrando,
+  .selp-chevron,
+  .selp-check { animation: none; transition: none; }
+}
+
+/* Compra en dos filas: cantidad + unidad, y precio + agregar. `.qadd` se
+   deshace (display: contents) para que sus piezas caigan en la rejilla de
+   la tarjeta sin tocar el componente. */
+.pcard:not(.pcard--compacta) .pcard-compra {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.5rem;
+  row-gap: 0.6rem;
+}
+.pcard:not(.pcard--compacta) .pcard-compra .qadd { display: contents; }
+.pcard:not(.pcard--compacta) .pcard-compra .qty {
+  grid-row: 1;
+  grid-column: 1;
+  flex: none;
+  justify-content: flex-start;
+  height: 2.15rem;
+  padding: 0 0.18rem;
+}
+.pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.8rem; height: 1.8rem; }
+.pcard:not(.pcard--compacta) .pcard-compra .qty-valor { flex: none; width: 2.5rem; }
+.pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta {
+  grid-row: 1;
+  grid-column: 2 / 4;
+  display: block;
+  min-width: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--marca-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Varias unidades: el select propio (SelectPersonalizado, la misma cápsula
+   verde de la variedad) junto al − +, a la altura del control. */
+.pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp {
+  display: inline-flex;
+  justify-self: start;
+  max-width: 100%;
+  height: 2.15rem;
+  padding: 0 0.55rem 0 0.75rem;
+  border-radius: 11px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp .selp-chevron { width: 14px; height: 14px; }
+.pcard:not(.pcard--compacta) .pcard-compra .precio { grid-row: 2; grid-column: 1 / 3; min-width: 0; }
+.pcard:not(.pcard--compacta) .pcard-compra .precio-meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pcard:not(.pcard--compacta) .pcard-compra .qadd-btn {
+  grid-row: 2;
+  grid-column: 3;
+  flex: none;
+  height: 2.75rem;
+  padding: 0 1rem;
+}
+.pcard:not(.pcard--compacta) .pcard-compra .qadd-btn svg { width: 18px; height: 18px; }
+/* Agotado: sin cantidad; el precio queda en la primera fila y el botón
+   "Agotado" ocupa la de abajo entera. */
+.pcard:not(.pcard--compacta) .pcard-compra .precio:has(+ .qadd .qadd-btn--agotado) { grid-row: 1; grid-column: 1 / 4; }
+.pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--agotado {
+  grid-row: 2;
+  grid-column: 1 / 4;
+  width: 100%;
+  padding: 0 0.75rem;
+}
+
+/* Tarjeta estrecha (rejilla densa, móvil): el botón se queda en su ícono
+   para que el precio respire. */
+@container (max-width: 215px) {
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn { width: 2.75rem; padding: 0; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--agotado { width: 100%; padding: 0 0.75rem; }
+}
+
+/* Teléfono: las mismas piezas, en medidas de bolsillo. */
+@media (max-width: 767px) {
+  .pcard:not(.pcard--compacta) .pcard-media {
+    margin: 0.3rem 0.3rem 0;
+    border-radius: calc(var(--t-radio-card) - 5px);
+  }
+  .pcard:not(.pcard--compacta) .pcard-badge {
+    top: 0.4rem;
+    left: 0.4rem;
+    max-width: calc(100% - 0.8rem);
+    gap: 0.22rem;
+    height: 1.3rem;
+    padding: 0 0.42rem 0 0.28rem;
+    border-radius: 7px;
+    font-size: 0.56rem;
+    letter-spacing: 0.05em;
+  }
+  .pcard:not(.pcard--compacta) .pcard-badge-icono { width: 12px; height: 12px; }
+  .pcard:not(.pcard--compacta) .pcard-cinta {
+    top: 0.4rem;
+    right: 0.4rem;
+    padding: 0.16rem 0.45rem;
+    font-size: 0.6rem;
+  }
+  .pcard:not(.pcard--compacta) .pcard-nombre { font-size: clamp(0.78rem, 3.5vw, 0.88rem); }
+  .pcard:not(.pcard--compacta) .pcard-compra { column-gap: 0.4rem; row-gap: 0.45rem; padding-top: 0.15rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty { height: 1.85rem; padding: 0 0.13rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.45rem; height: 1.45rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty-valor { width: 2.1rem; font-size: 0.82rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta { font-size: 0.76rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp { height: 1.85rem; padding: 0 0.4rem 0 0.55rem; border-radius: 9px; font-size: 0.76rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .precio-valor { font-size: 1.08rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .precio-meta { font-size: 0.66rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn { width: 2.75rem; padding: 0; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn svg { width: 19px; height: 19px; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn-texto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--agotado { width: 100%; padding: 0 0.75rem; font-size: 0.8rem; }
+}
+
+/* ==========================================================================
+   Favoritos de los negocios — banner protagonista (FeaturedProducts)
+   Un escaparate, no una ficha de compra: foto real a la izquierda (la parte
+   ancha de una composición asimétrica), campaña, nombre, frase, precio
+   orientativo y "Comprar ahora". Todo el banner es clicable: el enlace del
+   botón se estira sobre él con ::after. Escritorio: banner ~55% y la lista
+   "También puedes pedir…" al lado. Móvil: banner horizontal y compacto y la
+   lista debajo, en un carrusel.
+   ========================================================================== */
+.favs-cuerpo { grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); }
+/* Solo el banner, sin lista al lado: a todo el ancho. */
+.favs-cuerpo.favs-cuerpo--solo { grid-template-columns: minmax(0, 1fr); }
+.favs-cuerpo--solo .favs-banner { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); min-height: 320px; }
+.favs-cuerpo--solo .favs-banner-info { padding: 2.25rem 3rem 2.25rem 1rem; }
+.favs-cuerpo--solo .favs-banner-texto { max-width: 38ch; }
+@media (max-width: 767px) {
+  .favs-cuerpo--solo .favs-banner { grid-template-columns: minmax(0, 42%) minmax(0, 1fr); min-height: 0; }
+  .favs-cuerpo--solo .favs-banner-info { padding: 0.8rem 0.85rem 0.85rem 0.25rem; }
+}
+
+.favs-banner {
+  --campana: var(--marca-700);
+  --campana-fondo: color-mix(in srgb, var(--marca-100) 55%, var(--superficie));
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  min-height: 340px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--borde) 80%, transparent);
+  border-radius: 24px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--campana) 9%, transparent), transparent 60%),
+    var(--crema, #f9f5f2);
+  box-shadow: 0 1px 2px rgba(var(--sombra-tinte), 0.05), 0 18px 40px -28px rgba(var(--sombra-tinte), 0.45);
+  transition: transform var(--t-medio) var(--t-ease), box-shadow var(--t-medio) ease, border-color var(--t-rapido) ease;
+}
+.favs-banner[data-campana="mas-vendido"] { --campana: #9a6b12; --campana-fondo: #f6ecd2; }
+.favs-banner[data-campana="temporada"] { --campana: #2f6b3a; --campana-fondo: #e4efe2; }
+.favs-banner[data-campana="recomendado"] { --campana: var(--marca-700); --campana-fondo: color-mix(in srgb, var(--marca-100) 70%, var(--superficie)); }
+.favs-banner[data-campana="novedad"] { --campana: #a2522c; --campana-fondo: #f6e5da; }
+.favs-banner:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--campana) 30%, var(--borde));
+  box-shadow: 0 1px 2px rgba(var(--sombra-tinte), 0.05), 0 26px 50px -28px rgba(var(--sombra-tinte), 0.55);
+}
+.favs-banner:has(.favs-banner-cta:focus-visible) { box-shadow: var(--t-foco); }
+
+/* La foto: llena su mitad, con un fundido hacia el texto. */
+.favs-banner-media { position: relative; min-height: 100%; }
+.favs-banner-media .pimg { position: absolute; inset: 0; }
+.favs-banner-media::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 28%;
+  background: linear-gradient(90deg, transparent, var(--crema, #f9f5f2));
+  pointer-events: none;
+}
+.favs-banner:hover .pimg img:not(.pimg-icono) { transform: scale(1.04); }
+.favs-banner-media .pimg-icono { width: 46% !important; }
+
+.favs-banner-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 2rem 2rem 2rem 0.75rem;
+}
+.favs-banner-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 8px;
+  background: var(--campana-fondo);
+  color: var(--campana);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.favs-banner-etiqueta::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.favs-banner-nombre {
+  margin: 0;
+  font-size: calc(clamp(1.75rem, 2.8vw, 2.45rem) * var(--titulo-escala, 1));
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  color: var(--tinta);
+}
+.favs-banner-texto {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--gris-600);
+}
+.favs-banner-precio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem;
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--gris-600);
+}
+.favs-banner-precio b { font-size: 1.35rem; font-weight: 800; color: var(--tinta); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.favs-banner-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.85rem;
+  margin-top: 0.4rem;
+  padding: 0 1.35rem;
+  border-radius: 999px;
+  background: var(--marca-600);
+  color: var(--btn-primario-texto);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--marca-700) 80%, transparent);
+  transition: background-color var(--t-rapido) ease, transform var(--t-rapido) ease;
+}
+/* El enlace cubre todo el banner: un solo destino, sin enlaces anidados. */
+.favs-banner-cta::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.favs-banner-cta:focus-visible { outline: none; }
+.favs-banner:hover .favs-banner-cta { background: var(--marca-700); }
+.favs-banner-cta svg { transition: transform var(--t-rapido) ease; }
+.favs-banner:hover .favs-banner-cta svg { transform: translateX(3px); }
+
+/* La tarjeta a la que llevó el banner: un halo que se apaga solo. */
+.pcard.pcard--resaltada { animation: pcard-resaltada 2.2s ease-out; }
+@keyframes pcard-resaltada {
+  0%, 35% { box-shadow: 0 0 0 3px var(--marca-500), 0 18px 40px -18px rgba(var(--sombra-tinte), 0.45); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@media (max-width: 1024px) {
+  .favs-cuerpo { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Móvil: banner horizontal y compacto (foto a la izquierda, texto y botón a
+   la derecha) a todo el ancho; la lista sigue debajo como carrusel. */
+@media (max-width: 767px) {
+  .favs-cuerpo,
+  .vista-tienda .favs-cuerpo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    overflow: visible;
+    margin-inline: 0;
+    padding: 0;
+    scroll-snap-type: none;
+  }
+  .favs-banner {
+    grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+    min-height: 0;
+    border-radius: 18px;
+  }
+  .favs-banner:hover { transform: none; }
+  .favs-banner-media { min-height: 9.5rem; }
+  .favs-banner-media::after { width: 22%; }
+  .favs-banner-info { gap: 0.32rem; padding: 0.8rem 0.85rem 0.85rem 0.25rem; }
+  .favs-banner-etiqueta { padding: 0.18rem 0.45rem; border-radius: 6px; font-size: 0.56rem; letter-spacing: 0.1em; }
+  .favs-banner-nombre { font-size: calc(1.15rem * var(--titulo-escala, 1)); line-height: 1.1; letter-spacing: -0.015em; }
+  .favs-banner-texto {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.74rem;
+    line-height: 1.35;
+  }
+  .favs-banner-precio { margin: 0; font-size: 0.66rem; gap: 0.2rem; }
+  .favs-banner-precio b { font-size: 0.98rem; }
+  .favs-banner-cta { height: 2.1rem; margin-top: 0.15rem; padding: 0 0.85rem; gap: 0.35rem; font-size: 0.78rem; }
+  .favs-banner-cta svg { width: 14px; height: 14px; }
+
+  /* "También puedes pedir…": carrusel de filas compactas bajo el banner. */
+  .vista-tienda .favs-lado,
+  .favs-lado {
+    display: block;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+  .vista-tienda .favs-lado-titulo,
+  .favs-lado-titulo { display: block; margin: 0.2rem 0 0.4rem; font-size: 0.85rem; }
+  .vista-tienda .favs-lista,
+  .favs-lista {
+    display: flex;
+    flex-direction: row;
+    gap: 0.6rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    margin-inline: -1rem;
+    padding: 0.1rem 1rem 0.5rem;
+    scroll-padding-inline: 1rem;
+    scrollbar-width: none;
+  }
+  .favs-lista::-webkit-scrollbar { display: none; }
+  .vista-tienda .favs-lista .pcard--compacta,
+  .favs-lista .pcard--compacta,
+  .favs-lista .pcard--compacta:last-child {
+    flex: 0 0 min(86%, 21rem);
+    scroll-snap-align: start;
+    padding: 0.55rem;
+    border: 1px solid var(--borde);
+    border-radius: 18px;
+    background: var(--superficie);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .favs-banner,
+  .favs-banner-cta svg,
+  .favs-banner .pimg img { transition: none; }
+  .favs-banner:hover { transform: none; }
+  .favs-banner:hover .pimg img:not(.pimg-icono) { transform: none; }
+  .pcard.pcard--resaltada { animation: none; box-shadow: 0 0 0 3px var(--marca-500); }
+}
+
+/* ==========================================================================
+   Encabezado del catálogo (catalogo-hero) — evolución
+   Misma identidad (crema, verde, el camión con los productos), mejor
+   jerarquía: titular protagonista con "tu negocio" en verde, bajada corta,
+   el buscador como pieza principal (icono en su ficha verde, sugerencias de
+   lo más pedido y atajos debajo) y las cifras en una cápsula compacta.
+   Escritorio: dos columnas. Móvil: título con la foto al lado, buscador a
+   todo el ancho, atajos en una fila que se desliza; mucho más bajo.
+   ========================================================================== */
+.shero {
+  background:
+    radial-gradient(42% 70% at 78% 55%, color-mix(in srgb, var(--marca-100) 60%, transparent), transparent 72%),
+    radial-gradient(60% 90% at 92% 10%, color-mix(in srgb, var(--acento-400) 16%, transparent), transparent 70%),
+    var(--crema, #f9f5f2);
+}
+.shero .shero-inner {
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 2rem;
+  padding: 2rem 0 1.85rem;
+}
+.shero .shero-cabeza h1 { font-size: calc(clamp(2.1rem, 3.8vw, 3.35rem) * var(--titulo-escala, 1)); line-height: 1.02; }
+.shero .shero-cabeza h1 em { color: var(--marca-600); }
+.shero .shero-bajada { max-width: 44ch; margin-top: 0.7rem; font-size: 1rem; }
+
+/* La foto: más grande, fundida con el fondo. */
+.shero .shero-media img { max-height: 430px; }
+
+/* Buscador: la pieza principal. */
+.shero .sbar { margin-top: 1.3rem; max-width: 600px; }
+.shero .sbar-campo {
+  height: 3.75rem;
+  padding: 0 0.5rem 0 0.5rem;
+  border-color: color-mix(in srgb, var(--marca-500) 22%, var(--borde));
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(var(--sombra-tinte), 0.06), 0 16px 34px -18px rgba(var(--sombra-tinte), 0.45);
+}
+.shero .sbar-icono {
+  box-sizing: content-box;
+  padding: 0.6rem;
+  border-radius: 50%;
+  background: var(--marca-600);
+  color: var(--btn-primario-texto, #fff);
+}
+.shero .sbar-campo input { font-size: 1.05rem; }
+
+/* Lo más pedido: título dentro de la lista y atajos bajo el campo. */
+.sbar-lista-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0.6rem 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gris-600);
+}
+.sbar-lista-titulo svg { color: var(--acento-500, #d97706); }
+/* Una sola fila de alto fijo (aunque los datos lleguen después): sin saltos. */
+.sbar-populares {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2rem;
+  margin-top: 0.7rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.sbar-populares::-webkit-scrollbar { display: none; }
+.sbar-populares-rotulo {
+  flex: none;
+  margin-right: 0.15rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gris-600);
+}
+.sbar-chip {
+  flex: none;
+  height: 1.85rem;
+  padding: 0 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--marca-500) 25%, var(--borde));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--superficie) 85%, transparent);
+  color: var(--marca-800);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) ease, border-color var(--t-rapido) ease;
+}
+.sbar-chip:hover { background: var(--marca-100); border-color: color-mix(in srgb, var(--marca-500) 50%, var(--borde)); }
+.sbar-chip:focus-visible { outline: none; box-shadow: var(--t-foco); }
+
+/* Cifras del catálogo: una cápsula, cada dato con su icono. */
+.shero .shero-pie { margin-top: 1rem; }
+.shero .shero-stats {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--borde) 80%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--superficie) 70%, transparent);
+  font-size: 0.82rem;
+}
+.shero-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.75rem;
+  color: var(--gris-600);
+  white-space: nowrap;
+}
+.shero-stat + .shero-stat { border-left: 1px solid var(--borde); }
+.shero-stat svg { color: var(--marca-600); }
+.shero-stat b { color: var(--tinta); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* ---- Móvil: compacto, el catálogo aparece enseguida ---- */
+@media (max-width: 767px) {
+  .shero .shero-inner,
+  .vista-tienda .shero .shero-inner {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "cabeza" "bajada" "buscar" "pie";
+    column-gap: 0.5rem;
+    row-gap: 0;
+    align-items: center;
+    padding: 0.85rem 0 0.8rem;
+  }
+  .shero.shero--con-imagen-movil .shero-inner {
+    grid-template-columns: minmax(0, 1fr) 38%;
+    grid-template-areas: "cabeza media" "bajada bajada" "buscar buscar" "pie pie";
+  }
+  .shero .shero-texto { display: contents; }
+  .shero .shero-cabeza { grid-area: cabeza; min-width: 0; }
+  .shero .shero-bajada { grid-area: bajada; }
+  .shero .sbar { grid-area: buscar; }
+  .shero .shero-pie { grid-area: pie; }
+  .shero.shero--con-imagen-movil .shero-media { grid-area: media; display: block; align-self: center; }
+  .shero.shero--con-imagen-movil .shero-media img {
+    max-height: 7.5rem;
+    -webkit-mask-image: radial-gradient(ellipse 72% 70% at 50% 52%, #000 58%, transparent 100%);
+    mask-image: radial-gradient(ellipse 72% 70% at 50% 52%, #000 58%, transparent 100%);
+  }
+
+  .shero .shero-kicker,
+  .vista-tienda .shero .shero-kicker { margin-bottom: 0.3rem; font-size: 0.62rem; letter-spacing: 0.14em; }
+  .shero .shero-cabeza h1,
+  .vista-tienda .shero .shero-cabeza h1 { font-size: calc(1.5rem * var(--titulo-escala, 1)); line-height: 1.08; }
+
+  .shero .sbar,
+  .vista-tienda .shero .sbar { margin-top: 0.75rem; max-width: none; }
+  .shero .sbar-campo { height: 3.15rem; border-radius: 16px; padding: 0 0.4rem; }
+  .shero .sbar-icono { padding: 0.45rem; }
+  .shero .sbar-campo input { font-size: 1rem; }
+  /* Los atajos se deslizan de borde a borde. */
+  .shero .sbar-populares { margin: 0.55rem -1rem 0; padding-inline: 1rem; height: 1.9rem; }
+  .shero .sbar-chip { height: 1.75rem; padding: 0 0.7rem; font-size: 0.76rem; }
+
+  .shero .shero-pie,
+  .vista-tienda .shero .shero-pie { margin-top: 0.55rem; }
+  .shero .shero-stats,
+  .vista-tienda .shero .shero-stats { padding: 0.15rem; font-size: 0.72rem; }
+  .shero-stat { padding: 0.1rem 0.55rem; gap: 0.28rem; }
+  .shero-stat svg { width: 13px; height: 13px; }
+}
+
+/* ==========================================================================
+   Cabecera «comercio» — marfil y verde bosque
+   Sustituye las dos franjas verdes oscuras por una composición clara:
+     · franja de avisos en verde muy suave, baja, con iconos de línea y un
+       divisor fino entre mensajes;
+     · barra principal marfil con borde inferior: logo y nombre, enlaces sin
+       cápsulas (la página activa: verde, semibold y un subrayado corto),
+       el buscador de siempre en claro y «Mi pedido» como único botón lleno.
+   La tipografía es la del sitio (`--fuente-sitio`): la cabecera no estrena
+   una fuente propia. Paleta en variables locales, para retocarla en un sitio.
+   Solo afecta a la variante «comercio»; las demás no cambian.
+   ========================================================================== */
+.navbar--comercio,
+.navbar--comercio-avisos {
+  --hdr-bosque: #174d32;
+  --hdr-accion: #238348;
+  --hdr-marfil: #fffefa;
+  --hdr-suave: #edf4ec;
+  --hdr-tinta: #183126;
+  --hdr-borde: #e5ebe4;
+  --hdr-pedido: var(--navbar-pedido-fondo, var(--hdr-bosque));
+}
+
+/* --- Franja de avisos --- */
+.navbar-avisos.navbar--comercio-avisos {
+  background: var(--hdr-suave);
+  color: var(--hdr-tinta);
+  border-bottom: 1px solid var(--hdr-borde);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+}
+.navbar--comercio-avisos .navbar-avisos-cara {
+  align-items: center;
+  min-height: 2rem;
+  padding-block: 0.3rem;
+}
+.navbar--comercio-avisos .navbar-avisos-cara > div { gap: 0; align-items: center; }
+.navbar--comercio-avisos .navbar-avisos-cara > div > span { gap: 0.45rem; }
+/* Divisor sutil entre mensajes. */
+.navbar--comercio-avisos .navbar-avisos-cara > div > span + span::before {
+  content: "";
+  width: 1px;
+  height: 0.85rem;
+  margin: 0 1rem;
+  background: color-mix(in srgb, var(--hdr-bosque) 22%, transparent);
+}
+.navbar--comercio-avisos svg { color: var(--hdr-accion); opacity: 1; }
+
+/* --- Barra principal --- */
+.navbar.navbar--comercio,
+.navbar.navbar--comercio.con-scroll {
+  gap: 1.1rem;
+  /* El alto no cambia al hacer scroll: una barra sticky que encoge mueve el
+     contenido de debajo. Solo aparece la sombra. */
+  padding: 0.7rem 1.5rem;
+  background: color-mix(in srgb, var(--hdr-marfil) 94%, transparent);
+  color: var(--hdr-tinta);
+  border-bottom: 1px solid var(--hdr-borde);
+  box-shadow: none;
+}
+.navbar.navbar--comercio.con-scroll { box-shadow: 0 8px 24px -18px rgba(24, 49, 38, 0.35); }
+.navbar--comercio::after { content: none; }
+
+.navbar--comercio .marca { color: var(--hdr-bosque); font-weight: 700; letter-spacing: -0.01em; }
+
+/* Toda la cabecera (franja, enlaces, buscador, «Mi pedido» y el buscador
+   desplegable del móvil) en la serif editorial del sitio. Botones e inputs
+   la heredan (`font-family: inherit` global). El resto de la tienda sigue
+   en la fuente del sitio. */
+.navbar.navbar--comercio,
+.navbar-avisos.navbar--comercio-avisos {
+  font-family: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  font-variation-settings: "opsz" 24;
+}
+/* Nombre y, debajo, su filete con el ramito (solo en escritorio: en el móvil
+   la barra va justa de alto). */
+.navbar--comercio .marca-nombre {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.navbar--comercio .marca-adorno {
+  display: block;
+  width: 100%;
+  min-width: 7rem;
+  max-width: 11rem;
+  height: 10px;
+  color: var(--hdr-accion);
+  overflow: visible;
+}
+.navbar--comercio .marca-adorno-grano { fill: #c49a32; }
+.navbar--comercio .marca:hover .marca-adorno path:nth-of-type(3) { transform: rotate(-8deg); }
+.navbar--comercio .marca:hover .marca-adorno path:nth-of-type(4) { transform: rotate(8deg); }
+.navbar--comercio .marca-adorno path:nth-of-type(n + 3) {
+  transform-box: fill-box;
+  transition: transform 0.35s var(--t-ease, ease);
+}
+.navbar--comercio .marca-adorno path:nth-of-type(3) { transform-origin: right center; }
+.navbar--comercio .marca-adorno path:nth-of-type(4) { transform-origin: left center; }
+@media (max-width: 900px) {
+  .navbar--comercio .marca-adorno { display: none; }
+  /* Sin filete, el nombre vuelve a recortarse con «…» si no cabe. */
+  .navbar--comercio .marca-nombre { align-items: stretch; }
+  .navbar--comercio .marca-nombre .marca-txt { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar--comercio .marca-adorno path { transition: none; }
+}
+/* El nombre: itálica en bold. */
+.navbar--comercio .marca-txt {
+  font-style: italic;
+  font-weight: 800;
+  font-variation-settings: "opsz" 48;
+  letter-spacing: -0.005em;
+  line-height: 1;
+  color: var(--hdr-bosque);
+}
+.navbar--comercio .marca:hover .logo-circ { transform: rotate(-4deg) scale(1.04); }
+
+/* Enlaces: texto, sin cápsulas. */
+.navbar--comercio .nav-links { gap: 0.15rem; margin-left: 0.5rem; }
+.navbar--comercio .nav-links a {
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  background: none;
+  color: var(--hdr-tinta);
+  font-size: 0.92rem;
+  font-weight: 500;
+  transition: color var(--t-rapido, 0.16s) ease;
+}
+.navbar--comercio .nav-links a:hover { background: none; color: var(--hdr-accion); transform: none; }
+.navbar--comercio .nav-links a:focus-visible { outline: none; box-shadow: var(--t-foco); }
+.navbar--comercio .nav-links a.activo { background: none; color: var(--hdr-bosque); font-weight: 600; }
+/* Subrayado corto que crece desde el centro: fijo en la página activa, y al
+   pasar el puntero o llegar con el teclado en las demás (el mismo gesto que
+   la barra inferior del móvil). */
+/* El subrayado es una pequeña onda (el lenguaje de `OndaOrganica`): un
+   trazo ondulado dibujado como máscara sobre el verde, que nace desde el
+   centro y, mientras el puntero está encima, fluye de lado a lado. En la
+   página activa queda quieta. */
+.navbar--comercio .nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: 0.05rem;
+  width: 1.9rem;
+  height: 6px;
+  border-radius: 0;
+  background: var(--hdr-accion);
+  -webkit-mask: var(--onda-trazo-mini) 0 50% / 10px 6px repeat-x;
+  mask: var(--onda-trazo-mini) 0 50% / 10px 6px repeat-x;
+  opacity: 0.7;
+  transform: translateX(-50%) scaleX(0);
+  transition: transform 0.32s var(--t-ease, ease), opacity 0.28s ease;
+}
+.navbar--comercio .nav-links a:hover::after,
+.navbar--comercio .nav-links a:focus-visible::after {
+  transform: translateX(-50%) scaleX(1);
+  animation: onda-fluye 0.7s linear infinite;
+}
+.navbar--comercio .nav-links a.activo::after { opacity: 1; transform: translateX(-50%) scaleX(1); }
+@keyframes onda-fluye {
+  to { -webkit-mask-position: 10px 50%; mask-position: 10px 50%; }
+}
+:root {
+  --onda-trazo-mini: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 3Q2.5 0.4 5 3T10 3' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar--comercio .nav-links a::after { transition: none; animation: none !important; }
+}
+
+/* Buscador: el de siempre, en claro. */
+@media (min-width: 901px) {
+  /* El contenido de la barra respeta el ancho del sitio (el mismo de la
+     franja de avisos y de la página): en pantallas anchas no se reparte de
+     borde a borde dejando huecos entre los enlaces, el buscador y el botón. */
+  .navbar.navbar--comercio,
+  .navbar.navbar--comercio.con-scroll {
+    padding-inline: max(1.5rem, calc((100% - var(--contenedor-ancho, 1440px)) / 2 + 1.5rem));
+  }
+  /* El logo solo a la izquierda; enlaces, buscador y «Mi pedido» juntos a
+     la derecha. El espacio libre queda entre los dos grupos. */
+  .navbar.navbar--comercio .marca { margin-right: auto; gap: 0.75rem; }
+  /* Marca más presente: logo más grande y el nombre en la serif editorial
+     del sitio, en itálica — elegante sin ser una letra de adorno. */
+  .navbar--comercio .logo-circ { width: 50px; height: 50px; border-radius: 14px; }
+  .navbar--comercio .marca-txt { font-size: 1.45rem; }
+  .navbar--comercio .nav-links { gap: 0; margin-left: 2rem; }
+  .navbar--comercio .nav-links a { padding: 0.5rem 0.75rem; font-size: 1.04rem; }
+  .navbar--comercio .buscador-cont {
+    flex: 0 1 360px;
+    max-width: 360px;
+    margin-left: 0.75rem;
+  }
+  .navbar--comercio .buscador-cont:focus-within { flex-basis: 420px; max-width: 420px; }
+  .navbar--comercio .btn-carrito { margin-left: 0.75rem; }
+  .navbar--comercio .buscador {
+    height: 42px;
+    border: 1px solid var(--hdr-borde);
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: none;
+  }
+  .navbar--comercio .buscador:hover { border-color: color-mix(in srgb, var(--hdr-accion) 35%, var(--hdr-borde)); }
+  .navbar--comercio .buscador:focus-within {
+    border-color: var(--hdr-accion);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--hdr-accion) 18%, transparent);
+  }
+  .navbar--comercio .buscador svg { color: var(--hdr-accion); }
+  .navbar--comercio .buscador input { color: var(--hdr-tinta); font-size: 0.9rem; }
+  .navbar--comercio .buscador-atajo { color: var(--gris-600); border-color: var(--hdr-borde); background: var(--hdr-suave); }
+}
+
+/* «Mi pedido»: el CTA. Cápsula verde bosque con un degradado sutil hacia el
+   verde de interacción, un filo de luz arriba, la bolsa en su propio círculo
+   y el contador como una pastilla blanca. Al pasar: se eleva, el degradado
+   se aviva y un brillo cruza el botón. */
+.navbar--comercio .btn-carrito {
+  isolation: isolate;
+  height: 44px;
+  padding: 0 1.05rem 0 0.35rem;
+  gap: 0.55rem;
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--hdr-pedido) 78%, var(--hdr-accion)) 0%, var(--hdr-pedido) 60%);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 1px 2px rgba(23, 77, 50, 0.25),
+    0 8px 20px -10px rgba(23, 77, 50, 0.75);
+  transition: transform 0.2s var(--t-ease, ease), box-shadow 0.2s ease, filter 0.2s ease;
+}
+.navbar--comercio .btn-carrito:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.15) brightness(1.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 1px 2px rgba(23, 77, 50, 0.25),
+    0 14px 28px -12px rgba(35, 131, 72, 0.7);
+}
+.navbar--comercio .btn-carrito:active { transform: translateY(0) scale(0.97); }
+.navbar--comercio .btn-carrito:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 3px var(--hdr-marfil),
+    0 0 0 5px color-mix(in srgb, var(--hdr-accion) 55%, transparent);
+}
+/* La bolsa en su círculo translúcido. */
+.navbar--comercio .btn-carrito svg {
+  box-sizing: content-box;
+  padding: 0.45rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  transition: transform 0.25s var(--t-ease, ease), background-color 0.2s ease;
+}
+.navbar--comercio .btn-carrito:hover svg { transform: rotate(-8deg) scale(1.05); background: rgba(255, 255, 255, 0.2); }
+.navbar--comercio .btn-carrito .badge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  background: #fff;
+  color: var(--hdr-bosque);
+  font-size: 0.72rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.3);
+  animation: hdr-badge-pop 0.32s var(--t-ease, ease);
+}
+@media (min-width: 901px) {
+  /* El brillo que cruza al pasar el puntero. */
+  .navbar--comercio .btn-carrito { overflow: hidden; }
+  .navbar--comercio .btn-carrito::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.22) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.6s var(--t-ease, ease);
+  }
+  .navbar--comercio .btn-carrito:hover::before { transform: translateX(120%); }
+}
+@keyframes hdr-badge-pop {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* «Mi cuenta» (si el negocio la usa), sobre claro. */
+.navbar--comercio .navbar-cuenta { color: var(--hdr-tinta); }
+.navbar--comercio .navbar-cuenta svg { color: var(--hdr-accion); }
+.navbar--comercio .navbar-cuenta:hover,
+.navbar--comercio .navbar-cuenta.activo { background: var(--hdr-suave); }
+
+/* --- Móvil: franja compacta, logo a la izquierda, buscar y pedido a la
+   derecha; la navegación sigue en la barra inferior. --- */
+@media (max-width: 900px) {
+  .navbar.navbar--comercio,
+  .navbar.navbar--comercio.con-scroll { gap: 0.5rem; padding: 0.5rem 0.9rem; }
+  .navbar--comercio .marca { font-size: 1.28rem; }
+  .navbar--comercio .btn-buscar-movil {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: var(--hdr-suave);
+    color: var(--hdr-bosque);
+  }
+  .navbar--comercio .btn-buscar-movil:hover { background: color-mix(in srgb, var(--hdr-suave) 70%, var(--hdr-borde)); }
+  .navbar--comercio .btn-carrito { width: 42px; height: 42px; padding: 0; justify-content: center; }
+  /* Solo el icono: sin el círculo interior, que dentro del botón redondo
+     sería un círculo dentro de otro. */
+  .navbar--comercio .btn-carrito svg { padding: 0; background: none; box-shadow: none; }
+  .navbar--comercio .btn-carrito .badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 19px;
+    height: 19px;
+    border: 2px solid var(--hdr-marfil);
+    background: var(--hdr-accion);
+    color: #fff;
+    font-size: 0.66rem;
+  }
+  .navbar--comercio .navbar-buscador-movil {
+    background: var(--hdr-marfil);
+    border-bottom: 1px solid var(--hdr-borde);
+    box-shadow: 0 14px 28px -18px rgba(24, 49, 38, 0.45);
+  }
+  .navbar--comercio .navbar-buscador-movil .buscador {
+    background: #fff;
+    border: 1px solid var(--hdr-borde);
+    border-radius: 999px;
+    color: var(--hdr-tinta);
+  }
+  .navbar--comercio .navbar-buscador-movil .buscador:focus-within { border-color: var(--hdr-accion); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hdr-accion) 18%, transparent); }
+  .navbar--comercio .navbar-buscador-movil .buscador svg { color: var(--hdr-accion); opacity: 1; }
+  .navbar--comercio .navbar-buscador-movil .buscador input { color: var(--hdr-tinta); }
+  .navbar--comercio .navbar-buscador-movil .buscador input::placeholder { color: var(--gris-600); }
+}
+@media (max-width: 780px) {
+  .navbar-avisos.navbar--comercio-avisos { font-size: 0.68rem; }
+  .navbar--comercio-avisos .navbar-avisos-cara { min-height: 1.7rem; padding-block: 0.22rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar--comercio .btn-carrito,
+  .navbar--comercio .btn-carrito svg,
+  .navbar--comercio .btn-carrito::before,
+  .navbar--comercio .btn-carrito .badge { transition: none; animation: none; }
+  .navbar--comercio .btn-carrito::before { display: none; }
+  .navbar--comercio .btn-carrito:hover,
+  .navbar--comercio .btn-carrito:hover svg { transform: none; }
+}
+
+/* ==========================================================================
+   Barra inferior móvil (estilo «flotante», el de La Gran Cosecha) — rediseño
+   De cápsula flotante translúcida a barra de aplicación: blanca y sólida,
+   pegada al borde, con las esquinas de arriba apenas redondeadas, un borde
+   fino y una sombra ligera. 68 px de alto más la zona segura del sistema.
+   Activo: icono verde bosque sobre verde muy claro, texto semibold y un
+   indicador corto debajo. Inactivo: iconos de línea en gris verdoso.
+   Todo lo que se apila encima (carrito flotante, WhatsApp, aviso de
+   «agregado», relleno de la página) se mide con `--alto-nav-inferior`, así
+   que se recoloca solo. Escritorio no cambia: la barra no existe ahí.
+   ========================================================================== */
+@media (max-width: 900px) {
+  :root:has(.nav-inferior--flotante) { --alto-nav-inferior: 3.6rem; }
+
+  .nav-inferior.nav-inferior--flotante {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(var(--alto-nav-inferior) + env(safe-area-inset-bottom, 0px));
+    padding: 0 0.35rem env(safe-area-inset-bottom, 0px);
+    border: 0;
+    border-top: 1px solid #e5ebe4;
+    border-radius: 18px 18px 0 0;
+    background: #fff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 -6px 18px -12px rgba(24, 49, 38, 0.22);
+  }
+
+  .nav-inferior--flotante .nav-inferior-item {
+    min-height: 44px;
+    gap: 0.12rem;
+    color: #6b7f74;
+    font-size: 0.6875rem; /* 11 px */
+    font-weight: 500;
+    letter-spacing: 0.005em;
+    transition: color 0.22s ease;
+  }
+  .nav-inferior--flotante .nav-inferior-icono {
+    width: 48px;
+    height: 27px;
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    transition: background-color 0.25s ease, color 0.25s ease, transform 0.25s var(--t-ease, ease);
+  }
+  .nav-inferior--flotante .nav-inferior-icono svg { width: 21px; height: 21px; }
+
+  .nav-inferior--flotante .nav-inferior-item.activo { color: #174d32; font-weight: 600; }
+  .nav-inferior--flotante .nav-inferior-item.activo .nav-inferior-icono {
+    background: #e7f2e8;
+    color: #174d32;
+    animation: nav-inferior-activo-in 0.32s var(--t-ease, ease);
+  }
+  @keyframes nav-inferior-activo-in {
+    from { background-color: transparent; transform: scale(0.86); }
+  }
+  .nav-inferior--flotante .nav-inferior-item:active .nav-inferior-icono { transform: scale(0.92); }
+
+  /* Indicador inferior: el subrayado corto, en verde bosque cuando está activo. */
+  .nav-inferior--flotante .nav-inferior-txt::after {
+    bottom: -6px;
+    width: 1.5rem;
+    height: 5px;
+    border-radius: 0;
+    background: #238348;
+    opacity: 0.55;
+    -webkit-mask: var(--onda-trazo-mini) 0 50% / 9px 5px repeat-x;
+    mask: var(--onda-trazo-mini) 0 50% / 9px 5px repeat-x;
+  }
+  /* Al tocar, la onda fluye mientras el dedo está encima. */
+  .nav-inferior--flotante .nav-inferior-item:active .nav-inferior-txt::after { animation: onda-fluye-mini 0.6s linear infinite; }
+  @keyframes onda-fluye-mini {
+    to { -webkit-mask-position: 9px 50%; mask-position: 9px 50%; }
+  }
+  .nav-inferior--flotante .nav-inferior-item.activo .nav-inferior-txt::after { background: #174d32; opacity: 1; }
+
+  .nav-inferior--flotante .nav-inferior-item:focus-visible .nav-inferior-icono {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px color-mix(in srgb, #238348 55%, transparent);
+  }
+
+  /* El contador del pedido (si el negocio lo pone abajo) con borde blanco. */
+  .nav-inferior--flotante .nav-inferior-contador { border-color: #fff; }
+
+  /* Carrito flotante: un poco más de aire sobre la barra. */
+  /* Carrito flotante: de barra a todo el ancho con dos renglones a una
+     cápsula compacta de un renglón, a la derecha — [bolsa·3] $45.000 | Ver
+     pedido →. El número de productos ya está en el contador de la bolsa
+     (y completo en el `aria-label`), así que el texto "3 productos" sobra. */
+  .barra-carrito-movil {
+    left: auto;
+    right: 0.75rem;
+    bottom: calc(var(--alto-nav-inferior) + 0.55rem + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100% - 1.5rem);
+    height: 2.6rem;
+    padding: 0 0.85rem 0 0.3rem;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, color-mix(in srgb, #174d32 78%, #238348), #174d32 60%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 10px 24px -12px rgba(24, 49, 38, 0.6);
+  }
+  .barra-carrito-movil .barra-carrito-icono { width: 30px; height: 30px; background: rgba(255, 255, 255, 0.16); }
+  .barra-carrito-movil .barra-carrito-icono svg { width: 16px; height: 16px; }
+  .barra-carrito-movil .barra-carrito-contador {
+    top: -5px;
+    right: -6px;
+    min-width: 17px;
+    height: 17px;
+    background: #fff;
+    color: #174d32;
+    font-size: 0.64rem;
+    box-shadow: 0 0 0 2px #174d32;
+  }
+  .barra-carrito-movil .barra-carrito-texto {
+    flex: none;
+    flex-direction: row;
+    align-items: baseline;
+    font-size: 0; /* oculta "3 productos": ya lo dice el contador */
+  }
+  .barra-carrito-movil .barra-carrito-total { font-size: 0.86rem; font-weight: 700; }
+  .barra-carrito-movil .barra-carrito-total small { font-size: 0.66rem; }
+  .barra-carrito-movil .barra-carrito-cta {
+    padding-left: 0.5rem;
+    border-left-color: rgba(255, 255, 255, 0.25);
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .barra-carrito-movil .barra-carrito-cta svg { width: 14px; height: 14px; }
+  /* Y el contenido de la página termina por encima de los dos. */
+  body.con-barra-carrito { padding-bottom: calc(var(--alto-nav-inferior) + 3.3rem + env(safe-area-inset-bottom, 0px)); }
+
+  /* Aviso "agregado": del ancho de lo que dice, no 440 px fijos. Su "Ver
+     pedido" se retira en el móvil: justo debajo está la cápsula del
+     carrito, que hace lo mismo. Sigue cerrándose solo y con su ✕. */
+  .aviso-agregado-zona {
+    width: max-content;
+    max-width: calc(100% - 1.5rem);
+    bottom: calc(var(--alto-nav-inferior, 3.5rem) + 3.65rem + env(safe-area-inset-bottom, 0px));
+  }
+  .aviso-agregado {
+    gap: 0.5rem;
+    padding: 0.4rem 0.35rem 0.45rem 0.4rem;
+    border-radius: 14px;
+    box-shadow: 0 12px 28px -12px rgba(24, 49, 38, 0.55);
+  }
+  .aviso-agregado-check { width: 1.6rem; height: 1.6rem; }
+  .aviso-agregado-check svg { width: 13px; height: 13px; }
+  .aviso-agregado-texto strong { font-size: 0.8rem; }
+  .aviso-agregado-texto span { font-size: 0.7rem; }
+  .aviso-agregado-ver { display: none; }
+  .aviso-agregado-cerrar { padding: 0.25rem; }
+  .aviso-agregado-cerrar svg { width: 14px; height: 14px; }
+}
+/* Pantallas bajas o en horizontal: la barra se achica como antes. */
+@media (max-width: 900px) and (max-height: 560px) {
+  :root:has(.nav-inferior--flotante) { --alto-nav-inferior: 3.4rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-inferior--flotante .nav-inferior-item.activo .nav-inferior-icono { animation: none; }
+  .nav-inferior--flotante .nav-inferior-item:active .nav-inferior-txt::after { animation: none; }
+  .nav-inferior--flotante .nav-inferior-icono,
+  .nav-inferior--flotante .nav-inferior-item { transition: none; }
+}
+
+/* ==========================================================================
+   Banner del producto destacado — escaparate editorial
+   Foto real ~48% y contenido ~52%, 340–380 px de alto, radio 24 px, marfil
+   cálido. El contenido en dos grupos: qué es (campaña, nombre, frase) y cómo
+   se compra (precio de referencia con su unidad + «Comprar ahora»), juntos
+   y centrados en su columna, sin huecos.
+   ========================================================================== */
+.favs-cuerpo--solo .favs-banner,
+.favs-banner {
+  --banner-marfil: #fffbf3;
+  grid-template-columns: minmax(0, 48fr) minmax(0, 52fr);
+  min-height: 340px;
+  max-height: 380px;
+  height: clamp(340px, 30vw, 380px);
+  border-radius: 24px;
+  border-color: #ece6da;
+  background:
+    radial-gradient(70% 90% at 100% 0%, color-mix(in srgb, var(--campana) 8%, transparent), transparent 65%),
+    var(--banner-marfil);
+}
+/* La foto encuadrada sin deformarse: llena su mitad, centrada un poco arriba
+   (donde suele estar el producto), y se funde con el marfil. */
+.favs-banner-media .pimg img:not(.pimg-icono) { object-fit: cover; object-position: 50% 42%; }
+.favs-banner-media::after {
+  width: 34%;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--banner-marfil) 0%, transparent), var(--banner-marfil) 92%);
+}
+
+.favs-cuerpo--solo .favs-banner-info,
+.favs-banner-info {
+  justify-content: center;
+  gap: 1.35rem;
+  padding: 2rem clamp(1.5rem, 3.5vw, 3.25rem) 2rem 0.5rem;
+}
+.favs-banner-cabeza { display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; max-width: 34rem; }
+.favs-banner-etiqueta { letter-spacing: 0.14em; font-weight: 700; }
+.favs-cuerpo--solo .favs-banner-texto,
+.favs-banner-texto { max-width: 40ch; margin: 0; }
+
+/* Cómo se compra: precio y botón en una fila, separados del texto por un
+   filo fino. */
+.favs-banner-compra {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.9rem 1.5rem;
+  max-width: 34rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid color-mix(in srgb, var(--campana) 16%, #ece6da);
+}
+.favs-banner-precio { flex-direction: column; align-items: flex-start; gap: 0.1rem; margin: 0; }
+.favs-banner-precio-rotulo {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gris-600);
+}
+.favs-banner-precio-valor { display: inline-flex; align-items: baseline; gap: 0.3rem; font-size: 0.85rem; color: var(--gris-600); }
+.favs-banner-precio-valor b { font-size: 1.5rem; font-weight: 800; color: var(--tinta); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.favs-banner-compra .favs-banner-cta { margin-top: 0; margin-left: auto; }
+
+@media (max-width: 1024px) {
+  .favs-cuerpo--solo .favs-banner,
+  .favs-banner { height: auto; max-height: none; min-height: 320px; }
+}
+
+/* Móvil: compacto y horizontal, la foto sigue mandando. */
+@media (max-width: 767px) {
+  .favs-cuerpo--solo .favs-banner,
+  .favs-banner {
+    grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    border-radius: 18px;
+  }
+  .favs-banner-media::after { width: 24%; }
+  .favs-cuerpo--solo .favs-banner-info,
+  .favs-banner-info { gap: 0.5rem; padding: 0.75rem 0.8rem 0.8rem 0.2rem; }
+  .favs-banner-cabeza { gap: 0.28rem; }
+  .favs-banner-compra { gap: 0.4rem 0.6rem; padding-top: 0.5rem; }
+  .favs-banner-precio-rotulo { font-size: 0.55rem; letter-spacing: 0.08em; }
+  .favs-banner-precio-valor { font-size: 0.66rem; gap: 0.2rem; }
+  .favs-banner-precio-valor b { font-size: 0.98rem; }
+  .favs-banner-compra .favs-banner-cta { margin-left: 0; }
+}
+
+/* ==========================================================================
+   "Para empezar tu pedido" — escaparate + pedidos anteriores
+   Una sola sección con dos piezas hermanas: el banner del destacado (70%),
+   verde bosque con la foto real fundida a la derecha, y el panel "¿Ya nos
+   has pedido antes?" (30%) con los beneficios. Mismo alto, mismo radio,
+   mismo espacio entre ellas. Encabezado compacto con una bajada breve.
+   ========================================================================== */
+.favs.favs { padding: 1.5rem 0 0.4rem; }
+.favs .favs-cabecera { margin-bottom: 0.9rem; }
+.favs .favs-cabecera h2 { margin-top: 0.1rem; }
+.favs .favs-subtitulo { margin-top: 0.2rem; font-size: 0.98rem; }
+
+.favs .favs-cuerpo.favs-cuerpo--con-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+.favs .favs-cuerpo.favs-cuerpo--solo { display: block; }
+
+/* --- Banner: verde bosque, foto integrada --- */
+.favs .favs-banner {
+  --banner-verde: #174d32;
+  position: relative;
+  display: block;
+  height: clamp(340px, 28vw, 380px);
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 24px;
+  background:
+    radial-gradient(70% 90% at 0% 100%, rgba(35, 131, 72, 0.35), transparent 60%),
+    linear-gradient(135deg, #1d5a3b 0%, var(--banner-verde) 55%, #123d28 100%);
+  color: #fff;
+  box-shadow: 0 20px 44px -28px rgba(18, 61, 40, 0.75);
+}
+.favs .favs-banner:hover { transform: none; border-color: transparent; box-shadow: 0 24px 50px -26px rgba(18, 61, 40, 0.8); }
+/* La foto ocupa la derecha y se funde hacia el verde. */
+/* La foto va debajo del texto (z-index -1 dentro del banner aislado) y el
+   texto queda sin posicionar: así el enlace estirado de «Comprar ahora»
+   cubre el banner entero, foto incluida. */
+.favs .favs-banner { isolation: isolate; }
+.favs .favs-banner-media { position: absolute; z-index: -1; inset: 0 0 0 40%; min-height: 0; }
+.favs .favs-banner-media .pimg { position: absolute; inset: 0; background: transparent; }
+.favs .favs-banner-media .pimg img:not(.pimg-icono) { object-fit: cover; object-position: 50% 45%; }
+.favs .favs-banner-media::after {
+  inset: 0 auto 0 0;
+  width: 46%;
+  background: linear-gradient(90deg, var(--banner-verde) 0%, color-mix(in srgb, var(--banner-verde) 55%, transparent) 45%, transparent 100%);
+}
+.favs .favs-banner-media .pimg-icono { width: 40% !important; }
+
+.favs .favs-banner-info {
+  position: static;
+  width: 56%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 2rem 1.5rem 2rem clamp(1.75rem, 3.5vw, 3rem);
+}
+.favs .favs-banner-cabeza { gap: 0.55rem; max-width: none; }
+.favs .favs-banner-etiqueta {
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: #f4d35e;
+  color: #3a2c04;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+.favs .favs-banner-etiqueta::before { content: none; }
+.favs .favs-banner[data-campana="temporada"] .favs-banner-etiqueta { background: #d9efd5; color: #174d32; }
+.favs .favs-banner[data-campana="recomendado"] .favs-banner-etiqueta { background: #fffbf3; color: #174d32; }
+.favs .favs-banner[data-campana="novedad"] .favs-banner-etiqueta { background: #f8d9c4; color: #6b2f12; }
+.favs .favs-banner-nombre {
+  font-size: calc(clamp(2.2rem, 3.6vw, 3.2rem) * var(--titulo-escala, 1));
+  line-height: 1;
+  color: #fff;
+}
+.favs .favs-banner-texto { max-width: 34ch; font-size: 1rem; line-height: 1.45; color: rgba(255, 255, 255, 0.86); }
+
+.favs .favs-banner-compra {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+  max-width: 24rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+.favs .favs-banner-precio-rotulo { color: rgba(255, 255, 255, 0.78); text-transform: none; letter-spacing: 0; font-size: 0.82rem; font-weight: 600; }
+.favs .favs-banner-precio-valor { color: rgba(255, 255, 255, 0.85); font-size: 0.95rem; }
+.favs .favs-banner-precio-valor b { color: #fff; font-size: 2rem; }
+.favs .favs-banner-compra .favs-banner-cta {
+  margin: 0;
+  height: 2.9rem;
+  padding: 0 1.25rem 0 1.05rem;
+  background: #fffbf3;
+  color: #174d32;
+  box-shadow: 0 10px 22px -12px rgba(0, 0, 0, 0.45);
+}
+.favs .favs-banner:hover .favs-banner-cta { background: #fff; }
+.favs .favs-banner-cta svg:first-child { color: #238348; }
+
+/* --- Panel "¿Ya nos has pedido antes?" --- */
+.favs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.5rem 1.4rem;
+  border: 1px solid #e5ebe4;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(24, 49, 38, 0.04), 0 16px 36px -28px rgba(24, 49, 38, 0.35);
+}
+.favs-panel-cabeza { display: flex; align-items: flex-start; gap: 0.85rem; }
+.favs-panel-icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #238348;
+  color: #fff;
+}
+.favs-panel-texto { min-width: 0; }
+.favs-panel-texto h3 { margin: 0.1rem 0 0.25rem; font-size: 1.12rem; line-height: 1.25; color: #183126; }
+.favs-panel-texto p { margin: 0; font-size: 0.88rem; line-height: 1.45; color: var(--gris-600); }
+.favs-panel-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  height: 2.85rem;
+  border: 1.5px solid #238348;
+  border-radius: 999px;
+  background: #edf4ec;
+  color: #174d32;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--t-rapido, 0.16s) ease, color var(--t-rapido, 0.16s) ease;
+}
+.favs-panel-cta:hover { background: #174d32; border-color: #174d32; color: #fff; }
+.favs-panel-cta:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, #238348 35%, transparent); }
+.favs-panel-cta svg { transition: transform var(--t-rapido, 0.16s) ease; }
+.favs-panel-cta:hover svg { transform: translateX(3px); }
+.favs-panel-beneficios {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 1.1rem 0 0;
+  border-top: 1px solid #e5ebe4;
+}
+.favs-panel-beneficios li { display: flex; align-items: center; gap: 0.75rem; }
+.favs-panel-beneficio-icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #edf4ec;
+  color: #238348;
+}
+.favs-panel-beneficios b { display: block; font-size: 0.9rem; color: #183126; }
+.favs-panel-beneficios small { display: block; font-size: 0.78rem; color: var(--gris-600); }
+
+@media (max-width: 1024px) {
+  .favs .favs-cuerpo.favs-cuerpo--con-panel { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+  .favs-panel-beneficios { flex-direction: row; flex-wrap: wrap; gap: 0.75rem 1.5rem; }
+}
+
+/* --- Móvil: primero el banner, compacto; luego el panel en una fila --- */
+@media (max-width: 767px) {
+  .favs.favs { padding-top: 1rem; }
+  .favs .favs-cabecera { margin-bottom: 0.6rem; }
+  .favs .favs-subtitulo { font-size: 0.8rem; }
+  .favs .favs-cuerpo.favs-cuerpo--con-panel,
+  .vista-tienda .favs .favs-cuerpo { display: flex; flex-direction: column; gap: 0.6rem; overflow: visible; margin: 0; padding: 0; }
+
+  .favs .favs-banner { height: auto; min-height: 12.5rem; border-radius: 18px; }
+  .favs .favs-banner-media { inset: 0 0 0 46%; }
+  .favs .favs-banner-media::after { width: 55%; }
+  .favs .favs-banner-info { width: 64%; gap: 0.55rem; padding: 0.95rem 0.5rem 0.95rem 1rem; }
+  .favs .favs-banner-cabeza { gap: 0.3rem; }
+  .favs .favs-banner-etiqueta { padding: 0.2rem 0.5rem; font-size: 0.56rem; }
+  .favs .favs-banner-etiqueta svg { width: 11px; height: 11px; }
+  .favs .favs-banner-nombre { font-size: calc(1.55rem * var(--titulo-escala, 1)); }
+  .favs .favs-banner-texto { font-size: 0.74rem; line-height: 1.35; }
+  .favs .favs-banner-compra { gap: 0.5rem; padding-top: 0.5rem; }
+  .favs .favs-banner-precio-rotulo { font-size: 0.62rem; }
+  .favs .favs-banner-precio-valor { font-size: 0.7rem; }
+  .favs .favs-banner-precio-valor b { font-size: 1.15rem; }
+  .favs .favs-banner-compra .favs-banner-cta { height: 2.15rem; padding: 0 0.8rem; gap: 0.3rem; font-size: 0.76rem; }
+  .favs .favs-banner-cta svg { width: 14px; height: 14px; }
+
+  /* El panel, en una fila: icono, pregunta y su botón. */
+  .favs-panel { flex-direction: row; align-items: center; gap: 0.6rem; padding: 0.65rem 0.7rem; border-radius: 16px; }
+  .favs-panel-cabeza { flex: 1; min-width: 0; align-items: center; gap: 0.6rem; }
+  .favs-panel-icono { width: 36px; height: 36px; }
+  .favs-panel-icono svg { width: 17px; height: 17px; }
+  .favs-panel-texto h3 { margin: 0; font-size: 0.86rem; }
+  .favs-panel-texto p { display: none; }
+  .favs-panel-cta { flex: none; width: auto; height: 2.2rem; padding: 0 0.85rem; font-size: 0.76rem; }
+  .favs-panel-beneficios { display: none; }
+}
+
+/* Pie en escritorio: el contenido usa el mismo ancho que el resto de la
+   página (`--contenedor-ancho`), no 1240 px centrados con márgenes vacíos a
+   los lados. Columnas, franja de identidad, barra inferior y CTA. */
+@media (min-width: 1101px) {
+  .footer .footer-top,
+  .footer .footer-identidad,
+  .footer .footer-bottom,
+  .footer .footer-cta-inner {
+    max-width: var(--contenedor-ancho, 1440px);
+    padding-inline: clamp(1.5rem, 3vw, 3rem);
+  }
+  .footer .footer-cta { margin-inline: clamp(1.5rem, 3vw, 3rem); }
+  /* La barra inferior centrada: el copyright al centro y, si hay enlaces
+     legales en ella, centrados debajo. */
+  .footer .footer-bottom {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.45rem;
+    text-align: center;
+  }
+  .footer .footer-top { column-gap: clamp(2.25rem, 4vw, 4.5rem); }
+}
+
+/* ==========================================================================
+   Textos largos justificados (móvil y escritorio)
+   Selector de etiqueta a propósito (la especificidad más baja): solo toma
+   los párrafos, citas y elementos de lista que no tienen alineación propia.
+   Lo que una sección centra o alinea a mano lo sigue haciendo. Un texto de
+   una sola línea no cambia (la última línea nunca se justifica), así que
+   precios, etiquetas y rótulos cortos quedan igual. Con guiones de corte
+   (el documento es `lang="es"`) para que las líneas angostas no se llenen
+   de huecos entre palabras.
+   ========================================================================== */
+p,
+li,
+dd,
+blockquote {
+  text-align: justify;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  hyphenate-limit-chars: 7 3 3;
 }

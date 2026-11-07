@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, LayoutGrid, Package } from "lucide-react";
 import { SearchBar } from "@/componentes/tienda/SearchBar";
 import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
 import { claseDeVariante } from "./Seccion";
@@ -40,6 +40,11 @@ interface Props {
   mostrar_buscador?: boolean;
   buscador_etiqueta?: string;
   buscador_placeholder?: string;
+  /** Versión liviana de `imagen` para el teléfono (~560px). Vacía: en el
+   *  móvil no se muestra foto. */
+  imagen_movil?: string;
+  /** Atajos y sugerencias de lo más pedido en el buscador. */
+  mostrar_populares?: boolean;
 }
 
 const VARIANTES = ["compacto"] as const;
@@ -61,6 +66,8 @@ export function CatalogHero({
   mostrar_buscador = true,
   buscador_etiqueta = "¿Qué estás buscando?",
   buscador_placeholder = "Buscar productos…",
+  imagen_movil = "",
+  mostrar_populares = true,
 }: Props) {
   const catalogo = useCatalogoContexto();
 
@@ -72,62 +79,70 @@ export function CatalogHero({
   const estadisticas =
     mostrar_estadisticas && catalogo && total !== null
       ? [
-          { valor: total, etiqueta: total === 1 ? "producto" : "productos" },
+          { valor: total, etiqueta: total === 1 ? "producto" : "productos", Icono: Package },
           ...(numCategorias > 0
-            ? [{ valor: numCategorias, etiqueta: numCategorias === 1 ? "categoría" : "categorías" }]
+            ? [{ valor: numCategorias, etiqueta: numCategorias === 1 ? "categoría" : "categorías", Icono: LayoutGrid }]
             : []),
         ]
       : [];
 
+  // Móvil: la versión liviana si el negocio la subió; si no, ninguna (el
+  // pixel vacío), como antes — bajar la foto de escritorio en un teléfono
+  // costaría más que lo que aporta.
+  const fuenteMovil = imagen_movil || PIXEL_VACIO;
+
   return (
-    <section className={`shero ${clase} ${imagen ? "" : "shero--sin-imagen"}`} aria-labelledby="shero-titulo">
+    <section
+      className={`shero ${clase} ${imagen ? "" : "shero--sin-imagen"} ${imagen_movil ? "shero--con-imagen-movil" : ""}`}
+      aria-labelledby="shero-titulo"
+    >
       <div className="shero-inner">
         <div className="shero-texto">
-          {kicker && <p className="shero-kicker">{kicker}</p>}
+          <div className="shero-cabeza">
+            {kicker && <p className="shero-kicker">{kicker}</p>}
 
-          <h1 id="shero-titulo">
-            {titulo}
-            {titulo_resaltado && (
-              <>
-                {titulo && " "}
-                <em>{titulo_resaltado}</em>
-              </>
-            )}
-          </h1>
+            <h1 id="shero-titulo">
+              {titulo}
+              {titulo_resaltado && (
+                <>
+                  {titulo && " "}
+                  <em>{titulo_resaltado}</em>
+                </>
+              )}
+            </h1>
+          </div>
 
           {texto && <p className="shero-bajada">{texto}</p>}
 
           {mostrar_buscador && catalogo && (
-            <SearchBar etiqueta={buscador_etiqueta} placeholder={buscador_placeholder} />
+            <SearchBar etiqueta={buscador_etiqueta} placeholder={buscador_placeholder} populares={mostrar_populares} />
           )}
 
-          <div className="shero-pie">
-            {estadisticas.length > 0 && (
-              <p className="shero-stats">
-                {estadisticas.map((e, i) => (
-                  <span key={e.etiqueta}>
-                    {i > 0 && (
-                      <i aria-hidden="true" className="shero-sep">
-                        ·
-                      </i>
-                    )}
-                    <b>{e.valor}</b> {e.etiqueta}
-                  </span>
-                ))}
-              </p>
-            )}
-            {cta_texto && (
-              <Link className="shero-cta" href={cta_href || "#catalogo"}>
-                {cta_texto} <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            )}
-          </div>
+          {(estadisticas.length > 0 || cta_texto) && (
+            <div className="shero-pie">
+              {estadisticas.length > 0 && (
+                <p className="shero-stats">
+                  {estadisticas.map((e) => (
+                    <span key={e.etiqueta} className="shero-stat">
+                      <e.Icono size={15} aria-hidden="true" />
+                      <b>{e.valor}</b> {e.etiqueta}
+                    </span>
+                  ))}
+                </p>
+              )}
+              {cta_texto && (
+                <Link className="shero-cta" href={cta_href || "#catalogo"}>
+                  {cta_texto} <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
         {imagen && (
           <div className="shero-media" aria-hidden="true">
             <picture>
-              <source media="(max-width: 767px)" srcSet={PIXEL_VACIO} />
+              <source media="(max-width: 767px)" srcSet={fuenteMovil} width={560} height={420} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imagen} alt="" width={1448} height={1086} decoding="async" fetchPriority="high" />
             </picture>

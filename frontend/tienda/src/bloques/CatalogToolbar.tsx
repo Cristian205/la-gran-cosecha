@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ActiveFilters, FilterDrawer, SortControl } from "@/componentes/tienda/Filtros";
+import { ActiveFilters, FilterDrawer, SortControl, UnidadControl } from "@/componentes/tienda/Filtros";
 import { SearchBar } from "@/componentes/tienda/SearchBar";
 import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
 import { claseDeVariante } from "./Seccion";
@@ -16,8 +16,9 @@ import { claseDeVariante } from "./Seccion";
  * herramienta central; `mostrar_buscador` lo devuelve a la barra para una
  * tienda cuya composición no tenga ese encabezado.
  *
- * Filtrar por categoría y unidad vive en el panel lateral de `grid-productos`
- * (escritorio) y en el botón "Filtrar" de esta barra (móvil, abre una hoja).
+ * La categoría se elige en las tarjetas de categorías de arriba. Aquí van los
+ * demás controles: «Se vende por» (desplegable en escritorio; botón
+ * "Filtrar" con una hoja en móvil y tablet) y «Ordenar por».
  *
  * Depende de `CatalogoProvider`: sin él no hay qué contar ni qué ordenar, así
  * que no se dibuja nada — es un bloque de catálogo, no uno de contenido suelto.
@@ -44,13 +45,35 @@ export function CatalogToolbar({ variante, titulo = "", mostrar_buscador = false
     const el = barra.current;
     if (!el || typeof ResizeObserver === "undefined") return;
     const raiz = document.documentElement;
-    const obs = new ResizeObserver(() => raiz.style.setProperty("--tbar-alto", `${el.offsetHeight}px`));
+    // Solo cuenta mientras va pegada arriba: en escritorio la barra se queda
+    // en su sitio (no es fija) y no tapa nada.
+    const obs = new ResizeObserver(() =>
+      raiz.style.setProperty(
+        "--tbar-alto",
+        `${getComputedStyle(el).position === "sticky" ? el.offsetHeight : 0}px`
+      )
+    );
     obs.observe(el);
     return () => {
       obs.disconnect();
       raiz.style.removeProperty("--tbar-alto");
     };
   }, [catalogo !== null]);
+
+  // En el móvil la barra va pegada a la navbar: `--navbar-alto` era una
+  // estimación fija (62px) y cualquier diferencia dejaba una franja entre
+  // las dos, o la barra metida bajo la navbar. Se mide la real.
+  useEffect(() => {
+    const nav = document.querySelector<HTMLElement>(".navbar");
+    if (!nav || typeof ResizeObserver === "undefined") return;
+    const raiz = document.documentElement;
+    const obs = new ResizeObserver(() => raiz.style.setProperty("--navbar-alto", `${nav.offsetHeight}px`));
+    obs.observe(nav);
+    return () => {
+      obs.disconnect();
+      raiz.style.removeProperty("--navbar-alto");
+    };
+  }, []);
 
   if (!catalogo) return null;
 
@@ -87,6 +110,7 @@ export function CatalogToolbar({ variante, titulo = "", mostrar_buscador = false
         </div>
         <div className="tbar-acciones">
           <FilterDrawer />
+          <UnidadControl />
           <SortControl />
         </div>
       </div>
