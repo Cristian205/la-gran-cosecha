@@ -27,6 +27,7 @@ import { TikTokIcon } from "@/componentes/icons/TikTokIcon";
 import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
 import { WhatsAppLineaIcon } from "@/componentes/icons/WhatsAppLineaIcon";
 import { Reveal } from "@/componentes/animacion";
+import { srcSetImagen } from "@/lib/imagen";
 
 /** Cuántas categorías caben en la columna "Compra" sin volverla un índice. */
 const MAX_CATEGORIAS_FOOTER = 4;
@@ -264,7 +265,7 @@ export function Footer({
           <div className="footer-marca">
             <span className={`footer-logo ${config.logo_url ? "" : "footer-logo--letra"}`}>
               {config.logo_url ? (
-                <img src={config.logo_url} alt="" />
+                <img src={config.logo_url} srcSet={srcSetImagen(config.logo_url, [96, 128, 256])} sizes="64px" alt="" />
               ) : (
                 nombre.slice(0, 1).toUpperCase()
               )}

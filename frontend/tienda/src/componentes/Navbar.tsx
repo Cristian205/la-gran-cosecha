@@ -32,6 +32,7 @@ import { useCart } from "@/estado/carrito";
 import { BusquedaGlobal } from "@/componentes/BusquedaGlobal";
 import { icono } from "@/bloques/iconos";
 import { claseDeVariante } from "@/bloques/Seccion";
+import { srcSetImagen } from "@/lib/imagen";
 import { TipografiaEditorial } from "@/bloques/campanas/comunes";
 
 /**
@@ -275,6 +276,8 @@ export function Navbar({
           {config.logo_url ? (
             <img
               src={config.logo_url}
+              srcSet={srcSetImagen(config.logo_url, [96, 128, 256])}
+              sizes="56px"
               alt={nombre}
               style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "inherit" }}
             />

@@ -23,6 +23,8 @@ const config: NextConfig = {
     // servidor. Es lo que PageSpeed pide en «Usar tiempos de vida de caché
     // eficientes».
     minimumCacheTTL: 2678400,
+    // 75 (la de siempre) y 60 (fotos de fondo a todo el ancho: ver `lib/imagen.ts`).
+    qualities: [60, 75],
     remotePatterns: [
       { protocol: "https", hostname: "**.r2.dev" },
       { protocol: "https", hostname: "**.cloudflarestorage.com" },
