@@ -1,8 +1,22 @@
 "use client";
 
+import {
+  BadgeCheck,
+  Clock,
+  Leaf,
+  ShieldCheck,
+  ShoppingBasket,
+  Star,
+  TrendingUp,
+  Truck,
+  type LucideIcon,
+} from "lucide-react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useRef, type CSSProperties } from "react";
-import { Boton, TipografiaEditorial, useSinMovimiento } from "../campanas/comunes";
+import { Boton, TipografiaEditorial, useHojaAsincrona, useSinMovimiento } from "../campanas/comunes";
+
+const HOJA_PUBLICITARIA =
+  "https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Playfair+Display:ital,wght@1,600;1,700&display=swap";
 import { Medio, type MedioDatos } from "./Medio";
 
 /**
@@ -18,10 +32,25 @@ import { Medio, type MedioDatos } from "./Medio";
  * (madrugada → abasto → selección → tu negocio), con un punto que la recorre.
  * Es la primera pista de lo que cuenta el resto de la página.
  *
+ * # Estilo «publicitario»
+ *
+ * Una pieza de anuncio sobre una foto con personas: el texto en una columna
+ * a la izquierda, sobre un degradado verde que se disuelve hacia la foto, con
+ * tres atributos de confianza (`atributos`) entre la descripción y los
+ * botones. En móvil la composición se apila —texto arriba, foto abajo— para
+ * que nada tape a las personas. En este estilo no se dibuja el `recorrido`.
+ * El estilo de siempre (`clasico`) no cambia.
+ *
  * El titular sale en el HTML del servidor y entra con CSS: si el JavaScript
  * tarda, el mensaje ya está. Solo el movimiento de cámara al hacer scroll
  * depende de Motion, y se apaga con `prefers-reduced-motion`.
  */
+interface Atributo {
+  texto?: string;
+  /** `calidad`, `entrega`, `crecimiento`, `hoja`, `escudo`, `reloj`, `canasta`, `estrella`. */
+  icono?: string;
+}
+
 interface Props extends MedioDatos {
   kicker?: string;
   titulo?: string;
@@ -32,7 +61,20 @@ interface Props extends MedioDatos {
   cta_href?: string;
   cta2_texto?: string;
   cta2_href?: string;
+  estilo?: "clasico" | "publicitario";
+  atributos?: Atributo[];
 }
+
+const ICONOS_ATRIBUTO: Record<string, LucideIcon> = {
+  calidad: BadgeCheck,
+  entrega: Truck,
+  crecimiento: TrendingUp,
+  hoja: Leaf,
+  escudo: ShieldCheck,
+  reloj: Clock,
+  canasta: ShoppingBasket,
+  estrella: Star,
+};
 
 export function AboutHero({
   kicker = "",
@@ -44,6 +86,8 @@ export function AboutHero({
   cta_href = "#como-lo-hacemos",
   cta2_texto = "",
   cta2_href = "/tienda",
+  estilo,
+  atributos = [],
   ...medio
 }: Props) {
   const ref = useRef<HTMLElement>(null);
@@ -54,12 +98,22 @@ export function AboutHero({
   const textoY = useTransform(scrollYProgress, [0, 1], ["0%", "-18%"]);
   const opacidad = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
-  if (!titulo && !titulo_resaltado) return null;
+  const publicitario = estilo === "publicitario";
+  // Manrope (texto) y Playfair Display (frase destacada): solo este estilo las
+  // necesita, así que se piden aparte y sin bloquear el pintado. Va antes del
+  // `return` de abajo porque es un hook.
+  useHojaAsincrona(publicitario ? HOJA_PUBLICITARIA : "");
 
-  const pasos = recorrido.filter(Boolean);
+  if (!titulo && !titulo_resaltado) return null;
+  const pasos = publicitario ? [] : recorrido.filter(Boolean);
+  const lista = (Array.isArray(atributos) ? atributos : []).filter((a) => a?.texto?.trim());
 
   return (
-    <section ref={ref} className="nh" aria-labelledby="nh-titulo">
+    <section
+      ref={ref}
+      className={`nh ${publicitario ? "nh--publicitario" : ""}`}
+      aria-labelledby="nh-titulo"
+    >
       <TipografiaEditorial />
       <motion.div className="nh-media" style={quieto ? undefined : { scale: escala, y }}>
         <Medio {...medio} prioridad className="nh-medio" />
@@ -85,8 +139,23 @@ export function AboutHero({
             {subtitulo}
           </p>
         )}
+        {publicitario && lista.length > 0 && (
+          <ul className="nh-atributos nh-entra" style={{ "--i": 4 } as CSSProperties}>
+            {lista.map((a, i) => {
+              const Icono = ICONOS_ATRIBUTO[a.icono ?? ""] ?? BadgeCheck;
+              return (
+                <li key={`${a.texto}-${i}`}>
+                  <span className="nh-atributo-icono" aria-hidden="true">
+                    <Icono size={18} strokeWidth={2} />
+                  </span>
+                  <span>{a.texto}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
         {(cta_texto || cta2_texto) && (
-          <div className="nh-acciones nh-entra" style={{ "--i": 4 } as CSSProperties}>
+          <div className="nh-acciones nh-entra" style={{ "--i": publicitario ? 5 : 4 } as CSSProperties}>
             {cta_texto && <Boton href={cta_href || "#como-lo-hacemos"}>{cta_texto}</Boton>}
             {cta2_texto && (
               <Boton href={cta2_href || "/tienda"} variante="fantasma" flecha={false}>

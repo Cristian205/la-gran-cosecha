@@ -1394,3 +1394,190 @@
   .ne-recorte { border-radius: 20px; }
   .ne-pieza figcaption { left: 0.75rem; bottom: 0.75rem; font-size: 0.64rem; }
 }
+
+/* ==========================================================================
+   HERO «PUBLICITARIO» (`estilo: "publicitario"`)
+   --------------------------------------------------------------------------
+   Pieza de anuncio sobre una foto con personas. Escritorio y tablet: una
+   columna de texto a la izquierda sobre un degradado verde que se disuelve
+   hacia la foto. Móvil: composición apilada, texto arriba y foto abajo, para
+   que el texto nunca tape a las personas. El hero de siempre no cambia.
+   ========================================================================== */
+.nh.nh--publicitario {
+  --nh-oro: #ffb51b;
+  --nh-verde: var(--marca-900);
+  --nh-sans: "Manrope", var(--fuente-sitio, system-ui), "Segoe UI", Arial, sans-serif;
+  --nh-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+  justify-content: center;
+  min-height: clamp(30rem, 46vw, 40rem);
+  background: var(--nh-verde);
+  font-family: var(--nh-sans);
+}
+
+/* Verde oscuro a la izquierda que se disuelve: legibilidad sin tapar la foto. */
+.nh--publicitario .nh-velo {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--nh-verde) 95%, transparent) 0%,
+      color-mix(in srgb, var(--nh-verde) 84%, transparent) 26%,
+      color-mix(in srgb, var(--nh-verde) 46%, transparent) 46%,
+      transparent 68%
+    ),
+    linear-gradient(0deg, color-mix(in srgb, var(--nh-verde) 40%, transparent) 0%, transparent 28%);
+}
+
+.nh--publicitario .nh-cuerpo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-block: clamp(3rem, 6vw, 4.5rem);
+  text-align: left;
+}
+/* Ancho de lectura controlado: la columna no invade a las personas. */
+.nh--publicitario .nh-cuerpo > * { max-width: min(100%, 35rem); }
+
+.nh--publicitario .nh-kicker {
+  margin: 0;
+  font: 800 clamp(0.7rem, 0.9vw, 0.8rem) / 1.3 var(--nh-sans);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--nh-oro);
+}
+
+.nh--publicitario .nh-titulo {
+  max-width: 19ch;
+  margin-top: 1.1rem;
+  font-family: var(--nh-sans);
+  font-weight: 800;
+  font-size: calc(clamp(2rem, 4.5vw, 4rem) * var(--titulo-escala, 1));
+  line-height: 1.03;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-shadow: 0 2px 22px rgb(0 0 0 / 0.3);
+}
+.nh--publicitario .nh-titulo em {
+  max-width: none;
+  margin-top: 0.2em;
+  font-family: var(--nh-serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 0.8em;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--nh-oro);
+  text-wrap: balance;
+}
+/* La máscara de la línea no debe cortar los rasgos que bajan de la cursiva. */
+.nh--publicitario .nh-linea:has(em) { padding-bottom: 0.22em; }
+
+.nh--publicitario .nh-sub {
+  max-width: 36ch;
+  margin-top: 1.1rem;
+  font: 500 clamp(0.98rem, 1.25vw, 1.12rem) / 1.55 var(--nh-sans);
+  color: rgb(255 255 255 / 0.9);
+}
+
+/* Tres atributos de confianza, con iconos verdes. */
+.nh-atributos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem 1.6rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.nh-atributos li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font: 700 0.86rem / 1.25 var(--nh-sans, inherit);
+  color: #fff;
+}
+.nh-atributo-icono {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid color-mix(in srgb, var(--marca-300) 55%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--marca-400) 16%, transparent);
+  color: var(--marca-300);
+}
+
+.nh--publicitario .nh-acciones { margin-top: 1.7rem; gap: 0.8rem; }
+.nh--publicitario .cmp-btn--ambar {
+  background: var(--nh-oro);
+  color: #1b1305;
+  box-shadow: 0 12px 28px -12px rgb(255 181 27 / 0.7);
+}
+.nh--publicitario .cmp-btn--ambar:hover { background: #ffc43f; }
+.nh--publicitario .cmp-btn--fantasma {
+  background: rgb(255 255 255 / 0.12);
+  border-color: #fff;
+  color: #fff;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.nh--publicitario .cmp-btn--fantasma:hover { background: rgb(255 255 255 / 0.22); }
+
+/* Tablet: la columna de texto un poco más estrecha y el degradado llega más lejos. */
+@media (min-width: 781px) and (max-width: 1024px) {
+  .nh--publicitario .nh-cuerpo > * { max-width: min(100%, 29rem); }
+  .nh--publicitario .nh-velo {
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--nh-verde) 96%, transparent) 0%,
+        color-mix(in srgb, var(--nh-verde) 86%, transparent) 34%,
+        color-mix(in srgb, var(--nh-verde) 50%, transparent) 56%,
+        transparent 80%
+      ),
+      linear-gradient(0deg, color-mix(in srgb, var(--nh-verde) 40%, transparent) 0%, transparent 28%);
+  }
+}
+
+/* Móvil: texto arriba, foto abajo. La foto ocupa su propia franja inferior y
+   el texto queda por encima: nada se superpone con las personas. El degradado
+   baja desde arriba y se funde con la foto en su borde. */
+@media (max-width: 780px) {
+  .nh.nh--publicitario {
+    --nh-foto: clamp(15rem, 80vw, 23rem);
+    justify-content: flex-start;
+    min-height: 0;
+  }
+  .nh--publicitario .nh-media { inset: auto 0 0 0; height: var(--nh-foto); }
+  .nh--publicitario .nh-velo {
+    background: linear-gradient(
+      0deg,
+      transparent 0,
+      transparent calc(var(--nh-foto) - 3rem),
+      color-mix(in srgb, var(--nh-verde) 96%, transparent) calc(var(--nh-foto) + 1.5rem),
+      var(--nh-verde) 100%
+    );
+  }
+  .nh--publicitario .nh-cuerpo {
+    padding-block: 2.2rem calc(var(--nh-foto) - 0.5rem);
+  }
+  .nh--publicitario .nh-cuerpo > * { max-width: 100%; }
+  .nh--publicitario .nh-titulo { max-width: 100%; font-size: calc(clamp(1.8rem, 8vw, 2.4rem) * var(--titulo-escala, 1)); }
+  .nh--publicitario .nh-sub { max-width: 34ch; font-size: 0.96rem; }
+  /* Los tres atributos en tres columnas, icono encima. */
+  .nh-atributos {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 1.2rem;
+    width: 100%;
+  }
+  .nh-atributos li {
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    text-align: center;
+  }
+  .nh--publicitario .nh-acciones { margin-top: 1.3rem; width: 100%; }
+  .nh--publicitario .nh-acciones .cmp-btn { flex: 1 1 100%; justify-content: center; min-height: 2.9rem; }
+}

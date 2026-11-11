@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Producto } from "@/lib/tipos";
 import { colorCategoriaTematicoTinte, iconoCategoria } from "@/lib/utiles";
+import { esOptimizable, srcSetImagen } from "@/lib/imagen";
 
 interface Props {
   producto: Pick<Producto, "nombre_producto" | "imagen_url" | "categoria" | "categoria_nombre">;
@@ -33,6 +34,8 @@ interface Props {
 export function ImagenProducto({ producto, tamanoIcono = 72, prioridad = false, className = "" }: Props) {
   const [cargada, setCargada] = useState(false);
   const [fallo, setFallo] = useState(false);
+  // Si el optimizador no puede con una foto, se vuelve a la original una vez.
+  const [original, setOriginal] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   // Si la imagen terminó de bajar ANTES de hidratar, `onLoad` ya no se
@@ -57,6 +60,8 @@ export function ImagenProducto({ producto, tamanoIcono = 72, prioridad = false, 
         <img
           ref={imgRef}
           src={producto.imagen_url!}
+          srcSet={original ? undefined : srcSetImagen(producto.imagen_url, [384, 640, 828])}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
           alt={producto.nombre_producto}
           width={600}
           height={600}
@@ -64,7 +69,7 @@ export function ImagenProducto({ producto, tamanoIcono = 72, prioridad = false, 
           fetchPriority={prioridad ? "high" : "auto"}
           decoding="async"
           onLoad={() => setCargada(true)}
-          onError={() => setFallo(true)}
+          onError={() => (!original && esOptimizable(producto.imagen_url) ? setOriginal(true) : setFallo(true))}
         />
       ) : (
         <Icono size={tamanoIcono} aria-hidden="true" className="pimg-icono" />

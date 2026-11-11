@@ -6177,7 +6177,10 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
     padding: 0.3rem 0.25rem;
     border: 1px solid color-mix(in srgb, var(--borde) 85%, transparent);
     border-radius: var(--nav-inferior-radio, 22px);
-    background: color-mix(in srgb, var(--superficie) 96%, transparent);
+    /* Fondo sólido: con `color-mix(... transparent)` los verificadores de
+       contraste (Lighthouse/axe) no ven el blanco y miden el texto gris
+       contra el hero oscuro de detrás. El 4 % de transparencia no se notaba. */
+    background: var(--superficie);
     box-shadow:
       0 1px 2px rgba(var(--sombra-tinte), 0.06),
       0 14px 34px -14px rgba(var(--sombra-tinte), 0.38);
@@ -10467,4 +10470,67 @@ blockquote {
   -webkit-hyphens: auto;
   hyphens: auto;
   hyphenate-limit-chars: 7 3 3;
+}
+
+/* ==========================================================================
+   Tarjeta del catálogo en teléfono: cada dato en su línea y completo.
+   En escritorio el nombre y la variedad comparten renglón (con puntos
+   suspensivos); en un teléfono eso dejaba "Habichu…", "Pepino Cohombro C…" y
+   variedades como "Segun…". Aquí el nombre se parte en las líneas que
+   necesite y la variedad y la unidad van en su propia línea, con su rótulo:
+
+       Pepino Cohombro
+       [ Variedad: Chino          ⌄ ]
+       [ Unidad: Libra            ⌄ ]
+       [ −        1        + ]
+       $ 2.000                  (🧺)
+   ========================================================================== */
+@media (max-width: 767px) {
+  .pcard:not(.pcard--compacta) .pcard-nombre {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 0.4rem;
+    font-size: clamp(0.92rem, 4.2vw, 1.02rem);
+    line-height: 1.22;
+    white-space: normal;
+  }
+  .pcard:not(.pcard--compacta) .pcard-nombre > a {
+    flex: 1 1 100%;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  /* Variedad: ancho completo, con su rótulo. */
+  .pcard:not(.pcard--compacta) .pcard-variedad-sel {
+    flex: 1 1 100%;
+    align-self: stretch;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    height: 2rem;
+    margin-left: 0;
+    padding: 0 0.5rem 0 0.7rem;
+    border-radius: 9px;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .pcard:not(.pcard--compacta) .pcard-variedad-sel .selp-valor { flex: 1; text-align: left; }
+  .pcard:not(.pcard--compacta) .pcard-variedad-sel .selp-valor::before {
+    content: "Variedad: ";
+    font-weight: 500;
+    color: var(--gris-600);
+  }
+
+  /* Unidad: el mismo rótulo, tanto si es un select como si es texto fijo. */
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp .selp-valor { flex: 1; text-align: left; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-valor::before,
+  .pcard:not(.pcard--compacta) .pcard-compra span.qadd-etiqueta::before {
+    content: "Unidad: ";
+    font-weight: 500;
+    color: var(--gris-600);
+  }
 }

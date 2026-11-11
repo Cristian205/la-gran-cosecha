@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { srcSetImagen } from "@/lib/imagen";
 import { Boton, TipografiaEditorial, useSinMovimiento } from "./comunes";
 
 /**
@@ -205,13 +206,19 @@ export function HeroCampaign({
       >
         {imagen && (
           <picture>
-            {imagen_movil && <source media="(max-width: 780px)" srcSet={imagen_movil} />}
+            {imagen_movil && (
+              <source media="(max-width: 780px)" srcSet={srcSetImagen(imagen_movil) ?? imagen_movil} sizes="100vw" />
+            )}
             {imagen_tablet && (
-              <source media="(min-width: 781px) and (max-width: 1024px)" srcSet={imagen_tablet} />
+              <source
+                media="(min-width: 781px) and (max-width: 1024px)"
+                srcSet={srcSetImagen(imagen_tablet) ?? imagen_tablet}
+                sizes="100vw"
+              />
             )}
             {/* `img` y no `next/image`: el archivo vive en el bucket de cada negocio. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="hc-img" src={imagen} alt={imagen_alt} fetchPriority="high" decoding="async" />
+            <img className="hc-img" src={imagen} srcSet={srcSetImagen(imagen)} sizes="100vw" alt={imagen_alt} fetchPriority="high" decoding="async" />
           </picture>
         )}
         {videoSrc && (

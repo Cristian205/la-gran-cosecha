@@ -10,6 +10,7 @@ import {
   type CSSProperties,
   type KeyboardEvent,
 } from "react";
+import { srcSetImagen } from "@/lib/imagen";
 import { Boton, TipografiaEditorial, useSinMovimiento } from "./comunes";
 
 /**
@@ -171,10 +172,14 @@ export function BrandStory({
             >
               {c.imagen && (
                 <picture>
-                  {c.imagen_movil && <source media="(max-width: 780px)" srcSet={c.imagen_movil} />}
+                  {c.imagen_movil && (
+                    <source media="(max-width: 780px)" srcSet={srcSetImagen(c.imagen_movil) ?? c.imagen_movil} sizes="100vw" />
+                  )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={c.imagen}
+                    srcSet={srcSetImagen(c.imagen)}
+                    sizes="100vw"
                     alt={c.alt ?? ""}
                     width={1920}
                     height={1080}

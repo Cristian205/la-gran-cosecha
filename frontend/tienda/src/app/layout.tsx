@@ -89,7 +89,27 @@ export default async function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link rel="stylesheet" href={fuenteDeGoogle(config)} />
+        {/* Las fuentes NO bloquean el primer pintado: la hoja entra con
+            `media="print"` (el navegador la baja igual, pero sin frenar el
+            renderizado) y un script mínimo la pasa a `all` al terminar. Con
+            `display=swap` el texto sale primero con la fuente de respaldo.
+            Sin JavaScript, el `<noscript>` la carga de la forma normal. */}
+        <link
+          rel="stylesheet"
+          href={fuenteDeGoogle(config)}
+          media="print"
+          data-fuente=""
+          suppressHydrationWarning
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "document.querySelectorAll('link[data-fuente]').forEach(function(l){function a(){l.media='all'}l.sheet?a():l.addEventListener('load',a)})",
+          }}
+        />
+        <noscript>
+          <link rel="stylesheet" href={fuenteDeGoogle(config)} />
+        </noscript>
         {/* El tema va en el HTML, no en un efecto del cliente: si no, la
             página se pintaría con el color por defecto y se reteñiría al
             hidratar. Con una tienda por negocio ese parpadeo mostraría la
