@@ -64,9 +64,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const nombreNegocio = config?.nombre_empresa;
   const titulo = `${producto.nombre_producto} · ${producto.categoria_nombre}`;
-  const descripcion = `${producto.nombre_producto} para tu negocio${
-    nombreNegocio ? `, con ${nombreNegocio}` : ""
-  }. Pide en línea por ${producto.unidad_base_nombre ?? "unidad"} y recíbelo donde trabajas.`;
+  const descripcion =
+    producto.descripcion?.trim() ||
+    `${producto.nombre_producto} para tu negocio${
+      nombreNegocio ? `, con ${nombreNegocio}` : ""
+    }. Pide en línea por ${producto.unidad_base_nombre ?? "unidad"} y recíbelo donde trabajas.`;
 
   return {
     title: titulo,
@@ -109,9 +111,11 @@ export default async function ProductoPage({ params }: Props) {
     name: producto.nombre_producto,
     category: producto.categoria_nombre,
     url: urlProducto,
-    description: `${producto.nombre_producto} para tu negocio${
-      nombreNegocio ? `, con ${nombreNegocio}` : ""
-    }. Pide en línea por ${producto.unidad_base_nombre ?? "unidad"} y recíbelo donde trabajas.`,
+    description:
+      producto.descripcion?.trim() ||
+      `${producto.nombre_producto} para tu negocio${
+        nombreNegocio ? `, con ${nombreNegocio}` : ""
+      }. Pide en línea por ${producto.unidad_base_nombre ?? "unidad"} y recíbelo donde trabajas.`,
     ...(nombreNegocio ? { brand: { "@type": "Brand", name: nombreNegocio } } : {}),
     // Sin foto propia, el logo del negocio: `image` es obligatorio para Google.
     ...(imagenes.length > 0
@@ -181,6 +185,9 @@ export default async function ProductoPage({ params }: Props) {
               {producto.categoria_nombre}
             </Link>
             <h1>{producto.nombre_producto}</h1>
+            {producto.descripcion?.trim() && (
+              <p className="ficha-descripcion">{producto.descripcion.trim()}</p>
+            )}
           </>
         }
         // Solo lo que no está ya arriba: variedades, presentaciones y

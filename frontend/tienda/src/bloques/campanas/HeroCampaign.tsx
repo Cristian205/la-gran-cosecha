@@ -97,6 +97,9 @@ interface Props {
   oscurecer?: number;
   degradado?: "editorial" | "inferior" | "lateral" | "bosque" | "ninguno";
   tono_texto?: "claro" | "oscuro";
+  /** `impacto`: el titular en mayúsculas gigantes (el de siempre). `editorial`:
+   *  frase en minúsculas, más sobria, con la línea resaltada en serif cursiva. */
+  estilo_titulo?: "impacto" | "editorial";
   cta_visible?: boolean;
   cta_estilo?: "ambar" | "oscuro" | "fantasma";
   cta2_visible?: boolean;
@@ -139,6 +142,7 @@ export function HeroCampaign({
   oscurecer = 0,
   degradado,
   tono_texto,
+  estilo_titulo,
   cta_visible = true,
   cta_estilo,
   cta2_visible = true,
@@ -181,6 +185,7 @@ export function HeroCampaign({
     `hc--posicion-${uno(posicion, ["arriba", "centro", "abajo"] as const, "arriba")}`,
     `hc--degradado-${uno(degradado, ["editorial", "inferior", "lateral", "bosque", "ninguno"] as const, "editorial")}`,
     `hc--texto-${uno(tono_texto, ["claro", "oscuro"] as const, "claro")}`,
+    `hc--titulo-${uno(estilo_titulo, ["impacto", "editorial"] as const, "impacto")}`,
   ].join(" ");
   const verCta = Boolean(cta_texto) && cta_visible !== false;
   const verCta2 = Boolean(cta2_texto) && cta2_visible !== false;

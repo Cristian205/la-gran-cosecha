@@ -56,3 +56,12 @@ def test_una_composicion_vieja_y_una_nueva_siguen_validando():
     ]
     assert composicion.validar(vieja)[0]["props"] == vieja[0]["props"]
     assert composicion.validar(nueva)[0]["props"]["imagen_tablet"] == "/t.jpg"
+
+
+def test_hero_tiene_estilo_de_titulo_con_default_de_siempre():
+    props = _props("hero-campana")
+    assert props["estilo_titulo"]["default"] == "impacto"
+    assert props["estilo_titulo"]["opciones"] == ["impacto", "editorial"]
+    # Va justo después de «Color del texto», que es el orden del formulario.
+    claves = list(props)
+    assert claves.index("estilo_titulo") == claves.index("tono_texto") + 1
