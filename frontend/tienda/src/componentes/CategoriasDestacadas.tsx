@@ -12,6 +12,7 @@ import {
   iconoCategoria,
 } from "@/lib/utiles";
 import { Seccion, claseDeVariante } from "@/bloques/Seccion";
+import { srcSetImagen } from "@/lib/imagen";
 
 /**
  * `tarjetas` es la variante con llamada a la accion propia («Ver productos
@@ -84,7 +85,7 @@ export function CategoriasDestacadas({
               >
                 <span className="categoria-vidriera-icono">
                   {c.imagen_url ? (
-                    <img src={c.imagen_url} alt="" loading="lazy" />
+                    <img src={c.imagen_url} srcSet={srcSetImagen(c.imagen_url, [96, 128, 256])} sizes="96px" alt="" loading="lazy" />
                   ) : (
                     <Icono size={34} strokeWidth={1.6} />
                   )}
@@ -113,7 +114,14 @@ export function CategoriasDestacadas({
               }
             >
               {c.imagen_url ? (
-                <img src={c.imagen_url} alt="" className="categoria-tile-img" loading="lazy" />
+                <img
+                src={c.imagen_url}
+                srcSet={srcSetImagen(c.imagen_url, [96, 128, 256])}
+                sizes="64px"
+                alt=""
+                className="categoria-tile-img"
+                loading="lazy"
+              />
               ) : (
                 <Icono size={24} strokeWidth={1.6} />
               )}

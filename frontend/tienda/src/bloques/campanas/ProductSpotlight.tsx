@@ -9,6 +9,7 @@ import { useAgregarAlCarrito } from "@/hooks/useAgregarAlCarrito";
 import { idsElegidos, obtenerProductosMasVendidos, obtenerProductosPorIds } from "@/lib/datos";
 import type { Producto } from "@/lib/tipos";
 import { cantidadInicial, formatoPrecio, reglaCantidad } from "@/lib/utiles";
+import { srcSetImagen } from "@/lib/imagen";
 import { Boton, TipografiaEditorial, useParallax, useSinMovimiento } from "./comunes";
 import { DecoracionBotanica } from "./DecoracionBotanica";
 
@@ -281,6 +282,8 @@ export function ProductSpotlight({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={producto.imagen_url}
+                      srcSet={srcSetImagen(producto.imagen_url)}
+                      sizes="(max-width: 780px) 100vw, 50vw"
                       alt={producto.nombre_producto}
                       loading={actual === 0 ? "eager" : "lazy"}
                       decoding="async"
@@ -381,7 +384,14 @@ export function ProductSpotlight({
                   <span className="ps-pestana-foto" aria-hidden="true">
                     {d.producto.imagen_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={d.producto.imagen_url} alt="" loading="lazy" decoding="async" />
+                      <img
+                        src={d.producto.imagen_url}
+                        srcSet={srcSetImagen(d.producto.imagen_url, [96, 128, 256])}
+                        sizes="48px"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
                     ) : (
                       d.producto.nombre_producto.charAt(0)
                     )}

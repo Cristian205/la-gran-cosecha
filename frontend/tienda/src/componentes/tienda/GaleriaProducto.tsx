@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { imagenDeGrupo, type SeleccionProducto } from "@/hooks/useSeleccionProducto";
 import type { Producto } from "@/lib/tipos";
+import { srcSetImagen } from "@/lib/imagen";
 import { ImagenProducto } from "./ImagenProducto";
 
 /**
@@ -88,7 +89,16 @@ export function GaleriaProducto({ producto, seleccion }: { producto: Producto; s
                   }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={e.url} alt="" width={64} height={64} loading="lazy" decoding="async" />
+                  <img
+                    src={e.url}
+                    srcSet={srcSetImagen(e.url, [128, 256])}
+                    sizes="64px"
+                    alt=""
+                    width={64}
+                    height={64}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </button>
               </li>
             );
