@@ -854,6 +854,36 @@
   .ps--con-marco .cmp-inner { width: calc(100% - 3.4rem); }
 }
 
+/* --- Móvil: el bloque de «más vendidos» más bajo. En un teléfono ocupaba más
+       de una pantalla; aquí se recortan las alturas (foto apaisada, titular,
+       párrafo, precio y márgenes) sin quitar ninguna pieza. --- */
+@media (max-width: 780px) {
+  .ps--botanico.ps--con-marco { padding-block: 2.6rem 3.6rem; }
+  .ps--botanico .ps-grid { gap: 0.9rem; }
+  .ps--botanico.ps--carrusel .ps-foto { aspect-ratio: 16 / 10; border-radius: 1.1rem; }
+  .ps--botanico .ps-puesto { padding: 0.28rem 0.65rem 0.3rem 0.55rem; font-size: 1.1rem; }
+  .ps--botanico .ps-puesto-corona { width: 15px; height: 15px; }
+
+  .ps--botanico .ps-texto .cmp-kicker { font-size: 0.68rem; line-height: 1.35; letter-spacing: 0.12em; }
+  .ps--botanico .ps-texto h2 { margin-top: 0.4rem; font-size: clamp(1.9rem, 8.6vw, 2.6rem); line-height: 0.95; }
+  .ps--botanico .ps-parrafo {
+    max-width: none;
+    margin-top: 0.55rem;
+    font-size: 0.98rem;
+    line-height: 1.35;
+    -webkit-line-clamp: 2;
+  }
+  .ps--botanico .ps-precio { margin-top: 0.7rem; gap: 0.6rem; }
+  .ps--botanico .ps-precio > span { padding-right: 0.6rem; font-size: 0.95rem; }
+  .ps--botanico .ps-precio strong { font-size: clamp(1.6rem, 7vw, 2.1rem); }
+  .ps--botanico .ps-acciones { margin-top: 0.8rem; }
+  .ps--botanico .ps-enlace--boton { min-height: 2.8rem; }
+
+  .ps--botanico .ps-controles { margin-top: 0.9rem; padding-top: 0.7rem; gap: 0.6rem; }
+  .ps--botanico .ps-pestana { gap: 0.5rem; padding: 0.3rem 0.8rem 0.3rem 0.3rem; }
+  .ps--botanico .ps-pestana-foto { width: 2.1rem; height: 2.1rem; }
+}
+
 /* ==========================================================================
    CÓMO TRABAJAMOS — BrandStory (cuatro escenas, una pantalla)
    ========================================================================== */
@@ -1454,3 +1484,39 @@
 /* Una página que ya termina con `cierre-cta` no necesita el CTA del pie
    pegado justo debajo: serían dos invitaciones seguidas a lo mismo. */
 body:has(.fin) .footer-cta { display: none; }
+
+/* --- Titular «editorial» (opción `estilo_titulo`): una frase en minúsculas, con
+       peso pero sin gritar, y la línea resaltada en serif cursiva amarilla. El
+       «impacto» de siempre (mayúsculas gigantes) sigue siendo el predeterminado. --- */
+.hc--titulo-editorial h1 {
+  max-width: 17ch;
+  margin-top: 1.1rem;
+  font-size: clamp(2.3rem, 5.2vw, 4.6rem);
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+  text-transform: none;
+}
+.hc--titulo-editorial h1 em {
+  margin-top: 0.22em;
+  font-size: 0.82em;
+  font-weight: 600;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+.hc--titulo-editorial .hc-sub {
+  max-width: 34ch;
+  margin-top: 1.4rem;
+  font-size: clamp(1rem, 1.35vw, 1.18rem);
+  font-weight: 500;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+.hc--titulo-editorial .hc-kicker {
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+@media (max-width: 780px) {
+  .hc--titulo-editorial h1 { max-width: 100%; font-size: clamp(2.05rem, 9.4vw, 2.7rem); }
+  .hc--titulo-editorial h1 em { font-size: 0.84em; }
+  .hc--titulo-editorial .hc-sub { max-width: 30ch; font-size: 1rem; }
+}
