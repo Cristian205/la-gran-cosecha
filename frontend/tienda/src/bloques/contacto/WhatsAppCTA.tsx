@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSiteConfig } from "@/componentes/CapaCliente";
 import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
 import { whatsappHref } from "@/lib/utiles";
+import { srcSetImagen } from "@/lib/imagen";
 import { TipografiaEditorial, useSinMovimiento } from "../campanas/comunes";
 
 /**
@@ -108,7 +109,14 @@ export function WhatsAppCTA({
             <span className="ct-wa-chat-avatar">
               {config.logo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={config.logo_url} alt="" loading="lazy" decoding="async" />
+                <img
+                  src={config.logo_url}
+                  srcSet={srcSetImagen(config.logo_url, [96, 128])}
+                  sizes="48px"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
               ) : (
                 <WhatsAppIcon size={18} />
               )}

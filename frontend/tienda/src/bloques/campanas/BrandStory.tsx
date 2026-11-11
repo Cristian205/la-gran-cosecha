@@ -10,7 +10,7 @@ import {
   type CSSProperties,
   type KeyboardEvent,
 } from "react";
-import { srcSetImagen } from "@/lib/imagen";
+import { srcSetFondo } from "@/lib/imagen";
 import { Boton, TipografiaEditorial, useSinMovimiento } from "./comunes";
 
 /**
@@ -173,12 +173,12 @@ export function BrandStory({
               {c.imagen && (
                 <picture>
                   {c.imagen_movil && (
-                    <source media="(max-width: 780px)" srcSet={srcSetImagen(c.imagen_movil) ?? c.imagen_movil} sizes="100vw" />
+                    <source media="(max-width: 780px)" srcSet={srcSetFondo(c.imagen_movil) ?? c.imagen_movil} sizes="100vw" />
                   )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={c.imagen}
-                    srcSet={srcSetImagen(c.imagen)}
+                    srcSet={srcSetFondo(c.imagen)}
                     sizes="100vw"
                     alt={c.alt ?? ""}
                     width={1920}
@@ -200,7 +200,9 @@ export function BrandStory({
 
         <div className="bs-capitulos" aria-live={avanzando ? "off" : "polite"}>
           {lista.map((c, i) => (
-            <article
+            // `div` y no `article`: `tabpanel` no es un rol válido sobre un
+            // `article` (Lighthouse: «ARIA role should be appropriate for the element»).
+            <div
               key={`${c.titulo}-${i}`}
               id={`${id}-panel-${i}`}
               role="tabpanel"
@@ -219,7 +221,7 @@ export function BrandStory({
                   <Boton href={cta_href || "/tienda"}>{cta_texto}</Boton>
                 </div>
               )}
-            </article>
+            </div>
           ))}
         </div>
 

@@ -17,8 +17,11 @@
  */
 
 /** Anchos permitidos (están en las listas por defecto de Next). */
-export const ANCHOS_IMAGEN = [384, 640, 828, 1080, 1200, 1920] as const;
+export const ANCHOS_IMAGEN = [384, 640, 750, 828, 1080, 1200, 1920] as const;
+/** Calidad por defecto, y la de las fotos de fondo a todo el ancho (hero, escenas,
+ *  banners): llevan degradado y texto encima, y a 60 no se nota la diferencia. */
 const CALIDAD = 75;
+export const CALIDAD_FONDO = 60;
 
 function hostOptimizable(host: string): boolean {
   if (host.endsWith(".r2.dev") || host.endsWith(".cloudflarestorage.com")) return true;
@@ -39,9 +42,9 @@ export function esOptimizable(src: string | null | undefined): src is string {
 }
 
 /** La misma foto, redimensionada a `ancho` px (o la original si no se puede). */
-export function urlImagen(src: string, ancho: number): string {
+export function urlImagen(src: string, ancho: number, calidad: number = CALIDAD): string {
   if (!esOptimizable(src)) return src;
-  return `/_next/image?url=${encodeURIComponent(src)}&w=${ancho}&q=${CALIDAD}`;
+  return `/_next/image?url=${encodeURIComponent(src)}&w=${ancho}&q=${calidad}`;
 }
 
 /**
@@ -50,8 +53,14 @@ export function urlImagen(src: string, ancho: number): string {
  */
 export function srcSetImagen(
   src: string | null | undefined,
-  anchos: readonly number[] = ANCHOS_IMAGEN
+  anchos: readonly number[] = ANCHOS_IMAGEN,
+  calidad: number = CALIDAD
 ): string | undefined {
   if (!esOptimizable(src)) return undefined;
-  return anchos.map((w) => `${urlImagen(src, w)} ${w}w`).join(", ");
+  return anchos.map((w) => `${urlImagen(src, w, calidad)} ${w}w`).join(", ");
+}
+
+/** `srcSet` de una foto de fondo a todo el ancho (calidad 60). */
+export function srcSetFondo(src: string | null | undefined): string | undefined {
+  return srcSetImagen(src, ANCHOS_IMAGEN, CALIDAD_FONDO);
 }
