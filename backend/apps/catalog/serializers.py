@@ -163,6 +163,7 @@ class ProductoSerializer(serializers.ModelSerializer):
             "num_presentaciones_inactivas",
             "controla_stock",
             "codigo_barras",
+            "descripcion",
             "disponible",
         ]
 
@@ -498,6 +499,7 @@ class ProductoWriteSerializer(serializers.ModelSerializer):
             "estado_producto",
             "controla_stock",
             "codigo_barras",
+            "descripcion",
             "presentaciones",
         ]
 

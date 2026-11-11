@@ -148,6 +148,8 @@ export interface ProductoPayload {
   estado_producto: boolean;
   controla_stock: boolean;
   codigo_barras: string;
+  /** Texto corto que la tienda muestra en el detalle del producto. */
+  descripcion?: string;
   /** Opcional: al editar un producto existente el panel ya no lo manda
    *  (cada presentación se guarda por su endpoint) y el servidor no las toca. */
   presentaciones?: PresentacionAnidada[];

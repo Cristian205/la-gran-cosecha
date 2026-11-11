@@ -117,6 +117,8 @@ export interface Producto {
   /** El producto lleva cuenta de sus existencias. */
   controla_stock: boolean;
   codigo_barras: string;
+  /** Descripción corta que ve el cliente en la ficha de la tienda. */
+  descripcion?: string;
   /** Anotado por el servidor: `cantidad - reservada`, sumando ubicaciones. */
   disponible: string;
   /** El más bajo de sus presentaciones activas. Lo anota el servidor. */
