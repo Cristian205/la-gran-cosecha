@@ -10534,3 +10534,27 @@ blockquote {
     color: var(--gris-600);
   }
 }
+
+/* ==========================================================================
+   Móvil: el pie llega hasta abajo, detrás de la navegación y del "Ver pedido".
+   El `body` reservaba ese espacio abajo (nav + la barra del pedido, +3,3 rem
+   cuando hay productos) para que ninguna barra tapara contenido, pero el
+   `body` es claro: debajo del pie oscuro quedaba una franja vacía que solo
+   "se abría" cuando aparecía el botón flotante. Ahora la reserva es una
+   variable y la absorbe el propio pie: su fondo oscuro se extiende por esa
+   franja y el texto sigue quedando por encima de las barras. En páginas sin
+   pie (checkout, vistas previas) el `body` conserva el relleno de siempre.
+   ========================================================================== */
+@media (max-width: 900px) {
+  body {
+    --reserva-inferior: calc(var(--alto-nav-inferior) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: var(--reserva-inferior);
+  }
+  body.con-barra-carrito {
+    --reserva-inferior: calc(var(--alto-nav-inferior) + 3.3rem + env(safe-area-inset-bottom, 0px));
+  }
+  .footer {
+    margin-bottom: calc(-1 * var(--reserva-inferior));
+    padding-bottom: calc(1.5rem + var(--reserva-inferior));
+  }
+}

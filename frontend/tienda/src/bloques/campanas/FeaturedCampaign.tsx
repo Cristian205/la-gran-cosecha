@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { useRef, type CSSProperties } from "react";
-import { srcSetFondo } from "@/lib/imagen";
+import { SIZES_FONDO, srcSetFondo } from "@/lib/imagen";
 import { claseDeVariante } from "../Seccion";
 import { Boton, useParallax } from "./comunes";
 
@@ -67,17 +67,17 @@ export function FeaturedCampaign({
       <motion.div className="fc-media" style={movimiento}>
         <picture>
           {imagen_movil && (
-            <source media="(max-width: 780px)" srcSet={srcSetFondo(imagen_movil) ?? imagen_movil} sizes="100vw" />
+            <source media="(max-width: 780px)" srcSet={srcSetFondo(imagen_movil) ?? imagen_movil} sizes={SIZES_FONDO} />
           )}
           {imagen_tablet && (
             <source
               media="(min-width: 781px) and (max-width: 1024px)"
               srcSet={srcSetFondo(imagen_tablet) ?? imagen_tablet}
-              sizes="100vw"
+              sizes={SIZES_FONDO}
             />
           )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imagen} srcSet={srcSetFondo(imagen)} sizes="100vw" alt={imagen_alt} loading="lazy" decoding="async" />
+          <img src={imagen} srcSet={srcSetFondo(imagen)} sizes={SIZES_FONDO} alt={imagen_alt} loading="lazy" decoding="async" />
         </picture>
       </motion.div>
       <div className="fc-velo" aria-hidden="true" />

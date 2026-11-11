@@ -20,7 +20,6 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.views import APIView
 
 from apps.tenancy.viewsets import ExigeNegocioMixin
-from weasyprint import HTML
 
 from apps.common.permissions import EsStaff, requiere_permiso
 from apps.content.models import StoreSettings
@@ -29,6 +28,20 @@ from .factura_layout import planificar
 from .models import LotePedidos, Pedido
 
 CATEGORIAS_ESPECIALES = ["DESECHABLES", "SALSAMENTARIA", "DULCERIA"]
+
+
+def _html(*args, **kwargs):
+    """
+    `weasyprint.HTML`, importado al usarlo y no al arrancar Django.
+
+    WeasyPrint carga GLib/Pango al importarse, y en Windows eso llena la
+    terminal de avisos («GLib-GIO-WARNING: Unexpectedly, UWP app …») en CADA
+    comando (`migrate`, `runserver`, las pruebas…) aunque no se genere ningún
+    PDF. Importarlo aquí hace que solo se cargue al crear una factura.
+    """
+    from weasyprint import HTML
+
+    return HTML(*args, **kwargs)
 
 # Mismo verde del h1/marca de la factura (#065f46).
 COLOR_LOGO_FACTURA = (6, 95, 70)
@@ -208,7 +221,7 @@ class GenerarPdfPedidoView(ExigeNegocioMixin, APIView):
 
         response = HttpResponse(content_type="application/pdf")
         response["Content-Disposition"] = f'inline; filename="Pedido_{pk}.pdf"'
-        HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(response)
+        _html(string=html_string, base_url=request.build_absolute_uri()).write_pdf(response)
         return response
 
 
@@ -255,7 +268,7 @@ class GenerarPdfPedidosLoteView(ExigeNegocioMixin, APIView):
         response = HttpResponse(content_type="application/pdf")
         ids_str = "-".join(str(p.id) for p in pedidos_ordenados)
         response["Content-Disposition"] = f'inline; filename="Pedidos_{ids_str}.pdf"'
-        HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(response)
+        _html(string=html_string, base_url=request.build_absolute_uri()).write_pdf(response)
         return response
 
 
@@ -418,5 +431,5 @@ class VistaPreviaFacturaView(ExigeNegocioMixin, APIView):
         response = HttpResponse(content_type="application/pdf")
         response["Content-Disposition"] = 'inline; filename="Vista_previa_factura.pdf"'
         response["Cache-Control"] = "no-store"
-        HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(response)
+        _html(string=html_string, base_url=request.build_absolute_uri()).write_pdf(response)
         return response
