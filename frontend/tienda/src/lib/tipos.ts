@@ -44,6 +44,8 @@ export interface Producto {
   permite_fraccion: boolean;
   estado_producto: boolean;
   imagen_url: string | null;
+  /** Descripción corta que escribe el negocio; vacía si no la puso. */
+  descripcion?: string;
   orden: number;
   /** Precio más bajo entre las presentaciones activas; lo anota el backend. */
   precio_desde: string | null;

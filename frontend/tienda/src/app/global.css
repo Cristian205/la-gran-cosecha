@@ -6177,7 +6177,10 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
     padding: 0.3rem 0.25rem;
     border: 1px solid color-mix(in srgb, var(--borde) 85%, transparent);
     border-radius: var(--nav-inferior-radio, 22px);
-    background: color-mix(in srgb, var(--superficie) 96%, transparent);
+    /* Fondo sólido: con `color-mix(... transparent)` los verificadores de
+       contraste (Lighthouse/axe) no ven el blanco y miden el texto gris
+       contra el hero oscuro de detrás. El 4 % de transparencia no se notaba. */
+    background: var(--superficie);
     box-shadow:
       0 1px 2px rgba(var(--sombra-tinte), 0.06),
       0 14px 34px -14px rgba(var(--sombra-tinte), 0.38);
@@ -7954,6 +7957,14 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
   text-wrap: balance;
   color: var(--tinta);
 }
+.ficha-descripcion {
+  margin: 0.35rem 0 0;
+  max-width: 52ch;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--gris-600);
+  text-wrap: pretty;
+}
 .ficha-cabeza .precio { margin-top: 0.55rem; }
 .ficha-cabeza .precio--grande .precio-valor { font-size: clamp(1.7rem, 2.6vw, 2.15rem); letter-spacing: -0.02em; }
 .ficha-cabeza .precio--grande .precio-meta { margin-top: 0.25rem; font-size: 0.8rem; font-weight: 500; color: var(--gris-400); }
@@ -9153,11 +9164,31 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
   }
   .pcard:not(.pcard--compacta) .pcard-nombre { font-size: clamp(0.78rem, 3.5vw, 0.88rem); }
   .pcard:not(.pcard--compacta) .pcard-compra { column-gap: 0.4rem; row-gap: 0.45rem; padding-top: 0.15rem; }
-  .pcard:not(.pcard--compacta) .pcard-compra .qty { height: 1.85rem; padding: 0 0.13rem; }
-  .pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.45rem; height: 1.45rem; }
-  .pcard:not(.pcard--compacta) .pcard-compra .qty-valor { width: 2.1rem; font-size: 0.82rem; }
-  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta { font-size: 0.76rem; }
-  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp { height: 1.85rem; padding: 0 0.4rem 0 0.55rem; border-radius: 9px; font-size: 0.76rem; }
+  /* Un campo por línea, a todo el ancho, para que nada quede cortado:
+       1. unidad de venta ("Kilogramos ▾")
+       2. cantidad (− 1 +)
+       3. precio + botón de agregar */
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta {
+    grid-row: 1;
+    grid-column: 1 / 4;
+    font-size: 0.8rem;
+    white-space: normal;
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp {
+    justify-self: stretch;
+    justify-content: space-between;
+    width: 100%;
+    height: 2rem;
+    padding: 0 0.5rem 0 0.7rem;
+    border-radius: 9px;
+    font-size: 0.8rem;
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty { grid-row: 2; grid-column: 1 / 4; justify-self: stretch; justify-content: space-between; height: 2rem; padding: 0 0.15rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.65rem; height: 1.65rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty-valor { flex: 1; width: auto; font-size: 0.86rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .precio { grid-row: 3; grid-column: 1 / 3; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn { grid-row: 3; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--agotado { grid-row: 2; }
   .pcard:not(.pcard--compacta) .pcard-compra .precio-valor { font-size: 1.08rem; }
   .pcard:not(.pcard--compacta) .pcard-compra .precio-meta { font-size: 0.66rem; }
   .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn { width: 2.75rem; padding: 0; }
@@ -10439,4 +10470,91 @@ blockquote {
   -webkit-hyphens: auto;
   hyphens: auto;
   hyphenate-limit-chars: 7 3 3;
+}
+
+/* ==========================================================================
+   Tarjeta del catálogo en teléfono: cada dato en su línea y completo.
+   En escritorio el nombre y la variedad comparten renglón (con puntos
+   suspensivos); en un teléfono eso dejaba "Habichu…", "Pepino Cohombro C…" y
+   variedades como "Segun…". Aquí el nombre se parte en las líneas que
+   necesite y la variedad y la unidad van en su propia línea, con su rótulo:
+
+       Pepino Cohombro
+       [ Variedad: Chino          ⌄ ]
+       [ Unidad: Libra            ⌄ ]
+       [ −        1        + ]
+       $ 2.000                  (🧺)
+   ========================================================================== */
+@media (max-width: 767px) {
+  .pcard:not(.pcard--compacta) .pcard-nombre {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 0.4rem;
+    font-size: clamp(0.92rem, 4.2vw, 1.02rem);
+    line-height: 1.22;
+    white-space: normal;
+  }
+  .pcard:not(.pcard--compacta) .pcard-nombre > a {
+    flex: 1 1 100%;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  /* Variedad: ancho completo, con su rótulo. */
+  .pcard:not(.pcard--compacta) .pcard-variedad-sel {
+    flex: 1 1 100%;
+    align-self: stretch;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    height: 2rem;
+    margin-left: 0;
+    padding: 0 0.5rem 0 0.7rem;
+    border-radius: 9px;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .pcard:not(.pcard--compacta) .pcard-variedad-sel .selp-valor { flex: 1; text-align: left; }
+  .pcard:not(.pcard--compacta) .pcard-variedad-sel .selp-valor::before {
+    content: "Variedad: ";
+    font-weight: 500;
+    color: var(--gris-600);
+  }
+
+  /* Unidad: el mismo rótulo, tanto si es un select como si es texto fijo. */
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp .selp-valor { flex: 1; text-align: left; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-valor::before,
+  .pcard:not(.pcard--compacta) .pcard-compra span.qadd-etiqueta::before {
+    content: "Unidad: ";
+    font-weight: 500;
+    color: var(--gris-600);
+  }
+}
+
+/* ==========================================================================
+   Móvil: el pie llega hasta abajo, detrás de la navegación y del "Ver pedido".
+   El `body` reservaba ese espacio abajo (nav + la barra del pedido, +3,3 rem
+   cuando hay productos) para que ninguna barra tapara contenido, pero el
+   `body` es claro: debajo del pie oscuro quedaba una franja vacía que solo
+   "se abría" cuando aparecía el botón flotante. Ahora la reserva es una
+   variable y la absorbe el propio pie: su fondo oscuro se extiende por esa
+   franja y el texto sigue quedando por encima de las barras. En páginas sin
+   pie (checkout, vistas previas) el `body` conserva el relleno de siempre.
+   ========================================================================== */
+@media (max-width: 900px) {
+  body {
+    --reserva-inferior: calc(var(--alto-nav-inferior) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: var(--reserva-inferior);
+  }
+  body.con-barra-carrito {
+    --reserva-inferior: calc(var(--alto-nav-inferior) + 3.3rem + env(safe-area-inset-bottom, 0px));
+  }
+  .footer {
+    margin-bottom: calc(-1 * var(--reserva-inferior));
+    padding-bottom: calc(1.5rem + var(--reserva-inferior));
+  }
 }

@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { useRef, type CSSProperties } from "react";
+import { SIZES_FONDO, srcSetFondo } from "@/lib/imagen";
 import { claseDeVariante } from "../Seccion";
 import { Boton, useParallax } from "./comunes";
 
@@ -65,12 +66,18 @@ export function FeaturedCampaign({
     <section ref={ref} className={`fc ${clase} fc--${alineacion === "centro" ? "centro" : "izquierda"}`} style={variables}>
       <motion.div className="fc-media" style={movimiento}>
         <picture>
-          {imagen_movil && <source media="(max-width: 780px)" srcSet={imagen_movil} />}
+          {imagen_movil && (
+            <source media="(max-width: 780px)" srcSet={srcSetFondo(imagen_movil) ?? imagen_movil} sizes={SIZES_FONDO} />
+          )}
           {imagen_tablet && (
-            <source media="(min-width: 781px) and (max-width: 1024px)" srcSet={imagen_tablet} />
+            <source
+              media="(min-width: 781px) and (max-width: 1024px)"
+              srcSet={srcSetFondo(imagen_tablet) ?? imagen_tablet}
+              sizes={SIZES_FONDO}
+            />
           )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imagen} alt={imagen_alt} loading="lazy" decoding="async" />
+          <img src={imagen} srcSet={srcSetFondo(imagen)} sizes={SIZES_FONDO} alt={imagen_alt} loading="lazy" decoding="async" />
         </picture>
       </motion.div>
       <div className="fc-velo" aria-hidden="true" />

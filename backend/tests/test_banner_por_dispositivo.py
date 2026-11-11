@@ -56,3 +56,40 @@ def test_una_composicion_vieja_y_una_nueva_siguen_validando():
     ]
     assert composicion.validar(vieja)[0]["props"] == vieja[0]["props"]
     assert composicion.validar(nueva)[0]["props"]["imagen_tablet"] == "/t.jpg"
+
+
+def test_hero_tiene_estilo_de_titulo_con_default_de_siempre():
+    props = _props("hero-campana")
+    assert props["estilo_titulo"]["default"] == "impacto"
+    assert props["estilo_titulo"]["opciones"] == ["impacto", "editorial"]
+    # Va justo después de «Color del texto», que es el orden del formulario.
+    claves = list(props)
+    assert claves.index("estilo_titulo") == claves.index("tono_texto") + 1
+
+
+def test_nosotros_hero_tiene_estilo_y_atributos():
+    props = _props("nosotros-hero")
+    assert props["estilo"]["default"] == "clasico"
+    assert props["estilo"]["opciones"] == ["clasico", "publicitario"]
+    assert props["atributos"]["tipo"] == "array"
+    assert "calidad" in props["atributos"]["items"]["properties"]["icono"]["opciones"]
+
+
+def test_nosotros_hero_publicitario_valida_con_sus_atributos():
+    comp = [
+        {
+            "id": "h",
+            "tipo": "nosotros-hero",
+            "props": {
+                "titulo": "Mientras tú haces crecer tu negocio,",
+                "estilo": "publicitario",
+                "atributos": [
+                    {"texto": "Productos de calidad", "icono": "calidad"},
+                    {"texto": "Entrega confiable", "icono": "entrega"},
+                ],
+            },
+        }
+    ]
+    props = composicion.validar(comp)[0]["props"]
+    assert props["estilo"] == "publicitario"
+    assert props["atributos"][1]["icono"] == "entrega"

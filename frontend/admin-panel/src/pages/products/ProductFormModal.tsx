@@ -69,6 +69,7 @@ export function ProductFormModal({
   const [estado, setEstado] = useState(producto?.estado_producto ?? true);
   const [controlaStock, setControlaStock] = useState(producto?.controla_stock ?? false);
   const [codigoBarras, setCodigoBarras] = useState(producto?.codigo_barras ?? "");
+  const [descripcion, setDescripcion] = useState(producto?.descripcion ?? "");
   const [imagen, setImagen] = useState<File | null>(null);
 
   const [unidadesLocales, setUnidadesLocales] = useState(unidades);
@@ -100,8 +101,8 @@ export function ProductFormModal({
   useEffect(cargarPresentaciones, [producto?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const datosProducto = useMemo(
-    () => JSON.stringify([nombre.trim(), categoria, unidadBase, estado, controlaStock, codigoBarras.trim(), imagen?.name]),
-    [nombre, categoria, unidadBase, estado, controlaStock, codigoBarras, imagen]
+    () => JSON.stringify([nombre.trim(), categoria, unidadBase, estado, controlaStock, codigoBarras.trim(), descripcion.trim(), imagen?.name]),
+    [nombre, categoria, unidadBase, estado, controlaStock, codigoBarras, descripcion, imagen]
   );
   const datosIniciales = useRef(datosProducto);
   // Con producto existente las presentaciones se guardan al momento; con uno
@@ -151,6 +152,7 @@ export function ProductFormModal({
       estado_producto: estado,
       controla_stock: controlaStock,
       codigo_barras: codigoBarras.trim(),
+      descripcion: descripcion.trim(),
     };
 
     setGuardando(true);
@@ -359,6 +361,22 @@ export function ProductFormModal({
                   Base para las equivalencias e inventario. No cambia precios.
                 </p>
               </div>
+            </div>
+
+            <div className="campo">
+              <label htmlFor="pr-descripcion">Descripción</label>
+              <textarea
+                id="pr-descripcion"
+                value={descripcion}
+                maxLength={500}
+                rows={3}
+                onChange={(e) => setDescripcion(e.target.value)}
+                placeholder="Papa criolla fresca, ideal para sopas, ajiaco y freír. Cosechada en la sabana."
+                aria-describedby="pr-descripcion-ayuda"
+              />
+              <p className="campo-ayuda" id="pr-descripcion-ayuda">
+                Opcional. Se muestra en el detalle del producto en la tienda. {descripcion.length}/500
+              </p>
             </div>
 
             <div className="campo">

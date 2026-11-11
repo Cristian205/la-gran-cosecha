@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { obtenerBanners } from "@/lib/datos";
 import type { PromoBanner } from "@/lib/tipos";
 import { claseDeVariante } from "@/bloques/Seccion";
+import { SIZES_FONDO, srcSetFondo } from "@/lib/imagen";
 
 const INTERVALO_MS = 6000;
 
@@ -83,8 +84,10 @@ export function PromoCarousel({ autoplay = true, segundos, variante }: Props) {
       {slide.imagen_url && (
         <div className="slide-bg">
           <picture>
-            {slide.imagen_movil_url && <source media="(max-width: 700px)" srcSet={slide.imagen_movil_url} />}
-            <img src={slide.imagen_url} alt="" />
+            {slide.imagen_movil_url && (
+              <source media="(max-width: 700px)" srcSet={srcSetFondo(slide.imagen_movil_url) ?? slide.imagen_movil_url} sizes={SIZES_FONDO} />
+            )}
+            <img src={slide.imagen_url} srcSet={srcSetFondo(slide.imagen_url)} sizes={SIZES_FONDO} alt="" />
           </picture>
         </div>
       )}

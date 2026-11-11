@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { SIZES_FONDO, srcSetFondo } from "@/lib/imagen";
 
 /**
  * Un espacio de fotografía o video, reemplazable desde el panel.
@@ -129,11 +130,15 @@ export function Medio({
     >
       {foto && (
         <picture>
-          {imagen_movil && imagen && <source media={MOVIL} srcSet={imagen_movil} />}
+          {imagen_movil && imagen && (
+            <source media={MOVIL} srcSet={srcSetFondo(imagen_movil) ?? imagen_movil} sizes={SIZES_FONDO} />
+          )}
           {/* `img` y no `next/image`: el archivo vive en el bucket de cada negocio. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={foto}
+            srcSet={srcSetFondo(foto)}
+            sizes={SIZES_FONDO}
             alt=""
             loading={prioridad ? "eager" : "lazy"}
             fetchPriority={prioridad ? "high" : "auto"}

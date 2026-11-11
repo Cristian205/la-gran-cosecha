@@ -141,6 +141,11 @@ class Producto(ModeloConTenant):
 
     imagen = models.ImageField(upload_to=ruta_producto, blank=True, null=True)
 
+    # Texto corto que la tienda muestra en la ficha del producto y que también
+    # alimenta los datos estructurados para Google. Opcional: sin él la ficha
+    # queda como siempre.
+    descripcion = models.CharField(max_length=500, blank=True, default="")
+
     categoria = models.ForeignKey(
         Categoria, on_delete=models.PROTECT, related_name="productos"
     )

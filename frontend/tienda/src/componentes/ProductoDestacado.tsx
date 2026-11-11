@@ -9,6 +9,7 @@ import type { Producto } from "@/lib/tipos";
 import { cantidadInicial, formatoPrecio, iconoCategoria, reglaCantidad } from "@/lib/utiles";
 import { agruparPresentaciones } from "@/componentes/PresentationSelector";
 import { Reveal } from "@/componentes/animacion";
+import { srcSetImagen } from "@/lib/imagen";
 
 /**
  * El espacio de merchandising del catálogo: UN producto, tratado como
@@ -126,7 +127,13 @@ export function ProductoDestacado({
       <div className="pd-media">
         {producto.imagen_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={producto.imagen_url} alt={producto.nombre_producto} decoding="async" />
+          <img
+            src={producto.imagen_url}
+            srcSet={srcSetImagen(producto.imagen_url)}
+            sizes="(max-width: 780px) 100vw, 50vw"
+            alt={producto.nombre_producto}
+            decoding="async"
+          />
         ) : (
           <IconoRespaldo size={64} strokeWidth={1.3} />
         )}

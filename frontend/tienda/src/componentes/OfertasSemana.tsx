@@ -14,6 +14,7 @@ import {
   reglaCantidad,
 } from "@/lib/utiles";
 import { Seccion, claseDeVariante } from "@/bloques/Seccion";
+import { srcSetImagen } from "@/lib/imagen";
 
 function tiempoRestante(fechaFin: string): string | null {
   const restante = new Date(fechaFin).getTime() - Date.now();
@@ -67,7 +68,13 @@ function TarjetaOferta({ oferta }: { oferta: OfertaProducto }) {
     <article className="oferta-card glass" id={`oferta-${oferta.id}`}>
       <div className="oferta-media">
         {oferta.producto_imagen_url ? (
-          <img src={oferta.producto_imagen_url} alt={oferta.producto_nombre} loading="lazy" />
+          <img
+            src={oferta.producto_imagen_url}
+            srcSet={srcSetImagen(oferta.producto_imagen_url, [384, 640, 828])}
+            sizes="(max-width: 780px) 50vw, 25vw"
+            alt={oferta.producto_nombre}
+            loading="lazy"
+          />
         ) : (
           <Flame size={40} strokeWidth={1.5} />
         )}
