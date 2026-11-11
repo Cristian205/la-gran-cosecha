@@ -17,6 +17,7 @@ import {
 import { Reveal } from "@/componentes/animacion";
 import { useSiteConfig } from "@/componentes/CapaCliente";
 import type { Paginated, Producto } from "@/lib/tipos";
+import { srcSetImagen } from "@/lib/imagen";
 import { Boton, TipografiaEditorial } from "./comunes";
 
 /**
@@ -144,7 +145,14 @@ export function BusinessCampaign({
           <Reveal>
             {logo && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img className="bn-logo" src={logo} alt={config.nombre_empresa} decoding="async" />
+              <img
+                className="bn-logo"
+                src={logo}
+                srcSet={srcSetImagen(logo, [128, 256, 384])}
+                sizes="(max-width: 780px) 72px, 224px"
+                alt={config.nombre_empresa}
+                decoding="async"
+              />
             )}
             {kicker && <p className="cmp-kicker">{kicker}</p>}
             <h2>
@@ -210,7 +218,14 @@ export function BusinessCampaign({
                     {foto.imagen_movil && <source media="(max-width: 780px)" srcSet={foto.imagen_movil} />}
                     {/* `img` y no `next/image`: el archivo puede vivir en el bucket del negocio. */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={foto.imagen} alt={foto.alt ?? ""} loading="lazy" decoding="async" />
+                    <img
+                      src={foto.imagen}
+                      srcSet={srcSetImagen(foto.imagen, [384, 640, 828])}
+                      sizes="(max-width: 780px) 50vw, 25vw"
+                      alt={foto.alt ?? ""}
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </picture>
                   {foto.etiqueta && (
                     <figcaption className="bn-chip">
@@ -226,7 +241,14 @@ export function BusinessCampaign({
           imagen && (
             <Reveal className="bn-imagen" retraso={0.1}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imagen} alt={imagen_alt} loading="lazy" decoding="async" />
+              <img
+                src={imagen}
+                srcSet={srcSetImagen(imagen)}
+                sizes="(max-width: 780px) 100vw, 50vw"
+                alt={imagen_alt}
+                loading="lazy"
+                decoding="async"
+              />
             </Reveal>
           )
         )}

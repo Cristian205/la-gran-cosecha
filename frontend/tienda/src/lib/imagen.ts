@@ -31,7 +31,11 @@ function hostOptimizable(host: string): boolean {
 
 /** ¿Esta URL se puede pasar por el optimizador? */
 export function esOptimizable(src: string | null | undefined): src is string {
-  if (!src || !/^https:\/\//i.test(src)) return false;
+  if (!src) return false;
+  // Fotos del propio sitio (`public/img/...`): el optimizador también las
+  // recomprime y las ajusta al ancho, aunque ya sean WebP.
+  if (src.startsWith("/img/")) return !/\.(svg|gif)(\?|$)/i.test(src) && !src.includes("?");
+  if (!/^https:\/\//i.test(src)) return false;
   try {
     const url = new URL(src);
     if (/\.(svg|gif)$/i.test(url.pathname)) return false;
@@ -59,6 +63,14 @@ export function srcSetImagen(
   if (!esOptimizable(src)) return undefined;
   return anchos.map((w) => `${urlImagen(src, w, calidad)} ${w}w`).join(", ");
 }
+
+/**
+ * `sizes` de las fotos de fondo a todo el ancho. En móvil se piden como si la
+ * pantalla midiera 85 % de su ancho: en un teléfono de 428 px con DPR 1,75 el
+ * navegador elige 640 px en vez de 750 (-25 % de bytes), una nitidez de ~1,5x
+ * que en una foto con degradado y texto encima no se nota.
+ */
+export const SIZES_FONDO = "(max-width: 780px) 85vw, 100vw";
 
 /** `srcSet` de una foto de fondo a todo el ancho (calidad 60). */
 export function srcSetFondo(src: string | null | undefined): string | undefined {
