@@ -65,3 +65,31 @@ def test_hero_tiene_estilo_de_titulo_con_default_de_siempre():
     # Va justo después de «Color del texto», que es el orden del formulario.
     claves = list(props)
     assert claves.index("estilo_titulo") == claves.index("tono_texto") + 1
+
+
+def test_nosotros_hero_tiene_estilo_y_atributos():
+    props = _props("nosotros-hero")
+    assert props["estilo"]["default"] == "clasico"
+    assert props["estilo"]["opciones"] == ["clasico", "publicitario"]
+    assert props["atributos"]["tipo"] == "array"
+    assert "calidad" in props["atributos"]["items"]["properties"]["icono"]["opciones"]
+
+
+def test_nosotros_hero_publicitario_valida_con_sus_atributos():
+    comp = [
+        {
+            "id": "h",
+            "tipo": "nosotros-hero",
+            "props": {
+                "titulo": "Mientras tú haces crecer tu negocio,",
+                "estilo": "publicitario",
+                "atributos": [
+                    {"texto": "Productos de calidad", "icono": "calidad"},
+                    {"texto": "Entrega confiable", "icono": "entrega"},
+                ],
+            },
+        }
+    ]
+    props = composicion.validar(comp)[0]["props"]
+    assert props["estilo"] == "publicitario"
+    assert props["atributos"][1]["icono"] == "entrega"

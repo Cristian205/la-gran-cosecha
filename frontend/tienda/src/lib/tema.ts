@@ -363,8 +363,15 @@ export function fuenteDeGoogle(config: SiteConfig | null): string {
   // que el cambio fuese instantáneo en el panel, pero aquí el tema ya viene
   // resuelto del servidor y las otras cinco serían peso muerto.
   const familia = familias[config?.fuente ?? "poppins"] ?? familias.poppins;
-  const titulos = FAMILIAS_TITULO[fuenteDeTitulos(config)];
+  const elegidaTitulos = fuenteDeTitulos(config);
+  const titulos = FAMILIAS_TITULO[elegidaTitulos];
   const partes = titulos ? [familia, titulos] : [familia];
+  // La serif cursiva de los titulares con énfasis de las campañas
+  // (`--fuente-editorial`). Va aquí, en la misma petición, y no en un `<link>`
+  // por campaña. Si la tienda ya eligió Fraunces para sus títulos, ya viene.
+  if (elegidaTitulos !== "fraunces") {
+    partes.push("Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,600;1,9..144,800");
+  }
   return `https://fonts.googleapis.com/css2?family=${partes.join("&family=")}&display=swap`;
 }
 

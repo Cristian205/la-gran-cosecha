@@ -54,18 +54,35 @@ export function Boton({
 }
 
 /**
- * La serif de los titulares con énfasis. React 19 sube este `<link>` al
- * `<head>` y lo deduplica, así que basta con pintarlo desde cualquier
- * campaña; si la fuente no llega, `--fuente-editorial` cae a Georgia.
+ * La serif de los titulares con énfasis (Fraunces).
+ *
+ * Ya no pinta nada: la familia viaja en la MISMA hoja de Google Fonts que la
+ * tipografía de la tienda (`fuenteDeGoogle`, en `lib/tema.ts`), que el layout
+ * carga sin bloquear el pintado. Antes cada campaña subía su propio `<link>`
+ * con `precedence`, que React trata como bloqueante: una petición más que
+ * frenaba el primer pintado en el Home. Se conserva el componente para que las
+ * 25 campañas que lo usan no cambien; si la fuente no llega,
+ * `--fuente-editorial` cae a Georgia.
  */
 export function TipografiaEditorial() {
-  return (
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,600;1,9..144,800&display=swap"
-      {...({ precedence: "default" } as object)}
-    />
-  );
+  return null;
+}
+
+/**
+ * Carga una hoja de Google Fonts SIN bloquear el pintado, una sola vez aunque
+ * varios componentes la pidan. Se usa para fuentes que solo necesita un bloque
+ * concreto (no merecen ir en la hoja global). El texto sale primero con la
+ * fuente de respaldo y se cambia al llegar (`display=swap`).
+ */
+export function useHojaAsincrona(href: string) {
+  useEffect(() => {
+    if (!href || document.head.querySelector(`link[data-hoja="${href}"]`)) return;
+    const hoja = document.createElement("link");
+    hoja.rel = "stylesheet";
+    hoja.href = href;
+    hoja.dataset.hoja = href;
+    document.head.appendChild(hoja);
+  }, [href]);
 }
 
 /**
