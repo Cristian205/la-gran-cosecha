@@ -83,12 +83,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductoPage({ params }: Props) {
   const { slug } = await params;
-  const [producto, { host }] = await Promise.all([
+  const [producto, { host }, config] = await Promise.all([
     obtenerProductoPorSlug(slug),
     negocioDeLaPeticion(),
+    configuracionDeLaTienda(),
   ]);
 
   if (!producto) notFound();
+  const nombreNegocio = config?.nombre_empresa;
 
   const relacionados = await obtenerRelacionados(producto);
 
@@ -107,7 +109,16 @@ export default async function ProductoPage({ params }: Props) {
     name: producto.nombre_producto,
     category: producto.categoria_nombre,
     url: urlProducto,
-    ...(imagenes.length > 0 ? { image: imagenes } : {}),
+    description: `${producto.nombre_producto} para tu negocio${
+      nombreNegocio ? `, con ${nombreNegocio}` : ""
+    }. Pide en línea por ${producto.unidad_base_nombre ?? "unidad"} y recíbelo donde trabajas.`,
+    ...(nombreNegocio ? { brand: { "@type": "Brand", name: nombreNegocio } } : {}),
+    // Sin foto propia, el logo del negocio: `image` es obligatorio para Google.
+    ...(imagenes.length > 0
+      ? { image: imagenes }
+      : config?.logo_url
+        ? { image: [config.logo_url] }
+        : {}),
     ...(precioDesde
       ? {
           offers: {
