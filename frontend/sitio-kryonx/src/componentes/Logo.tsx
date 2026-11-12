@@ -1,15 +1,15 @@
-import monograma from "../assets/logo-kryonx-marca-inverso.png";
+import isotipo from "../assets/crafteech-isotipo.webp";
 
-/** La pantera y el nombre. El nombre va en texto: se lee nítido a cualquier tamaño. */
+/**
+ * El isotipo (el triángulo con su órbita) y el nombre. El nombre va en texto y
+ * no dentro de la imagen: se lee nítido a cualquier tamaño y lo leen los
+ * lectores de pantalla.
+ */
 export function Logo({ conNombre = true }: { conNombre?: boolean }) {
   return (
     <span className="logo">
-      <img src={monograma} alt="" width={38} height={27} className="logo__marca" />
-      {conNombre && (
-        <span className="logo__nombre">
-          KRYON <b>X</b>
-        </span>
-      )}
+      <img src={isotipo} alt="" width={40} height={33} className="logo__marca" />
+      {conNombre && <span className="logo__nombre">crafteech</span>}
     </span>
   );
 }

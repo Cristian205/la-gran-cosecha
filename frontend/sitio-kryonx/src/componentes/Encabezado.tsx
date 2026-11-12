@@ -1,17 +1,18 @@
-import type { EncabezadoSeccion } from "../contenido/tipos";
+import type { EncabezadoEscena } from "../contenido/tipos";
 import { Revelar } from "./Revelar";
 
 /**
- * La cabecera de cada sección: etiqueta, título con su parte en cursiva y una
- * línea de apoyo. Es la única tipografía grande que se repite, así que vive
- * en un sitio para que las secciones no acaben con cinco escalas distintas.
+ * La cabecera de cada escena: la etiqueta que la identifica, el titular con su
+ * parte resaltada y una línea de apoyo. Es la única tipografía grande que se
+ * repite, así que vive en un sitio para que las escenas no acaben con cinco
+ * escalas distintas.
  */
 export function Encabezado({
   datos,
   alineacion = "izquierda",
   id,
 }: {
-  datos: EncabezadoSeccion;
+  datos: EncabezadoEscena;
   alineacion?: "izquierda" | "centro";
   id?: string;
 }) {
