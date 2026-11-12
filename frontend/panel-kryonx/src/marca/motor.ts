@@ -14,7 +14,7 @@ function aRgb(hex: string): Rgb {
   const limpio = hex.replace("#", "").trim();
   const largo = limpio.length === 3 ? limpio.split("").map((c) => c + c).join("") : limpio;
   const n = Number.parseInt(largo.slice(0, 6), 16);
-  if (!Number.isFinite(n)) return [212, 166, 58];
+  if (!Number.isFinite(n)) return [183, 243, 74];
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
@@ -46,7 +46,7 @@ export function contraste(a: string, b: string): number {
 
 /** El texto que se lee encima de un color: casi negro o blanco, el que contraste más. */
 export function textoSobre(fondo: string): string {
-  const oscuro = "#15110a";
+  const oscuro = "#101311";
   return contraste(fondo, oscuro) >= contraste(fondo, "#ffffff") ? oscuro : "#ffffff";
 }
 
@@ -97,7 +97,9 @@ export function aplicarTokens(marca: Marca, elemento: HTMLElement): void {
 /** Publica una marca en toda la interfaz: tokens, favicon y título. */
 export function aplicarMarca(marca: Marca): void {
   aplicarTokens(marca, document.documentElement);
-  document.title = `${marca.nombre} · ${marca.lema}`;
+  // La marca de sistema es la propia plataforma, que ahora se llama Crafteech;
+  // las marcas que el equipo crea en Identidad conservan su título.
+  document.title = marca.sistema ? "Crafteech" : `${marca.nombre} · ${marca.lema}`;
   if (marca.favicon) {
     let icono = document.querySelector<HTMLLinkElement>("link[rel='icon'][data-marca]");
     if (!icono) {

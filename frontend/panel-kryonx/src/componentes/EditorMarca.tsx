@@ -41,7 +41,7 @@ export function EditorMarca({
   onCambio: (marca: Marca) => void;
   onError: (mensaje: string) => void;
 }) {
-  const fondo = "#08090b";
+  const fondo = "#101311";
   const ratioPrimario = contraste(marca.colores.primario, fondo);
   const ratioTexto = contraste(marca.colores.primario, textoSobre(marca.colores.primario));
 

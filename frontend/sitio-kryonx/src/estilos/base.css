@@ -300,6 +300,12 @@ fieldset {
   color: var(--nube);
 }
 
+/* Las dos «ee» en verde eléctrico. */
+.logo__nombre i {
+  font-style: normal;
+  color: var(--lima);
+}
+
 /* ------------------------------------------------------------------ */
 /* Botones                                                             */
 /* ------------------------------------------------------------------ */
