@@ -2,306 +2,257 @@ import {
   AnimatePresence,
   motion,
   useMotionValue,
+  useReducedMotion,
   useScroll,
   useSpring,
   useTransform,
   type MotionValue,
 } from "motion/react";
-import {
-  Check,
-  GripVertical,
-  Image,
-  Layers,
-  LayoutGrid,
-  Megaphone,
-  Monitor,
-  MousePointer2,
-  Palette,
-  Smartphone,
-  Tablet,
-  Type,
-} from "lucide-react";
+import { Check, Palette } from "lucide-react";
 import { Fragment, useRef, type MouseEvent, type ReactNode } from "react";
 import { Boton } from "../componentes/Boton";
 import { FUENTES } from "../componentes/fuentes";
+import { Marco } from "../componentes/Marco";
+import { Objeto } from "../componentes/Objeto";
 import { TiendaMaqueta } from "../componentes/TiendaMaqueta";
-import type { DatosHero, TemaTienda } from "../contenido/tipos";
+import type { DatosHero } from "../contenido/tipos";
 import { usarTemas } from "../contenido/usarContenido";
 import { usarAutoavance } from "../hooks/usarAutoavance";
 
 const SUAVE = [0.22, 1, 0.36, 1] as const;
 
 /**
- * El hero vende el constructor enseñándolo trabajar: una ventana del editor
- * en la que la misma tienda cambia de identidad cada pocos segundos, con el
- * panel de estilo siguiendo el cambio. Al bajar, la ventana se endereza —de
- * maqueta inclinada a pantalla de trabajo—, que es el gesto de "entrar".
+ * Escena 01. La tienda es la protagonista: una ventana de navegador con una
+ * tienda que cambia de identidad cada pocos segundos y, delante, el teléfono
+ * con la siguiente. Nada de un computador genérico: lo que se ve es lo que la
+ * gente va a comprar.
+ *
+ * El movimiento es poco y tiene dueño: la ventana se endereza al bajar (de
+ * maqueta inclinada a pantalla de trabajo) y las piezas flotantes siguen al
+ * puntero a distinta distancia, que es lo que da profundidad. Con «menos
+ * movimiento» nada de esto se inclina ni sigue al puntero.
  */
 export function Hero({ datos, id }: { datos: DatosHero; id: string }) {
   const temas = usarTemas(datos.temas);
   const escena = useRef<HTMLDivElement>(null);
-  const { indice } = usarAutoavance(temas.length, 3800, escena);
+  const reducido = useReducedMotion();
+  const { indice } = usarAutoavance(temas.length, 4200, escena);
   const tema = temas[indice];
+  const otro = temas[(indice + 1) % temas.length];
 
-  /* Inclinación ligada al scroll. */
   const { scrollYProgress } = useScroll({ target: escena, offset: ["start end", "end start"] });
-  const giro = useTransform(scrollYProgress, [0.15, 0.55], [16, 0]);
-  const escala = useTransform(scrollYProgress, [0.15, 0.55], [0.92, 1]);
+  const giro = useTransform(scrollYProgress, [0.1, 0.5], [reducido ? 0 : 14, 0]);
+  const escala = useTransform(scrollYProgress, [0.1, 0.5], [reducido ? 1 : 0.93, 1]);
 
-  /* Paralaje con el puntero: las piezas flotantes se mueven más que la ventana. */
   const px = useSpring(useMotionValue(0), { stiffness: 60, damping: 18 });
   const py = useSpring(useMotionValue(0), { stiffness: 60, damping: 18 });
 
   function alMover(evento: MouseEvent<HTMLElement>) {
+    if (reducido) return;
     const caja = evento.currentTarget.getBoundingClientRect();
     px.set((evento.clientX - caja.left) / caja.width - 0.5);
     py.set((evento.clientY - caja.top) / caja.height - 0.5);
   }
 
+  if (!tema) return null;
   const palabras = datos.titulo.split(" ");
 
   return (
-    <section className="hero" id={id} onMouseMove={alMover} aria-labelledby="hero-titulo">
+    <section className="hero escena--oscura" id={id} onMouseMove={alMover} aria-labelledby="hero-titulo">
       <div className="hero__fondo" aria-hidden="true">
         <div className="hero__rejilla" />
-        <div className="hero__luz hero__luz--rojo" />
-        <div className="hero__luz hero__luz--oro" />
+        <div className="hero__luz hero__luz--a" />
+        <div className="hero__luz hero__luz--b" />
       </div>
 
-      <div className="hero__texto contenedor">
-        <motion.span
-          className="insignia"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: SUAVE, delay: 0.2 }}
-        >
-          <i className="insignia__punto" />
-          {datos.insignia}
-        </motion.span>
+      <div className="hero__interior contenedor">
+        <div className="hero__texto">
+          <motion.p
+            className="hero__lema"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: SUAVE, delay: 0.15 }}
+          >
+            <i aria-hidden="true" />
+            {datos.lema}
+          </motion.p>
 
-        <h1 className="hero__titulo" id="hero-titulo">
-          {/* El espacio va FUERA de la máscara: dentro de un inline-block el
-              espacio final se colapsa y las palabras quedan pegadas. */}
-          {palabras.map((palabra, i) => (
-            <Fragment key={i}>
-              <span className="mascara">
-                <motion.span
-                  initial={{ y: "110%" }}
-                  animate={{ y: 0 }}
-                  transition={{ duration: 1, ease: SUAVE, delay: 0.3 + i * 0.07 }}
-                >
-                  {palabra}
-                </motion.span>
-              </span>{" "}
-            </Fragment>
-          ))}
-          <span className="mascara">
-            <motion.em
-              initial={{ y: "110%" }}
-              animate={{ y: 0 }}
-              transition={{ duration: 1, ease: SUAVE, delay: 0.3 + palabras.length * 0.07 }}
-            >
-              {datos.destacado}
-            </motion.em>
-          </span>
-        </h1>
+          <h1 className="hero__titulo" id="hero-titulo">
+            {/* El espacio va FUERA de la máscara: dentro de un inline-block el
+                espacio final se colapsa y las palabras quedan pegadas. */}
+            {palabras.map((palabra, i) => (
+              <Fragment key={i}>
+                <span className="mascara">
+                  <motion.span
+                    initial={{ y: "110%" }}
+                    animate={{ y: 0 }}
+                    transition={{ duration: 1, ease: SUAVE, delay: 0.25 + i * 0.06 }}
+                  >
+                    {palabra}
+                  </motion.span>
+                </span>{" "}
+              </Fragment>
+            ))}
+            <span className="mascara">
+              <motion.em
+                initial={{ y: "110%" }}
+                animate={{ y: 0 }}
+                transition={{ duration: 1, ease: SUAVE, delay: 0.25 + palabras.length * 0.06 }}
+              >
+                {datos.destacado}
+              </motion.em>
+            </span>
+          </h1>
 
-        <motion.p
-          className="hero__subtitulo"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: SUAVE, delay: 0.75 }}
-        >
-          {datos.subtitulo}
-        </motion.p>
+          <motion.p
+            className="hero__subtitulo"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, ease: SUAVE, delay: 0.7 }}
+          >
+            {datos.subtitulo}
+          </motion.p>
+
+          <motion.div
+            className="hero__acciones"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, ease: SUAVE, delay: 0.85 }}
+          >
+            <Boton enlace={datos.ctaPrincipal} />
+            <Boton enlace={datos.ctaSecundario} variante="secundario" />
+          </motion.div>
+        </div>
 
         <motion.div
-          className="hero__acciones"
-          initial={{ opacity: 0, y: 16 }}
+          className="hero__escena"
+          ref={escena}
+          initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: SUAVE, delay: 0.9 }}
+          transition={{ duration: 1.2, ease: SUAVE, delay: 0.5 }}
         >
-          <Boton enlace={datos.ctaPrincipal} />
-          <Boton enlace={datos.ctaSecundario} variante="secundario" />
+          <motion.div className="hero__inclinacion" style={{ rotateX: giro, scale: escala }}>
+            <Marco dominio={datos.dominio} className="hero__marco">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={tema.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <TiendaMaqueta tema={tema} compacta />
+                </motion.div>
+              </AnimatePresence>
+            </Marco>
+          </motion.div>
+
+          {otro && (
+            <Flotante x={px} y={py} fuerza={-14} className="hero__telefono" retraso={1}>
+              <div className="telefono" aria-hidden="true">
+                <span className="telefono__muesca" />
+                <div className="telefono__pantalla">
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={otro.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <TiendaMaqueta tema={otro} compacta />
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </div>
+            </Flotante>
+          )}
+
+          <Flotante x={px} y={py} fuerza={30} className="hero__objeto hero__objeto--a" retraso={1.2}>
+            <Objeto forma="cubo" color={tema.hero.objeto} />
+          </Flotante>
+          <Flotante x={px} y={py} fuerza={-26} className="hero__objeto hero__objeto--b" retraso={1.35}>
+            <Objeto forma="gota" color={otro ? otro.hero.objeto : tema.hero.objeto} />
+          </Flotante>
+
+          <Flotante x={px} y={py} fuerza={-22} className="hero__ficha hero__ficha--paleta" retraso={1.5}>
+            <span className="chip__titulo">
+              <Palette aria-hidden="true" /> Paleta
+            </span>
+            <span className="chip__muestras">
+              {temas.map((t) => (
+                <i
+                  key={t.id}
+                  style={{ background: t.acento === t.texto ? t.hero.objeto[1] : t.acento }}
+                  className={t.id === tema.id ? "activa" : ""}
+                />
+              ))}
+            </span>
+          </Flotante>
+
+          <Flotante x={px} y={py} fuerza={26} className="hero__ficha hero__ficha--tipo" retraso={1.65}>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={tema.fuente}
+                className="chip__aa"
+                style={{ fontFamily: FUENTES[tema.fuente].css }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+              >
+                Aa
+              </motion.span>
+            </AnimatePresence>
+            <span className="chip__nombre">{FUENTES[tema.fuente].nombre}</span>
+          </Flotante>
+
+          <Flotante x={px} y={py} fuerza={16} className="hero__ficha hero__ficha--publicado" retraso={1.8}>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={tema.id}
+                className="chip__publicada"
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.92 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Check aria-hidden="true" /> {tema.nombre}
+              </motion.span>
+            </AnimatePresence>
+          </Flotante>
         </motion.div>
       </div>
-
-      <motion.div
-        className="hero__escena"
-        ref={escena}
-        initial={{ opacity: 0, y: 60 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1.3, ease: SUAVE, delay: 0.55 }}
-      >
-        <motion.div className="hero__inclinacion" style={{ rotateX: giro, scale: escala }}>
-          <Editor tema={tema} temas={temas} dominio={datos.dominio} />
-        </motion.div>
-
-        <Flotante x={px} y={py} fuerza={-28} className="flotante--paleta" retraso={1.4}>
-          <span className="flotante__titulo">
-            <Palette /> Paleta
-          </span>
-          <span className="flotante__muestras">
-            {temas.map((t) => (
-              <i
-                key={t.id}
-                style={{ background: t.acento === t.texto ? t.hero.objeto[1] : t.acento }}
-                className={t.id === tema.id ? "activa" : ""}
-              />
-            ))}
-          </span>
-        </Flotante>
-
-        <Flotante x={px} y={py} fuerza={34} className="flotante--tipo" retraso={1.55}>
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={tema.fuente}
-              className="flotante__aa"
-              style={{ fontFamily: FUENTES[tema.fuente].css }}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-            >
-              Aa
-            </motion.span>
-          </AnimatePresence>
-          <span className="flotante__fuente">{FUENTES[tema.fuente].nombre}</span>
-        </Flotante>
-
-        <Flotante x={px} y={py} fuerza={22} className="flotante--bloque" retraso={1.7}>
-          <GripVertical className="flotante__agarre" />
-          <span>
-            <strong>Banner promocional</strong>
-            <small>Arrastra para añadir</small>
-          </span>
-          <MousePointer2 className="flotante__cursor" />
-        </Flotante>
-
-        <Flotante x={px} y={py} fuerza={-18} className="flotante--publicado" retraso={1.85}>
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={tema.id}
-              className="flotante__publicado"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.35 }}
-            >
-              <Check /> {tema.nombre} publicada
-            </motion.span>
-          </AnimatePresence>
-        </Flotante>
-      </motion.div>
     </section>
   );
 }
 
-/* ------------------------------------------------------------------ */
-
-const SECCIONES = ["Anuncio", "Navbar", "Hero", "Categorías", "Productos", "Promoción", "Footer"];
-const HERRAMIENTAS = [Layers, Type, Palette, Image, LayoutGrid, Megaphone];
-
-function Editor({ tema, temas, dominio }: { tema: TemaTienda; temas: TemaTienda[]; dominio: string }) {
-  const posicion = temas.findIndex((t) => t.id === tema.id);
-
-  return (
-    <div className="editor">
-      <div className="editor__barra">
-        <span className="marco__semaforo" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </span>
-        <span className="editor__pagina">Inicio</span>
-        <span className="editor__dispositivos" aria-hidden="true">
-          <Monitor className="activo" />
-          <Tablet />
-          <Smartphone />
-        </span>
-        <span className="editor__dominio">{dominio}</span>
-        <span className="editor__publicar">Publicar</span>
-      </div>
-
-      <div className="editor__cuerpo">
-        <aside className="editor__riel" aria-hidden="true">
-          {HERRAMIENTAS.map((Icono, i) => (
-            <span key={i} className={i === posicion % HERRAMIENTAS.length ? "activo" : ""}>
-              <Icono />
-            </span>
-          ))}
-        </aside>
-
-        <aside className="editor__panel editor__panel--capas" aria-hidden="true">
-          <span className="editor__rotulo">Secciones</span>
-          {SECCIONES.map((s, i) => (
-            <span key={s} className={`editor__capa ${i === (posicion + 2) % SECCIONES.length ? "activa" : ""}`}>
-              <GripVertical />
-              {s}
-            </span>
-          ))}
-        </aside>
-
-        <div className="editor__lienzo">
-          <TiendaMaqueta tema={tema} />
-        </div>
-
-        <aside className="editor__panel editor__panel--estilo" aria-hidden="true">
-          <span className="editor__rotulo">Estilo</span>
-          <span className="editor__campo">Color de marca</span>
-          <span className="editor__muestras">
-            {temas.map((t) => (
-              <i key={t.id} style={{ background: t.acento === t.texto ? t.hero.objeto[1] : t.acento }}>
-                {t.id === tema.id && <motion.b layoutId="muestra-activa" className="editor__anillo" />}
-              </i>
-            ))}
-          </span>
-          <span className="editor__campo">Tipografía</span>
-          <span className="editor__selector" style={{ fontFamily: FUENTES[tema.fuente].css }}>
-            {FUENTES[tema.fuente].nombre}
-          </span>
-          <span className="editor__campo">Esquinas</span>
-          <span className="editor__deslizador">
-            <motion.i animate={{ left: `${Math.min(100, (tema.radio / 2.2) * 100)}%` }} transition={{ type: "spring", stiffness: 120, damping: 16 }} />
-          </span>
-          <span className="editor__campo">Fondo</span>
-          <span className="editor__fondos">
-            <i style={{ background: tema.fondo }} />
-            <i style={{ background: tema.superficie }} />
-            <i style={{ background: tema.texto }} />
-          </span>
-        </aside>
-      </div>
-    </div>
-  );
-}
-
+/** Una pieza que entra con retraso y se desplaza con el puntero a su propia distancia. */
 function Flotante({
   x,
   y,
   fuerza,
-  className,
   retraso,
+  className,
   children,
 }: {
   x: MotionValue<number>;
   y: MotionValue<number>;
   fuerza: number;
-  className: string;
   retraso: number;
+  className: string;
   children: ReactNode;
 }) {
-  const dx = useTransform(x, (v) => v * fuerza);
-  const dy = useTransform(y, (v) => v * fuerza);
+  const tx = useTransform(x, (v) => v * fuerza);
+  const ty = useTransform(y, (v) => v * fuerza);
   return (
-    <motion.div className={`flotante ${className}`} style={{ x: dx, y: dy }} aria-hidden="true">
-      <motion.div
-        className="flotante__caja"
-        initial={{ opacity: 0, scale: 0.85, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.9, ease: SUAVE, delay: retraso }}
-      >
-        {children}
-      </motion.div>
+    <motion.div
+      className={`flotante ${className}`}
+      style={{ x: tx, y: ty }}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.8, ease: SUAVE, delay: retraso }}
+    >
+      {children}
     </motion.div>
   );
 }

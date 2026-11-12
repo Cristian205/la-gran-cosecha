@@ -1,8 +1,8 @@
 {
-  "name": "kryonx-sitio",
+  "name": "crafteech-sitio",
   "private": true,
   "version": "1.0.0",
-  "description": "Sitio comercial de Kryon X: la página de ventas del constructor de tiendas. Vive aparte de la tienda multiempresa (www no es ningún negocio).",
+  "description": "Sitio comercial de Crafteech: tiendas online personalizadas (Commerce, Custom y Growth). Vive aparte de la tienda multiempresa (www no es ningún negocio).",
   "type": "module",
   "scripts": {
     "dev": "vite --port 5177",

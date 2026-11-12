@@ -1,23 +1,34 @@
 /**
- * La forma del contenido del sitio comercial.
+ * La forma del contenido del sitio comercial de Crafteech.
  *
- * La página no lleva un solo texto escrito en los componentes: cada sección
+ * La página no lleva un solo texto escrito en los componentes: cada escena
  * recibe sus datos de aquí, igual que los bloques de la tienda reciben los
  * suyos de la composición. El día que esto se administre desde el panel de la
  * plataforma, el backend devuelve un `ContenidoSitio` con esta forma y no hay
- * que tocar ni una sección — solo `usarContenido`.
+ * que tocar ni una escena — solo `usarContenido`.
  *
  * Por eso todo es serializable: nada de JSX, nada de funciones. Los iconos van
- * por nombre (`NombreIcono`) y los colores como texto CSS.
+ * por nombre y los colores como texto CSS.
  */
+
+/** Las tres modalidades de Crafteech. */
+export type Solucion = "commerce" | "custom" | "growth";
 
 export interface Enlace {
   etiqueta: string;
   href: string;
+  /**
+   * Si el botón expresa interés en una modalidad, cuál. Al pulsarlo, el
+   * formulario del cierre queda con esa modalidad elegida y el mensaje de
+   * WhatsApp sale contextualizado.
+   */
+  solucion?: Solucion;
+  /** De dónde sale el clic, para la analítica («hero», «planes-custom»…). */
+  origen?: string;
 }
 
 /* ------------------------------------------------------------------ */
-/* Tiendas de ejemplo                                                  */
+/* Tiendas de ejemplo (maquetas)                                       */
 /* ------------------------------------------------------------------ */
 
 export type FuenteTitulos = "sans" | "serif" | "editorial" | "grotesca" | "display";
@@ -68,7 +79,7 @@ export interface TemaTienda {
 }
 
 /* ------------------------------------------------------------------ */
-/* Campañas                                                            */
+/* Campañas (las que dibuja la maqueta)                                */
 /* ------------------------------------------------------------------ */
 
 export type FormatoCampana =
@@ -82,9 +93,7 @@ export type FormatoCampana =
 export interface Campana {
   id: string;
   formato: FormatoCampana;
-  /** Cómo se llama el formato en el calendario. */
   nombre: string;
-  /** Cuándo corre, tal como se lee en el calendario. */
   fecha: string;
   antetitulo: string;
   titulo: string;
@@ -92,25 +101,10 @@ export interface Campana {
   cta: string;
   /** Fondo y acento de la pieza publicitaria. */
   colores: [string, string];
-  /** Barra de anuncio que acompaña a la campaña encima de la navegación. */
   anuncio: string;
 }
 
-/* ------------------------------------------------------------------ */
-/* Secciones                                                           */
-/* ------------------------------------------------------------------ */
-
-export type NombreIcono =
-  | "pincel"
-  | "rayo"
-  | "dispositivos"
-  | "bloques"
-  | "contenido"
-  | "megafono"
-  | "escala"
-  | "huella";
-
-/** Las zonas de una tienda que el constructor deja tocar. */
+/** Las zonas de una tienda que la maqueta sabe señalar. */
 export type ZonaTienda =
   | "home"
   | "navbar"
@@ -124,21 +118,30 @@ export type ZonaTienda =
   | "componentes"
   | "contenido";
 
-export interface EncabezadoSeccion {
+/* ------------------------------------------------------------------ */
+/* Escenas                                                             */
+/* ------------------------------------------------------------------ */
+
+export interface EncabezadoEscena {
+  /** La etiqueta pequeña que identifica la escena («02 · Dos caminos»). */
   etiqueta: string;
   titulo: string;
-  /** La parte del título que va en cursiva: lo que la sección quiere que se recuerde. */
+  /** La parte del título que va resaltada: lo que la escena quiere que se recuerde. */
   destacado: string;
   descripcion?: string;
 }
 
 export interface DatosNavegacion {
   enlaces: Enlace[];
+  /** El menú «Soluciones» se despliega con una entrada por modalidad. */
+  soluciones: { solucion: Solucion; nombre: string; detalle: string; href: string }[];
   cta: Enlace;
 }
 
+/** 01 · Hero. */
 export interface DatosHero {
-  insignia: string;
+  /** El concepto de marca, en pequeño sobre el titular. */
+  lema: string;
   titulo: string;
   destacado: string;
   subtitulo: string;
@@ -146,35 +149,67 @@ export interface DatosHero {
   ctaSecundario: Enlace;
   /** Ids de `temas` que el hero va alternando. */
   temas: string[];
-  /** Lo que se lee en la barra de direcciones del editor. */
+  /** Lo que se lee en la barra de direcciones de la ventana. */
   dominio: string;
 }
 
-export interface DatosConstructor extends EncabezadoSeccion {
-  zonas: { id: ZonaTienda; nombre: string; detalle: string }[];
-  /** Tema sobre el que se demuestra. */
-  tema: string;
+/** Una de las dos modalidades que presenta «Dos caminos». */
+export interface Modalidad {
+  solucion: Solucion;
+  nombre: string;
+  frase: string;
+  descripcion: string;
+  beneficios: string[];
+  funciones: string[];
+  cta: Enlace;
+  /** Una línea que deja clara la diferencia con la otra modalidad. */
+  diferencia: string;
 }
 
-export interface DatosCampanas extends EncabezadoSeccion {
-  campanas: Campana[];
+/** 02 · Dos caminos, una marca. */
+export interface DatosCaminos extends EncabezadoEscena {
+  commerce: Modalidad;
+  custom: Modalidad;
+}
+
+export interface Industria {
+  id: string;
+  /** Cómo se nombra la experiencia («Fashion & Lifestyle»). */
+  nombre: string;
+  /** Id del tema de `temas` que la ilustra. */
   tema: string;
+  descripcion: string;
+}
+
+/** 03 · Experiencias por industria. */
+export interface DatosExperiencias extends EncabezadoEscena {
+  industrias: Industria[];
+}
+
+/** 04 · Personalización real. */
+export interface DatosPersonalizacion extends EncabezadoEscena {
+  /** Tema sobre el que se demuestra. */
+  tema: string;
+  paletas: { nombre: string; acento: string }[];
+  fuentes: FuenteTitulos[];
+  /** Mensajes de la barra de anuncio entre los que se puede elegir. */
+  anuncios: string[];
+  /** Aviso de que es una demostración y no una tienda real. */
+  aviso: string;
 }
 
 /**
- * Una tienda de verdad, hecha con Kryon X. Las maquetas de `tiendas` enseñan lo
- * que el motor PODRÍA hacer; esto enseña lo que ya hizo, con capturas de la
- * tienda publicada. Las imágenes son URL para que mañana puedan venir del
- * backend igual que el resto del contenido.
+ * Un proyecto. `tipo` distingue lo REALMENTE publicado de lo conceptual: un
+ * concepto se rotula como tal y nunca se presenta como trabajo realizado.
  */
-export interface CasoDemostracion {
+export interface CasoProyecto {
   id: string;
+  tipo: "real" | "concepto";
   nombre: string;
   rubro: string;
-  /** La plantilla de Kryon X sobre la que está montada. */
-  plantilla: string;
-  descripcion: string;
-  rasgos: string[];
+  reto: string;
+  solucion: string;
+  funcionalidades: string[];
   /** Lo que se lee en la barra de direcciones del marco. */
   dominio: string;
   /** Captura de la página completa en escritorio; el marco la recorre. */
@@ -183,30 +218,46 @@ export interface CasoDemostracion {
   movil: string;
   /** Segundos que tardan las capturas en recorrerse de arriba abajo. */
   recorrido: number;
-  /** Enlace a la tienda publicada, cuando la hay. */
+  /** Enlace a la tienda publicada. Solo los proyectos reales lo tienen. */
   enlace?: Enlace;
 }
 
-export interface DatosDemostraciones extends EncabezadoSeccion {
-  casos: CasoDemostracion[];
+/** 05 · Proyectos destacados. */
+export interface DatosProyectos extends EncabezadoEscena {
+  casos: CasoProyecto[];
 }
 
-export interface DatosTiendas extends EncabezadoSeccion {
-  temas: string[];
+/** 06 · Proceso de trabajo. */
+export interface DatosProceso extends EncabezadoEscena {
+  etapas: { numero: string; titulo: string; texto: string }[];
 }
 
-export interface DatosBeneficios extends EncabezadoSeccion {
-  beneficios: { icono: NombreIcono; titulo: string; texto: string }[];
-  /** Tema que la demostración responsive usa. */
-  tema: string;
+export interface Plan {
+  solucion: Solucion;
+  nombre: string;
+  /** Cómo se contrata: la diferencia que esta escena tiene que dejar clara. */
+  modelo: string;
+  descripcion: string;
+  incluye: string[];
+  cta: Enlace;
+  destacado?: boolean;
 }
 
-export interface DatosConversion {
+/** 07 · Soluciones y planes. Sin precios: todas llevan a cotización. */
+export interface DatosSoluciones extends EncabezadoEscena {
+  planes: Plan[];
+  nota: string;
+}
+
+/** 08 · Cierre y contacto. */
+export interface DatosContacto {
   titulo: string;
   destacado: string;
   texto: string;
-  ctaPrincipal: Enlace;
-  ctaSecundario: Enlace;
+  /** Las opciones del selector de tipo de solución del formulario. */
+  opciones: { valor: Solucion | "por_definir"; etiqueta: string }[];
+  whatsapp: string;
+  correoDeRespaldo?: string;
 }
 
 export interface DatosPie {
@@ -216,20 +267,21 @@ export interface DatosPie {
 }
 
 /**
- * Una sección de la página. `id` es el ancla (`#constructor`), `visible`
+ * Una escena de la página. `id` es el ancla (`#soluciones`), `visible`
  * permite apagarla sin borrarla, y el orden del arreglo es el orden en
  * pantalla — exactamente lo que necesita un editor para reordenarlas.
  */
-type Seccion<T extends string, D> = { tipo: T; id: string; visible: boolean; datos: D };
+type Escena<T extends string, D> = { tipo: T; id: string; visible: boolean; datos: D };
 
 export type SeccionSitio =
-  | Seccion<"hero", DatosHero>
-  | Seccion<"demostraciones", DatosDemostraciones>
-  | Seccion<"constructor", DatosConstructor>
-  | Seccion<"campanas", DatosCampanas>
-  | Seccion<"tiendas", DatosTiendas>
-  | Seccion<"beneficios", DatosBeneficios>
-  | Seccion<"conversion", DatosConversion>;
+  | Escena<"hero", DatosHero>
+  | Escena<"caminos", DatosCaminos>
+  | Escena<"experiencias", DatosExperiencias>
+  | Escena<"personalizacion", DatosPersonalizacion>
+  | Escena<"proyectos", DatosProyectos>
+  | Escena<"proceso", DatosProceso>
+  | Escena<"soluciones", DatosSoluciones>
+  | Escena<"contacto", DatosContacto>;
 
 export type TipoSeccion = SeccionSitio["tipo"];
 
@@ -237,6 +289,6 @@ export interface ContenidoSitio {
   navegacion: DatosNavegacion;
   secciones: SeccionSitio[];
   pie: DatosPie;
-  /** El catálogo de identidades que las secciones citan por id. */
+  /** El catálogo de identidades que las escenas citan por id. */
   temas: TemaTienda[];
 }

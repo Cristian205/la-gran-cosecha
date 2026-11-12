@@ -1,16 +1,17 @@
 import type { SeccionSitio, TipoSeccion } from "../contenido/tipos";
-import { Beneficios } from "./Beneficios";
-import { Campanas } from "./Campanas";
-import { Constructor } from "./Constructor";
-import { Conversion } from "./Conversion";
-import { Demostraciones } from "./Demostraciones";
+import { Caminos } from "./Caminos";
+import { Contacto } from "./Contacto";
+import { Experiencias } from "./Experiencias";
 import { Hero } from "./Hero";
-import { Tiendas } from "./Tiendas";
+import { Personalizacion } from "./Personalizacion";
+import { Proceso } from "./Proceso";
+import { Proyectos } from "./Proyectos";
+import { Soluciones } from "./Soluciones";
 
 /**
  * De `tipo` a componente. Mismo patrón que `bloques/registro.tsx` en la
  * tienda: la página es una lista de datos y esto la convierte en pantalla.
- * Una sección nueva es una entrada aquí y un caso en `SeccionSitio`.
+ * Una escena nueva es una entrada aquí y un caso en `SeccionSitio`.
  */
 type Componentes = {
   [T in TipoSeccion]: (props: {
@@ -21,12 +22,13 @@ type Componentes = {
 
 const COMPONENTES: Componentes = {
   hero: Hero,
-  demostraciones: Demostraciones,
-  constructor: Constructor,
-  campanas: Campanas,
-  tiendas: Tiendas,
-  beneficios: Beneficios,
-  conversion: Conversion,
+  caminos: Caminos,
+  experiencias: Experiencias,
+  personalizacion: Personalizacion,
+  proyectos: Proyectos,
+  proceso: Proceso,
+  soluciones: Soluciones,
+  contacto: Contacto,
 };
 
 export function RenderSeccion({ seccion }: { seccion: SeccionSitio }) {

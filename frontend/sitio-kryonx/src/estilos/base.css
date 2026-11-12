@@ -1,44 +1,51 @@
 /*
- * Kryon X · sitio comercial — base.
+ * Crafteech · sitio comercial — base. Identidad «Digital Fusion».
  *
- * Los colores son los del logo: negro de la pantera, rojo de sus trazos, oro
- * de la X y blanco. El rojo es el acento que actúa —botones, foco, lo
- * seleccionado—; el oro es el brillo de la marca y se reserva para el nombre y
- * la palabra que el titular quiere subrayar: si todo fuera dorado, nada lo
- * sería.
+ * Cuatro colores y un criterio para cada uno:
+ *   Grafito    las escenas de impacto: es el escenario, y las tiendas son lo
+ *              que se mira.
+ *   Nube       las escenas editoriales: blanco cálido, no blanco de oficina.
+ *   Lima       el color que ACTÚA: botones, foco, lo seleccionado, la palabra
+ *              que el titular quiere subrayar. Si todo fuera lima, nada lo sería.
+ *   Pizarra    lo que acompaña: líneas, texto secundario, estados quietos.
  *
- * La página es un escenario negro y las tiendas son claras y de colores: el
- * contraste hace que el producto —las tiendas— sea lo que se mira.
+ * Tipografía: Manrope para titulares y contenido; Inter para interfaces y
+ * componentes funcionales (botones, navegación, formularios, etiquetas).
+ *
+ * Contraste: el Pizarra puro (#777E79) no llega a 4,5:1 como texto sobre Nube
+ * ni sobre Grafito a tamaños pequeños, así que el texto secundario usa dos
+ * tonos derivados (`--texto-sobre-claro` y `--texto-sobre-oscuro`). El Lima
+ * puro sobre Nube tampoco se lee como texto: ahí se usa `--lima-texto`.
  */
 
 :root {
-  --lienzo: #070708;
-  --lienzo-alto: #0d0d0f;
-  --superficie: #131315;
-  --superficie-alta: #1a1a1d;
-  --linea: rgba(255, 255, 255, 0.08);
-  --linea-viva: rgba(255, 255, 255, 0.16);
+  --grafito: #101311;
+  --grafito-2: #161a17;
+  --grafito-3: #1e231f;
+  --nube: #f5f6f2;
+  --nube-2: #ecede7;
+  --blanco: #ffffff;
+  --lima: #b7f34a;
+  --lima-vivo: #c9fa6e;
+  --lima-texto: #4a7a07;
+  --pizarra: #777e79;
 
-  --texto: #ffffff;
-  --texto-medio: #b4b4bb;
-  --texto-tenue: #77777f;
+  --texto-sobre-oscuro: #b6bcb7;
+  --texto-sobre-claro: #4f5651;
+  --linea-oscura: rgba(245, 246, 242, 0.1);
+  --linea-oscura-viva: rgba(245, 246, 242, 0.22);
+  --linea-clara: rgba(16, 19, 17, 0.1);
+  --linea-clara-viva: rgba(16, 19, 17, 0.22);
 
-  --rojo: #e11d2a;
-  --rojo-vivo: #ff3b46;
-  --rojo-tenue: rgba(225, 29, 42, 0.14);
-  --rojo-linea: rgba(225, 29, 42, 0.45);
-  --oro: #d4a63a;
-  --oro-vivo: #f2c96b;
-  --oro-metal: linear-gradient(180deg, #fbe7a6 0%, #e0b453 48%, #a8771f 100%);
-  --plata: linear-gradient(180deg, #ffffff 0%, #d6d6dc 55%, #9a9aa3 100%);
-
-  --sans: "Inter Tight", "Segoe UI", system-ui, sans-serif;
-  --serif: "Instrument Serif", Georgia, serif;
+  --manrope: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --inter: "Inter", "Segoe UI", system-ui, sans-serif;
+  /* La maqueta de tienda (maqueta.css) pinta su interfaz con `--sans`. */
+  --sans: var(--inter);
 
   --ancho: 1240px;
-  --gutter: clamp(16px, 4vw, 40px);
+  --gutter: clamp(18px, 4vw, 40px);
   --radio: 14px;
-  --radio-l: 22px;
+  --radio-l: 24px;
   --suave: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -50,7 +57,7 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  scroll-padding-top: 72px;
+  scroll-padding-top: 76px;
 }
 
 /* Lenis gestiona la inercia; el `smooth` nativo encima la duplicaría. */
@@ -64,11 +71,11 @@ html.lenis body {
 
 body {
   margin: 0;
-  background: var(--lienzo);
-  color: var(--texto);
-  font-family: var(--sans);
+  background: var(--grafito);
+  color: var(--nube);
+  font-family: var(--manrope);
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -82,7 +89,10 @@ body.sin-scroll {
 h1,
 h2,
 h3,
-p {
+p,
+dl,
+dd,
+figure {
   margin: 0;
 }
 
@@ -91,9 +101,14 @@ a {
   text-decoration: none;
 }
 
-button {
+button,
+input,
+textarea {
   font: inherit;
   color: inherit;
+}
+
+button {
   background: none;
   border: 0;
   padding: 0;
@@ -112,15 +127,26 @@ ul {
   list-style: none;
 }
 
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
 ::selection {
-  background: var(--rojo);
-  color: #fff;
+  background: var(--lima);
+  color: var(--grafito);
 }
 
 :focus-visible {
-  outline: 2px solid var(--rojo-vivo);
+  outline: 2px solid var(--lima);
   outline-offset: 3px;
   border-radius: 6px;
+}
+.escena--clara :focus-visible,
+.escena--nube2 :focus-visible {
+  outline-color: var(--grafito);
 }
 
 .saltar {
@@ -129,13 +155,28 @@ ul {
   top: -60px;
   z-index: 100;
   padding: 10px 16px;
-  background: var(--rojo);
+  background: var(--lima);
+  color: var(--grafito);
   border-radius: 10px;
+  font-family: var(--inter);
   font-weight: 600;
   transition: top 0.2s;
 }
 .saltar:focus {
   top: 16px;
+}
+
+/* Texto solo para lectores de pantalla. */
+.sr-solo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .contenedor {
@@ -145,44 +186,63 @@ ul {
   padding-inline: var(--gutter);
 }
 
+/* ------------------------------------------------------------------ */
+/* Escenas: cada una tiene su luz                                      */
+/* ------------------------------------------------------------------ */
+
 .seccion {
   position: relative;
-  padding-block: clamp(96px, 14vw, 180px);
+  padding-block: clamp(88px, 12vw, 160px);
+}
+.escena--oscura {
+  background: var(--grafito);
+  color: var(--nube);
+  --etiqueta: var(--lima);
+  --texto-medio: var(--texto-sobre-oscuro);
+}
+.escena--clara {
+  background: var(--nube);
+  color: var(--grafito);
+  --etiqueta: var(--grafito);
+  --texto-medio: var(--texto-sobre-claro);
+}
+.escena--nube2 {
+  background: var(--nube-2);
+  color: var(--grafito);
+  --etiqueta: var(--grafito);
+  --texto-medio: var(--texto-sobre-claro);
 }
 
 /* ------------------------------------------------------------------ */
 /* Tipografía compartida                                               */
 /* ------------------------------------------------------------------ */
 
+/* La etiqueta pequeña que identifica la escena. */
 .etiqueta {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  font-family: var(--inter);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--rojo-vivo);
+  color: var(--etiqueta, var(--lima));
 }
 .etiqueta::before {
   content: "";
-  width: 22px;
-  height: 1px;
-  background: currentColor;
-}
-
-/* La cursiva serif es la voz de la marca: la frase que se quiere recordar. */
-em {
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--lima);
+  box-shadow: 0 0 0 3px rgba(183, 243, 74, 0.25);
 }
 
 .encabezado {
   display: grid;
   gap: 20px;
-  max-width: 640px;
+  max-width: 720px;
+  margin-bottom: clamp(40px, 6vw, 72px);
 }
 .encabezado--centro {
   margin-inline: auto;
@@ -190,24 +250,32 @@ em {
   justify-items: center;
 }
 .encabezado__titulo {
-  font-size: clamp(36px, 5.4vw, 64px);
-  line-height: 1.02;
-  font-weight: 600;
+  font-size: clamp(34px, 5.2vw, 64px);
+  line-height: 1.04;
+  font-weight: 800;
   letter-spacing: -0.035em;
   text-wrap: balance;
 }
 .encabezado__titulo em {
-  display: inline;
-  background: var(--oro-metal);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  padding-right: 0.06em;
+  font-style: normal;
+  white-space: normal;
+}
+.escena--oscura .encabezado__titulo em {
+  color: var(--lima);
+}
+/* Sobre claro el lima no se lee como texto: se usa como marcador. */
+.escena--clara .encabezado__titulo em,
+.escena--nube2 .encabezado__titulo em {
+  background: linear-gradient(transparent 62%, var(--lima) 62%, var(--lima) 90%, transparent 90%);
+  padding-inline: 0.06em;
+  margin-inline: -0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 .encabezado__texto {
   font-size: clamp(16px, 1.4vw, 18px);
   color: var(--texto-medio);
-  max-width: 52ch;
+  max-width: 56ch;
   text-wrap: pretty;
 }
 
@@ -221,25 +289,15 @@ em {
   gap: 10px;
 }
 .logo__marca {
-  width: 38px;
+  width: 40px;
   height: auto;
 }
-/* Mayúsculas y espaciadas, como el logotipo: KRYON en plata y la X en oro. */
 .logo__nombre {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  background: var(--plata);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.logo__nombre b {
-  background: var(--oro-metal);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-weight: 700;
+  font-family: var(--manrope);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--nube);
 }
 
 /* ------------------------------------------------------------------ */
@@ -255,44 +313,57 @@ em {
   height: 52px;
   padding-inline: 26px;
   border-radius: 999px;
-  font-size: 15.5px;
+  font-family: var(--inter);
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   isolation: isolate;
-  transition: background 0.3s var(--suave), border-color 0.3s var(--suave), box-shadow 0.4s var(--suave);
+  transition: background 0.3s var(--suave), border-color 0.3s var(--suave), box-shadow 0.4s var(--suave), color 0.3s;
   will-change: transform;
+}
+.boton[disabled] {
+  opacity: 0.7;
+  cursor: progress;
 }
 .boton__icono {
   width: 18px;
   height: 18px;
+  flex: none;
   transition: transform 0.35s var(--suave);
 }
 .boton:hover .boton__icono {
   transform: translateX(4px);
 }
+.boton__icono--giro {
+  animation: giro 0.9s linear infinite;
+}
+.boton:hover .boton__icono--giro {
+  transform: none;
+}
+@keyframes giro {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
+/* Lima con texto grafito: el botón que actúa. Tiene el brillo que lo cruza al pasar. */
 .boton--primario {
-  background: var(--rojo);
-  color: #fff;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
-    0 10px 30px -8px rgba(225, 29, 42, 0.7);
+  background: var(--lima);
+  color: var(--grafito);
+  box-shadow: 0 10px 30px -10px rgba(183, 243, 74, 0.55);
 }
 .boton--primario:hover {
-  background: #4a76ff;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.2) inset,
-    0 16px 44px -8px rgba(225, 29, 42, 0.9);
+  background: var(--lima-vivo);
+  box-shadow: 0 16px 44px -10px rgba(183, 243, 74, 0.8);
 }
-/* El brillo que cruza el botón al pasar. */
 .boton--primario::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
   transform: translateX(-120%);
   transition: transform 0.8s var(--suave);
 }
@@ -300,15 +371,26 @@ em {
   transform: translateX(120%);
 }
 
+/* Sobre escenas oscuras. */
 .boton--secundario {
-  color: var(--texto);
-  border: 1px solid var(--linea-viva);
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--nube);
+  border: 1px solid var(--linea-oscura-viva);
+  background: rgba(245, 246, 242, 0.04);
   backdrop-filter: blur(10px);
 }
 .boton--secundario:hover {
-  border-color: rgba(255, 255, 255, 0.32);
-  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(245, 246, 242, 0.45);
+  background: rgba(245, 246, 242, 0.1);
+}
+
+/* Sobre escenas claras. */
+.boton--oscuro {
+  background: var(--grafito);
+  color: var(--nube);
+}
+.boton--oscuro:hover {
+  background: var(--grafito-3);
+  box-shadow: 0 14px 36px -12px rgba(16, 19, 17, 0.5);
 }
 
 .boton--fantasma {
@@ -318,60 +400,18 @@ em {
 }
 
 /* ------------------------------------------------------------------ */
-/* Insignia                                                            */
-/* ------------------------------------------------------------------ */
-
-.insignia {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 14px 7px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--linea-viva);
-  background: rgba(255, 255, 255, 0.03);
-  font-size: 13.5px;
-  color: var(--texto-medio);
-  backdrop-filter: blur(8px);
-}
-.insignia__punto {
-  position: relative;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--rojo-vivo);
-}
-.insignia__punto::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 1px solid var(--rojo-vivo);
-  animation: latido 2.2s var(--suave) infinite;
-}
-@keyframes latido {
-  from {
-    transform: scale(0.6);
-    opacity: 1;
-  }
-  to {
-    transform: scale(1.8);
-    opacity: 0;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Ventana de navegador                                                */
+/* Ventana de navegador (para las maquetas y las capturas)             */
 /* ------------------------------------------------------------------ */
 
 .marco {
   border-radius: var(--radio-l);
-  background: #0f0f11;
-  border: 1px solid var(--linea-viva);
+  background: var(--grafito-2);
+  border: 1px solid var(--linea-oscura-viva);
   overflow: hidden;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.4),
-    0 40px 80px -30px rgba(0, 0, 0, 0.8),
-    0 20px 60px -40px rgba(225, 29, 42, 0.4);
+    0 40px 80px -30px rgba(0, 0, 0, 0.7),
+    0 24px 70px -40px rgba(183, 243, 74, 0.28);
 }
 .marco__barra {
   display: grid;
@@ -380,8 +420,8 @@ em {
   gap: 12px;
   height: 38px;
   padding-inline: 14px;
-  border-bottom: 1px solid var(--linea);
-  background: var(--lienzo-alto);
+  border-bottom: 1px solid var(--linea-oscura);
+  background: var(--grafito);
 }
 .marco__semaforo {
   display: inline-flex;
@@ -391,7 +431,7 @@ em {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #2c2c31;
+  background: #2c312d;
 }
 .marco__semaforo i:first-child {
   background: #ff5f57;
@@ -410,9 +450,10 @@ em {
   max-width: 100%;
   padding: 4px 14px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(245, 246, 242, 0.06);
+  font-family: var(--inter);
   font-size: 12px;
-  color: var(--texto-medio);
+  color: var(--texto-sobre-oscuro);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -421,6 +462,48 @@ em {
   width: 11px;
   height: 11px;
   flex: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Teléfono (marco del móvil)                                          */
+/* ------------------------------------------------------------------ */
+
+.telefono {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 19;
+  padding: 7px;
+  border-radius: 30px;
+  background: var(--grafito);
+  border: 1px solid var(--linea-oscura-viva);
+  box-shadow:
+    0 30px 60px -20px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+.telefono__muesca {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 2;
+  width: 32%;
+  height: 8px;
+  border-radius: 99px;
+  background: #000;
+  transform: translateX(-50%);
+}
+.telefono__pantalla {
+  height: 100%;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #fff;
+}
+/* La tienda ocupa TODA la pantalla del teléfono: sin esto, lo que no cubre
+   su contenido se vería como un hueco blanco. */
+.telefono__pantalla > div {
+  height: 100%;
+}
+.telefono__pantalla .tm {
+  min-height: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
