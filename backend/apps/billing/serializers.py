@@ -7,6 +7,7 @@ además del crudo. `precio_mensual` viaja junto a la lista de precios, y
 reimplemente `Plan.importe_mensual()` y las dos versiones se separen el día que
 alguien añada una periodicidad.
 """
+import re
 from decimal import Decimal
 
 from rest_framework import serializers
@@ -311,6 +312,47 @@ class DomainPlataformaSerializer(serializers.Serializer):
     hostname = serializers.CharField()
     es_primario = serializers.BooleanField()
     verificado = serializers.BooleanField()
+
+
+_HOSTNAME = re.compile(
+    r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$"
+)
+
+
+class DominioEntradaSerializer(serializers.Serializer):
+    """
+    Añadir o editar un dominio de una empresa desde la plataforma.
+
+    El hostname se normaliza (minúsculas, sin protocolo ni barra final) y debe
+    ser único en toda la plataforma: dos empresas en el mismo host harían
+    imposible saber cuál atiende la petición.
+    """
+
+    hostname = serializers.CharField(max_length=253, required=False)
+    es_primario = serializers.BooleanField(required=False)
+    verificado = serializers.BooleanField(required=False)
+
+    def validate_hostname(self, valor):
+        limpio = (valor or "").strip().lower()
+        for prefijo in ("https://", "http://"):
+            if limpio.startswith(prefijo):
+                limpio = limpio[len(prefijo):]
+        limpio = limpio.split("/")[0].strip(".")
+        if not _HOSTNAME.match(limpio):
+            raise serializers.ValidationError(
+                "Escribe solo el dominio, por ejemplo tienda.midominio.com."
+            )
+        from apps.tenancy.context import ambito_de_plataforma  # noqa: PLC0415
+        from apps.tenancy.models import Domain  # noqa: PLC0415
+
+        actual = self.context.get("hostname_actual")
+        with ambito_de_plataforma():
+            repetido = Domain.objects.filter(hostname=limpio)
+            if actual:
+                repetido = repetido.exclude(hostname=actual)
+            if repetido.exists():
+                raise serializers.ValidationError("Ese dominio ya está conectado a una empresa.")
+        return limpio
 
 
 class MembershipPlataformaSerializer(serializers.Serializer):

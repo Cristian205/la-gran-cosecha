@@ -74,6 +74,8 @@ MIDDLEWARE = [
     # Primero de todos: responde /healthz sin validar el host ni tocar la base
     # de datos. Ver config/health.py.
     "config.health.HealthzMiddleware",
+    # Mantiene `settings` al día con las credenciales guardadas desde el panel.
+    "apps.billing.secretos.IntegracionesMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -402,6 +404,9 @@ EMAIL_TIMEOUT = 15
 # Clave de la API de Brevo. Si esta puesta, produccion envia por HTTPS en vez
 # de SMTP (ver prod.py): Render bloquea los puertos SMTP salientes.
 BREVO_API_KEY = env("BREVO_API_KEY", default="")
+# Clave con la que se cifran las credenciales guardadas desde el panel. Sin ella
+# se deriva de SECRET_KEY: definirla aparte permite rotar SECRET_KEY sin perderlas.
+INTEGRACIONES_CLAVE = env("INTEGRACIONES_CLAVE", default="")
 
 # ==========================================================================
 # WHATSAPP (apps.mensajeria) — Meta Cloud API con Twilio de respaldo

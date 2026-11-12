@@ -22,6 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tenancy.context import ambito_de_plataforma, usar_tenant
+from apps.tenancy.middleware import limpiar_cache_de_dominio
 from apps.tenancy.models import Domain, Tenant
 
 from .models import (
@@ -41,6 +42,7 @@ from .serializers import (
     CambiarPlanSerializer,
     CaracteristicaSerializer,
     DomainPlataformaSerializer,
+    DominioEntradaSerializer,
     DuplicarPlanSerializer,
     IdentidadNegocioSerializer,
     MembershipPlataformaSerializer,
@@ -419,23 +421,113 @@ class NegocioViewSet(BaseDePlataforma):
         )
         return Response(MembershipPlataformaSerializer(membresias, many=True).data)
 
-    @action(detail=True, methods=["get"])
+    @action(detail=True, methods=["get", "post"])
     def dominios(self, request, pk=None):
         """
-        El detalle de cada dominio: si es el principal, si ya se verificó.
+        GET: el detalle de cada dominio (principal, verificado).
+        POST: conectar un dominio nuevo a la empresa.
 
         `NegocioSerializer.dominios` solo trae el hostname —lo que ya
         consumen la búsqueda global y la tabla de empresas—; esto es lo que
-        hace falta además para que la pestaña «Dominios» muestre el detalle,
-        sin cambiarle la forma a nadie que ya lea la lista simple.
+        hace falta además para que la pestaña «Dominios» muestre y administre
+        el detalle, sin cambiarle la forma a nadie que ya lea la lista simple.
         """
         negocio = Tenant.objects.filter(pk=pk).first()
         if negocio is None:
             return Response({"detail": "No existe ese negocio."}, status=404)
 
-        return Response(
-            DomainPlataformaSerializer(negocio.dominios.all(), many=True).data
-        )
+        if request.method == "POST":
+            entrada = DominioEntradaSerializer(data=request.data)
+            entrada.is_valid(raise_exception=True)
+            datos = entrada.validated_data
+            if "hostname" not in datos:
+                return Response({"hostname": ["Escribe el dominio."]}, status=400)
+            with transaction.atomic():
+                # El primero que se conecta es el principal; después, solo si se pide.
+                primario = datos.get("es_primario", False) or not negocio.dominios.exists()
+                if primario:
+                    self._quitar_principal(negocio)
+                Domain.objects.create(
+                    tenant=negocio,
+                    hostname=datos["hostname"],
+                    es_primario=primario,
+                    verificado=datos.get("verificado", True),
+                )
+            return Response(self._dominios_de(negocio), status=201)
+
+        return Response(self._dominios_de(negocio))
+
+    @action(detail=True, methods=["patch"], url_path=r"dominios/(?P<hostname>[^/]+)")
+    def dominio(self, request, pk=None, hostname=None):
+        """
+        Editar un dominio: renombrarlo, hacerlo principal o (des)verificarlo.
+
+        Hacerlo principal le quita la marca al anterior en la misma transacción:
+        la base solo admite un principal por empresa.
+        """
+        negocio = Tenant.objects.filter(pk=pk).first()
+        dominio = negocio.dominios.filter(hostname=(hostname or "").lower()).first() if negocio else None
+        if dominio is None:
+            return Response({"detail": "No existe ese dominio en esta empresa."}, status=404)
+
+        entrada = DominioEntradaSerializer(data=request.data, context={"hostname_actual": dominio.hostname})
+        entrada.is_valid(raise_exception=True)
+        datos = entrada.validated_data
+
+        anterior = dominio.hostname
+        with transaction.atomic():
+            if datos.get("es_primario") is True and not dominio.es_primario:
+                self._quitar_principal(negocio)
+                dominio.es_primario = True
+            elif datos.get("es_primario") is False and dominio.es_primario:
+                # No se «quita» el principal sin elegir otro: queda el canonical ambiguo.
+                return Response(
+                    {"es_primario": ["Para cambiar el principal, marca otro dominio como principal."]},
+                    status=400,
+                )
+            if "hostname" in datos:
+                dominio.hostname = datos["hostname"]
+            if "verificado" in datos:
+                dominio.verificado = datos["verificado"]
+            dominio.save()
+        if dominio.hostname != anterior:
+            limpiar_cache_de_dominio(anterior)
+        return Response(self._dominios_de(negocio))
+
+    @action(detail=True, methods=["post"], url_path=r"dominios/(?P<hostname>[^/]+)/quitar")
+    def quitar_dominio(self, request, pk=None, hostname=None):
+        """
+        Desconectar un dominio. Es POST y no DELETE a propósito: este viewset
+        no admite `delete` para que nadie pueda borrar una empresa entera.
+
+        Si era el principal y quedan otros, el siguiente pasa a serlo.
+        """
+        negocio = Tenant.objects.filter(pk=pk).first()
+        dominio = negocio.dominios.filter(hostname=(hostname or "").lower()).first() if negocio else None
+        if dominio is None:
+            return Response({"detail": "No existe ese dominio en esta empresa."}, status=404)
+
+        with transaction.atomic():
+            era_principal = dominio.es_primario
+            dominio.delete()
+            if era_principal:
+                siguiente = negocio.dominios.order_by("hostname").first()
+                if siguiente:
+                    siguiente.es_primario = True
+                    siguiente.save(update_fields=["es_primario"])
+        return Response(self._dominios_de(negocio))
+
+    @staticmethod
+    def _quitar_principal(negocio):
+        # Instancia por instancia y no `update()`: así dispara la señal que
+        # invalida el caché de ese hostname.
+        for d in negocio.dominios.filter(es_primario=True):
+            d.es_primario = False
+            d.save(update_fields=["es_primario"])
+
+    @staticmethod
+    def _dominios_de(negocio):
+        return DomainPlataformaSerializer(negocio.dominios.all(), many=True).data
 
 
     @action(
