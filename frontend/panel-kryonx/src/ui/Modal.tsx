@@ -6,7 +6,8 @@
  * mirando la pantalla. Por eso `Confirmar` obliga a decir a quién afecta y qué
  * va a pasar, en vez de un "¿estás seguro?" que nadie lee.
  */
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Boton } from "./basicos";
 
@@ -16,6 +17,7 @@ export function Modal({
   ancho = 460,
   onCerrar,
   pie,
+  cabeceraExtra,
   children,
 }: {
   titulo: ReactNode;
@@ -23,6 +25,8 @@ export function Modal({
   ancho?: number;
   onCerrar: () => void;
   pie?: ReactNode;
+  /** Pasos o pestañas pegados bajo el título, fuera del cuerpo con scroll. */
+  cabeceraExtra?: ReactNode;
   children?: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -42,12 +46,15 @@ export function Modal({
     };
   }, [onCerrar]);
 
-  return (
+  // En `body` y no donde se invoca: un ancestro con `transform` (la transición de
+  // página) convierte `position: fixed` en relativo a él y el modal dejaba de
+  // cubrir la ventana.
+  return createPortal(
     <div className="velo" onMouseDown={onCerrar}>
       <div
         ref={panel}
         className="modal"
-        style={{ maxWidth: ancho }}
+        style={{ "--ancho": `${ancho}px` } as CSSProperties}
         role="dialog"
         aria-modal="true"
         aria-label={typeof titulo === "string" ? titulo : undefined}
@@ -68,10 +75,16 @@ export function Modal({
             <X size={16} />
           </button>
         </header>
-        {children && <div className="modal__cuerpo">{children}</div>}
+        {cabeceraExtra && <div className="modal__extra">{cabeceraExtra}</div>}
+        {children && (
+          <div className="modal__cuerpo">
+            <div className="modal__interior">{children}</div>
+          </div>
+        )}
         {pie && <footer className="modal__pie">{pie}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

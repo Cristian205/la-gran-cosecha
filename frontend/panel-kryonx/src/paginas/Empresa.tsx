@@ -10,19 +10,9 @@
  * directo a la suscripción de un cliente y para que el botón de atrás funcione.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Link, NavLink, Navigate, useNavigate, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  Ban,
-  Globe,
-  IdCard,
-  Layers,
-  PlayCircle,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { Link, Navigate, useParams } from "react-router-dom";
+import { Layers, Users } from "lucide-react";
 import type {
-  DominioDetalle,
   MiembroEquipo,
   Negocio,
   Permiso,
@@ -40,31 +30,21 @@ import {
 } from "../datos/derivados";
 import { fechaCorta, moneda, numero, relativo, tamano } from "../datos/formato";
 import { Aviso, Boton, Dato, EstadoVacio, Esqueleto, Insignia, Tarjeta } from "../ui/basicos";
-import { Menu, OpcionMenu, SeparadorMenu } from "../ui/Menu";
 import { IndicadorUso } from "../ui/Uso";
 import { usarAviso } from "../ui/Notificaciones";
-import { EstadoEmpresa, EstadoSuscripcionInsignia, PlanEtiqueta } from "../componentes/piezas";
+import { EstadoSuscripcionInsignia } from "../componentes/piezas";
 import { LineaActividad } from "../componentes/LineaActividad";
 import { PanelAlertas } from "../componentes/PanelAlertas";
 import { DialogoEstado, DialogoPlan } from "../componentes/dialogos";
-import { AvatarEmpresa } from "../componentes/empresas/piezas";
+import { ProductosEmpresa } from "../componentes/empresas/ProductosEmpresa";
 import { IdentidadCorporativa } from "../componentes/empresas/IdentidadCorporativa";
+import { CabeceraEmpresa } from "../componentes/empresas/CabeceraEmpresa";
+import { DominiosEmpresa } from "../componentes/empresas/DominiosEmpresa";
 
-const PESTANAS = [
-  { ruta: "", etiqueta: "Resumen" },
-  { ruta: "suscripcion", etiqueta: "Suscripción" },
-  { ruta: "modulos", etiqueta: "Módulos" },
-  { ruta: "usuarios", etiqueta: "Usuarios" },
-  { ruta: "dominios", etiqueta: "Dominios" },
-  { ruta: "uso", etiqueta: "Uso" },
-  { ruta: "actividad", etiqueta: "Actividad" },
-  { ruta: "identidad", etiqueta: "Identidad" },
-];
 
 export function Empresa() {
   const { id, pestana = "" } = useParams();
   const plataforma = usarPlataforma();
-  const navegar = useNavigate();
   const [cambiandoPlan, setCambiandoPlan] = useState(false);
   const [cambiandoEstado, setCambiandoEstado] = useState<Negocio["estado"] | null>(null);
 
@@ -84,92 +64,13 @@ export function Empresa() {
 
   return (
     <>
-      <Link to="/empresas" className="volver">
-        <ArrowLeft size={14} /> Empresas
-      </Link>
-
-      <header className="ficha">
-        <AvatarEmpresa negocio={negocio} tamano="xl" className="ficha__avatar" />
-        <div className="ficha__identidad">
-          <h1>{negocio.nombre}</h1>
-          <p className="ficha__meta">
-            <code>{negocio.slug}</code>
-            <EstadoEmpresa estado={negocio.estado} />
-            <PlanEtiqueta
-              nombre={negocio.plan?.nombre}
-              href={`/empresas/${negocio.id}/suscripcion`}
-            />
-            <span className="tenue">alta {relativo(negocio.fecha_creacion)}</span>
-          </p>
-        </div>
-        <div className="ficha__acciones">
-          <Boton onClick={() => setCambiandoPlan(true)} icono={<Layers size={14} />}>
-            Cambiar de plan
-          </Boton>
-          <Menu etiqueta="Más acciones">
-            {(cerrar) => (
-              <>
-                <OpcionMenu
-                  icono={<IdCard size={14} />}
-                  onClick={() => {
-                    cerrar();
-                    navegar(`/empresas/${negocio.id}/identidad`);
-                  }}
-                >
-                  Editar identidad corporativa
-                </OpcionMenu>
-                <SeparadorMenu />
-                {negocio.estado !== "ACTIVO" && (
-                  <OpcionMenu
-                    icono={<PlayCircle size={14} />}
-                    onClick={() => {
-                      cerrar();
-                      setCambiandoEstado("ACTIVO");
-                    }}
-                  >
-                    Marcar como activa…
-                  </OpcionMenu>
-                )}
-                {negocio.estado !== "SUSPENDIDO" && (
-                  <OpcionMenu
-                    icono={<Ban size={14} />}
-                    peligrosa
-                    onClick={() => {
-                      cerrar();
-                      setCambiandoEstado("SUSPENDIDO");
-                    }}
-                  >
-                    Suspender…
-                  </OpcionMenu>
-                )}
-                <SeparadorMenu />
-                <OpcionMenu
-                  peligrosa
-                  onClick={() => {
-                    cerrar();
-                    setCambiandoEstado("ARCHIVADO");
-                  }}
-                  disabled={negocio.estado === "ARCHIVADO"}
-                >
-                  Archivar…
-                </OpcionMenu>
-              </>
-            )}
-          </Menu>
-        </div>
-      </header>
-
-      <nav className="pestanas" aria-label="Secciones de la empresa">
-        {PESTANAS.map((p) => (
-          <NavLink
-            key={p.ruta}
-            end={p.ruta === ""}
-            to={`/empresas/${negocio.id}${p.ruta ? `/${p.ruta}` : ""}`}
-          >
-            {p.etiqueta}
-          </NavLink>
-        ))}
-      </nav>
+      <CabeceraEmpresa
+        negocio={negocio}
+        plan={plan}
+        suscripcion={suscripcion}
+        onCambiarPlan={() => setCambiandoPlan(true)}
+        onEstado={setCambiandoEstado}
+      />
 
       <Contenido pestana={pestana} negocio={negocio} plan={plan} suscripcion={suscripcion} />
 
@@ -199,12 +100,14 @@ function Contenido({ pestana, ...ctx }: Contexto & { pestana: string }) {
       return <VistaResumen {...ctx} />;
     case "suscripcion":
       return <VistaSuscripcion {...ctx} />;
+    case "productos":
+      return <ProductosEmpresa negocio={ctx.negocio} plan={ctx.plan} suscripcion={ctx.suscripcion} />;
     case "modulos":
       return <VistaModulos {...ctx} />;
     case "usuarios":
       return <VistaUsuarios {...ctx} />;
     case "dominios":
-      return <VistaDominios {...ctx} />;
+      return <DominiosEmpresa negocio={ctx.negocio} plan={ctx.plan} suscripcion={ctx.suscripcion} />;
     case "uso":
       return <VistaUso {...ctx} />;
     case "actividad":
@@ -226,8 +129,17 @@ function VistaResumen({ negocio, plan, suscripcion }: Contexto) {
     (a) => a.negocioId === negocio.id
   );
 
+  const atencion = (
+    <div className={alertas.length > 0 ? "ce-atencion" : undefined} style={alertas.length > 0 ? { gridColumn: "1 / -1" } : undefined}>
+      <Tarjeta titulo={alertas.length > 0 ? `Requiere atención (${alertas.length})` : "Atención"}>
+        <PanelAlertas alertas={alertas} cuantas={4} />
+      </Tarjeta>
+    </div>
+  );
+
   return (
     <div className="grid items-start gap-3 grid-cols-[repeat(auto-fit,minmax(290px,1fr))]">
+      {alertas.length > 0 && atencion}
       <Tarjeta
         titulo="Suscripción"
         accion={
@@ -306,9 +218,7 @@ function VistaResumen({ negocio, plan, suscripcion }: Contexto) {
         )}
       </Tarjeta>
 
-      <Tarjeta titulo="Atención">
-        <PanelAlertas alertas={alertas} cuantas={4} />
-      </Tarjeta>
+      {alertas.length === 0 && atencion}
     </div>
   );
 }
@@ -742,78 +652,6 @@ function VistaUsuarios({ negocio, plan, suscripcion }: Contexto) {
 }
 
 // ----------------------------------------------------------------- dominios
-
-function VistaDominios({ negocio }: Contexto) {
-  const { dominiosDe } = usarPlataforma();
-  const [detalle, setDetalle] = useState<DominioDetalle[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let vigente = true;
-    setDetalle(null);
-    dominiosDe(negocio.id)
-      .then((datos) => vigente && setDetalle(datos))
-      .catch((e) => vigente && setError((e as Error).message));
-    return () => {
-      vigente = false;
-    };
-  }, [negocio.id, dominiosDe]);
-
-  if (error) {
-    return (
-      <Tarjeta titulo="Dominios">
-        <Aviso>{error}</Aviso>
-      </Tarjeta>
-    );
-  }
-
-  if (detalle === null) {
-    return (
-      <Tarjeta titulo="Dominios">
-        <Esqueleto alto={80} />
-      </Tarjeta>
-    );
-  }
-
-  if (detalle.length === 0) {
-    return (
-      <Tarjeta titulo="Dominios">
-        <EstadoVacio icono={Globe} titulo="Sin dominios configurados">
-          Esta empresa todavía no responde en ninguna dirección.
-        </EstadoVacio>
-      </Tarjeta>
-    );
-  }
-
-  return (
-    <Tarjeta titulo="Dominios">
-      <ul className="dominios">
-        {detalle.map((dominio) => (
-          <li key={dominio.hostname}>
-            <Globe size={15} />
-            <span className="dominios__nombre">{dominio.hostname}</span>
-            {dominio.es_primario && <span className="insignia insignia--info">principal</span>}
-            {dominio.verificado ? (
-              <span className="insignia insignia--ok">
-                <ShieldCheck size={11} /> verificado
-              </span>
-            ) : (
-              <span className="insignia insignia--aviso">sin verificar</span>
-            )}
-            <a
-              href={`https://${dominio.hostname}`}
-              target="_blank"
-              rel="noreferrer"
-              className="enlace-accion"
-            >
-              Abrir
-            </a>
-          </li>
-        ))}
-      </ul>
-    </Tarjeta>
-  );
-}
 
 // ---------------------------------------------------------------------- uso
 

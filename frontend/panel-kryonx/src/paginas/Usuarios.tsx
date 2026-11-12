@@ -34,24 +34,15 @@ export function Usuarios() {
     <>
       <EncabezadoPagina
         antetitulo="Negocio"
+        icono={IconoUsuarios}
         titulo="Usuarios"
         descripcion="Las personas con acceso a cada empresa. Cada negocio los gestiona desde su propio panel; aquí se consultan."
-      >
-        <dl className="resumen-linea">
-          <div>
-            <dt>Usuarios</dt>
-            <dd>{numero(filas.length)}</dd>
-          </div>
-          <div>
-            <dt>Activos</dt>
-            <dd>{numero(activos)}</dd>
-          </div>
-          <div>
-            <dt>Empresas</dt>
-            <dd>{numero(empresas)}</dd>
-          </div>
-        </dl>
-      </EncabezadoPagina>
+        cifras={[
+          { etiqueta: "Usuarios", valor: numero(filas.length) },
+          { etiqueta: "Activos", valor: numero(activos) },
+          { etiqueta: "Empresas", valor: numero(empresas) },
+        ]}
+      />
 
       {error && <Aviso>{error}</Aviso>}
 

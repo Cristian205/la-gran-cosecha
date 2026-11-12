@@ -7,7 +7,7 @@
  * evento allí, hay que añadirlo aquí: la lista es corta y cambia poco.
  */
 import type { ReactNode } from "react";
-import { Bell, MessageCircle, Store, User } from "lucide-react";
+import { Bell, MessageCircle, Store, User, Workflow } from "lucide-react";
 import { Insignia, Tarjeta } from "../ui/basicos";
 import { EncabezadoPagina } from "../componentes/piezas";
 
@@ -58,9 +58,15 @@ export function Automatizaciones() {
     <>
       <EncabezadoPagina
         antetitulo="Sistema"
+        icono={Workflow}
         titulo="Automatizaciones"
         descripcion="Lo que la plataforma hace sola cuando algo ocurre en una tienda."
         acciones={<Insignia tono="info">Canal: WhatsApp</Insignia>}
+        cifras={[
+          { etiqueta: "Flujos", valor: AL_CLIENTE.length + AL_NEGOCIO.length },
+          { etiqueta: "Avisos al cliente", valor: AL_CLIENTE.length },
+          { etiqueta: "Alertas al negocio", valor: AL_NEGOCIO.length },
+        ]}
       />
       <p className="nota-seccion">
         Cada empresa las enciende desde su configuración de WhatsApp y puede apagar eventos sueltos.

@@ -14,6 +14,7 @@ export function Auditoria() {
     <>
       <EncabezadoPagina
         antetitulo="Administración"
+        icono={ScrollText}
         titulo="Auditoría"
         descripcion="El registro de cada cambio hecho desde el Control Center."
       />

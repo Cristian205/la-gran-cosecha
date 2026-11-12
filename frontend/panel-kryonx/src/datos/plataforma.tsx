@@ -74,6 +74,17 @@ interface Plataforma extends Datos {
   /** Por empresa y bajo demanda: no son catálogos que casi toda pantalla use. */
   equipoDe: (negocioId: number) => Promise<MiembroEquipo[]>;
   dominiosDe: (negocioId: number) => Promise<DominioDetalle[]>;
+  /** Conectar, editar y quitar dominios. Cada una devuelve la lista ya actualizada. */
+  agregarDominio: (
+    negocioId: number,
+    datos: { hostname: string; es_primario?: boolean; verificado?: boolean }
+  ) => Promise<DominioDetalle[]>;
+  editarDominio: (
+    negocioId: number,
+    hostname: string,
+    cambios: { hostname?: string; es_primario?: boolean; verificado?: boolean }
+  ) => Promise<DominioDetalle[]>;
+  quitarDominio: (negocioId: number, hostname: string) => Promise<DominioDetalle[]>;
 }
 
 const Contexto = createContext<Plataforma | null>(null);
@@ -119,6 +130,15 @@ export function ProveedorPlataforma({ children }: { children: ReactNode }) {
   useEffect(() => {
     void recargar();
   }, [recargar]);
+
+  const sincronizarDominios = useCallback((negocioId: number, lista: DominioDetalle[]) => {
+    setDatos((previos) => ({
+      ...previos,
+      negocios: previos.negocios.map((n) =>
+        n.id === negocioId ? { ...n, dominios: lista.map((d) => d.hostname) } : n
+      ),
+    }));
+  }, []);
 
   const valor = useMemo<Plataforma>(() => {
     const porTenant = new Map(datos.suscripciones.map((s) => [s.tenant, s]));
@@ -328,8 +348,32 @@ export function ProveedorPlataforma({ children }: { children: ReactNode }) {
       equipoDe: (negocioId) => api.get<MiembroEquipo[]>(`/platform/tenants/${negocioId}/equipo/`),
       dominiosDe: (negocioId) =>
         api.get<DominioDetalle[]>(`/platform/tenants/${negocioId}/dominios/`),
+
+      // Tras cada cambio se sincroniza la lista simple de la empresa (la que lee
+      // la tabla y el buscador) con lo que el servidor devolvió.
+      async agregarDominio(negocioId, datos) {
+        const lista = await api.post<DominioDetalle[]>(`/platform/tenants/${negocioId}/dominios/`, datos);
+        sincronizarDominios(negocioId, lista);
+        return lista;
+      },
+      async editarDominio(negocioId, hostname, cambios) {
+        const lista = await api.patch<DominioDetalle[]>(
+          `/platform/tenants/${negocioId}/dominios/${encodeURIComponent(hostname)}/`,
+          cambios
+        );
+        sincronizarDominios(negocioId, lista);
+        return lista;
+      },
+      async quitarDominio(negocioId, hostname) {
+        const lista = await api.post<DominioDetalle[]>(
+          `/platform/tenants/${negocioId}/dominios/${encodeURIComponent(hostname)}/quitar/`,
+          {}
+        );
+        sincronizarDominios(negocioId, lista);
+        return lista;
+      },
     };
-  }, [datos, cargando, error, recargar]);
+  }, [datos, cargando, error, recargar, sincronizarDominios]);
 
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

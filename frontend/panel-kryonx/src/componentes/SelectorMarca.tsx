@@ -41,6 +41,16 @@ export function NombreMarca({ marca }: { marca: Marca }) {
       </span>
     );
   }
+  // La marca de sistema es CrafTeech: la T en mayúscula y las dos «ee» en verde.
+  if (marca.sistema) {
+    return (
+      <span className="nombre-marca" aria-label="CrafTeech">
+        <span aria-hidden="true">
+          CrafT<i className="nombre-marca__ee">ee</i>ch
+        </span>
+      </span>
+    );
+  }
   return <span className="nombre-marca">{marca.nombre}</span>;
 }
 

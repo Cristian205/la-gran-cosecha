@@ -22,6 +22,7 @@ import { Negocios } from "./paginas/Negocios";
 import { Planes } from "./paginas/Planes";
 import { Plantillas } from "./paginas/Plantillas";
 import { Presets } from "./paginas/Presets";
+import { ProductoFicha } from "./paginas/ProductoFicha";
 import { Productos } from "./paginas/Productos";
 import { Resumen } from "./paginas/Resumen";
 import { Suscripciones } from "./paginas/Suscripciones";
@@ -83,6 +84,8 @@ function Panel({ alSalir }: { alSalir: () => void }) {
               <Route path="/usuarios" element={<Usuarios />} />
               <Route path="/suscripciones" element={<Suscripciones />} />
               <Route path="/productos" element={<Productos />} />
+              <Route path="/productos/:id" element={<ProductoFicha />} />
+              <Route path="/productos/:id/:pestana" element={<ProductoFicha />} />
               <Route path="/planes" element={<Planes />} />
               <Route path="/plantillas" element={<Plantillas />} />
               <Route path="/presets" element={<Presets />} />

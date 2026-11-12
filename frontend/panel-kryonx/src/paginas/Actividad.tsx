@@ -6,6 +6,7 @@
  * registros—, entera y filtrable. No es una auditoría: eso necesita una tabla
  * que el backend todavía no tiene, y la pantalla lo dice.
  */
+import { Activity } from "lucide-react";
 import { useMemo, useState } from "react";
 import { usarPlataforma } from "../datos/plataforma";
 import { actividadDe, type TipoEvento } from "../datos/derivados";
@@ -32,8 +33,10 @@ export function Actividad() {
     <>
       <EncabezadoPagina
         antetitulo="Visión general"
+        icono={Activity}
         titulo="Actividad"
         descripcion="Lo que ha pasado en la plataforma, del más reciente al más antiguo."
+        cifras={[{ etiqueta: "Eventos", valor: eventos.length }]}
       />
       {error && <Aviso>{error}</Aviso>}
 

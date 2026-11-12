@@ -15,8 +15,9 @@ import {
 } from "../datos/derivados";
 import { diasHasta, fechaCorta, moneda, numero, relativo } from "../datos/formato";
 import type { EstadoSuscripcion } from "../api/tipos";
+import { CreditCard } from "lucide-react";
 import { Aviso, EstadoVacio, Esqueleto, Insignia } from "../ui/basicos";
-import { EstadoSuscripcionInsignia } from "../componentes/piezas";
+import { EncabezadoPagina, EstadoSuscripcionInsignia } from "../componentes/piezas";
 
 const ESTADOS: EstadoSuscripcion[] = ["ACTIVA", "PRUEBA", "VENCIDA", "CANCELADA"];
 
@@ -70,28 +71,17 @@ export function Suscripciones() {
 
   return (
     <>
-      <header className="titulo-pagina titulo-pagina--con-resumen">
-        <div>
-          <h1>Suscripciones</h1>
-          <p className="tenue">
-            Qué plan tiene cada empresa contratado, desde cuándo y hasta cuándo.
-          </p>
-        </div>
-        <dl className="resumen-linea">
-          <div>
-            <dt>MRR</dt>
-            <dd>{moneda(cifras.mrr, cifras.moneda)}</dd>
-          </div>
-          <div>
-            <dt>Renuevan en {HORIZONTE} días</dt>
-            <dd className={porRenovar ? "es-aviso" : undefined}>{numero(porRenovar)}</dd>
-          </div>
-          <div>
-            <dt>Vencidas</dt>
-            <dd className={vencidas ? "es-malo" : undefined}>{numero(vencidas)}</dd>
-          </div>
-        </dl>
-      </header>
+      <EncabezadoPagina
+        antetitulo="Negocio"
+        icono={CreditCard}
+        titulo="Suscripciones"
+        descripcion="Qué plan tiene cada empresa contratado, desde cuándo y hasta cuándo."
+        cifras={[
+          { etiqueta: "MRR", valor: moneda(cifras.mrr, cifras.moneda) },
+          { etiqueta: `Renuevan en ${HORIZONTE} días`, valor: numero(porRenovar), tono: porRenovar ? "aviso" : undefined },
+          { etiqueta: "Vencidas", valor: numero(vencidas), tono: vencidas ? "malo" : undefined },
+        ]}
+      />
 
       {error && <Aviso>{error}</Aviso>}
 

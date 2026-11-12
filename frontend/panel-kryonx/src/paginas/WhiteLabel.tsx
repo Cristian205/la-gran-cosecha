@@ -7,7 +7,7 @@
  * botón, para que nadie crea que un cliente ya está viendo su marca.
  */
 import { useState } from "react";
-import { Check, Info, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Info, Palette, Pencil, Plus, Trash2 } from "lucide-react";
 import { usarMarca } from "../marca/ProveedorMarca";
 import { MARCA_KRYON } from "../marca/kryon";
 import type { Marca } from "../marca/tipos";
@@ -43,6 +43,7 @@ export function WhiteLabel() {
       <>
         <EncabezadoPagina
           antetitulo="Marca · White Label"
+          icono={Palette}
           titulo={existe ? `Editar ${editando.nombre}` : "Nueva marca"}
           descripcion="Configura la marca y mírala en la vista previa antes de publicarla."
           acciones={
@@ -91,6 +92,7 @@ export function WhiteLabel() {
     <>
       <EncabezadoPagina
         antetitulo="Marca"
+        icono={Palette}
         titulo="White Label"
         descripcion="Las marcas con las que puede vestirse el Control Center. Todas comparten el mismo sistema: cambian tokens, logo y tipografía, nunca componentes."
         acciones={

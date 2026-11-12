@@ -29,7 +29,10 @@ import {
   type Preset,
 } from "../api/negocio";
 import { Aviso, Boton, Campo, Esqueleto, EstadoVacio, Insignia } from "../ui/basicos";
-import { Confirmar, Modal } from "../ui/Modal";
+import { ModalAsistente, Resumen } from "../ui/Asistente";
+import { Confirmar } from "../ui/Modal";
+import { EncabezadoPagina } from "../componentes/piezas";
+import "./productos.css";
 import { usarAviso } from "../ui/Notificaciones";
 
 function presetVacio(): Partial<Preset> {
@@ -182,18 +185,22 @@ export function Presets() {
 
   return (
     <>
-      <header className="titulo-pagina titulo-pagina--con-resumen">
-        <div>
-          <h1>Presets de negocio</h1>
-          <p className="tenue">
-            El punto de partida de cada tipo de negocio. Adoptarlo copia estos
-            valores; editarlos aquí no cambia a ningún cliente que ya lo tenga.
-          </p>
-        </div>
-        <Boton variante="primario" icono={<Plus size={14} />} onClick={() => setCreando(true)}>
-          Nuevo preset
-        </Boton>
-      </header>
+      <EncabezadoPagina
+        antetitulo="Producto"
+        icono={Wand2}
+        titulo="Presets de negocio"
+        descripcion="El punto de partida de cada tipo de negocio. Adoptarlo copia estos valores; editarlos aquí no cambia a ningún cliente que ya lo tenga."
+        acciones={
+          <Boton variante="primario" icono={<Plus size={14} />} onClick={() => setCreando(true)}>
+            Nuevo preset
+          </Boton>
+        }
+        cifras={[
+          { etiqueta: "Presets", valor: presets.length },
+          { etiqueta: "Activos", valor: presets.filter((p) => p.activo).length },
+          { etiqueta: "Retirados", valor: presets.filter((p) => !p.activo).length },
+        ]}
+      />
 
       {error && <Aviso>{error}</Aviso>}
 
@@ -210,7 +217,7 @@ export function Presets() {
           Sin ninguno, el alta de un negocio no tiene nada que sugerir.
         </EstadoVacio>
       ) : (
-        <div className="grid gap-3 items-start grid-cols-[minmax(0,240px)_minmax(0,1fr)]">
+        <div className="prod-maestro">
           {/* ---------- la lista ---------- */}
           <nav className="tarjeta" aria-label="Presets">
             <div className="tarjeta__cuerpo flex flex-col gap-1">
@@ -220,7 +227,7 @@ export function Presets() {
                   type="button"
                   onClick={() => setElegido(p.slug)}
                   className={`text-left rounded px-3 py-2 ${
-                    elegido === p.slug ? "bg-[var(--acento-suave,#eef2ff)] font-semibold" : ""
+                    elegido === p.slug ? "prod-sel font-semibold" : ""
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -448,28 +455,41 @@ export function Presets() {
       )}
 
       {creando && (
-        <Modal
+        <ModalAsistente
           titulo="Nuevo preset"
           descripcion="Un tipo de negocio nuevo. No hace falta tocar código."
+          trabajando={guardando}
+          etiquetaFinal="Crear preset"
           onCerrar={() => setCreando(false)}
-          pie={
-            <>
-              <Boton onClick={() => setCreando(false)}>Cancelar</Boton>
-              <Boton variante="primario" cargando={guardando} onClick={crear}>
-                Crear
-              </Boton>
-            </>
-          }
-        >
-          <Campo etiqueta="Nombre" ayuda="Por ejemplo: Floristería, Panadería, Perfumería.">
-            <input
-              autoFocus
-              value={nombreNuevo}
-              onChange={(e) => setNombreNuevo(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && crear()}
-            />
-          </Campo>
-        </Modal>
+          onFinalizar={crear}
+          pasos={[
+            {
+              id: "nombre",
+              titulo: "Nombre",
+              valido: Boolean(nombreNuevo.trim()),
+              contenido: (
+                <Campo etiqueta="Nombre" ayuda="Por ejemplo: Floristería, Panadería, Perfumería.">
+                  <input autoFocus value={nombreNuevo} onChange={(e) => setNombreNuevo(e.target.value)} />
+                </Campo>
+              ),
+            },
+            {
+              id: "revision",
+              titulo: "Revisión",
+              contenido: (
+                <>
+                  <Resumen
+                    filas={[
+                      { etiqueta: "Nombre", valor: nombreNuevo.trim() },
+                      { etiqueta: "Capacidades", valor: "Por defecto; se eligen al editarlo" },
+                    ]}
+                  />
+                  <p className="tenue text-xs">Al crearlo se abre su editor para fijar sector, capacidades y módulos.</p>
+                </>
+              ),
+            },
+          ]}
+        />
       )}
 
       {borrando && (

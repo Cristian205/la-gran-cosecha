@@ -12,11 +12,12 @@
  * entero sí se confirma: eso lo apaga en todas las empresas a la vez.
  */
 import { Fragment, useMemo, useState } from "react";
-import { Check, Minus, Pencil, Plus, Power, Search } from "lucide-react";
+import { Check, Minus, Pencil, Plus, Power, Search, ShieldCheck } from "lucide-react";
 import type { Permiso } from "../api/tipos";
 import { usarPlataforma } from "../datos/plataforma";
 import { moneda } from "../datos/formato";
 import { Aviso, Boton, Campo, EstadoVacio, Esqueleto } from "../ui/basicos";
+import { EncabezadoPagina } from "../componentes/piezas";
 import { Confirmar, Modal } from "../ui/Modal";
 import { usarAviso } from "../ui/Notificaciones";
 
@@ -104,30 +105,33 @@ export function Matriz() {
 
   return (
     <>
-      <header className="titulo-pagina titulo-pagina--con-resumen">
-        <div>
-          <h1>Permisos</h1>
-          <p className="tenue">
-            Qué concede cada plan. El plan marca el techo de una empresa; quién
-            hace qué dentro de ella lo reparte su propio panel. Un permiso
-            retirado desaparece de todos los negocios, sea cual sea su plan.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="filtros__buscar filtros__buscar--suelto">
-            <Search size={15} />
-            <input
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder="Filtrar permisos…"
-              aria-label="Filtrar permisos"
-            />
-          </div>
-          <Boton variante="primario" icono={<Plus size={14} />} onClick={() => setCreando(true)}>
-            Nuevo permiso
-          </Boton>
-        </div>
-      </header>
+      <EncabezadoPagina
+        antetitulo="Sistema"
+        icono={ShieldCheck}
+        titulo="Permisos"
+        descripcion="Qué concede cada plan. El plan marca el techo de una empresa; quién hace qué dentro de ella lo reparte su propio panel. Un permiso retirado desaparece de todos los negocios, sea cual sea su plan."
+        acciones={
+          <>
+            <div className="filtros__buscar filtros__buscar--suelto">
+              <Search size={15} />
+              <input
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                placeholder="Filtrar permisos…"
+                aria-label="Filtrar permisos"
+              />
+            </div>
+            <Boton variante="primario" icono={<Plus size={14} />} onClick={() => setCreando(true)}>
+              Nuevo permiso
+            </Boton>
+          </>
+        }
+        cifras={[
+          { etiqueta: "Permisos activos", valor: permisos.filter((p) => p.activo).length },
+          { etiqueta: "Módulos", valor: new Set(permisos.filter((p) => p.activo).map((p) => p.modulo)).size },
+          { etiqueta: "Planes", valor: planes.length },
+        ]}
+      />
 
       {error && <Aviso>{error}</Aviso>}
 
@@ -155,7 +159,7 @@ export function Matriz() {
                     </span>
                   </th>
                 ))}
-                <th className="col-estado">En Kryon X</th>
+                <th className="col-estado">En CrafTeech</th>
               </tr>
             </thead>
 
@@ -198,7 +202,7 @@ export function Matriz() {
                               title={
                                 permiso.activo
                                   ? undefined
-                                  : "Este permiso está retirado de Kryon X"
+                                  : "Este permiso está retirado de CrafTeech"
                               }
                             >
                               {incluido ? <Check size={14} /> : <Minus size={12} />}
@@ -235,7 +239,7 @@ export function Matriz() {
       {retirando && (
         <Confirmar
           titulo={`Retirar ${retirando.etiqueta}`}
-          afecta="Todas las empresas de Kryon X"
+          afecta="Todas las empresas de CrafTeech"
           etiquetaAccion="Retirar el permiso"
           peligrosa
           trabajando={trabajando}
@@ -348,7 +352,7 @@ function ModalPermiso({
     >
       {error && <Aviso>{error}</Aviso>}
 
-      <Campo etiqueta="Producto" ayuda="A qué solución de Kryon X pertenece.">
+      <Campo etiqueta="Producto" ayuda="A qué solución de CrafTeech pertenece.">
         <select value={producto} onChange={(e) => setProducto(e.target.value)}>
           <option value="">Sin producto</option>
           {productos.map((p) => (
