@@ -99,7 +99,7 @@ export function aplicarMarca(marca: Marca): void {
   aplicarTokens(marca, document.documentElement);
   // La marca de sistema es la propia plataforma, que ahora se llama Crafteech;
   // las marcas que el equipo crea en Identidad conservan su título.
-  document.title = marca.sistema ? "Crafteech" : `${marca.nombre} · ${marca.lema}`;
+  document.title = marca.sistema ? "CrafTeech" : `${marca.nombre} · ${marca.lema}`;
   if (marca.favicon) {
     let icono = document.querySelector<HTMLLinkElement>("link[rel='icon'][data-marca]");
     if (!icono) {

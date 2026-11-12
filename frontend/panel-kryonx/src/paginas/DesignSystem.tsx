@@ -7,7 +7,7 @@
  * aquí, se ve mal en todo el panel, que es justo para lo que sirve.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { Bell, Building2, Check, LayoutDashboard, Plus, Search, Users } from "lucide-react";
+import { Bell, BookOpen, Building2, Check, LayoutDashboard, Plus, Search, Users } from "lucide-react";
 import { usarMarca } from "../marca/ProveedorMarca";
 import { Aviso, Boton, Campo, EstadoVacio, Insignia, Tarjeta } from "../ui/basicos";
 import { Modal } from "../ui/Modal";
@@ -82,6 +82,7 @@ export function DesignSystem() {
     <>
       <EncabezadoPagina
         antetitulo="Marca"
+        icono={BookOpen}
         titulo="Design System"
         descripcion={`Los tokens y componentes de los que está hecho el Control Center, vestidos ahora con ${activa.nombre}. Cualquier plantilla futura se construye con estas mismas piezas.`}
       />

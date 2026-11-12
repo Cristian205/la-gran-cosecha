@@ -26,7 +26,7 @@ import { Menu, OpcionMenu, SeparadorMenu } from "../ui/Menu";
 import { Desplegable } from "../ui/Desplegable";
 import { CentroComandos, esMac } from "./CentroComandos";
 import { destinoDe } from "./navegacion";
-import { LogoMarca } from "./SelectorMarca";
+import { LogoMarca, NombreMarca } from "./SelectorMarca";
 
 const NOMBRE_PESTANA: Record<string, string> = {
   suscripcion: "Suscripción",
@@ -82,7 +82,7 @@ export function Cabecera({ alSalir, alAbrirMenu }: { alSalir: () => void; alAbri
         <nav className="migas" aria-label="Ruta">
           <Link to="/" className="migas__workspace" aria-label={`${activa.nombre}, ir al dashboard`}>
             <LogoMarca marca={activa} conNombre={false} />
-            <span>{activa.nombre}</span>
+            <NombreMarca marca={activa} />
           </Link>
           {migas.map((miga, i) => (
             <span key={`${miga.texto}${i}`} className="migas__paso">

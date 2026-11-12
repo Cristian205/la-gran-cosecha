@@ -7,15 +7,14 @@
  * lo demás —su configuración, su suscripción, sus páginas— lo montan las
  * señales del backend.
  *
- * Pedirlo todo junto y no en pasos es deliberado: son cuatro campos, y un
- * asistente de tres pantallas para cuatro campos es ceremonia.
+ * Va en tres pasos —identidad, plan y tienda, revisión— para que cada decisión
+ * se tome por separado y se vea el resumen antes de crear nada.
  */
 import { useState } from "react";
-import { Building2 } from "lucide-react";
 import { tienda, type Plantilla } from "../api/tienda";
 import { usarPlataforma } from "../datos/plataforma";
-import { Boton } from "../ui/basicos";
-import { Modal } from "../ui/Modal";
+import { Aviso, Campo } from "../ui/basicos";
+import { ModalAsistente, Resumen, type Paso } from "../ui/Asistente";
 import { usarAviso } from "../ui/Notificaciones";
 
 /** El identificador sale del nombre: hacérselo escribir a alguien da erratas. */
@@ -81,111 +80,102 @@ export function DialogoAltaNegocio({
     }
   }
 
-  return (
-    <Modal
-      titulo="Nueva empresa"
-      descripcion="Nace con su tienda, su plan y su configuración."
-      ancho={520}
-      onCerrar={onCerrar}
-      pie={
+  const planElegido = disponibles.find((p) => p.slug === plan) ?? disponibles.find((p) => p.es_predeterminado);
+  const plantillaElegida = plantillas.find((p) => p.slug === plantilla);
+  const slugOk = /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug);
+
+  const pasos: Paso[] = [
+    {
+      id: "identidad",
+      titulo: "Identidad",
+      valido: nombre.trim().length > 1 && slugOk,
+      contenido: (
         <>
-          <Boton onClick={onCerrar} disabled={creando}>
-            Cancelar
-          </Boton>
-          <Boton
-            variante="primario"
-            icono={<Building2 size={14} />}
-            onClick={crear}
-            disabled={!nombre.trim() || !slug}
-            cargando={creando}
+          {error && <Aviso>{error}</Aviso>}
+          <Campo etiqueta="Nombre de la empresa">
+            <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Perfumería Luna" autoFocus />
+          </Campo>
+          <Campo
+            etiqueta="Identificador"
+            ayuda="Va en su subdominio y en las rutas de sus archivos. No se puede cambiar después sin dejar archivos huérfanos."
           >
-            Dar de alta
-          </Boton>
+            <input value={slug} onChange={(e) => setSlugManual(aSlug(e.target.value))} spellCheck={false} />
+          </Campo>
+          {slug && !slugOk && <p className="aviso aviso--malo">El identificador solo admite letras, números y guiones.</p>}
+          <Campo
+            etiqueta="Dominio"
+            ayuda="Opcional. Sin dominio la empresa existe, pero su tienda no responde en ninguna dirección."
+          >
+            <input value={dominio} onChange={(e) => setDominio(e.target.value)} placeholder="perfumerialuna.com" spellCheck={false} />
+          </Campo>
         </>
-      }
-    >
-      {error && (
-        <p className="aviso aviso--malo" role="alert">
-          {error}
-        </p>
-      )}
-
-      <div className="formulario">
-        <label className="campo">
-          <span className="campo__etiqueta">Nombre de la empresa</span>
-          <input
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Perfumería Luna"
-            autoFocus
-          />
-        </label>
-
-        <label className="campo">
-          <span className="campo__etiqueta">Identificador</span>
-          <input
-            value={slug}
-            onChange={(e) => setSlugManual(aSlug(e.target.value))}
-            spellCheck={false}
-          />
-          <span className="campo__ayuda">
-            Va en su subdominio y en las rutas de sus archivos. No se puede
-            cambiar después sin dejar archivos huérfanos.
-          </span>
-        </label>
-
-        <label className="campo">
-          <span className="campo__etiqueta">Dominio</span>
-          <input
-            value={dominio}
-            onChange={(e) => setDominio(e.target.value)}
-            placeholder="perfumerialuna.com"
-            spellCheck={false}
-          />
-          <span className="campo__ayuda">
-            Opcional. Sin dominio la empresa existe, pero su tienda no responde
-            en ninguna dirección.
-          </span>
-        </label>
-
-        <label className="campo">
-          <span className="campo__etiqueta">Plan</span>
-          <select value={plan} onChange={(e) => setPlan(e.target.value)}>
-            <option value="">
-              El predeterminado
-              {disponibles.find((p) => p.es_predeterminado)
-                ? ` (${disponibles.find((p) => p.es_predeterminado)!.nombre})`
-                : ""}
-            </option>
-            {disponibles.map((p) => (
-              <option key={p.slug} value={p.slug}>
-                {p.nombre}
+      ),
+    },
+    {
+      id: "plan",
+      titulo: "Plan y tienda",
+      contenido: (
+        <>
+          <Campo etiqueta="Plan" ayuda="Lo que podrá hacer y hasta dónde. Se puede cambiar después.">
+            <select value={plan} onChange={(e) => setPlan(e.target.value)}>
+              <option value="">
+                El predeterminado
+                {disponibles.find((p) => p.es_predeterminado) ? ` (${disponibles.find((p) => p.es_predeterminado)!.nombre})` : ""}
               </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="campo">
-          <span className="campo__etiqueta">Plantilla de tienda</span>
-          <select
-            value={plantilla}
-            onChange={(e) => setPlantilla(e.target.value)}
-          >
-            <option value="">Sin plantilla</option>
-            {plantillas
-              .filter((p) => p.activa)
-              .map((p) => (
+              {disponibles.map((p) => (
                 <option key={p.slug} value={p.slug}>
                   {p.nombre}
-                  {p.sector ? ` · ${p.sector}` : ""}
                 </option>
               ))}
-          </select>
-          <span className="campo__ayuda">
-            Se copian sus secciones y su aspecto, y la tienda queda publicada.
-          </span>
-        </label>
-      </div>
-    </Modal>
+            </select>
+          </Campo>
+          <Campo etiqueta="Plantilla de tienda" ayuda="Se copian sus secciones y su aspecto, y la tienda queda publicada.">
+            <select value={plantilla} onChange={(e) => setPlantilla(e.target.value)}>
+              <option value="">Sin plantilla</option>
+              {plantillas
+                .filter((p) => p.activa)
+                .map((p) => (
+                  <option key={p.slug} value={p.slug}>
+                    {p.nombre}
+                    {p.sector ? ` · ${p.sector}` : ""}
+                  </option>
+                ))}
+            </select>
+          </Campo>
+        </>
+      ),
+    },
+    {
+      id: "revision",
+      titulo: "Revisión",
+      contenido: (
+        <>
+          {error && <Aviso>{error}</Aviso>}
+          <Resumen
+            filas={[
+              { etiqueta: "Empresa", valor: nombre.trim() },
+              { etiqueta: "Identificador", valor: <code>{slug}</code> },
+              { etiqueta: "Dominio", valor: dominio.trim() },
+              { etiqueta: "Plan", valor: planElegido?.nombre },
+              { etiqueta: "Plantilla", valor: plantillaElegida?.nombre ?? "Sin plantilla" },
+              { etiqueta: "Estado inicial", valor: "En prueba" },
+            ]}
+          />
+          <p className="tenue text-xs">Al darla de alta se crean su suscripción, su configuración y sus páginas.</p>
+        </>
+      ),
+    },
+  ];
+
+  return (
+    <ModalAsistente
+      titulo="Nueva empresa"
+      descripcion="Nace con su tienda, su plan y su configuración."
+      pasos={pasos}
+      etiquetaFinal="Dar de alta"
+      trabajando={creando}
+      onCerrar={onCerrar}
+      onFinalizar={crear}
+    />
   );
 }

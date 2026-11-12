@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Download, RotateCcw } from "lucide-react";
+import { Download, Fingerprint, RotateCcw } from "lucide-react";
 import logoCompleto from "../assets/logo-kryonx.png";
 import monograma from "../assets/logo-kryonx-marca.png";
 import { usarMarca } from "../marca/ProveedorMarca";
@@ -42,6 +42,7 @@ export function Identidad() {
     <>
       <EncabezadoPagina
         antetitulo="Marca"
+        icono={Fingerprint}
         titulo="Identidad"
         descripcion={`Logo, colores y tipografía de ${activa.nombre}, la marca publicada en el Control Center.`}
         acciones={
@@ -52,7 +53,7 @@ export function Identidad() {
                 icono={<RotateCcw size={14} />}
                 onClick={() => {
                   restablecerKryon();
-                  avisar("Kryon X vuelve a sus valores de fábrica.");
+                  avisar("CrafTeech vuelve a sus valores de fábrica.");
                 }}
               >
                 Restablecer

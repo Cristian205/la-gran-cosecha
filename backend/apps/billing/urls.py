@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from .integraciones import GuardarIntegracionView, IntegracionesView, ProbarIntegracionView
 from .views import (
     CaracteristicaViewSet,
     NegocioViewSet,
@@ -25,5 +26,10 @@ router.register(r"plans", PlanViewSet, basename="platform-plans")
 router.register(r"prices", PrecioPlanViewSet, basename="platform-prices")
 router.register(r"permissions", PermisoDisponibleViewSet, basename="platform-permissions")
 
-urlpatterns = [path("resumen/", ResumenPlataformaView.as_view(), name="platform-resumen")]
+urlpatterns = [
+    path("resumen/", ResumenPlataformaView.as_view(), name="platform-resumen"),
+    path("integrations/", IntegracionesView.as_view(), name="platform-integrations"),
+    path("integrations/<str:clave>/", GuardarIntegracionView.as_view(), name="platform-integrations-save"),
+    path("integrations/<str:clave>/probar/", ProbarIntegracionView.as_view(), name="platform-integrations-test"),
+]
 urlpatterns += router.urls

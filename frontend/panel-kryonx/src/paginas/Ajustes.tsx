@@ -6,7 +6,7 @@
  * consulta en Integraciones.
  */
 import { Link } from "react-router-dom";
-import { LogOut, Palette } from "lucide-react";
+import { LogOut, Palette, Settings } from "lucide-react";
 import { usarPlataforma } from "../datos/plataforma";
 import { iniciales } from "../datos/formato";
 import { usarMarca } from "../marca/ProveedorMarca";
@@ -20,7 +20,7 @@ export function Ajustes({ alSalir }: { alSalir: () => void }) {
 
   return (
     <>
-      <EncabezadoPagina antetitulo="Administración" titulo="Ajustes" descripcion="Tu cuenta y la marca con la que se ve el Control Center." />
+      <EncabezadoPagina antetitulo="Administración" icono={Settings} titulo="Ajustes" descripcion="Tu cuenta y la marca con la que se ve el Control Center." />
       <div className="rejilla-dos">
         <Tarjeta titulo="Cuenta">
           <div className="perfil">

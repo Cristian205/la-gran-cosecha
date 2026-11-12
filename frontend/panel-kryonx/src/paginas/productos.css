@@ -1,0 +1,269 @@
+/*
+ * Productos: lista, tarjetas y ficha. Reutiliza las clases de Empresas
+ * (`emp-cabecera`, `emp-filtros`, `tabla`, `pestanas`) para que los dos módulos
+ * se vean como uno; aquí solo va lo propio de un producto.
+ */
+
+.prod-nombre {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.prod-nombre > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.prod-nombre strong {
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.prod-nombre code {
+  font-size: 11.5px;
+  color: var(--texto-tenue);
+  background: none;
+  padding: 0;
+}
+
+.prod-nombre:hover strong {
+  color: var(--marca);
+}
+
+.prod-icono {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  color: var(--marca);
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-line);
+}
+
+.prod-icono--grande {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+}
+
+/* ------------------------------------------------------------- tarjetas */
+
+.prod-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prod-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 16px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radius-lg, 14px);
+  background: var(--surface-1);
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.prod-tarjeta:hover {
+  border-color: var(--brand-line);
+  transform: translateY(-1px);
+}
+
+.prod-tarjeta header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.prod-tarjeta__desc {
+  margin: 0;
+  min-height: 2.9em;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.prod-tarjeta__etiquetas {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.prod-tarjeta__datos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: auto 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--linea);
+}
+
+.prod-tarjeta__datos dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--texto-tenue);
+}
+
+.prod-tarjeta__datos dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- ficha */
+
+.prod-ficha .prod-icono--grande {
+  margin-right: 2px;
+}
+
+.prod-pendiente {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--warning);
+}
+
+.prod-pendiente i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warning);
+  box-shadow: 0 0 0 3px var(--warning-soft);
+}
+
+.prod-formulario {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.prod-formulario__ancho {
+  grid-column: 1 / -1;
+}
+
+.prod-formulario textarea {
+  resize: vertical;
+}
+
+.prod-error {
+  display: block;
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--danger);
+}
+
+.prod-nota {
+  margin: 14px 0 0;
+}
+
+.prod-enlace {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--marca);
+}
+
+.prod-enlace:hover {
+  text-decoration: underline;
+}
+
+.prod-lista {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prod-lista li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.prod-lista li:last-child {
+  border-bottom: 0;
+}
+
+.prod-lista li > code {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.prod-lista__desc {
+  display: block;
+  font-size: 12.5px;
+}
+
+.prod-subtitulo {
+  margin: 22px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.prod-versiones-aviso {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--warning-line);
+  border-radius: 12px;
+  background: var(--warning-soft);
+  color: var(--text-primary);
+}
+
+.prod-versiones-aviso svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--warning);
+}
+
+.prod-versiones-aviso p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+@media (max-width: 720px) {
+  .prod-formulario {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Lista lateral + editor (Presets). En pantallas angostas se apilan. */
+.prod-maestro {
+  display: grid;
+  align-items: start;
+  gap: 12px;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+}
+
+@media (max-width: 860px) {
+  .prod-maestro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

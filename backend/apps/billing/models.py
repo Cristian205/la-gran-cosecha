@@ -672,3 +672,31 @@ class Subscription(models.Model):
             self.permisos_excluidos or []
         )
         return sorted(activos.intersection(concedidos))
+
+
+# ==========================================================================
+# 5. INTEGRACIONES — credenciales de la plataforma guardadas desde el panel
+# ==========================================================================
+class ConfiguracionIntegracion(models.Model):
+    """
+    Una variable de configuración de una integración (R2, Brevo, WhatsApp…),
+    guardada CIFRADA y editable desde el panel de la plataforma.
+
+    No pertenece a ningún negocio: es configuración de toda la plataforma. El
+    valor nunca se devuelve por la API (solo si está definido); se descifra en
+    el servidor y se aplica a `settings`. Si no hay fila, manda la variable de
+    entorno del servidor, como hasta ahora.
+    """
+
+    clave = models.CharField(max_length=80, unique=True)
+    valor_cifrado = models.TextField()
+    actualizado_por = models.CharField(max_length=254, blank=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "billing_configuracion_integracion"
+        verbose_name = "Configuración de integración"
+        verbose_name_plural = "Configuración de integraciones"
+
+    def __str__(self):
+        return self.clave

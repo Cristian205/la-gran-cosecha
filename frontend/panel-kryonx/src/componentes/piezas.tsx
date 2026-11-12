@@ -5,7 +5,7 @@
  * buscador porque sale de aquí. Cuando el mismo dato se dibuja de tres maneras,
  * el lector deja de reconocerlo de un vistazo y tiene que leerlo.
  */
-import type { ReactNode } from "react";
+import type { ElementType, ReactNode } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { EstadoNegocio, EstadoSuscripcion } from "../api/tipos";
@@ -118,28 +118,59 @@ export function TarjetaMetrica({
   );
 }
 
-/** El encabezado de cada página: antetítulo, título, descripción y acciones. */
+/** Una cifra de contexto de la franja bajo el título. */
+export interface CifraCabecera {
+  etiqueta: string;
+  valor: ReactNode;
+  /** «aviso» o «malo» tiñen el valor: algo pide atención. */
+  tono?: "aviso" | "malo";
+}
+
+/**
+ * El encabezado de cada página: antetítulo (con su ícono), título, descripción,
+ * acciones y una franja de cifras. Es el MISMO en todo el panel —Productos,
+ * Empresas, Planes, Presets…— para que ninguna pantalla se vea de otra casa.
+ * Las cifras tienen que ser datos reales: si no hay, no se pasan.
+ */
 export function EncabezadoPagina({
   antetitulo,
+  icono: Icono,
   titulo,
   descripcion,
   acciones,
+  cifras,
   children,
 }: {
   antetitulo?: ReactNode;
+  icono?: ElementType;
   titulo: ReactNode;
   descripcion?: ReactNode;
   acciones?: ReactNode;
+  cifras?: CifraCabecera[];
   children?: ReactNode;
 }) {
   return (
-    <header className="encabezado-pagina">
-      <div className="encabezado-pagina__textos">
-        {antetitulo && <p className="encabezado-pagina__antetitulo">{antetitulo}</p>}
+    <header className="emp-cabecera">
+      <div className="emp-cabecera__texto">
+        {antetitulo && (
+          <p className="emp-cabecera__antetitulo">
+            {Icono && <Icono size={13} aria-hidden="true" />} {antetitulo}
+          </p>
+        )}
         <h1>{titulo}</h1>
-        {descripcion && <p className="encabezado-pagina__descripcion">{descripcion}</p>}
+        {descripcion && <p className="tenue">{descripcion}</p>}
       </div>
       {acciones && <div className="encabezado-pagina__acciones">{acciones}</div>}
+      {cifras && cifras.length > 0 && (
+        <dl className="emp-stats">
+          {cifras.map((c) => (
+            <div key={c.etiqueta} className={c.tono ? `emp-stats__${c.tono}` : undefined}>
+              <dt>{c.etiqueta}</dt>
+              <dd>{c.valor}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
       {children}
     </header>
   );

@@ -14,7 +14,7 @@
  */
 import { useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Activity, ArrowRight, Building2, CircleDollarSign, Plus, ShieldCheck } from "lucide-react";
+import { Activity, ArrowRight, LayoutDashboard, Building2, CircleDollarSign, Plus, ShieldCheck } from "lucide-react";
 import { usarPlataforma } from "../datos/plataforma";
 import {
   ETIQUETA_ESTADO,
@@ -63,6 +63,7 @@ export function Resumen() {
   return (
     <>
       <EncabezadoPagina
+        icono={LayoutDashboard}
         antetitulo={`${activa.nombre} · ${saludo(usuario?.nombre_usuario)}`}
         titulo="Control Center"
         descripcion="Resumen de lo que está ocurriendo en tu ecosistema."

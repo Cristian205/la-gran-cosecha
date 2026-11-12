@@ -14,6 +14,7 @@ import { usarPlataforma } from "../datos/plataforma";
 import { alertasDe, metricas } from "../datos/derivados";
 import { numero } from "../datos/formato";
 import { Aviso, Boton } from "../ui/basicos";
+import { EncabezadoPagina } from "../componentes/piezas";
 import { TablaEmpresas } from "../componentes/TablaEmpresas";
 import { DialogoAltaNegocio } from "../componentes/DialogoAltaNegocio";
 import { tienda, type Plantilla } from "../api/tienda";
@@ -44,37 +45,26 @@ export function Negocios() {
 
   return (
     <>
-      <header className="emp-cabecera">
-        <div className="emp-cabecera__texto">
-          <p className="emp-cabecera__antetitulo">
-            <Boxes size={13} aria-hidden="true" /> Workspaces
-          </p>
-          <h1>Empresas</h1>
-          <p className="tenue">
-            Gestiona todos los workspaces de tu ecosistema. Cada cliente tiene su
-            catálogo, sus pedidos y su gente, separados del resto.
-          </p>
-        </div>
-        <Boton
-          variante="primario"
-          icono={<Building2 size={14} />}
-          onClick={() => setDandoAlta(true)}
-        >
-          Nueva empresa
-        </Boton>
-        <dl className="emp-stats">
-          <div>
-            <dt>Total</dt>
-            <dd>{numero(cifras.empresas)}</dd>
-          </div>
-          <div>
-            <dt>Operativas</dt>
-            <dd>{numero(cifras.operativas)}</dd>
-          </div>
-          <div className={conAlerta ? "emp-stats__aviso" : undefined}>
-            <dt>Con avisos</dt>
-            <dd>
-              {conAlerta > 0 && !soloAtencion ? (
+      <EncabezadoPagina
+        antetitulo="Workspaces"
+        icono={Boxes}
+        titulo="Empresas"
+        descripcion="Gestiona todos los workspaces de tu ecosistema. Cada cliente tiene su catálogo, sus pedidos y su gente, separados del resto."
+        acciones={
+          <Boton variante="primario" icono={<Building2 size={14} />} onClick={() => setDandoAlta(true)}>
+            Nueva empresa
+          </Boton>
+        }
+        cifras={[
+          { etiqueta: "Total", valor: numero(cifras.empresas) },
+          { etiqueta: "Operativas", valor: numero(cifras.operativas) },
+          { etiqueta: "En prueba", valor: numero(negocios.filter((n) => n.estado === "PRUEBA").length) },
+          { etiqueta: "Suspendidas", valor: numero(negocios.filter((n) => n.estado === "SUSPENDIDO").length) },
+          {
+            etiqueta: "Con avisos",
+            tono: conAlerta ? "aviso" : undefined,
+            valor:
+              conAlerta > 0 && !soloAtencion ? (
                 <button
                   type="button"
                   onClick={() => setParametros({ filtro: "atencion" })}
@@ -84,11 +74,10 @@ export function Negocios() {
                 </button>
               ) : (
                 numero(conAlerta)
-              )}
-            </dd>
-          </div>
-        </dl>
-      </header>
+              ),
+          },
+        ]}
+      />
 
       {error && <Aviso>{error}</Aviso>}
 

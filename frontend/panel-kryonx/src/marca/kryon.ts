@@ -10,7 +10,7 @@ import type { Marca } from "./tipos";
  */
 export const MARCA_KRYON: Marca = {
   id: "kryon-x",
-  nombre: "Crafteech",
+  nombre: "CrafTeech",
   lema: "Centro de mando",
   logo: monograma,
   favicon: "/favicon-32x32.png",

@@ -14,12 +14,14 @@
  */
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Copy, Pencil, Plus, Power, Star } from "lucide-react";
+import { Check, Copy, Layers, Pencil, Plus, Power, Star } from "lucide-react";
 import type { Periodicidad, Plan, PrecioPlan } from "../api/tipos";
 import { usarPlataforma } from "../datos/plataforma";
 import { modulosDe } from "../datos/derivados";
 import { fechaCorta, moneda, numero, tamano } from "../datos/formato";
 import { Aviso, Boton, Campo, EstadoVacio, Esqueleto, Insignia } from "../ui/basicos";
+import { ModalAsistente, Pestanas, Resumen } from "../ui/Asistente";
+import { EncabezadoPagina } from "../componentes/piezas";
 import { Confirmar, Modal } from "../ui/Modal";
 import { usarAviso } from "../ui/Notificaciones";
 
@@ -108,19 +110,28 @@ export function Planes() {
 
   return (
     <>
-      <header className="titulo-pagina titulo-pagina--con-resumen">
-        <div>
-          <h1>Planes</h1>
-          <p className="tenue">
-            Lo que una empresa contrata: qué límites tiene y cuánto paga. Los
-            permisos que concede cada plan se administran en{" "}
-            <Link to="/permisos">la matriz</Link>.
-          </p>
-        </div>
-        <Boton variante="primario" icono={<Plus size={14} />} onClick={() => setCreando(true)}>
-          Nuevo plan
-        </Boton>
-      </header>
+      <EncabezadoPagina
+        antetitulo="Producto"
+        icono={Layers}
+        titulo="Planes"
+        descripcion={
+          <>
+            Lo que una empresa contrata: qué límites tiene y cuánto paga. Los permisos que concede cada plan se
+            administran en <Link to="/permisos">la matriz</Link>.
+          </>
+        }
+        acciones={
+          <Boton variante="primario" icono={<Plus size={14} />} onClick={() => setCreando(true)}>
+            Nuevo plan
+          </Boton>
+        }
+        cifras={[
+          { etiqueta: "Planes", valor: planes.length },
+          { etiqueta: "Activos", valor: planes.filter((p) => p.activo).length },
+          { etiqueta: "Retirados", valor: planes.filter((p) => !p.activo).length },
+          { etiqueta: "Empresas con plan", valor: planes.reduce((t, p) => t + p.negocios, 0) },
+        ]}
+      />
 
       {error && <Aviso>{error}</Aviso>}
 
@@ -312,7 +323,7 @@ export function Planes() {
           onCrear={async (datos) => {
             const creado = await crearPlan(datos);
             setCreando(false);
-            avisar(`${creado.nombre} creado. Edítalo para fijarle límites y precio.`);
+            avisar(`${creado.nombre} creado. Fíjale ahora su precio.`);
             setEditando(creado);
           }}
         />
@@ -351,19 +362,37 @@ function ModalNuevoPlan({
   onCrear,
 }: {
   onCerrar: () => void;
-  onCrear: (datos: { slug: string; nombre: string }) => Promise<void>;
+  onCrear: (datos: Partial<Plan> & { slug: string; nombre: string }) => Promise<void>;
 }) {
+  const { planes, tiposLimite } = usarPlataforma();
   const [nombre, setNombre] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [trialDias, setTrialDias] = useState("0");
+  const [limites, setLimites] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const slug = slugificar(nombre);
+  const repetido = planes.some((p) => p.slug === slug);
 
   async function crear() {
-    if (!nombre.trim() || !slug) return;
+    if (!nombre.trim() || !slug || repetido) return;
     setGuardando(true);
     setError(null);
     try {
-      await onCrear({ slug, nombre: nombre.trim() });
+      const limitesLimpios: Record<string, number | null> = {};
+      for (const tipo of tiposLimite) {
+        const bruto = limites[tipo.codigo];
+        if (bruto === undefined || bruto === "") continue;
+        const n = Number(bruto);
+        limitesLimpios[tipo.codigo] = Number.isFinite(n) ? n : null;
+      }
+      await onCrear({
+        slug,
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim(),
+        trial_dias: Number(trialDias) || 0,
+        limites: limitesLimpios,
+      });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -371,40 +400,96 @@ function ModalNuevoPlan({
     }
   }
 
+  const fijados = Object.entries(limites).filter(([, v]) => v !== "");
+
   return (
-    <Modal
+    <ModalAsistente
       titulo="Nuevo plan"
-      descripcion="Nace sin límites ni precio: se completan al editarlo."
+      descripcion="Lo que una empresa contrata. El precio se fija después, al editarlo."
+      trabajando={guardando}
+      etiquetaFinal="Crear plan"
       onCerrar={onCerrar}
-      pie={
-        <>
-          <Boton onClick={onCerrar}>Cancelar</Boton>
-          <Boton
-            variante="primario"
-            cargando={guardando}
-            disabled={!nombre.trim()}
-            onClick={crear}
-          >
-            Crear
-          </Boton>
-        </>
-      }
-    >
-      {error && <Aviso>{error}</Aviso>}
-      <Campo etiqueta="Nombre" ayuda="Por ejemplo: Starter, Growth, Business.">
-        <input
-          autoFocus
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && crear()}
-        />
-      </Campo>
-      {slug && (
-        <p className="tenue text-xs">
-          Identificador: <code>{slug}</code>
-        </p>
-      )}
-    </Modal>
+      onFinalizar={crear}
+      pasos={[
+        {
+          id: "datos",
+          titulo: "Datos",
+          valido: Boolean(nombre.trim()) && Boolean(slug) && !repetido,
+          contenido: (
+            <>
+              {error && <Aviso>{error}</Aviso>}
+              <Campo etiqueta="Nombre" ayuda="Por ejemplo: Starter, Growth, Business.">
+                <input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={80} />
+              </Campo>
+              {slug && !repetido && (
+                <p className="tenue text-xs">
+                  Identificador: <code>{slug}</code>
+                </p>
+              )}
+              {repetido && <p className="aviso aviso--malo">Ya existe un plan con ese identificador.</p>}
+              <Campo etiqueta="Descripción" ayuda="Lo que lee el cliente al comparar planes. Opcional.">
+                <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} maxLength={255} />
+              </Campo>
+              <Campo etiqueta="Prueba gratuita (días)" ayuda="Cero desactiva la prueba gratuita en este plan.">
+                <input type="number" min={0} value={trialDias} onChange={(e) => setTrialDias(e.target.value)} />
+              </Campo>
+            </>
+          ),
+        },
+        {
+          id: "limites",
+          titulo: "Límites",
+          contenido: (
+            <>
+              <p className="tenue text-xs">Vacío hereda el valor por defecto del catálogo de límites.</p>
+              {tiposLimite.length === 0 ? (
+                <p className="tenue">Todavía no hay tipos de límite definidos.</p>
+              ) : (
+                tiposLimite.map((tipo) => (
+                  <Campo
+                    key={tipo.codigo}
+                    etiqueta={tipo.nombre}
+                    ayuda={tipo.valor_por_defecto === null ? "Por defecto: sin límite" : `Por defecto: ${tipo.valor_por_defecto}`}
+                  >
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="sin límite"
+                      value={limites[tipo.codigo] ?? ""}
+                      onChange={(e) => setLimites((l) => ({ ...l, [tipo.codigo]: e.target.value }))}
+                    />
+                  </Campo>
+                ))
+              )}
+            </>
+          ),
+        },
+        {
+          id: "revision",
+          titulo: "Revisión",
+          contenido: (
+            <>
+              {error && <Aviso>{error}</Aviso>}
+              <Resumen
+                filas={[
+                  { etiqueta: "Nombre", valor: nombre.trim() },
+                  { etiqueta: "Identificador", valor: <code>{slug}</code> },
+                  { etiqueta: "Descripción", valor: descripcion.trim() },
+                  { etiqueta: "Prueba gratuita", valor: Number(trialDias) > 0 ? `${trialDias} días` : "Sin prueba" },
+                  {
+                    etiqueta: "Límites fijados",
+                    valor: fijados.length
+                      ? fijados.map(([k, v]) => `${tiposLimite.find((t) => t.codigo === k)?.nombre ?? k}: ${v}`).join(" · ")
+                      : "Todos por defecto",
+                  },
+                ]}
+              />
+              <p className="tenue text-xs">Al crearlo se abre su edición para fijar los precios.</p>
+            </>
+          ),
+        },
+      ]}
+    />
   );
 }
 
@@ -427,15 +512,18 @@ function ModalEditarPlan({ plan, onCerrar }: { plan: Plan; onCerrar: () => void 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cambiado =
-    nombre !== plan.nombre ||
-    descripcion !== plan.descripcion ||
-    trialDias !== String(plan.trial_dias) ||
-    JSON.stringify(limites) !== JSON.stringify(
+  const [pestana, setPestana] = useState<"general" | "limites" | "precios">("general");
+
+  const generalCambiado =
+    nombre !== plan.nombre || descripcion !== plan.descripcion || trialDias !== String(plan.trial_dias);
+  const limitesCambiados =
+    JSON.stringify(limites) !==
+    JSON.stringify(
       Object.fromEntries(
         Object.entries(plan.limites ?? {}).map(([c, v]) => [c, v === null ? "" : String(v)])
       )
     );
+  const cambiado = generalCambiado || limitesCambiados;
 
   function fijarLimite(codigo: string, valor: string) {
     setLimites((previos) => ({ ...previos, [codigo]: valor }));
@@ -467,71 +555,76 @@ function ModalEditarPlan({ plan, onCerrar }: { plan: Plan; onCerrar: () => void 
   }
 
   return (
-    <Modal titulo={`Editar ${plan.nombre}`} ancho={560} onCerrar={onCerrar}>
+    <Modal
+      titulo={`Editar ${plan.nombre}`}
+      ancho={600}
+      onCerrar={onCerrar}
+      cabeceraExtra={
+        <Pestanas
+          etiqueta="Secciones del plan"
+          activa={pestana}
+          onCambiar={setPestana}
+          pestanas={[
+            { id: "general", etiqueta: "General", pendiente: generalCambiado },
+            { id: "limites", etiqueta: "Límites", pendiente: limitesCambiados },
+            { id: "precios", etiqueta: "Precios" },
+          ]}
+        />
+      }
+      pie={
+        pestana === "precios" ? (
+          <Boton onClick={onCerrar}>Cerrar</Boton>
+        ) : (
+          <>
+            <span className="asistente__cuenta tenue">
+              {cambiado ? "Hay cambios sin guardar" : "Sin cambios"}
+            </span>
+            <Boton onClick={onCerrar}>Cerrar</Boton>
+            <Boton variante="primario" cargando={guardando} disabled={!cambiado} onClick={guardar}>
+              Guardar cambios
+            </Boton>
+          </>
+        )
+      }
+    >
       {error && <Aviso>{error}</Aviso>}
 
-      <div className="flex flex-col gap-4">
-        <Campo etiqueta="Nombre">
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} />
-        </Campo>
-        <Campo etiqueta="Descripción" ayuda="Lo que lee el cliente al comparar planes.">
-          <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
-        </Campo>
-        <Campo
-          etiqueta="Prueba gratuita (días)"
-          ayuda="Cero desactiva la prueba gratuita en este plan."
-        >
-          <input
-            type="number"
-            min={0}
-            value={trialDias}
-            onChange={(e) => setTrialDias(e.target.value)}
-          />
-        </Campo>
-
-        <div>
-          <p className="plan__subtitulo">Límites</p>
-          <p className="tenue text-xs mb-2">
-            Vacío hereda el valor por defecto del catálogo de límites.
-          </p>
-          <div className="flex flex-col gap-2">
-            {tiposLimite.map((tipo) => (
-              <Campo
-                key={tipo.codigo}
-                etiqueta={tipo.nombre}
-                ayuda={
-                  tipo.valor_por_defecto === null
-                    ? "Por defecto: sin límite"
-                    : `Por defecto: ${tipo.valor_por_defecto}`
-                }
-              >
-                <input
-                  type="number"
-                  min={0}
-                  placeholder="sin límite"
-                  value={limites[tipo.codigo] ?? ""}
-                  onChange={(e) => fijarLimite(tipo.codigo, e.target.value)}
-                />
-              </Campo>
-            ))}
-          </div>
+      {pestana === "general" && (
+        <div className="flex flex-col gap-4">
+          <Campo etiqueta="Nombre">
+            <input value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          </Campo>
+          <Campo etiqueta="Descripción" ayuda="Lo que lee el cliente al comparar planes.">
+            <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+          </Campo>
+          <Campo etiqueta="Prueba gratuita (días)" ayuda="Cero desactiva la prueba gratuita en este plan.">
+            <input type="number" min={0} value={trialDias} onChange={(e) => setTrialDias(e.target.value)} />
+          </Campo>
         </div>
+      )}
 
-        <div className="flex justify-end">
-          <Boton
-            variante="primario"
-            cargando={guardando}
-            disabled={!cambiado}
-            onClick={guardar}
-          >
-            Guardar cambios
-          </Boton>
+      {pestana === "limites" && (
+        <div className="flex flex-col gap-3">
+          <p className="tenue text-xs">Vacío hereda el valor por defecto del catálogo de límites.</p>
+          {tiposLimite.map((tipo) => (
+            <Campo
+              key={tipo.codigo}
+              etiqueta={tipo.nombre}
+              ayuda={tipo.valor_por_defecto === null ? "Por defecto: sin límite" : `Por defecto: ${tipo.valor_por_defecto}`}
+            >
+              <input
+                type="number"
+                min={0}
+                placeholder="sin límite"
+                value={limites[tipo.codigo] ?? ""}
+                onChange={(e) => fijarLimite(tipo.codigo, e.target.value)}
+              />
+            </Campo>
+          ))}
         </div>
+      )}
 
-        <hr className="constructor-separador" />
-
-        <PreciosDePlan plan={plan} crearPrecio={crearPrecio} avisar={avisar} />
-      </div>
+      {pestana === "precios" && <PreciosDePlan plan={plan} crearPrecio={crearPrecio} avisar={avisar} />}
     </Modal>
   );
 }
