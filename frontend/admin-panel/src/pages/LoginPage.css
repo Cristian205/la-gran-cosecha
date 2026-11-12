@@ -1,36 +1,31 @@
 /*
- * Pantalla de acceso al panel administrativo.
+ * Acceso al panel administrativo — «Fresh Commerce».
  *
- * Dos mitades con trabajos distintos: la izquierda dice de quién es este panel
- * —logo, nombre y una foto del propio negocio— y la derecha solo pide dos
- * datos. Separarlas evita el problema de las pantallas de acceso con marca:
- * que el formulario compita con la identidad y ninguno de los dos se lea.
+ * Dos mitades con trabajos distintos: la izquierda dice de quién es el panel
+ * (foto editorial, logo del negocio y una frase) y la derecha solo pide los
+ * datos de acceso, sobre marfil. En pantallas angostas la foto pasa arriba con
+ * una altura controlada y el formulario queda debajo, a la vista.
  *
- * `--marca` la inyecta el componente con el color que la empresa tenga
- * configurado. Todo lo verde de aquí abajo sale de esa variable, así que el
- * panel de una perfumería llega morado sin tocar una línea de este archivo.
+ * Paleta fija de la identidad del panel; el logo sí lo pone cada negocio.
  */
 
 .acceso {
-  --marca: #16a34a;
-  --tinta: #0a0f14;
-  --tinta-alta: #111820;
-  --linea: rgba(255, 255, 255, 0.08);
-  --texto: #eef2f6;
-  --texto-medio: #9aa6b2;
-  --texto-tenue: #6b7681;
-  /* El componente los pisa con lo que el negocio eligió para su tienda en
-     Contenido → Apariencia — mismo criterio que --marca, y estos valores de
-     aquí son solo lo que se ve mientras esa petición todavía no llega. */
-  --fuente: "Inter", "Segoe UI", system-ui, sans-serif;
-  --radio-boton: 12px;
+  --bosque: #183b29;
+  --cosecha: #315c39;
+  --natural: #a7c957;
+  --marfil: #f8f9f5;
+  --grafito: #343c34;
+  --grafito-suave: #5c665c; /* 5.6:1 sobre marfil */
+  --borde: #d9ddd0;
+  --error: #b42318;
 
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
+  grid-template-columns: 42fr 58fr;
   min-height: 100vh;
-  background: var(--tinta);
-  color: var(--texto);
-  font-family: var(--fuente);
+  min-height: 100dvh;
+  background: var(--marfil);
+  color: var(--grafito);
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
 }
 
 /* ====================================================== panel de la marca */
@@ -39,18 +34,15 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
   gap: 32px;
-  padding: 56px 64px;
+  padding: 44px 48px 36px;
   overflow: hidden;
   isolation: isolate;
+  color: #fff;
+  background: var(--bosque);
 }
 
-/*
- * La foto sale del primer banner del negocio. Va desenfocada y al 45%: los
- * banners llevan texto encima ("VERDURAS FRESCAS Y LOCALES") y sin el
- * desenfoque competiría con el título. Así queda como textura.
- */
 .acceso__foto {
   position: absolute;
   inset: 0;
@@ -58,118 +50,58 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center bottom;
-  filter: blur(3px) saturate(1.15);
-  opacity: 0.45;
-  transform: scale(1.06); /* tapa el borde claro que deja el desenfoque */
+  object-position: 62% 60%;
 }
 
+/* Verde bosque: más cerrado arriba y abajo, donde va el texto, y dejando
+   respirar el centro de la foto. */
 .acceso__velo {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background:
-    radial-gradient(
-      70% 60% at 18% 34%,
-      color-mix(in srgb, var(--marca) 55%, transparent),
-      transparent 72%
-    ),
-    linear-gradient(
-      118deg,
-      color-mix(in srgb, var(--marca) 42%, #04140c) 0%,
-      rgba(6, 20, 14, 0.94) 52%,
-      var(--tinta) 100%
-    );
-}
-
-/* La curva que separa las dos mitades: un círculo enorme desbordado, que da
-   un arco de radio grande sin depender de un SVG. */
-.acceso__curva {
-  position: absolute;
-  top: 50%;
-  right: -62%;
-  z-index: -1;
-  width: 128%;
-  aspect-ratio: 1;
-  transform: translateY(-50%);
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--marca) 45%, transparent);
   background: linear-gradient(
-    100deg,
-    color-mix(in srgb, var(--marca) 9%, transparent),
-    transparent 58%
+    180deg,
+    rgba(24, 59, 41, 0.5) 0%,
+    rgba(24, 59, 41, 0.14) 34%,
+    rgba(24, 59, 41, 0.72) 70%,
+    rgba(24, 59, 41, 0.94) 100%
   );
-}
-
-/* Rejillas de puntos: `radial-gradient` repetido, no una imagen. */
-.acceso__puntos {
-  position: absolute;
-  z-index: -1;
-  width: 130px;
-  height: 90px;
-  background-image: radial-gradient(
-    color-mix(in srgb, var(--marca) 70%, transparent) 1.4px,
-    transparent 1.4px
-  );
-  background-size: 15px 15px;
-  opacity: 0.55;
-}
-
-.acceso__puntos--alto {
-  top: 62px;
-  right: 12%;
-}
-
-.acceso__puntos--bajo {
-  bottom: 84px;
-  right: 18%;
-  opacity: 0.35;
 }
 
 .acceso__marca-cuerpo {
-  position: relative;
-  max-width: 460px;
-  padding-left: 24px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 440px;
 }
 
-/* El hilo vertical con el punto: marca el inicio del bloque sin una caja. */
-.acceso__hilo {
-  position: absolute;
-  left: 0;
-  top: 4px;
-  bottom: 38%;
-  width: 1px;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    color-mix(in srgb, var(--marca) 75%, transparent) 30%,
-    transparent
-  );
+/* El logo arriba y el mensaje abajo: la foto respira en medio. */
+.acceso__logo-caja,
+.acceso__negocio {
+  margin-bottom: auto;
 }
 
-.acceso__hilo::after {
-  content: "";
-  position: absolute;
-  left: -2.5px;
-  bottom: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--marca);
-  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--marca) 60%, transparent);
+.acceso__etiqueta {
+  margin: 0 0 14px;
+  padding-left: 12px;
+  border-left: 2px solid var(--natural);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .acceso__logo-caja {
   display: grid;
   place-items: center;
-  width: 296px;
-  height: 250px;
-  margin-bottom: 34px;
-  padding: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(6px);
+  width: 150px;
+  height: 96px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--marfil);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
 }
 
 .acceso__logo-caja img {
@@ -178,82 +110,37 @@
   object-fit: contain;
 }
 
-/* Cuando el negocio no tiene logo cargado: su nombre hace de marca en vez de
-   dejar un hueco o, peor, el logo de otro cliente. */
+/* Sin logo cargado: el nombre del negocio hace de marca. */
 .acceso__negocio {
-  margin: 0 0 26px;
-  font-size: 30px;
-  font-weight: 700;
+  margin: 0;
+  font-family: "Manrope", "Inter", sans-serif;
+  font-size: 26px;
+  font-weight: 800;
   letter-spacing: -0.02em;
 }
 
 .acceso__titulo {
   margin: 0;
-  font-size: clamp(26px, 2.6vw, 37px);
-  font-weight: 400;
-  line-height: 1.16;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.acceso__titulo span {
-  display: block;
+  font-family: "Manrope", "Inter", sans-serif;
+  font-size: clamp(30px, 3vw, 44px);
   font-weight: 800;
-  color: #f5a524;
-}
-
-.acceso__regla {
-  width: 100%;
-  max-width: 405px;
-  margin: 26px 0;
-  border: 0;
-  border-top: 1px solid var(--linea);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
 .acceso__lema {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  margin: 0;
-  max-width: 400px;
-  font-size: 15px;
-  line-height: 1.62;
-  color: #d3dbe2;
-}
-
-.acceso__lema svg {
-  flex: none;
-  margin-top: 2px;
-  color: var(--marca);
+  margin: 14px 0 0;
+  max-width: 360px;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .acceso__pie {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: auto;
-  padding-top: 32px;
-  font-size: 13.5px;
-  color: var(--texto-medio);
-}
-
-.acceso__pie strong {
-  display: block;
-  font-weight: 600;
-  color: var(--texto);
-}
-
-.acceso__sello {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: rgba(245, 165, 36, 0.12);
-  border: 1px solid rgba(245, 165, 36, 0.3);
-  color: #f5a524;
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* ============================================================ formulario */
@@ -262,95 +149,66 @@
   display: grid;
   place-items: center;
   padding: 48px 40px;
-  background:
-    radial-gradient(80% 55% at 60% 0%, rgba(22, 163, 74, 0.06), transparent 70%),
-    var(--tinta);
+  background: var(--marfil);
 }
 
 .acceso__tarjeta {
   width: 100%;
-  max-width: 452px;
-  padding: 40px 44px 34px;
-  border: 1px solid var(--linea);
-  border-radius: 18px;
-  background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.035),
-      rgba(255, 255, 255, 0) 40%
-    ),
-    var(--tinta-alta);
-  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5);
-  text-align: center;
+  max-width: 420px;
 }
 
-.acceso__escudo {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 18px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--marca) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--marca) 32%, transparent);
-  color: var(--marca);
+.acceso__kicker {
+  margin: 0 0 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cosecha);
 }
 
 .acceso__tarjeta h2 {
-  margin: 0;
-  font-size: 29px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.acceso__subrayado {
-  display: block;
-  width: 62px;
-  height: 3px;
-  margin: 14px auto 18px;
-  border-radius: 2px;
-  background: var(--marca);
+  margin: 0 0 8px;
+  font-family: "Manrope", "Inter", sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--bosque);
 }
 
 .acceso__intro {
-  margin: 0 0 26px;
-  font-size: 14.5px;
-  color: var(--texto-medio);
+  margin: 0 0 30px;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--grafito-suave);
 }
 
 .acceso__error {
-  margin: 0 0 18px;
-  padding: 10px 13px;
-  border-radius: 9px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.32);
-  color: #fecaca;
-  font-size: 13.5px;
-  text-align: left;
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fdecea;
+  border: 1px solid #f3b9b3;
+  color: var(--error);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 /* ----------------------------------------------------------------- campos */
 .acceso__campo {
   display: block;
   margin-bottom: 20px;
-  text-align: left;
 }
 
-/*
- * El rótulo lleva clase propia y no se selecciona como `.acceso__campo > span`.
- * Ese selector también capturaba `.acceso__entrada` —que es otro span hijo del
- * mismo label— y con mayor especificidad, así que le imponía `display: block`
- * y tumbaba su `align-items: center`: los iconos se iban arriba y el ojo caía
- * debajo del campo, en su posición estática de flujo de bloque.
- */
+/* El rótulo lleva clase propia: un selector `.acceso__campo > span` también
+   atrapaba `.acceso__entrada` y rompía su alineación. */
 .acceso__rotulo,
 .acceso__campo legend {
   display: block;
-  margin-bottom: 9px;
-  font-size: 11.5px;
+  margin-bottom: 8px;
+  font-size: 13.5px;
   font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--texto-medio);
+  color: var(--grafito);
 }
 
 .acceso__campo--otp {
@@ -365,64 +223,86 @@
   align-items: center;
 }
 
-/* Centrado explícito y no heredado del `align-items` del contenedor: la
-   posición estática de un hijo absoluto depende del tipo de caja del padre, y
-   eso es justo lo que se rompió antes. Anclarlo al 50% no depende de nada. */
 .acceso__entrada > svg {
   position: absolute;
-  left: 17px;
+  left: 16px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--marca);
+  color: var(--cosecha);
   pointer-events: none;
 }
 
 .acceso__entrada input {
   width: 100%;
-  height: 56px;
+  height: 54px;
   padding: 0 50px;
-  border: 1px solid var(--linea);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.025);
-  color: var(--texto);
+  border: 1.5px solid var(--borde);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--grafito);
   font: inherit;
-  font-size: 15px;
+  font-size: 16px; /* 16px evita el zoom automático de iOS al enfocar */
+  transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .acceso__entrada input::placeholder {
-  color: var(--texto-tenue);
+  color: #8b948b;
+}
+
+.acceso__entrada input:hover {
+  border-color: #bfc6b5;
 }
 
 .acceso__entrada input:focus-visible {
   outline: none;
-  border-color: color-mix(in srgb, var(--marca) 70%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--marca) 18%, transparent);
+  border-color: var(--cosecha);
+  box-shadow: 0 0 0 4px rgba(167, 201, 87, 0.35);
+}
+
+.acceso__campo--error .acceso__entrada input {
+  border-color: var(--error);
+}
+
+.acceso__campo--error .acceso__entrada input:focus-visible {
+  box-shadow: 0 0 0 4px rgba(180, 35, 24, 0.16);
+}
+
+.acceso__campo-error {
+  display: block;
+  margin-top: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--error);
 }
 
 .acceso__ojo {
   position: absolute;
-  right: 10px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: none;
-  color: var(--texto-tenue);
+  color: var(--grafito-suave);
   cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
 }
 
 .acceso__ojo:hover {
-  color: var(--texto);
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--bosque);
+  background: rgba(49, 92, 57, 0.08);
 }
 
-/* Seis casillas y no un campo: el código llega por correo y se copia entero,
-   así que `onPaste` lo reparte y envía solo. Escribirlo a mano tampoco pide
-   tabular, porque el foco avanza con cada dígito. */
+.acceso__ojo:focus-visible {
+  outline: 2px solid var(--cosecha);
+  outline-offset: 1px;
+}
+
+/* Seis casillas y no un campo: el código llega por correo y se pega entero. */
 .acceso__otp {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -433,21 +313,21 @@
   width: 100%;
   min-width: 0;
   height: 58px;
-  border: 1px solid var(--linea);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.025);
-  color: var(--texto);
+  border: 1.5px solid var(--borde);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--bosque);
   font: inherit;
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
 .acceso__otp input:focus-visible {
   outline: none;
-  border-color: color-mix(in srgb, var(--marca) 70%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--marca) 18%, transparent);
+  border-color: var(--cosecha);
+  box-shadow: 0 0 0 4px rgba(167, 201, 87, 0.35);
 }
 
 /* ------------------------------------------------------------- accesorios */
@@ -456,34 +336,34 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: -4px 0 22px;
-  font-size: 13.5px;
+  margin: -2px 0 24px;
+  font-size: 14px;
 }
 
 .acceso__recordar {
   display: flex;
   align-items: center;
   gap: 9px;
-  color: var(--texto);
+  color: var(--grafito);
   cursor: pointer;
 }
 
 .acceso__recordar input {
   appearance: none;
-  width: 19px;
-  height: 19px;
+  width: 20px;
+  height: 20px;
   margin: 0;
-  border: 1px solid var(--linea);
+  border: 1.5px solid #aab2a0;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  background: #fff;
   cursor: pointer;
   display: grid;
   place-items: center;
 }
 
 .acceso__recordar input:checked {
-  background: var(--marca);
-  border-color: var(--marca);
+  background: var(--cosecha);
+  border-color: var(--cosecha);
 }
 
 .acceso__recordar input:checked::after {
@@ -496,13 +376,19 @@
   transform: rotate(45deg);
 }
 
+.acceso__recordar input:focus-visible {
+  outline: 3px solid rgba(167, 201, 87, 0.6);
+  outline-offset: 2px;
+}
+
 .acceso__olvido {
   border: 0;
-  padding: 0;
+  padding: 4px 0;
   background: none;
   font: inherit;
-  font-size: 13.5px;
-  color: var(--marca);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cosecha);
   cursor: pointer;
 }
 
@@ -510,16 +396,22 @@
   text-decoration: underline;
 }
 
+.acceso__olvido:focus-visible,
+.acceso__volver:focus-visible {
+  outline: 2px solid var(--cosecha);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 .acceso__nota {
   margin: -8px 0 20px;
-  padding: 10px 13px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--marca) 9%, transparent);
-  border: 1px solid color-mix(in srgb, var(--marca) 24%, transparent);
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(167, 201, 87, 0.18);
+  border: 1px solid rgba(49, 92, 57, 0.2);
   font-size: 13px;
   line-height: 1.55;
-  color: var(--texto-medio);
-  text-align: left;
+  color: var(--grafito);
 }
 
 .acceso__enviar {
@@ -528,33 +420,45 @@
   justify-content: center;
   gap: 10px;
   width: 100%;
-  height: 58px;
+  height: 56px;
   border: 0;
-  border-radius: var(--radio-boton);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--marca) 86%, #ffffff),
-    var(--marca)
-  );
+  border-radius: 14px;
+  background: var(--cosecha);
   color: #fff;
   font: inherit;
-  font-size: 15.5px;
+  font-size: 14px;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--marca) 32%, transparent);
-  transition: filter 120ms ease, transform 120ms ease;
+  box-shadow: 0 6px 16px rgba(24, 59, 41, 0.18);
+  transition: background 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.acceso__enviar svg {
+  transition: transform 160ms ease;
 }
 
 .acceso__enviar:hover:not(:disabled) {
-  filter: brightness(1.08);
+  background: var(--bosque);
+  box-shadow: 0 8px 20px rgba(24, 59, 41, 0.26);
+}
+
+.acceso__enviar:hover:not(:disabled) svg {
+  transform: translateX(3px);
 }
 
 .acceso__enviar:active:not(:disabled) {
   transform: translateY(1px);
 }
 
+.acceso__enviar:focus-visible {
+  outline: 3px solid var(--natural);
+  outline-offset: 3px;
+}
+
 .acceso__enviar:disabled {
-  opacity: 0.6;
+  opacity: 0.7;
   cursor: progress;
 }
 
@@ -564,92 +468,156 @@
   border: 0;
   background: none;
   font: inherit;
-  font-size: 13.5px;
-  color: var(--texto-tenue);
+  font-size: 14px;
+  color: var(--grafito-suave);
   cursor: pointer;
 }
 
 .acceso__volver:hover {
-  color: var(--texto);
+  color: var(--bosque);
 }
 
-/* La "o" entre reglas: los pseudo-elementos se estiran solos, así que no hay
-   que calcular anchos cuando cambia el idioma o el tamaño de la tarjeta. */
-.acceso__separador {
+.acceso__aviso,
+.acceso__ayuda {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  margin: 26px 0 22px;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
   font-size: 13px;
-  color: var(--texto-tenue);
+  line-height: 1.5;
+  color: var(--grafito-suave);
 }
 
-.acceso__separador::before,
-.acceso__separador::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--linea);
+.acceso__aviso {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--borde);
+  font-weight: 600;
+  color: var(--cosecha);
 }
 
 .acceso__ayuda {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin: 0;
-  font-size: 13.5px;
-  color: var(--texto-medio);
-  text-align: left;
+  margin-top: 10px;
 }
 
+.acceso__aviso svg,
 .acceso__ayuda svg {
   flex: none;
-  color: #f5a524;
+  margin-top: 2px;
 }
 
-.acceso__ayuda strong {
+/* ---------- Restablecer la contraseña ---------- */
+.acceso__reenviar {
   display: block;
-  font-weight: 600;
-  color: var(--texto);
+  margin: 14px auto 0;
+}
+
+.acceso__reenviar:disabled {
+  color: var(--grafito-suave);
+  cursor: default;
+  text-decoration: none;
+}
+
+.acceso__listo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  color: var(--cosecha);
 }
 
 /* ============================================================ responsive */
 
+/* Tablet: se conserva la composición, con proporciones y espacios ajustados. */
 @media (max-width: 1080px) {
   .acceso {
-    grid-template-columns: 1fr;
+    grid-template-columns: 40fr 60fr;
   }
 
-  /* En una columna el formulario va primero: es a lo que se viene. La marca
-     queda debajo, como pie, en vez de empujar el login fuera de la pantalla. */
   .acceso__marca {
-    order: 2;
-    justify-content: flex-start;
-    gap: 24px;
-    padding: 40px 28px;
-  }
-
-  .acceso__panel {
-    order: 1;
-    padding: 40px 24px;
-  }
-
-  .acceso__curva,
-  .acceso__puntos {
-    display: none;
+    padding: 32px 28px;
   }
 
   .acceso__logo-caja {
-    width: 200px;
-    height: 168px;
-    margin-bottom: 24px;
+    width: 120px;
+    height: 78px;
+  }
+
+  .acceso__lema {
+    display: none;
+  }
+
+  .acceso__panel {
+    padding: 40px 28px;
+  }
+}
+
+/* Móvil y tablet vertical: foto arriba con altura controlada, formulario debajo. */
+@media (max-width: 860px) {
+  .acceso {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .acceso__marca {
+    height: clamp(200px, 30vh, 280px);
+    padding: 20px 24px;
+    gap: 0;
+  }
+
+  .acceso__marca-cuerpo {
+    max-width: none;
+  }
+
+  .acceso__logo-caja {
+    width: 104px;
+    height: 66px;
+    border-radius: 14px;
+  }
+
+  .acceso__negocio {
+    font-size: 20px;
+  }
+
+  .acceso__etiqueta {
+    margin-bottom: 8px;
+    font-size: 10.5px;
+  }
+
+  .acceso__titulo {
+    font-size: clamp(22px, 5vw, 30px);
+  }
+
+  .acceso__pie {
+    display: none;
+  }
+
+  .acceso__panel {
+    align-items: start;
+    padding: 32px 24px 40px;
+  }
+
+  .acceso__tarjeta {
+    margin-inline: auto;
   }
 }
 
 @media (max-width: 560px) {
-  .acceso__tarjeta {
-    padding: 30px 22px 26px;
+  .acceso__marca {
+    height: 200px;
+    padding: 16px 20px;
+  }
+
+  .acceso__panel {
+    padding: 24px 20px 32px;
+  }
+
+  .acceso__tarjeta h2 {
+    font-size: 28px;
+  }
+
+  .acceso__intro {
+    margin-bottom: 22px;
   }
 
   .acceso__otp {
@@ -664,24 +632,28 @@
   .acceso__opciones {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+    gap: 8px;
   }
 }
 
-/* ---------- Restablecer la contraseña ---------- */
-.acceso__reenviar {
-  display: block;
-  margin: 14px auto 0;
+@media (prefers-reduced-motion: reduce) {
+  .acceso * {
+    transition: none !important;
+  }
 }
-.acceso__reenviar:disabled {
-  color: var(--texto-tenue);
-  cursor: default;
-  text-decoration: none;
+
+/* Aparición suave del formulario; sin movimiento si la persona lo pidió. */
+@keyframes acceso-entra {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
 }
-.acceso__listo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  color: var(--marca);
+
+.acceso__tarjeta {
+  animation: acceso-entra 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acceso__tarjeta {
+    animation: none;
+  }
 }

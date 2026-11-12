@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  Headset,
   KeyRound,
   Lock,
   Mail,
@@ -18,7 +17,6 @@ import {
   verificarCodigoRestablecimiento,
   verificarOtp,
 } from "../api/auth";
-import { pilaFuente, radioPx } from "../api/apariencia";
 import { cargarMarca, type MarcaNegocio } from "../api/marca";
 import { useAuth } from "../auth/AuthContext";
 import { extraerMensajeError } from "../utils";
@@ -55,6 +53,7 @@ export function LoginPage() {
   const [reenvioEn, setReenvioEn] = useState(0);
   const [usuarioPendiente, setUsuarioPendiente] = useState<Usuario | null>(null);
   const [marca, setMarca] = useState<MarcaNegocio | null>(null);
+  const [camposError, setCamposError] = useState<{ email?: string; password?: string }>({});
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -161,6 +160,17 @@ export function LoginPage() {
   async function enviarCredenciales(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    // Validación de forma antes de molestar al servidor; las reglas reales
+    // (credenciales, bloqueos) siguen siendo del backend.
+    const faltan: { email?: string; password?: string } = {};
+    if (!email.trim()) faltan.email = "Escriba su correo electrónico.";
+    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) faltan.email = "Revise el formato del correo.";
+    if (!password) faltan.password = "Escriba su contraseña.";
+    setCamposError(faltan);
+    if (faltan.email || faltan.password) {
+      document.getElementById(faltan.email ? "acceso-email" : "acceso-clave")?.focus();
+      return;
+    }
     setCargando(true);
     try {
       const resp = await loginPaso1(email, password);
@@ -249,36 +259,22 @@ export function LoginPage() {
   const nombre = marca?.nombre?.trim() || "";
 
   return (
-    <div
-      className="acceso"
-      // El color del negocio entra como variable y no como estilo suelto: de
-      // aquí lo heredan el botón, los iconos y los focos sin repetirlo.
-      style={
-        marca
-          ? ({
-              "--marca": marca.color,
-              "--fuente": pilaFuente(marca.fuente),
-              "--radio-boton": `${radioPx(marca.radioBoton)}px`,
-            } as React.CSSProperties)
-          : undefined
-      }
-    >
+    <div className="acceso">
       {/* ---------------------------------------------------- panel de marca */}
       <section className="acceso__marca">
-        {marca?.fondo && (
-          // La foto es del propio negocio (su primer banner). Va muy velada y
-          // desenfocada: aporta textura, no información, y así el texto que
-          // los banners llevan encima no compite con el formulario.
-          <img className="acceso__foto" src={marca.fondo} alt="" aria-hidden="true" />
-        )}
+        {/* Foto editorial propia (ya optimizada, ~85 KB). Es decorativa. */}
+        <img
+          className="acceso__foto"
+          src="/img/login-cosecha.webp"
+          alt=""
+          aria-hidden="true"
+          width={1024}
+          height={881}
+          fetchPriority="high"
+        />
         <span className="acceso__velo" aria-hidden="true" />
-        <span className="acceso__curva" aria-hidden="true" />
-        <span className="acceso__puntos acceso__puntos--alto" aria-hidden="true" />
-        <span className="acceso__puntos acceso__puntos--bajo" aria-hidden="true" />
 
         <div className="acceso__marca-cuerpo">
-          <span className="acceso__hilo" aria-hidden="true" />
-
           {marca?.logo ? (
             <div className="acceso__logo-caja">
               <img src={marca.logo} alt={nombre || "Logo del negocio"} />
@@ -287,44 +283,23 @@ export function LoginPage() {
             nombre && <p className="acceso__negocio">{nombre}</p>
           )}
 
-          <h1 className="acceso__titulo">
-            Control de calidad
-            <span>Administrativo</span>
-          </h1>
-
-          <hr className="acceso__regla" />
-
+          <p className="acceso__etiqueta">Plataforma de gestión comercial</p>
+          <h1 className="acceso__titulo">Todo tu negocio, en orden.</h1>
           <p className="acceso__lema">
-            <ShieldCheck size={20} aria-hidden="true" />
-            <span>
-              Sistema integral para la gestión y supervisión de procesos de
-              calidad. Información segura, decisiones confiables.
-            </span>
+            Administra tus productos, pedidos y clientes desde un solo lugar.
           </p>
         </div>
 
-        <footer className="acceso__pie">
-          <span className="acceso__sello" aria-hidden="true">
-            <ShieldCheck size={18} />
-          </span>
-          <span>
-            <strong>
-              © {new Date().getFullYear()} {nombre || "Panel administrativo"}
-            </strong>
-            Sistema de acceso restringido para personal autorizado.
-          </span>
-        </footer>
+        <p className="acceso__pie">
+          © {new Date().getFullYear()} {nombre || "Panel administrativo"}
+        </p>
       </section>
 
       {/* --------------------------------------------------------- formulario */}
       <section className="acceso__panel">
         <div className="acceso__tarjeta">
-          <span className="acceso__escudo" aria-hidden="true">
-            <ShieldCheck size={24} />
-          </span>
-
-          <h2>{recuperar ? "Restablecer contraseña" : paso === 1 ? "Identificación" : "Verificación"}</h2>
-          <span className="acceso__subrayado" aria-hidden="true" />
+          <p className="acceso__kicker">Acceso administrativo</p>
+          <h2>{recuperar ? "Restablecer contraseña" : paso === 1 ? "Bienvenido de nuevo." : "Verificación"}</h2>
           <p className="acceso__intro" aria-live="polite">
             {recuperar === "correo"
               ? "Escriba el correo de su cuenta y le enviaremos un código para crear una contraseña nueva."
@@ -335,7 +310,7 @@ export function LoginPage() {
                   : recuperar === "listo"
                     ? "Su contraseña se cambió. Le enviamos un aviso a su correo."
                     : paso === 1
-                      ? aviso || "Inicie sesión para acceder al panel de control."
+                      ? aviso || "Ingresa tus credenciales para continuar."
                       : aviso || "Hemos enviado un código de acceso a su correo."}
           </p>
 
@@ -430,43 +405,65 @@ export function LoginPage() {
             </div>
           ) : paso === 1 && !recuperar ? (
             <form onSubmit={enviarCredenciales} noValidate>
-              <label className="acceso__campo">
+              <label className={`acceso__campo ${camposError.email ? "acceso__campo--error" : ""}`}>
                 <span className="acceso__rotulo">Correo electrónico</span>
                 <span className="acceso__entrada">
                   <Mail size={17} aria-hidden="true" />
                   <input
+                    id="acceso-email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (camposError.email) setCamposError((c) => ({ ...c, email: undefined }));
+                    }}
                     placeholder="usuario@empresa.com"
                     autoComplete="username"
+                    aria-invalid={Boolean(camposError.email)}
+                    aria-describedby={camposError.email ? "acceso-email-error" : undefined}
                     required
                     autoFocus
                   />
                 </span>
+                {camposError.email && (
+                  <span className="acceso__campo-error" id="acceso-email-error">
+                    {camposError.email}
+                  </span>
+                )}
               </label>
 
-              <label className="acceso__campo">
-                <span className="acceso__rotulo">Clave de seguridad</span>
+              <label className={`acceso__campo ${camposError.password ? "acceso__campo--error" : ""}`}>
+                <span className="acceso__rotulo">Contraseña</span>
                 <span className="acceso__entrada">
                   <Lock size={17} aria-hidden="true" />
                   <input
+                    id="acceso-clave"
                     type={verClave ? "text" : "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (camposError.password) setCamposError((c) => ({ ...c, password: undefined }));
+                    }}
                     placeholder="••••••••"
                     autoComplete="current-password"
+                    aria-invalid={Boolean(camposError.password)}
+                    aria-describedby={camposError.password ? "acceso-clave-error" : undefined}
                     required
                   />
                   <button
                     type="button"
                     className="acceso__ojo"
                     onClick={() => setVerClave((v) => !v)}
-                    aria-label={verClave ? "Ocultar la clave" : "Mostrar la clave"}
+                    aria-label={verClave ? "Ocultar la contraseña" : "Mostrar la contraseña"}
                   >
                     {verClave ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
                 </span>
+                {camposError.password && (
+                  <span className="acceso__campo-error" id="acceso-clave-error">
+                    {camposError.password}
+                  </span>
+                )}
               </label>
 
               <div className="acceso__opciones">
@@ -485,7 +482,7 @@ export function LoginPage() {
               </div>
 
               <button type="submit" className="acceso__enviar" disabled={cargando}>
-                {cargando ? "Verificando…" : "Entrar al sistema"}
+                {cargando ? "Verificando…" : "Ingresar al sistema"}
                 {!cargando && <ArrowRight size={18} />}
               </button>
             </form>
@@ -549,17 +546,11 @@ export function LoginPage() {
             </form>
           )}
 
-          <p className="acceso__separador">
-            <span>o</span>
+          <p className="acceso__aviso">
+            <ShieldCheck size={16} aria-hidden="true" />
+            Acceso exclusivo para personal autorizado.
           </p>
 
-          <p className="acceso__ayuda">
-            <Headset size={20} aria-hidden="true" />
-            <span>
-              <strong>¿Necesitas ayuda?</strong>
-              Contacta al administrador del sistema.
-            </span>
-          </p>
         </div>
       </section>
     </div>
