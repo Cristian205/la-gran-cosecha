@@ -108,3 +108,63 @@ class Suscriptor(ModeloConTenant):
 
     def __str__(self):
         return self.email
+
+
+class SolicitudComercial(models.Model):
+    """
+    Alguien que escribió a CRAFTEECH, la plataforma, desde su sitio de ventas.
+
+    # Por qué NO es `MensajeContacto`
+
+    `MensajeContacto` es el buzón de UN negocio: lo escribe un cliente de una
+    tienda y lo lee el dueño de esa tienda, y por eso lleva `tenant`. Esto es
+    otra cosa: lo escribe un negocio que todavía no es cliente y lo lee el
+    equipo de la plataforma. No pertenece a ninguna tienda, así que este modelo
+    no hereda de `ModeloConTenant` y no pasa por el ámbito de negocio: la
+    petición llega sin tienda resuelta, que es justo lo que se espera.
+
+    # Qué guarda
+
+    Lo mínimo para empezar una conversación: quién es, de qué negocio, qué
+    modalidad le interesa y cómo responderle. `origen` dice de qué botón o
+    escena salió el contacto (para medir qué convierte) y `pagina` desde qué
+    URL; ninguno es obligatorio. No se guarda la IP ni nada que identifique al
+    visitante más allá de lo que él escribió.
+    """
+
+    class Solucion(models.TextChoices):
+        COMMERCE = "COMMERCE", "Commerce: tienda autogestionable"
+        CUSTOM = "CUSTOM", "Custom: desarrollo a medida"
+        GROWTH = "GROWTH", "Growth: soporte y evolución"
+        POR_DEFINIR = "POR_DEFINIR", "Aún no lo sé"
+
+    class Estado(models.TextChoices):
+        NUEVA = "NUEVA", "Nueva"
+        CONTACTADA = "CONTACTADA", "Contactada"
+        DESCARTADA = "DESCARTADA", "Descartada"
+
+    nombre = models.CharField(max_length=120)
+    negocio = models.CharField(max_length=160, blank=True)
+    solucion = models.CharField(
+        max_length=20, choices=Solucion.choices, default=Solucion.POR_DEFINIR
+    )
+    descripcion = models.TextField(blank=True, max_length=1500)
+    #: Un correo o un teléfono: lo que la persona dejó para que le respondan.
+    contacto = models.CharField(max_length=160)
+    origen = models.CharField(max_length=80, blank=True)
+    pagina = models.CharField(max_length=300, blank=True)
+
+    estado = models.CharField(
+        max_length=12, choices=Estado.choices, default=Estado.NUEVA
+    )
+    notas = models.TextField(blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "contact_solicitudcomercial"
+        ordering = ["-fecha_creacion"]
+        verbose_name = "Solicitud comercial"
+        verbose_name_plural = "Solicitudes comerciales"
+
+    def __str__(self):
+        return f"{self.nombre} · {self.get_solucion_display()} · {self.fecha_creacion:%Y-%m-%d}"
