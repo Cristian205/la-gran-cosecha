@@ -1,25 +1,26 @@
-import monograma from "../assets/logo-kryonx-marca-inverso.png";
+import monograma from "../assets/crafteech-isotipo.webp";
 import type { Marca } from "./tipos";
 
 /**
- * Kryon X, la marca con la que arranca la plataforma.
+ * Crafteech (antes Kryon X), la marca con la que arranca la plataforma. El `id`
+ * sigue siendo `kryon-x`: es la clave con la que se guarda la selección.
  *
  * Sus valores son los mismos que `estilos.css` declara en `:root`: si el motor
  * no llegara a ejecutarse, la interfaz se vería igual.
  */
 export const MARCA_KRYON: Marca = {
   id: "kryon-x",
-  nombre: "Kryon X",
-  lema: "Control Center",
+  nombre: "Crafteech",
+  lema: "Centro de mando",
   logo: monograma,
   favicon: "/favicon-32x32.png",
   colores: {
-    primario: "#d4a63a",
-    secundario: "#f5f5f5",
-    acento: "#e11d2a",
+    primario: "#b7f34a",
+    secundario: "#f5f6f2",
+    acento: "#d4ff7a",
   },
   tipografia: "Inter",
   redondez: "media",
-  logotipoMetalico: true,
+  logotipoMetalico: false,
   sistema: true,
 };

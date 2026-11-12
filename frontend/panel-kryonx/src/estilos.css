@@ -27,21 +27,21 @@
 :root {
   /* ---------------------------------------------------------------- marca */
   /* Lo único que cambia entre una marca y otra. */
-  --brand-primary: #d4a63a;
-  --brand-primary-strong: #e7bd5a;
-  --brand-on-primary: #15110a;
-  --brand-secondary: #f5f5f5;
-  --brand-accent: #e11d2a;
+  --brand-primary: #b7f34a;
+  --brand-primary-strong: #c3f567;
+  --brand-on-primary: #101311;
+  --brand-secondary: #f5f6f2;
+  --brand-accent: #d4ff7a;
   --brand-tint: color-mix(in srgb, var(--brand-primary) 13%, transparent);
   --brand-line: color-mix(in srgb, var(--brand-primary) 40%, transparent);
   --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 
   /* --------------------------------------------------------- superficies */
-  --background: #08090b;
-  --surface-1: #101114;
-  --surface-2: #15171b;
-  --surface-3: #1c1e23;
+  --background: #101311;
+  --surface-1: #171c18;
+  --surface-2: #1c231e;
+  --surface-3: #232c26;
   --border: rgba(255, 255, 255, 0.06);
   --border-strong: rgba(255, 255, 255, 0.11);
   --overlay: rgba(4, 5, 7, 0.72);
@@ -3141,98 +3141,6 @@ select {
   border-color: var(--texto-tenue);
 }
 
-/* ================================================================== acceso */
-
-/*
- * Es la única pantalla que ve alguien que aún no ha entrado, y la única donde
- * el fondo hace trabajo de marca: profundidad, el rojo del logo y una malla de
- * puntos en las esquinas bajas. Dentro del panel el mismo tratamiento robaría
- * atención a los datos, así que nada de esto se reutiliza.
- */
-.acceso {
-  position: relative;
-  display: grid;
-  grid-template-rows: 1fr auto;
-  place-items: center;
-  min-height: 100vh;
-  padding: 40px 24px 24px;
-  overflow: hidden;
-  /* Dos focos y no uno: el de arriba es la marca; el inferior levanta el
-     horizonte lo justo para que la malla no flote sobre negro plano. */
-  background:
-    radial-gradient(52% 34% at 50% -4%, color-mix(in srgb, var(--brand-primary) 20%, transparent), transparent 68%),
-    radial-gradient(90% 55% at 50% 108%, color-mix(in srgb, var(--brand-primary) 9%, transparent), transparent 70%),
-    var(--background);
-}
-
-.acceso__ondas {
-  position: absolute;
-  bottom: -4%;
-  width: min(52vw, 720px);
-  height: min(48vh, 520px);
-  /* La malla es una máscara y no una imagen: toma el color de la marca. */
-  background: var(--brand-primary);
-  -webkit-mask: url("./assets/malla-ondas.webp") no-repeat left bottom / contain;
-  mask: url("./assets/malla-ondas.webp") no-repeat left bottom / contain;
-  pointer-events: none;
-  opacity: 0.55;
-}
-
-.acceso__ondas--izquierda {
-  left: -3%;
-}
-
-/* La misma imagen espejada: dibujar la esquina derecha aparte habría duplicado
-   150 KB para obtener exactamente esto. */
-.acceso__ondas--derecha {
-  right: -3%;
-  transform: scaleX(-1);
-}
-
-.acceso__tarjeta {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  width: 100%;
-  max-width: 392px;
-  padding: 34px 32px 26px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 18px;
-  /* Translúcida y con un velo más claro arriba: da el volumen de la maqueta
-     sin recurrir a una sombra interior, que a este tamaño se ve sucia. */
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0) 42%),
-    color-mix(in srgb, var(--surface-1) 78%, transparent);
-  backdrop-filter: blur(14px);
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.acceso__logo {
-  display: block;
-  width: 236px;
-  height: auto;
-  margin: 0 auto 2px;
-}
-
-.acceso__tarjeta h1 {
-  font-size: 23px;
-  font-weight: 700;
-  text-align: center;
-  margin-top: 2px;
-}
-
-.acceso__lema {
-  margin-top: -8px;
-  margin-bottom: 8px;
-  text-align: center;
-  font-size: 13.5px;
-  color: var(--texto-medio);
-}
-
 /* ------------------------------------------------------- campos con icono */
 .campo-icono {
   position: relative;
@@ -3300,120 +3208,6 @@ select {
 .campo-icono__accion:hover {
   color: var(--texto);
   background: rgba(255, 255, 255, 0.05);
-}
-
-.acceso__codigo {
-  font-size: 19px;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ------------------------------------------------------------- accesorios */
-.acceso__olvido {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: -6px;
-}
-
-.acceso__olvido button {
-  border: 0;
-  background: none;
-  padding: 0;
-  font: inherit;
-  font-size: 12.5px;
-  color: var(--oro-vivo);
-  cursor: pointer;
-}
-
-.acceso__olvido button:hover {
-  text-decoration: underline;
-}
-
-.acceso__nota {
-  margin-top: -4px;
-  padding: 9px 11px;
-  border-radius: 8px;
-  background: var(--brand-tint);
-  border: 1px solid var(--brand-line);
-  font-size: 12.5px;
-  color: var(--texto-medio);
-}
-
-/*
- * El botón del acceso es el rojo de la marca con algo de volumen: aquí el
- * logo está a diez centímetros, y un botón plano a su lado se ve de otra marca.
- */
-.acceso__enviar {
-  height: 48px;
-  margin-top: 4px;
-  border: 0;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 650;
-  background: var(--brand-primary);
-  color: var(--brand-on-primary);
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--brand-primary) 30%, transparent);
-}
-
-.acceso__enviar:hover:not(:disabled) {
-  background: var(--brand-primary-strong);
-  border: 0;
-}
-
-.acceso__volver {
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 12.5px;
-  color: var(--texto-tenue);
-  cursor: pointer;
-}
-
-.acceso__volver:hover {
-  color: var(--texto);
-}
-
-/* La línea con el sello: las reglas se dibujan con el propio pseudo-elemento
-   para que se ajusten solas al ancho del texto. */
-.acceso__sello {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-top: 8px;
-  padding-top: 4px;
-  font-size: 12.5px;
-  color: var(--texto-tenue);
-}
-
-.acceso__sello::before,
-.acceso__sello::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.acceso__sello svg {
-  color: var(--texto-medio);
-}
-
-.acceso__pie {
-  position: relative;
-  z-index: 1;
-  padding-top: 28px;
-  font-size: 12.5px;
-  color: var(--texto-tenue);
-}
-
-@media (max-width: 560px) {
-  .acceso__ondas {
-    width: 90vw;
-    opacity: 0.5;
-  }
-  .acceso__tarjeta {
-    padding: 26px 20px 22px;
-  }
 }
 
 /* ============================================================ constructor */
@@ -5392,23 +5186,6 @@ a.btn {
   height: 14px;
   border-radius: 4px;
   border: 1px solid var(--border-strong);
-}
-
-.acceso__marca {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 6px;
-}
-
-.acceso__marca .logo-marca__imagen,
-.acceso__marca .logo-marca__iniciales {
-  width: 44px;
-  height: 44px;
-  font-size: 15px;
-}
-
-.acceso__marca .nombre-marca {
-  font-size: 20px;
 }
 
 /* ------------------------------------------------------- design system */

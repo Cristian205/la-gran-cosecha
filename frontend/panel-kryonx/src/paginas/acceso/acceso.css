@@ -1,0 +1,801 @@
+/*
+ * Crafteech Root — Command Center. Acceso.
+ *
+ * Dos paneles con trabajos distintos. El izquierdo (Digital Core) dice dónde
+ * estás: el isotipo oficial como núcleo de un ecosistema. El derecho (Access
+ * Control) solo pide los datos. En móvil el panel gráfico desaparece y queda un
+ * encabezado compacto con el formulario como protagonista.
+ *
+ * Paleta de la identidad: Graphite, Surface, Electric Lime, Cloud y Slate. El
+ * Slate puro no llega a 4,5:1 sobre Surface, así que el texto secundario usa
+ * `--cc-texto-2`, un poco más claro.
+ */
+
+.cc {
+  --cc-graphite: #101311;
+  --cc-surface: #171c18;
+  --cc-surface-2: #202822;
+  --cc-lima: #b7f34a;
+  --cc-cloud: #f5f6f2;
+  --cc-slate: #777e79;
+  --cc-texto-2: #a3aaa5; /* 7,3:1 sobre Surface */
+  --cc-linea: rgba(245, 246, 242, 0.1);
+  --cc-error: #ff8f85;
+
+  display: grid;
+  grid-template-columns: 1.32fr 1fr; /* ≈ 57 % / 43 % */
+  /* Una pantalla exacta: el acceso nunca desplaza la página. */
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--cc-graphite);
+  color: var(--cc-cloud);
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+/* ============================================================ Digital Core */
+
+.cc-nucleo {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 8px;
+  padding: 40px 56px 36px;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(60% 55% at 62% 42%, rgba(183, 243, 74, 0.13), transparent 70%),
+    radial-gradient(90% 60% at 0% 100%, rgba(32, 40, 34, 0.9), transparent 70%),
+    var(--cc-graphite);
+}
+
+/* Rejilla fina que se desvanece hacia los bordes: da la sensación de
+   infraestructura sin competir con el núcleo. */
+.cc-nucleo__rejilla {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image:
+    linear-gradient(rgba(245, 246, 242, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 246, 242, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(70% 65% at 60% 45%, #000 20%, transparent 75%);
+  mask-image: radial-gradient(70% 65% at 60% 45%, #000 20%, transparent 75%);
+}
+
+/* Luz ambiental que respira muy despacio. */
+.cc-nucleo__luz {
+  position: absolute;
+  left: 34%;
+  top: 14%;
+  z-index: -1;
+  width: 62%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(183, 243, 74, 0.16), transparent);
+  filter: blur(20px);
+  animation: cc-respira 9s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.cc-nucleo__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: cc-entra 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cc-nucleo__isotipo {
+  width: 40px;
+  height: auto;
+}
+
+.cc-nombre {
+  font-family: "Manrope", "Inter", sans-serif;
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  color: var(--cc-cloud);
+}
+
+.cc-nombre b {
+  font-weight: inherit;
+  color: var(--cc-lima);
+}
+
+.cc-nucleo__escena {
+  position: relative;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.cc-nucleo__texto {
+  max-width: 560px;
+  animation: cc-entra 1s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cc-nucleo__texto h2 {
+  margin: 0 0 14px;
+  font-family: "Manrope", "Inter", sans-serif;
+  font-size: clamp(34px, 3.5vw, 54px);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: var(--cc-cloud);
+}
+
+.cc-nucleo__texto h2 em {
+  display: block;
+  font-style: normal;
+  color: var(--cc-lima);
+}
+
+.cc-nucleo__texto p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--cc-texto-2);
+}
+
+.cc-nucleo__pie {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 24px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--cc-linea);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--cc-texto-2);
+  animation: cc-entra 1s 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cc-nucleo__pie span:first-child {
+  color: var(--cc-lima);
+}
+
+/* ====================================================== núcleo orbital (3D) */
+
+.nucleo-escena {
+  --n: min(100%, 64vh, 640px);
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  perspective: 1100px;
+}
+
+.nucleo {
+  position: relative;
+  width: var(--n);
+  aspect-ratio: 1;
+  transform-style: preserve-3d;
+}
+
+.nucleo__halo {
+  position: absolute;
+  inset: 18%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(183, 243, 74, 0.28), transparent);
+  filter: blur(14px);
+  transform: translateZ(-60px);
+  animation: cc-respira 7s ease-in-out infinite;
+}
+
+/* Sombra elíptica sobre un «suelo» imaginario: ancla el objeto en el espacio. */
+.nucleo__suelo {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 6%;
+  height: 7%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(183, 243, 74, 0.3), transparent);
+  filter: blur(6px);
+  transform: translateZ(-80px);
+}
+
+.nucleo__lineas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform: translateZ(-20px);
+}
+
+.nucleo__lineas line {
+  stroke: rgba(183, 243, 74, 0.34);
+  stroke-width: 0.35;
+  stroke-dasharray: 1.2 1.8;
+  vector-effect: non-scaling-stroke;
+  animation: cc-hilo 3.2s linear infinite;
+}
+
+/* Anillos: cada uno gira en su propio plano inclinado. */
+.anillo {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(183, 243, 74, 0.24);
+  transform-style: preserve-3d;
+  transform: rotateX(68deg) rotateY(var(--incl)) rotateZ(0deg);
+  animation: cc-giro var(--dur) linear infinite;
+  box-shadow: inset 0 0 24px rgba(183, 243, 74, 0.05);
+}
+
+.anillo--a { inset: 3%; }
+.anillo--b { inset: 14%; border-color: rgba(245, 246, 242, 0.16); }
+.anillo--c { inset: -4%; border-color: rgba(183, 243, 74, 0.14); }
+
+/* Nodos: esferas de luz. Giran al revés que su anillo (la inversa exacta de su
+   transformación) y por eso siempre se ven redondos y de frente. */
+.nodo {
+  position: absolute;
+  left: calc(50% + 50% * cos(var(--ang)));
+  top: calc(50% + 50% * sin(var(--ang)));
+  width: 13px;
+  height: 13px;
+  margin: -6.5px 0 0 -6.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff 0 8%, var(--cc-lima) 40%, #4f8a10 100%);
+  box-shadow: 0 0 14px 2px rgba(183, 243, 74, 0.7);
+  transform: rotateZ(0deg) rotateY(calc(var(--incl) * -1)) rotateX(-68deg);
+  animation: cc-contragiro var(--dur) linear infinite;
+}
+
+.nodo::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 1px solid var(--cc-lima);
+  opacity: 0;
+  animation: cc-pulso 3.6s ease-out infinite;
+}
+
+.nodo--chico {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+}
+
+.nodo--chico::after {
+  animation-delay: 1.6s;
+}
+
+/* El isotipo oficial, en el centro y con volumen: flota y lleva un brillo que
+   recorre solo su silueta. */
+.nucleo__centro {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 50%;
+  aspect-ratio: 560 / 461;
+  margin: -20.6% 0 0 -25%;
+  transform: translateZ(70px);
+  animation: cc-flota-centro 8s ease-in-out infinite;
+}
+
+.nucleo__centro img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 34px rgba(183, 243, 74, 0.38)) drop-shadow(0 18px 24px rgba(0, 0, 0, 0.5));
+}
+
+.nucleo__brillo {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: var(--silueta) center / contain no-repeat;
+  mask: var(--silueta) center / contain no-repeat;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.55) 50%, transparent 62%) 160% 0 / 260% 100% no-repeat;
+  mix-blend-mode: soft-light;
+  animation: cc-barrido 9s ease-in-out 2s infinite;
+}
+
+/* Piezas flotantes: vidrio y metal a distintas profundidades. */
+.pieza {
+  position: absolute;
+  --z: 30px;
+  --r0: 0deg;
+  --r1: 8deg;
+  animation: cc-flota 9s ease-in-out infinite alternate;
+}
+
+.pieza--cubo {
+  left: 14%;
+  top: 22%;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  --z: 90px;
+  --r0: 12deg;
+  --r1: 40deg;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 246, 242, 0.35);
+  background: linear-gradient(135deg, rgba(245, 246, 242, 0.28), rgba(245, 246, 242, 0.03) 55%, rgba(183, 243, 74, 0.2));
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.pieza--rombo {
+  left: 88%;
+  top: 30%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  --z: 50px;
+  --r0: 45deg;
+  --r1: 70deg;
+  animation-duration: 11s;
+  border: 1.5px solid var(--cc-lima);
+  background: rgba(183, 243, 74, 0.12);
+  box-shadow: 0 0 16px rgba(183, 243, 74, 0.4);
+}
+
+.pieza--aro {
+  left: 82%;
+  top: 84%;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  --z: 110px;
+  animation-duration: 10s;
+  border-radius: 50%;
+  border: 5px solid transparent;
+  background:
+    linear-gradient(var(--cc-graphite), var(--cc-graphite)) padding-box,
+    linear-gradient(135deg, #e8ece6, #6f7872 45%, var(--cc-lima)) border-box;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+}
+
+.pieza--placa {
+  left: 10%;
+  top: 76%;
+  width: 54px;
+  height: 34px;
+  margin: -17px 0 0 -27px;
+  --z: 40px;
+  --r0: -6deg;
+  --r1: 4deg;
+  animation-duration: 12s;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 246, 242, 0.22);
+  background:
+    linear-gradient(var(--cc-lima), var(--cc-lima)) 10px 11px / 20px 3px no-repeat,
+    linear-gradient(rgba(245, 246, 242, 0.4), rgba(245, 246, 242, 0.4)) 10px 19px / 32px 3px no-repeat,
+    linear-gradient(135deg, rgba(245, 246, 242, 0.14), rgba(245, 246, 242, 0.02));
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+/* ============================================================ Access Control */
+
+.cc-acceso {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  /* Red de seguridad: solo si la ventana es diminuta se desplaza el formulario
+     por dentro, nunca la página. */
+  overflow-y: auto;
+  padding: 32px 40px;
+  background: var(--cc-surface);
+  border-left: 1px solid var(--cc-linea);
+}
+
+.cc-form {
+  width: 100%;
+  max-width: 400px;
+  animation: cc-entra 0.9s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Solo móvil. */
+.cc-form__marca {
+  display: none;
+}
+
+.cc-form h1 {
+  margin: 0 0 10px;
+  font-family: "Manrope", "Inter", sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--cc-cloud);
+}
+
+.cc-verde {
+  color: var(--cc-lima);
+}
+
+.cc-form__lema {
+  margin: 0 0 30px;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--cc-texto-2);
+}
+
+.cc-error {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 143, 133, 0.1);
+  border: 1px solid rgba(255, 143, 133, 0.35);
+  color: var(--cc-error);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.cc-campo {
+  margin-bottom: 20px;
+}
+
+.cc-campo label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--cc-cloud);
+}
+
+.cc-entrada {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cc-entrada > svg {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--cc-slate);
+  pointer-events: none;
+  transition: color 160ms ease;
+}
+
+.cc-entrada:focus-within > svg {
+  color: var(--cc-lima);
+}
+
+.cc-entrada input {
+  width: 100%;
+  height: 54px;
+  padding: 0 50px;
+  border: 1.5px solid rgba(245, 246, 242, 0.14);
+  border-radius: 14px;
+  background: var(--cc-graphite);
+  color: var(--cc-cloud);
+  font: inherit;
+  font-size: 16px; /* 16px evita el zoom automático de iOS al enfocar */
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.cc-entrada input::placeholder {
+  color: #7d8580;
+}
+
+.cc-entrada input:hover {
+  border-color: rgba(245, 246, 242, 0.26);
+}
+
+.cc-entrada input:focus-visible {
+  outline: none;
+  border-color: var(--cc-lima);
+  background: #0c0f0d;
+  box-shadow: 0 0 0 4px rgba(183, 243, 74, 0.18);
+}
+
+.cc-campo--error .cc-entrada input {
+  border-color: var(--cc-error);
+}
+
+.cc-campo--error .cc-entrada input:focus-visible {
+  box-shadow: 0 0 0 4px rgba(255, 143, 133, 0.18);
+}
+
+.cc-campo__error {
+  display: block;
+  margin-top: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cc-error);
+}
+
+.cc-entrada__codigo {
+  font-size: 20px !important;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cc-entrada__ojo {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--cc-texto-2);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.cc-entrada__ojo:hover {
+  color: var(--cc-cloud);
+  background: rgba(245, 246, 242, 0.07);
+}
+
+.cc-entrada__ojo:focus-visible {
+  outline: 2px solid var(--cc-lima);
+  outline-offset: 1px;
+}
+
+.cc-olvido {
+  margin: -6px 0 22px;
+  text-align: right;
+}
+
+.cc-olvido button,
+.cc-volver {
+  border: 0;
+  padding: 4px 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cc-lima);
+  cursor: pointer;
+}
+
+.cc-olvido button:hover,
+.cc-volver:hover {
+  text-decoration: underline;
+}
+
+.cc-olvido button:focus-visible,
+.cc-volver:focus-visible {
+  outline: 2px solid var(--cc-lima);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.cc-nota {
+  margin: -8px 0 22px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--cc-linea);
+  background: var(--cc-surface-2);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--cc-texto-2);
+}
+
+/* El botón: lima con texto grafito. Al pasar sube un punto y se ilumina; al
+   presionar se hunde; la flecha avanza. */
+.cc-enviar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 56px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--cc-lima);
+  color: var(--cc-graphite);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(183, 243, 74, 0), 0 10px 24px rgba(0, 0, 0, 0.35);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease, filter 160ms ease;
+}
+
+.cc-enviar svg {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cc-enviar:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  box-shadow: 0 0 0 4px rgba(183, 243, 74, 0.16), 0 14px 32px rgba(183, 243, 74, 0.22);
+}
+
+.cc-enviar:hover:not(:disabled) svg {
+  transform: translateX(4px);
+}
+
+.cc-enviar:active:not(:disabled) {
+  transform: translateY(0) scale(0.985);
+  filter: brightness(0.96);
+}
+
+.cc-enviar:focus-visible {
+  outline: 3px solid var(--cc-cloud);
+  outline-offset: 3px;
+}
+
+.cc-enviar:disabled {
+  opacity: 0.75;
+  cursor: progress;
+}
+
+.cc-volver {
+  display: block;
+  margin: 16px auto 0;
+  color: var(--cc-texto-2);
+}
+
+.cc-sello {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 30px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--cc-linea);
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: var(--cc-texto-2);
+}
+
+.cc-sello svg {
+  color: var(--cc-lima);
+}
+
+/* ================================================================ animación */
+
+@keyframes cc-entra {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes cc-respira {
+  0%, 100% { opacity: 0.75; transform: scale(1) translateZ(-60px); }
+  50% { opacity: 1; transform: scale(1.06) translateZ(-60px); }
+}
+
+@keyframes cc-giro {
+  to { transform: rotateX(68deg) rotateY(var(--incl)) rotateZ(360deg); }
+}
+
+@keyframes cc-contragiro {
+  from { transform: rotateZ(0deg) rotateY(calc(var(--incl) * -1)) rotateX(-68deg); }
+  to { transform: rotateZ(-360deg) rotateY(calc(var(--incl) * -1)) rotateX(-68deg); }
+}
+
+@keyframes cc-pulso {
+  0% { opacity: 0.7; transform: scale(1); }
+  70%, 100% { opacity: 0; transform: scale(3); }
+}
+
+@keyframes cc-hilo {
+  to { stroke-dashoffset: -6; }
+}
+
+@keyframes cc-flota {
+  from { transform: translate3d(0, 0, var(--z)) rotate(var(--r0)); }
+  to { transform: translate3d(0, -12px, var(--z)) rotate(var(--r1)); }
+}
+
+@keyframes cc-flota-centro {
+  0%, 100% { transform: translate3d(0, 0, 70px); }
+  50% { transform: translate3d(0, -10px, 70px); }
+}
+
+@keyframes cc-barrido {
+  0%, 55% { background-position: 160% 0; }
+  100% { background-position: -60% 0; }
+}
+
+/* ============================================================ responsive */
+
+/* Tablet: el panel gráfico se encoge y el formulario gana proporción. */
+@media (max-width: 1180px) {
+  .cc {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cc-nucleo {
+    padding: 32px 36px 30px;
+  }
+
+  .cc-nucleo__texto h2 {
+    font-size: clamp(28px, 3.6vw, 38px);
+  }
+
+  .cc-nucleo__texto p {
+    font-size: 15.5px;
+  }
+}
+
+/* Móvil y tablet vertical: sin panel gráfico. Encabezado compacto + formulario. */
+@media (max-width: 899px) {
+  .cc {
+    grid-template-columns: 1fr;
+    background: var(--cc-graphite);
+  }
+
+  .cc-nucleo {
+    display: none;
+  }
+
+  .cc-acceso {
+    align-items: center;
+    padding: 20px 22px;
+    background:
+      radial-gradient(70% 40% at 50% 0%, rgba(183, 243, 74, 0.1), transparent 70%),
+      var(--cc-graphite);
+    border-left: 0;
+  }
+
+  .cc-form {
+    margin-inline: auto;
+  }
+
+  .cc-form__marca {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: clamp(18px, 4vh, 32px);
+  }
+
+  .cc-form__marca img {
+    width: 38px;
+    height: auto;
+  }
+
+  .cc-form h1 {
+    font-size: 30px;
+  }
+
+  .cc-form__lema {
+    margin-bottom: 24px;
+  }
+
+  .cc-sello {
+    margin-top: 24px;
+  }
+}
+
+/* Móviles bajos (≈ 667 px o menos): se compacta el ritmo vertical. */
+@media (max-width: 899px) and (max-height: 700px) {
+  .cc-form h1 { font-size: 26px; margin-bottom: 6px; }
+  .cc-form__lema { margin-bottom: 16px; font-size: 14.5px; }
+  .cc-campo { margin-bottom: 14px; }
+  .cc-entrada input { height: 48px; }
+  .cc-olvido { margin-bottom: 14px; }
+  .cc-enviar { height: 52px; }
+  .cc-sello { margin-top: 16px; padding-top: 14px; }
+}
+
+/* Con poca altura (portátiles pequeños, móvil horizontal) el núcleo se reduce
+   y el texto se compacta para que no haya scroll innecesario. */
+@media (min-width: 900px) and (max-height: 700px) {
+  .cc-nucleo {
+    padding-block: 24px 22px;
+  }
+
+  .cc-nucleo__pie {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc *,
+  .cc *::before,
+  .cc *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

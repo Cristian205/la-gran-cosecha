@@ -9,7 +9,13 @@ export function Logo({ conNombre = true }: { conNombre?: boolean }) {
   return (
     <span className="logo">
       <img src={isotipo} alt="" width={40} height={33} className="logo__marca" />
-      {conNombre && <span className="logo__nombre">crafteech</span>}
+      {conNombre && (
+        <span className="logo__nombre" aria-label="CrafTeech">
+          <span aria-hidden="true">
+            CrafT<i>ee</i>ch
+          </span>
+        </span>
+      )}
     </span>
   );
 }
