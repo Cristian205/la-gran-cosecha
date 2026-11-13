@@ -3,7 +3,9 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
+  CircleDollarSign,
   Copy,
+  History,
   Layers,
   Pencil,
   Plus,
@@ -13,8 +15,10 @@ import {
   Trash2,
 } from "lucide-react";
 import {
+  actualizarPreciosPresentaciones,
   actualizarPresentacion,
   crearPresentacion,
+  obtenerHistorialPresentacion,
   obtenerPresentaciones,
   quitarImagenPresentacion,
   reordenarPresentaciones,
@@ -25,7 +29,11 @@ import type { UnidadMedida } from "../../types";
 import { formatoPrecio } from "../../utils";
 import { alertaError, alertaExito, confirmarAccion } from "../../utils/alertas";
 import { aDecimalApi, describirRegla } from "../../utils/cantidades";
+import { ActualizarPreciosModal } from "./ActualizarPreciosModal";
+import { PrecioRapido } from "./PrecioRapido";
 import { PresentacionFormModal, type ModoFormulario } from "./PresentacionFormModal";
+import { PriceHistoryModal } from "./PriceHistoryModal";
+import "./precios.css";
 import {
   aPayload,
   borradorDesde,
@@ -103,6 +111,8 @@ export function PresentacionesComerciales({
 }: Props) {
   const persistido = productoId !== null;
   const [edicion, setEdicion] = useState<Edicion | null>(null);
+  const [preciosAbierto, setPreciosAbierto] = useState(false);
+  const [historialDe, setHistorialDe] = useState<BorradorPresentacion | null>(null);
   /** Filas con una operación en curso: sus botones se bloquean (doble clic). */
   const [ocupadas, setOcupadas] = useState<Set<string>>(new Set());
   const ultimo = useRef(presentaciones);
@@ -242,6 +252,32 @@ export function PresentacionesComerciales({
     }
   }
 
+  /**
+   * Edición rápida de UN precio: misma ruta que «Actualizar precios» (todo o
+   * nada, con historial). Devuelve el error a mostrar, o null si se guardó;
+   * la fila solo cambia cuando el servidor confirma.
+   */
+  async function guardarPrecio(b: BorradorPresentacion, nuevo: string): Promise<string | null> {
+    if (!productoId || !b.id) return "Guarda el producto antes de cambiar precios aquí.";
+    marcar(b.clave, true);
+    try {
+      const r = await actualizarPreciosPresentaciones(productoId, [{ id: b.id, precio: nuevo, version: b.version }]);
+      onCambiar(r.presentaciones.map(borradorDesde));
+      onPersistido();
+      alertaExito(`Precio de «${b.nombre_presentacion}» actualizado`);
+      return null;
+    } catch (err) {
+      const e = err as { response?: { status?: number } };
+      if (e?.response?.status === 409) {
+        await recargar();
+        return "Otra persona cambió esta presentación. Se recargó el precio actual: vuelve a intentarlo.";
+      }
+      return errorDeRed(err).general ?? Object.values(errorDeRed(err))[0] ?? "No se pudo guardar el precio.";
+    } finally {
+      marcar(b.clave, false);
+    }
+  }
+
   function quitarBorrador(b: BorradorPresentacion) {
     onCambiar(ultimo.current.filter((p) => p.clave !== b.clave));
   }
@@ -265,6 +301,17 @@ export function PresentacionesComerciales({
           </p>
         </div>
         {puedeEditar && (
+          <div className="pc-cabecera-acciones">
+          {persistido && activas > 0 && (
+            <button
+              type="button"
+              className="btn secundario sm pc-precios"
+              onClick={() => setPreciosAbierto(true)}
+              disabled={cargando || Boolean(errorCarga)}
+            >
+              <CircleDollarSign size={14} aria-hidden /> Actualizar precios
+            </button>
+          )}
           <button
             type="button"
             className="btn primario sm pc-agregar"
@@ -273,6 +320,7 @@ export function PresentacionesComerciales({
           >
             <Plus size={14} aria-hidden /> Agregar presentación
           </button>
+          </div>
         )}
       </div>
 
@@ -362,15 +410,41 @@ export function PresentacionesComerciales({
                     </div>
                   )}
                 </div>
-                <div className="pc-precio">
-                  <span className="pc-precio-valor">{precio ? formatoPrecio(precio) : "—"}</span>
-                  <span className="pc-precio-unidad">/ {unidad?.abreviatura_unidad ?? "u"}</span>
-                </div>
+                {persistido && puedeEditar && p.id && p.estado_presentacion ? (
+                  <PrecioRapido
+                    precio={precio}
+                    unidad={unidad?.abreviatura_unidad ?? "u"}
+                    nombre={p.nombre_presentacion}
+                    deshabilitado={ocupada}
+                    onGuardar={(nuevo) => guardarPrecio(p, nuevo)}
+                  />
+                ) : (
+                  <div
+                    className="pc-precio"
+                    title={persistido && puedeEditar && !p.estado_presentacion ? "Actívala para cambiar su precio" : undefined}
+                  >
+                    <span className="pc-precio-valor">{precio ? formatoPrecio(precio) : "—"}</span>
+                    <span className="pc-precio-unidad">/ {unidad?.abreviatura_unidad ?? "u"}</span>
+                  </div>
+                )}
                 <span className={`badge ${p.estado_presentacion ? "activo" : "inactivo"} pc-estado`}>
                   {p.estado_presentacion ? "Activa" : "Inactiva"}
                 </span>
-                {puedeEditar && (
+                {(puedeEditar || (persistido && p.id)) && (
                   <div className="acciones pc-acciones">
+                    {persistido && p.id && (
+                      <Tooltip label="Historial de precios">
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          onClick={() => setHistorialDe(p)}
+                          aria-label={`Historial de precios de ${p.nombre_presentacion}`}
+                        >
+                          <History size={15} />
+                        </button>
+                      </Tooltip>
+                    )}
+                    {puedeEditar && (<>
                     <Tooltip label="Editar">
                       <button
                         type="button"
@@ -404,7 +478,8 @@ export function PresentacionesComerciales({
                         {p.estado_presentacion ? <PowerOff size={15} /> : <Power size={15} />}
                       </button>
                     </Tooltip>
-                    {!persistido && (
+                    </>)}
+                    {!persistido && puedeEditar && (
                       <Tooltip label="Quitar">
                         <button
                           type="button"
@@ -422,6 +497,32 @@ export function PresentacionesComerciales({
             );
           })}
         </ol>
+      )}
+
+      {preciosAbierto && productoId && (
+        <ActualizarPreciosModal
+          productoId={productoId}
+          productoNombre={productoNombre}
+          presentaciones={presentaciones}
+          unidades={unidades}
+          onCerrar={() => setPreciosAbierto(false)}
+          onAplicado={(lista, cambiadas) => {
+            onCambiar(lista.map(borradorDesde));
+            onPersistido();
+            setPreciosAbierto(false);
+            alertaExito(cambiadas === 1 ? "Se actualizó 1 precio" : `Se actualizaron ${cambiadas} precios`);
+          }}
+        />
+      )}
+
+      {historialDe?.id && (
+        <PriceHistoryModal
+          titulo={`Historial de precios · ${historialDe.nombre_presentacion}`}
+          subtitulo={productoNombre}
+          cargar={() => obtenerHistorialPresentacion(historialDe.id!)}
+          conPresentacion={false}
+          onCerrar={() => setHistorialDe(null)}
+        />
       )}
 
       {edicion && (

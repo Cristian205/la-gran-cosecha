@@ -661,6 +661,34 @@ class ProductoWriteSerializer(serializers.ModelSerializer):
         return ProductoSerializer(instance, context=self.context).data
 
 
+class CambioPrecioSerializer(serializers.Serializer):
+    """Un precio nuevo para una presentación (`actualizar-precios`)."""
+
+    id = serializers.IntegerField()
+    precio = serializers.DecimalField(max_digits=12, decimal_places=2)
+    #: La versión que vio quien edita: si otra persona guardó después, 409.
+    version = serializers.IntegerField(required=False)
+
+    def validate_precio(self, valor):
+        # La misma regla que el formulario de presentación (`_validar_presentacion`).
+        if valor < 0:
+            raise serializers.ValidationError("El precio no puede ser negativo.")
+        if valor == 0:
+            raise serializers.ValidationError("El precio debe ser mayor que cero.")
+        return valor
+
+
+class ActualizarPreciosSerializer(serializers.Serializer):
+    producto = serializers.IntegerField()
+    cambios = CambioPrecioSerializer(many=True, allow_empty=False)
+
+    def validate_cambios(self, cambios):
+        ids = [c["id"] for c in cambios]
+        if len(ids) != len(set(ids)):
+            raise serializers.ValidationError("Una presentación aparece más de una vez.")
+        return cambios
+
+
 class HistorialPrecioSerializer(serializers.ModelSerializer):
     usuario_nombre = serializers.CharField(
         source="usuario.nombre_usuario", read_only=True

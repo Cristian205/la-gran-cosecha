@@ -657,3 +657,40 @@
   .girando { animation: gestion-girar 1.6s linear infinite !important; }
   .kpi-gestion:hover { transform: none; }
 }
+
+/* ==========================================================================
+   PAGINACIÓN (Paginacion.tsx) — bajo cada tabla de gestión
+   ========================================================================== */
+.paginacion {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1rem;
+  padding: .75rem 1rem; border-top: 1px solid var(--borde);
+}
+.paginacion-info { margin: 0; font-size: .8rem; color: var(--gris); font-variant-numeric: tabular-nums; }
+.paginacion-info strong { color: var(--dark); font-weight: 600; }
+.paginacion-controles { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.paginacion-tamano { display: inline-flex; align-items: center; gap: .45rem; font-size: .78rem; color: var(--gris); }
+.paginacion-tamano select {
+  height: 32px; padding: 0 1.8rem 0 .6rem; border: 1px solid var(--borde); border-radius: 8px;
+  background-color: var(--superficie); font: inherit; font-size: .8rem; color: var(--dark);
+}
+.paginacion-paginas { display: inline-flex; align-items: center; gap: .2rem; }
+.paginacion-paginas button {
+  display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 .45rem;
+  border: 1px solid transparent; border-radius: 8px; background: transparent;
+  font: inherit; font-size: .8rem; font-weight: 600; color: var(--dark); font-variant-numeric: tabular-nums;
+  cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.paginacion-paginas button:hover:not(:disabled) { background: var(--gris-claro); }
+.paginacion-paginas button:disabled { color: var(--gris); opacity: .45; cursor: default; }
+.paginacion-paginas button:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 1px; }
+.paginacion-paginas .paginacion-num.activa { border-color: var(--verde); background: var(--verde); color: #fff; }
+.paginacion-puntos { min-width: 20px; text-align: center; font-size: .8rem; color: var(--gris); }
+.paginacion-movil { display: none; padding: 0 .4rem; font-size: .8rem; font-weight: 600; color: var(--dark); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .paginacion { justify-content: center; }
+  .paginacion-info { width: 100%; text-align: center; }
+  /* En el móvil: «‹ 3 / 12 ›», sin la fila de números. */
+  .paginacion-num, .paginacion-puntos, .paginacion-extremo { display: none !important; }
+  .paginacion-movil { display: inline; }
+}

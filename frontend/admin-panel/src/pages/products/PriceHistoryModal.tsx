@@ -1,32 +1,44 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, History, TrendingDown, TrendingUp } from "lucide-react";
 import { Modal } from "../../components/Modal";
-import { obtenerHistorialPrecios } from "../../api/resources";
-import type { HistorialPrecio, Producto } from "../../types";
+import type { HistorialPrecio } from "../../types";
 import { formatoFecha, formatoPrecio } from "../../utils";
 
 interface Props {
-  producto: Producto;
+  titulo: string;
+  subtitulo?: string;
+  /** De dónde sale la lista: el historial del producto o el de una presentación. */
+  cargar: () => Promise<HistorialPrecio[]>;
+  /** En el de una presentación sobra repetir su nombre en cada fila. */
+  conPresentacion?: boolean;
   onCerrar: () => void;
 }
 
-export function PriceHistoryModal({ producto, onCerrar }: Props) {
+/**
+ * Historial de precios: quién cambió qué precio, de cuánto a cuánto y
+ * cuándo. Sirve para un producto entero (Catálogo) o para una sola
+ * presentación (Presentaciones comerciales).
+ */
+export function PriceHistoryModal({ titulo, subtitulo, cargar, conPresentacion = true, onCerrar }: Props) {
   const [historial, setHistorial] = useState<HistorialPrecio[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    obtenerHistorialPrecios(producto.id)
+    cargar()
       .then(setHistorial)
+      .catch(() => setError(true))
       .finally(() => setCargando(false));
-  }, [producto.id]);
+    // Se carga una vez por apertura.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <Modal
-      titulo={`Historial de precios · ${producto.nombre_producto}`}
-      onCerrar={onCerrar}
-    >
+    <Modal titulo={titulo} subtitulo={subtitulo} onCerrar={onCerrar} cerrarConEscape amplio medio>
       {cargando ? (
         <div className="vacio">Cargando…</div>
+      ) : error ? (
+        <div className="error-box">No se pudo cargar el historial. Inténtalo de nuevo.</div>
       ) : historial.length === 0 ? (
         <div className="vacio">
           <History size={30} style={{ opacity: 0.5, marginBottom: ".5rem" }} />
@@ -42,17 +54,11 @@ export function PriceHistoryModal({ producto, onCerrar }: Props) {
                   {sube ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                 </span>
                 <div className="historial-detalle">
-                  <div className="historial-presentacion">
-                    {h.presentacion_nombre}
-                  </div>
+                  {conPresentacion && <div className="historial-presentacion">{h.presentacion_nombre}</div>}
                   <div className="historial-precios">
-                    <span className="anterior">
-                      {formatoPrecio(h.precio_anterior)}
-                    </span>
+                    <span className="anterior">{formatoPrecio(h.precio_anterior)}</span>
                     <ArrowRight size={13} />
-                    <span className={`nuevo ${sube ? "sube" : "baja"}`}>
-                      {formatoPrecio(h.precio_nuevo)}
-                    </span>
+                    <span className={`nuevo ${sube ? "sube" : "baja"}`}>{formatoPrecio(h.precio_nuevo)}</span>
                   </div>
                   <div className="historial-meta">
                     {formatoFecha(h.fecha_cambio)} · {h.usuario_nombre} - {h.usuario_rol}

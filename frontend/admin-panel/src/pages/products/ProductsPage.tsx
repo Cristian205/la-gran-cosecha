@@ -33,6 +33,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { CategoriesManagerModal } from "./CategoriesManagerModal";
 import { ProductFormModal } from "./ProductFormModal";
 import { PriceHistoryModal } from "./PriceHistoryModal";
+import { obtenerHistorialPrecios } from "../../api/resources";
 
 type EstadoFiltro = "todos" | "activos" | "inactivos";
 
@@ -505,7 +506,8 @@ export function ProductsPage() {
 
       {historialDe && (
         <PriceHistoryModal
-          producto={historialDe}
+          titulo={`Historial de precios · ${historialDe.nombre_producto}`}
+          cargar={() => obtenerHistorialPrecios(historialDe.id)}
           onCerrar={() => setHistorialDe(null)}
         />
       )}

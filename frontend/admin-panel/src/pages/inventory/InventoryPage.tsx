@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Paginacion, usePaginacion } from "../../components/gestion/Paginacion";
 import {
   ArrowLeftRight,
   Boxes,
@@ -97,6 +98,7 @@ export function InventoryPage() {
       return true;
     });
   }, [existencias, busqueda, filtro]);
+  const pag = usePaginacion(vista, "inventario", [busqueda, filtro]);
 
   const kpis = useMemo(() => {
     const agotados = existencias.filter((e) => Number(e.disponible) <= 0).length;
@@ -239,7 +241,7 @@ export function InventoryPage() {
                     </td>
                   </tr>
                 ) : (
-                  vista.map((e) => {
+                  pag.visibles.map((e) => {
                     const disponible = Number(e.disponible);
                     return (
                       <tr key={e.id}>
@@ -311,6 +313,7 @@ export function InventoryPage() {
               </tbody>
             </table>
           </div>
+          <Paginacion {...pag} etiqueta="referencias" />
         </div>
       </div>
 

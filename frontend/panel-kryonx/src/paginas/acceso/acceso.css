@@ -428,6 +428,24 @@
   line-height: 1.5;
 }
 
+/* Confirmación neutra (p. ej. «si el correo existe, le llegará un código»). */
+.cc-aviso {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(183, 243, 74, 0.08);
+  border: 1px solid rgba(183, 243, 74, 0.3);
+  color: var(--cc-cloud);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.cc-listo {
+  display: block;
+  margin: 0 0 16px;
+  color: var(--cc-lima);
+}
+
 .cc-campo {
   margin-bottom: 20px;
 }
@@ -555,9 +573,14 @@
   cursor: pointer;
 }
 
-.cc-olvido button:hover,
+.cc-olvido button:hover:not(:disabled),
 .cc-volver:hover {
   text-decoration: underline;
+}
+
+.cc-olvido button:disabled {
+  color: var(--cc-texto-2);
+  cursor: default;
 }
 
 .cc-olvido button:focus-visible,
@@ -565,17 +588,6 @@
   outline: 2px solid var(--cc-lima);
   outline-offset: 3px;
   border-radius: 4px;
-}
-
-.cc-nota {
-  margin: -8px 0 22px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--cc-linea);
-  background: var(--cc-surface-2);
-  font-size: 13.5px;
-  line-height: 1.55;
-  color: var(--cc-texto-2);
 }
 
 /* El botón: lima con texto grafito. Al pasar sube un punto y se ilumina; al

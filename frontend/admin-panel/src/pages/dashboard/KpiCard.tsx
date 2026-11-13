@@ -1,43 +1,10 @@
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Minus, type LucideIcon } from "lucide-react";
+import { ArrowRight, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-
-/**
- * Una métrica principal: el número, qué significa y contra qué se compara.
- *
- * La comparación es honesta por diseño. Un "−100 %" en rojo cuando hoy aún no
- * se ha vendido nada alarma sin informar; por eso los casos sin base (sin
- * ventas ahora, o sin ventas antes) se dicen con palabras y en tono neutro, y
- * el porcentaje solo aparece cuando hay dos números que comparar.
- */
-export type Comparacion =
-  | { tipo: "sube" | "baja" | "igual"; valor: string; contra: string }
-  | { tipo: "neutra"; texto: string };
-
-const UMBRAL_IGUAL = 0.5;
-
-export function comparar(
-  actual: number,
-  anterior: number,
-  contra: string,
-  { formatear, sinDatos }: { formatear: (n: number) => string; sinDatos: string }
-): Comparacion {
-  if (actual === 0 && anterior === 0) return { tipo: "neutra", texto: sinDatos };
-  if (actual === 0) return { tipo: "neutra", texto: `Período anterior: ${formatear(anterior)}` };
-  if (anterior === 0) return { tipo: "neutra", texto: "Sin datos del período anterior para comparar" };
-  const pct = ((actual - anterior) / anterior) * 100;
-  if (Math.abs(pct) < UMBRAL_IGUAL) return { tipo: "igual", valor: "Igual", contra };
-  const texto = `${Math.abs(pct) >= 100 ? Math.round(Math.abs(pct)) : Math.abs(pct).toFixed(1).replace(".", ",")} %`;
-  return { tipo: pct > 0 ? "sube" : "baja", valor: texto, contra };
-}
-
-/** Diferencia en unidades ("+3 vs. …") para conteos pequeños, donde un % engaña. */
-export function compararConteo(actual: number, anterior: number, contra: string, sinDatos: string): Comparacion {
-  if (actual === 0 && anterior === 0) return { tipo: "neutra", texto: sinDatos };
-  const dif = actual - anterior;
-  if (dif === 0) return { tipo: "igual", valor: "Igual", contra };
-  return { tipo: dif > 0 ? "sube" : "baja", valor: `${dif > 0 ? "+" : "−"}${Math.abs(dif)}`, contra };
-}
+import { InfoTip } from "./estados";
+import type { Variacion } from "./formato";
+import { Sparkline } from "./Sparkline";
+import { VariacionChip } from "./Variacion";
 
 /** El número que cambia se cuenta hasta su valor nuevo, en medio segundo. */
 export function useValorAnimado(objetivo: number): number {
@@ -68,16 +35,22 @@ export function useValorAnimado(objetivo: number): number {
   return valor;
 }
 
-const ICONO_DE = { sube: ArrowUpRight, baja: ArrowDownRight, igual: Minus } as const;
-
+/**
+ * Una métrica ejecutiva: el número, qué significa (ayuda), cómo cambió contra
+ * el período anterior, su tendencia y a dónde ir para ver el detalle.
+ */
 export function KpiCard({
   etiqueta,
   icono: Icono,
   valor,
   formatear,
-  sinValor,
+  sinValor = "—",
+  info,
+  variacion,
+  referencia,
+  serie,
+  tono = "verde",
   detalle,
-  comparacion,
   href,
   hrefTexto,
   indice = 0,
@@ -88,8 +61,12 @@ export function KpiCard({
   valor: number | null;
   formatear: (n: number) => string;
   sinValor?: string;
+  info: string;
+  variacion: Variacion | null;
+  referencia?: string | null;
+  serie?: (number | null)[];
+  tono?: "verde" | "azul" | "ambar";
   detalle?: ReactNode;
-  comparacion?: Comparacion;
   href?: string;
   hrefTexto?: string;
   indice?: number;
@@ -97,37 +74,27 @@ export function KpiCard({
   const animado = useValorAnimado(valor ?? 0);
 
   return (
-    <article className="db-kpi" style={{ animationDelay: `${indice * 60}ms` }}>
+    <article className={`db-kpi db-kpi--${tono}`} style={{ animationDelay: `${indice * 60}ms` }}>
       <div className="db-kpi-cabecera">
         <span className="db-kpi-icono" aria-hidden="true">
-          <Icono size={16} />
+          <Icono size={16} strokeWidth={1.9} />
         </span>
         <h3>{etiqueta}</h3>
+        <InfoTip texto={info} posicion="abajo" />
       </div>
-      <p className={`db-kpi-valor ${valor === null ? "db-kpi-valor--vacio" : ""}`}>
-        {valor === null ? sinValor ?? "—" : formatear(animado)}
-      </p>
+      <div className="db-kpi-cuerpo">
+        <p className={`db-kpi-valor ${valor === null ? "db-kpi-valor--vacio" : ""}`}>
+          {valor === null ? sinValor : formatear(animado)}
+        </p>
+        {serie && <Sparkline valores={serie} tono={tono} />}
+      </div>
+      <VariacionChip variacion={variacion} referencia={referencia} />
       {detalle && <div className="db-kpi-detalle">{detalle}</div>}
-      {comparacion && <Tendencia comparacion={comparacion} />}
       {href && (
         <Link className="db-kpi-enlace" to={href}>
           {hrefTexto} <ArrowRight size={13} aria-hidden="true" />
         </Link>
       )}
     </article>
-  );
-}
-
-function Tendencia({ comparacion }: { comparacion: Comparacion }) {
-  if (comparacion.tipo === "neutra") return <p className="db-tendencia db-tendencia--neutra">{comparacion.texto}</p>;
-  const Icono = ICONO_DE[comparacion.tipo];
-  return (
-    <p className={`db-tendencia db-tendencia--${comparacion.tipo}`}>
-      <span className="db-tendencia-chip">
-        <Icono size={13} aria-hidden="true" />
-        {comparacion.valor}
-      </span>
-      <span>{comparacion.contra}</span>
-    </p>
   );
 }

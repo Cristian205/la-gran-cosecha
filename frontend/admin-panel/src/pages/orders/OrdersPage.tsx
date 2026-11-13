@@ -3,7 +3,6 @@ import { useSearchParams } from "react-router-dom";
 import {
   Check,
   CheckCircle2,
-  ChevronDown,
   ClipboardList,
   Clock,
   Eye,
@@ -50,7 +49,7 @@ import {
   TarjetaKpi,
   type AccionMenu,
 } from "../../components/gestion/Gestion";
-import { fechaISO, fechaLocalISO, hoyISO } from "../../utils/fechas";
+import { fechaISO, hoyISO } from "../../utils/fechas";
 import {
   ETIQUETAS_ESTADO,
   EstadoPedido,
@@ -59,11 +58,13 @@ import {
   rangoDelPeriodo,
   type Periodo,
 } from "./pedidosUi";
+import { Paginacion, usePaginacion } from "../../components/gestion/Paginacion";
 import { BotonFiltros, FilaFiltros, useFiltrosColumna, type DefsFiltros } from "../../components/gestion/FiltrosColumna";
 import "./pedidos.css";
 
 /** Lo que devuelve `obtenerPedidos` como máximo (su `page_size`). */
-const TOPE_LISTA = 100;
+/** Lo que trae cada consulta como máximo; la tabla lo pagina. */
+const TOPE_LISTA = 500;
 
 /** Columnas configurables. Las claves no cambian: `useColumnas` guarda en el
  *  navegador cuáles están visibles y en qué orden. */
@@ -139,7 +140,8 @@ const EXTRACTORES_PEDIDOS: ExtractoresOrden<Pedido> = {
   estado: (p) => p.estado,
 };
 
-type Vista = "pedidos" | "lotes";
+/** Las tres pestañas: los pedidos del día, los lotes y el historial. */
+type Vista = "hoy" | "lotes" | "historial";
 type ClaveKpi = "total" | "pendientes" | "entregados" | "facturado" | "lotes";
 
 interface Kpis {
@@ -386,21 +388,32 @@ export function OrdersPage() {
     // Si un indicador lo fija, la fila de filtros se abre para que se vea.
     if (valor) filtros.abrir();
   };
-  const [periodo, setPeriodo] = useState<Periodo>(qInicial ? "todas" : "hoy");
-  const [rangoDesde, setRangoDesde] = useState(hoyISO);
-  const [rangoHasta, setRangoHasta] = useState(hoyISO);
+  // Desde el dashboard se llega con `?desde=…&hasta=…&estado=…` para ver el
+  // detalle de lo que se estaba mirando (p. ej. las ventas de un período).
+  const fechaParam = (clave: string) => {
+    const v = searchParams.get(clave);
+    return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+  };
+  const desdeParam = fechaParam("desde");
+  const hastaParam = fechaParam("hasta");
+  // El filtro de fecha es del Historial; «Pedidos de hoy» siempre es hoy.
+  const [periodo, setPeriodo] = useState<Periodo>(desdeParam && hastaParam ? "rango" : qInicial ? "todas" : "anteriores");
+  const [rangoDesde, setRangoDesde] = useState(() => desdeParam ?? hoyISO());
+  const [rangoHasta, setRangoHasta] = useState(() => hastaParam ?? hoyISO());
+  useEffect(() => {
+    const estadoParam = searchParams.get("estado");
+    if (estadoParam && ["PENDIENTE", "EDITADO", "CERRADO", "IMPRESO", "ENTREGADO"].includes(estadoParam)) {
+      setEstado(estadoParam);
+    }
+    // Solo al llegar: después manda lo que la persona elija en la página.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recarga, setRecarga] = useState(0);
 
-  const [historial, setHistorial] = useState<Pedido[]>([]);
-  const [historialAbierto, setHistorialAbierto] = useState(false);
-  const [cargandoHistorial, setCargandoHistorial] = useState(false);
-  const [errorHistorial, setErrorHistorial] = useState<string | null>(null);
-  const [recargaHistorial, setRecargaHistorial] = useState(0);
-  const historialRef = useRef<HTMLDivElement>(null);
 
   const [lotes, setLotes] = useState<Lote[] | null>(null);
   const [errorLotes, setErrorLotes] = useState<string | null>(null);
@@ -416,7 +429,8 @@ export function OrdersPage() {
   } = useColumnas("pedidos", CLAVES_PEDIDOS);
   const { columna: columnaOrden, direccion: direccionOrden, alternarColumna: ordenarPorColumna, ordenar } =
     useOrdenTabla<Pedido>();
-  const [vista, setVista] = useState<Vista>("pedidos");
+  // Llegar buscando o con fechas (paleta de comandos, dashboard) abre el Historial.
+  const [vista, setVista] = useState<Vista>(qInicial || desdeParam ? "historial" : "hoy");
   const [seleccion, setSeleccion] = useState<Set<number>>(new Set());
   const [detalleId, setDetalleId] = useState<number | null>(null);
   const [loteAbiertoId, setLoteAbiertoId] = useState<number | null>(null);
@@ -434,17 +448,16 @@ export function OrdersPage() {
 
   // Respuestas fuera de orden: solo cuenta la última petición de cada lista.
   const turnoLista = useRef(0);
-  const turnoHistorial = useRef(0);
 
-  const rango = rangoDelPeriodo(periodo, rangoDesde, rangoHasta);
-  const historialDisponible = periodo === "hoy";
+  const rango = rangoDelPeriodo(vista === "hoy" ? "hoy" : periodo, rangoDesde, rangoHasta);
 
-  // Lista principal
+  // La lista de la pestaña activa (Hoy o Historial; Lotes tiene la suya).
   useEffect(() => {
+    if (vista === "lotes") return;
     const turno = ++turnoLista.current;
     setCargando(true);
     const t = setTimeout(() => {
-      obtenerPedidos({ search: busqueda || undefined, estado: estado || undefined, ...rango })
+      obtenerPedidos({ search: busqueda || undefined, estado: estado || undefined, ...rango, page_size: TOPE_LISTA })
         .then((lista) => {
           if (turno !== turnoLista.current) return;
           recordar(lista);
@@ -461,41 +474,13 @@ export function OrdersPage() {
     }, 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busqueda, estado, rango.desde, rango.hasta, recarga]);
+  }, [vista, busqueda, estado, rango.desde, rango.hasta, recarga]);
 
-  // Historial: lo anterior a hoy, en el último año. Solo se pide abierto.
+  // Cambiar de pestaña suelta la selección: imprimir o entregar pedidos que
+  // ya no están a la vista sería una sorpresa.
   useEffect(() => {
-    if (!historialAbierto || !historialDisponible) return;
-    const turno = ++turnoHistorial.current;
-    const hoy = new Date();
-    const ayer = new Date(hoy);
-    ayer.setDate(hoy.getDate() - 1);
-    const haceUnAnio = new Date(hoy);
-    haceUnAnio.setFullYear(hoy.getFullYear() - 1);
-    setCargandoHistorial(true);
-    const t = setTimeout(() => {
-      obtenerPedidos({
-        search: busqueda || undefined,
-        estado: estado || undefined,
-        desde: fechaLocalISO(haceUnAnio),
-        hasta: fechaLocalISO(ayer),
-      })
-        .then((lista) => {
-          if (turno !== turnoHistorial.current) return;
-          recordar(lista);
-          setHistorial(lista);
-          setErrorHistorial(null);
-        })
-        .catch((err) => {
-          if (turno !== turnoHistorial.current) return;
-          setErrorHistorial(extraerMensajeError(err, "Revisa tu conexión e inténtalo de nuevo."));
-        })
-        .finally(() => {
-          if (turno === turnoHistorial.current) setCargandoHistorial(false);
-        });
-    }, 300);
-    return () => clearTimeout(t);
-  }, [historialAbierto, historialDisponible, busqueda, estado, recargaHistorial]);
+    setSeleccion(new Set());
+  }, [vista]);
 
   // Indicadores: conteos exactos del servidor, no de una lista recortada.
   function cargarKpis() {
@@ -503,7 +488,8 @@ export function OrdersPage() {
     Promise.all([
       contarPedidos(),
       contarPedidos({ estado: "PENDIENTE" }),
-      obtenerPedidos({ estado: "ENTREGADO", desde: hoy, hasta: hoy }),
+      // Hasta 500: con el tope de 100, «Facturado hoy» se quedaba corto en días de mucho movimiento.
+      obtenerPedidos({ estado: "ENTREGADO", desde: hoy, hasta: hoy, page_size: TOPE_LISTA }),
       contarLotes(),
     ])
       .then(([total, pendientes, entregadosHoy, numLotes]) =>
@@ -539,27 +525,26 @@ export function OrdersPage() {
 
   function recargarListados() {
     setRecarga((n) => n + 1);
-    if (historialAbierto) setRecargaHistorial((n) => n + 1);
     cargarKpis();
     if (lotes !== null) cargarLotes();
   }
 
   // ---------- Filtros ----------
 
-  const hayFiltros = Boolean(busqueda || filtros.activos || periodo !== "hoy");
+  const hayFiltros = Boolean(busqueda || filtros.activos || (vista === "historial" && periodo !== "anteriores"));
 
   function limpiarFiltros() {
     setBusqueda("");
     filtros.limpiar();
-    setPeriodo("hoy");
+    setPeriodo("anteriores");
     setKpiPulsado(null);
   }
 
   const coincideKpi: Record<ClaveKpi, boolean> = {
-    total: vista === "pedidos" && !busqueda && !estado && periodo === "todas",
-    pendientes: vista === "pedidos" && !busqueda && estado === "PENDIENTE" && periodo === "todas",
-    entregados: vista === "pedidos" && !busqueda && estado === "ENTREGADO" && periodo === "hoy",
-    facturado: vista === "pedidos" && !busqueda && estado === "ENTREGADO" && periodo === "hoy",
+    total: vista === "historial" && !busqueda && !estado && periodo === "todas",
+    pendientes: vista === "historial" && !busqueda && estado === "PENDIENTE" && periodo === "todas",
+    entregados: vista === "hoy" && !busqueda && estado === "ENTREGADO",
+    facturado: vista === "hoy" && !busqueda && estado === "ENTREGADO",
     lotes: vista === "lotes",
   };
   // "Entregados hoy" y "Facturado hoy" muestran los mismos pedidos: se marca
@@ -570,7 +555,7 @@ export function OrdersPage() {
   function aplicarKpi(clave: ClaveKpi) {
     if (kpiActivo === clave) {
       // Pulsar la tarjeta activa la suelta: vuelve a la vista del día.
-      setVista("pedidos");
+      setVista("hoy");
       limpiarFiltros();
       return;
     }
@@ -579,17 +564,18 @@ export function OrdersPage() {
       setVista("lotes");
       return;
     }
-    setVista("pedidos");
     setBusqueda("");
     if (clave === "total") {
+      setVista("historial");
       setEstado("");
       setPeriodo("todas");
     } else if (clave === "pendientes") {
+      setVista("historial");
       setEstado("PENDIENTE");
       setPeriodo("todas");
     } else {
+      setVista("hoy");
       setEstado("ENTREGADO");
-      setPeriodo("hoy");
     }
   }
 
@@ -621,7 +607,7 @@ export function OrdersPage() {
   const ultimaCantidad = useRef(0);
   if (seleccion.size > 0) ultimaCantidad.current = seleccion.size;
   const cantidadBarra = seleccion.size || ultimaCantidad.current;
-  const barraVisible = vista === "pedidos" && seleccion.size > 0;
+  const barraVisible = vista !== "lotes" && seleccion.size > 0;
   const barraRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (barraRef.current) barraRef.current.inert = !barraVisible;
@@ -706,10 +692,7 @@ export function OrdersPage() {
   }
 
   function verHistorial() {
-    setHistorialAbierto(true);
-    requestAnimationFrame(() =>
-      historialRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-    );
+    setVista("historial");
   }
 
   // ---------- Render ----------
@@ -719,9 +702,12 @@ export function OrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pedidos, filtros.aplicar, columnaOrden, direccionOrden]
   );
-  const nombrePeriodo = etiquetaPeriodo(periodo, rangoDesde, rangoHasta);
+  // Paginación (en el navegador, después de filtrar y ordenar).
+  const pagPedidos = usePaginacion(listaOrdenada, "pedidos", [vista, busqueda, estado, periodo, rangoDesde, rangoHasta, filtros.valores]);
+  const pagLotes = usePaginacion(lotes ?? [], "lotes");
+  const nombrePeriodo = vista === "hoy" ? "Hoy" : etiquetaPeriodo(periodo, rangoDesde, rangoHasta);
   const puedeEntregar = tienePermiso(actual, "orders.change_pedido");
-  const actualizando = cargando || (historialAbierto && cargandoHistorial);
+  const actualizando = cargando;
 
   const vacioPrincipal =
     busqueda || estado ? (
@@ -735,7 +721,7 @@ export function OrdersPage() {
           </button>
         }
       />
-    ) : periodo === "hoy" ? (
+    ) : vista === "hoy" ? (
       <EstadoVacio
         icono={<ClipboardList size={20} />}
         titulo="No hay pedidos hoy"
@@ -752,9 +738,11 @@ export function OrdersPage() {
         titulo="No hay pedidos en este periodo"
         texto={`No se registraron pedidos: ${nombrePeriodo.toLowerCase()}.`}
         accion={
-          <button type="button" className="btn secundario sm" onClick={() => setPeriodo("todas")}>
-            Ver todas las fechas
-          </button>
+          periodo !== "todas" ? (
+            <button type="button" className="btn secundario sm" onClick={() => setPeriodo("todas")}>
+              Ver todas las fechas
+            </button>
+          ) : undefined
         }
       />
     );
@@ -852,17 +840,17 @@ export function OrdersPage() {
           />
         </div>
 
-        <section className="panel gestion-modulo" aria-label="Pedidos y lotes">
+        <section className="panel gestion-modulo" aria-label="Pedidos, lotes e historial">
           <div className="gestion-modulo-cab">
             <div className="gestion-tabs" role="tablist" aria-label="Vista">
               <button
                 type="button"
                 role="tab"
-                aria-selected={vista === "pedidos"}
-                className={vista === "pedidos" ? "activo" : ""}
-                onClick={() => setVista("pedidos")}
+                aria-selected={vista === "hoy"}
+                className={vista === "hoy" ? "activo" : ""}
+                onClick={() => setVista("hoy")}
               >
-                <ClipboardList size={15} /> Pedidos
+                <ClipboardList size={15} /> Pedidos de hoy
               </button>
               <button
                 type="button"
@@ -874,8 +862,17 @@ export function OrdersPage() {
                 <Layers size={15} /> Lotes
                 {kpis && <span className="gestion-tab-num">{kpis.lotes}</span>}
               </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={vista === "historial"}
+                className={vista === "historial" ? "activo" : ""}
+                onClick={() => setVista("historial")}
+              >
+                <History size={15} /> Historial
+              </button>
             </div>
-            {vista === "pedidos" && (
+            {vista !== "lotes" && (
               <p className="gestion-meta" aria-live="polite">
                 {cargando ? (
                   "Cargando…"
@@ -889,7 +886,7 @@ export function OrdersPage() {
             )}
           </div>
 
-          {vista === "pedidos" && (
+          {vista !== "lotes" && (
             <>
               <div className="gestion-toolbar">
                 <div className="buscador gestion-buscador">
@@ -916,19 +913,21 @@ export function OrdersPage() {
                     )
                   )}
                 </div>
-                <select
-                  className={`select-filtro ${periodo !== "hoy" ? "con-valor" : ""}`}
-                  value={periodo}
-                  onChange={(e) => setPeriodo(e.target.value as Periodo)}
-                  aria-label="Filtrar por fecha"
-                >
-                  {OPCIONES_PERIODO.map((o) => (
-                    <option key={o.valor} value={o.valor}>
-                      {o.etiqueta}
-                    </option>
-                  ))}
-                </select>
-                {periodo === "rango" && (
+                {vista === "historial" && (
+                  <select
+                    className={`select-filtro ${periodo !== "anteriores" ? "con-valor" : ""}`}
+                    value={periodo}
+                    onChange={(e) => setPeriodo(e.target.value as Periodo)}
+                    aria-label="Filtrar el historial por fecha"
+                  >
+                    {OPCIONES_PERIODO.map((o) => (
+                      <option key={o.valor} value={o.valor}>
+                        {o.etiqueta}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {vista === "historial" && periodo === "rango" && (
                   <div className="gestion-rango">
                     <input
                       type="date"
@@ -1009,15 +1008,17 @@ export function OrdersPage() {
 
               <TablaPedidos
                 {...propsTabla}
-                lista={listaOrdenada}
+                lista={pagPedidos.visibles}
                 cargando={cargando}
                 error={error}
                 onReintentar={() => setRecarga((n) => n + 1)}
                 vacio={vacioPrincipal}
               />
+              {!cargando && !error && <Paginacion {...pagPedidos} etiqueta="pedidos" />}
               {!cargando && pedidos.length >= TOPE_LISTA && (
                 <p className="gestion-nota">
-                  Se muestran los {TOPE_LISTA} pedidos más recientes. Acota la búsqueda o la fecha para ver otros.
+                  Se muestran los {TOPE_LISTA} pedidos más recientes.{" "}
+                  {vista === "historial" ? "Acota la búsqueda o la fecha para ver otros." : "Acota la búsqueda para ver otros."}
                 </p>
               )}
             </>
@@ -1074,7 +1075,7 @@ export function OrdersPage() {
                       </td>
                     </tr>
                   ) : (
-                    lotes?.map((l) => (
+                    pagLotes.visibles.map((l) => (
                       <tr key={l.id}>
                         <td>
                           <span className="celda-id">#{l.id}</span>
@@ -1117,66 +1118,9 @@ export function OrdersPage() {
               </table>
             </div>
           )}
+          {vista === "lotes" && lotes && !errorLotes && <Paginacion {...pagLotes} etiqueta="lotes" />}
         </section>
 
-        {/* El historial es "todo lo anterior a hoy": solo tiene sentido junto
-            a la lista del día. Con otro periodo, el filtro de fecha ya lo cubre. */}
-        {vista === "pedidos" && historialDisponible && (
-          <section
-            ref={historialRef}
-            className={`panel gestion-panel pedidos-historial ${historialAbierto ? "abierto" : ""}`}
-            aria-label="Historial de pedidos"
-          >
-            <button
-              type="button"
-              className="pedidos-historial-cab"
-              aria-expanded={historialAbierto}
-              onClick={() => setHistorialAbierto((v) => !v)}
-            >
-              <span className="pedidos-historial-icono" aria-hidden="true">
-                <History size={17} />
-              </span>
-              <span className="pedidos-historial-texto">
-                <span className="pedidos-historial-titulo">Historial de pedidos</span>
-                <span className="pedidos-historial-sub">Pedidos anteriores a hoy · último año</span>
-              </span>
-              {historialAbierto && !cargandoHistorial && !errorHistorial && (
-                <span className="pedidos-historial-num">
-                  {historial.length >= TOPE_LISTA ? `${TOPE_LISTA}+` : historial.length}
-                </span>
-              )}
-              <ChevronDown size={18} className={`chevron ${historialAbierto ? "abierto" : ""}`} aria-hidden="true" />
-            </button>
-            {historialAbierto && (
-              <div className="pedidos-historial-cuerpo">
-                <TablaPedidos
-                  {...propsTabla}
-                  lista={ordenar(filtros.aplicar(historial), EXTRACTORES_PEDIDOS)}
-                  cargando={cargandoHistorial}
-                  error={errorHistorial}
-                  onReintentar={() => setRecargaHistorial((n) => n + 1)}
-                  vacio={
-                    <EstadoVacio
-                      icono={<History size={20} />}
-                      titulo={busqueda || estado ? "Ningún pedido anterior coincide" : "Sin pedidos en el último año"}
-                      texto={
-                        busqueda || estado
-                          ? "Prueba con otra búsqueda o estado."
-                          : "Aquí aparecerán los pedidos de días anteriores."
-                      }
-                    />
-                  }
-                />
-                {!cargandoHistorial && historial.length >= TOPE_LISTA && (
-                  <p className="gestion-nota">
-                    Se muestran los {TOPE_LISTA} pedidos más recientes del historial. Usa el filtro de fecha para
-                    ver otros.
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
-        )}
       </div>
 
       {detalleId !== null && (

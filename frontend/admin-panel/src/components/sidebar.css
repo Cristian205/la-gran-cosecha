@@ -7,8 +7,10 @@
    alguien (pedidos pendientes, productos por revisar). Todo lo demás es gris
    azulado, para que el ojo vaya a esas dos señales.
 
-   Compacto pero respirable: filas de 38 px, 2 px entre ellas, títulos de
-   sección pequeños y espaciados.
+   Compacto pero respirable: filas de 42 px, íconos de 19 px, 2 px entre
+   filas, títulos de sección pequeños y espaciados. La sección activa lleva
+   fondo verde muy suave, texto verde oscuro e indicador de 3 px; nunca un
+   verde intenso. Transiciones de 150 ms.
 
    Sigue el tema del panel (`data-tema` en <html>): claro con el tema claro,
    navy con el oscuro. Todos los colores pasan por las variables `--sb-*`;
@@ -16,15 +18,16 @@
    sidebar y también las necesita.
    ========================================================================== */
 :root {
-  --sb-fondo: var(--superficie);
+  --sb-fondo: #fcfdfe;
   --sb-texto: #475569;
   --sb-fuerte: #0f172a;
   --sb-icono: #64748b;
   --sb-icono-hover: #334155;
   --sb-tenue: #64748b;
-  --sb-linea: var(--borde);
-  --sb-hover: rgba(15, 23, 42, 0.05);
-  --sb-activo: color-mix(in srgb, var(--verde-500) 11%, transparent);
+  --sb-linea: #e6ebf2;
+  --sb-hover: rgba(15, 23, 42, 0.045);
+  --sb-activo: color-mix(in srgb, var(--verde-500) 9%, transparent);
+  --sb-activo-texto: #166534;
   --sb-verde: var(--verde-600);
   --sb-ambar: #b45309;
   --sb-ambar-fondo: rgba(245, 158, 11, 0.16);
@@ -39,7 +42,7 @@
   --sb-tip-borde: transparent;
 }
 :root[data-tema="oscuro"] {
-  --sb-fondo: linear-gradient(180deg, #0b1220 0%, #0e1627 100%);
+  --sb-fondo: linear-gradient(180deg, #0d121b 0%, #10161f 100%);
   --sb-texto: #94a3b8;
   --sb-fuerte: #fff;
   --sb-icono: #7b8aa3;
@@ -47,11 +50,12 @@
   --sb-tenue: #5b6b82;
   --sb-linea: rgba(255, 255, 255, 0.06);
   --sb-hover: rgba(255, 255, 255, 0.045);
-  --sb-activo: color-mix(in srgb, var(--verde-400) 11%, rgba(255, 255, 255, 0.04));
+  --sb-activo: color-mix(in srgb, var(--verde-400) 11%, rgba(255, 255, 255, 0.03));
+  --sb-activo-texto: #86efac;
   --sb-verde: var(--verde-400);
   --sb-ambar: #fbbf24;
   --sb-ambar-fondo: rgba(245, 158, 11, 0.14);
-  --sb-anillo: #0c1423;
+  --sb-anillo: #0d121b;
   --sb-logo-anillo: rgba(255, 255, 255, 0.08);
   --sb-scroll: rgba(255, 255, 255, 0.12);
   --sb-control: rgba(255, 255, 255, 0.06);
@@ -66,12 +70,15 @@
   --sb-ancho-compacto: 72px;
   --sb-ease: cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  z-index: 20;
+  /* Por encima de la barra superior (30): el botón de contraer se monta
+     sobre el borde entre las dos y no debe quedar tapado. */
+  z-index: 35;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   width: var(--sb-ancho);
   height: 100vh;
+  height: 100dvh;
   color: var(--sb-texto);
   background: var(--sb-fondo);
   border-right: 1px solid var(--sb-linea);
@@ -93,9 +100,9 @@
 .sb-cabecera {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  min-height: 72px;
-  padding: 1rem 1rem 0.9rem;
+  gap: 0.7rem;
+  min-height: 64px;
+  padding: 0.7rem 1rem 0.65rem 1.05rem;
 }
 .sb-logo {
   display: grid;
@@ -110,20 +117,28 @@
   box-shadow: 0 0 0 1px var(--sb-logo-anillo), 0 6px 16px -6px color-mix(in srgb, var(--marca-negocio) 60%, transparent);
 }
 .sb-logo img { width: 100%; height: 100%; object-fit: cover; }
-.sb-marca { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+/* Con logo propio, la imagen va sola: sin el cuadro de color ni su sombra, y
+   entera (contain) para no recortar logos que no son cuadrados. */
+.sb-logo--imagen { border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+.sb-logo--imagen img { object-fit: contain; }
+.sb-marca { display: flex; flex-direction: column; justify-content: center; gap: 0.05rem; min-width: 0; }
 /* El nombre se lee entero: hasta dos líneas, nunca "La Gran Cosec…". */
+/* El nombre con la letra con que lo escribe la tienda (ver
+   `aplicarTipografiaDeMarca`); sin una propia, la del panel. */
 .sb-marca strong {
   display: -webkit-box;
   overflow: hidden;
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-family: var(--fuente-marca, inherit);
+  font-style: var(--fuente-marca-estilo, normal);
+  font-size: 1rem;
+  font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.01em;
   color: var(--sb-fuerte);
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
-.sb-marca small { font-size: 0.7rem; font-weight: 500; color: var(--sb-tenue); letter-spacing: 0.02em; }
+.sb-marca small { font-size: 0.7rem; font-weight: 500; line-height: 1.3; color: var(--sb-tenue); letter-spacing: 0.01em; }
 .sb--compacto .sb-cabecera { justify-content: center; padding-inline: 0; }
 .sb--compacto .sb-marca { display: none; }
 .sb-cerrar {
@@ -154,19 +169,19 @@
   --scroll-visible: var(--sb-scroll);
   --scroll-reposo: color-mix(in srgb, var(--sb-scroll) 45%, transparent);
 }
-.sb-grupo + .sb-grupo { margin-top: 0.85rem; }
+.sb-grupo + .sb-grupo { margin-top: 0.75rem; }
 .sb-grupo-titulo {
   display: flex;
   align-items: center;
   gap: 0.45rem;
   width: 100%;
-  height: 28px;
-  padding: 0 0.6rem;
+  height: 26px;
+  padding: 0 0.7rem;
   border: 0;
   border-radius: 7px;
   font-size: 0.64rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--sb-tenue);
   background: none;
@@ -187,15 +202,15 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  height: 38px;
-  padding: 0 0.65rem;
-  border-radius: 9px;
-  font-size: 0.875rem;
+  gap: 0.75rem;
+  height: 42px;
+  padding: 0 0.7rem;
+  border-radius: 10px;
+  font-size: 0.86rem;
   font-weight: 500;
   color: var(--sb-texto);
   text-decoration: none;
-  transition: background-color 0.16s ease, color 0.16s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 .sb-icono {
   position: relative;
@@ -203,8 +218,9 @@
   place-items: center;
   flex: none;
   width: 20px;
+  height: 20px;
   color: var(--sb-icono);
-  transition: color 0.16s ease;
+  transition: color 0.15s ease;
 }
 .sb-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sb-item:hover { color: var(--sb-fuerte); background: var(--sb-hover); }
@@ -212,26 +228,26 @@
 .sb-item:focus-visible,
 .sb-grupo-titulo:focus-visible,
 .sb-dock-btn:focus-visible,
-.sb-contraer:focus-visible,
 .sb-cerrar:focus-visible {
   outline: 2px solid var(--sb-verde);
   outline-offset: -2px;
 }
 
-/* La sección actual: fondo apenas más claro con un matiz verde, la línea y el ícono. */
-.sb-item.activo { font-weight: 600; color: var(--sb-fuerte); background: var(--sb-activo); }
+/* La sección actual: fondo verde muy suave, texto verde oscuro, ícono verde
+   institucional y la línea de 3 px a la izquierda. Sin halos ni verdes intensos. */
+.sb-item.activo { font-weight: 600; color: var(--sb-activo-texto); background: var(--sb-activo); }
+.sb-item.activo:hover { background: color-mix(in srgb, var(--sb-activo) 100%, var(--sb-hover)); }
 .sb-item.activo .sb-icono { color: var(--sb-verde); }
 .sb-item.activo::before {
   content: "";
   position: absolute;
-  top: 9px;
-  bottom: 9px;
+  top: 11px;
+  bottom: 11px;
   left: 0;
   width: 3px;
   border-radius: 0 3px 3px 0;
   background: var(--sb-verde);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--sb-verde) 55%, transparent);
-  animation: sb-linea 0.22s var(--sb-ease) both;
+  animation: sb-linea 0.18s var(--sb-ease) both;
 }
 @keyframes sb-linea { from { transform: scaleY(0); } }
 
@@ -240,11 +256,12 @@
   place-items: center;
   flex: none;
   min-width: 20px;
-  height: 20px;
+  height: 18px;
   padding: 0 6px;
   border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--sb-ambar);
   background: var(--sb-ambar-fondo);
@@ -267,19 +284,19 @@
 .sb--compacto .sb-badge { display: none; }
 
 /* ---------- Dock de utilidades y contraer ---------- */
-.sb-pie { padding: 0.55rem 0.7rem 0.8rem; border-top: 1px solid var(--sb-linea); }
-.sb-dock { display: flex; justify-content: center; gap: 0.35rem; padding: 0.15rem 0 0.5rem; }
+.sb-pie { padding: 0.5rem 0.7rem 0.7rem; border-top: 1px solid var(--sb-linea); }
+.sb-dock { display: flex; justify-content: space-between; gap: 0.25rem; padding: 0.1rem 0.15rem 0.45rem; }
 .sb-dock-btn {
   position: relative;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   color: var(--sb-icono);
   background: none;
-  transition: background-color 0.16s ease, color 0.16s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 .sb-dock-btn:hover { color: var(--sb-fuerte); background: var(--sb-hover); }
 .sb-dock-btn.activo { color: var(--sb-verde); background: var(--sb-activo); }
@@ -302,24 +319,33 @@
 }
 .sb--compacto .sb-dock { flex-direction: column; align-items: center; gap: 0.25rem; }
 
-.sb-contraer {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  width: 100%;
-  height: 36px;
-  padding: 0 0.65rem;
-  border: 0;
-  border-radius: 9px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  text-align: left;
-  color: var(--sb-tenue);
-  background: none;
-  transition: background-color 0.16s ease, color 0.16s ease;
+
+/* ---------- Contraer / expandir ----------
+   Redondo, montado sobre el borde derecho del menú y centrado con la barra
+   superior (64 px de alto). La flecha gira al contraer. */
+.sb-colapso {
+  position: absolute;
+  top: 18px;
+  right: -14px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--sb-linea);
+  border-radius: 50%;
+  color: var(--sb-icono);
+  background: var(--superficie);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 4px 10px -4px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
-.sb-contraer:hover { color: var(--sb-fuerte); background: var(--sb-hover); }
-.sb--compacto .sb-contraer { justify-content: center; padding: 0; }
+.sb-colapso svg { transition: transform 0.2s var(--sb-ease); }
+.sb--compacto .sb-colapso svg { transform: rotate(180deg); }
+.sb-colapso:hover { color: var(--sb-verde); border-color: color-mix(in srgb, var(--sb-verde) 45%, var(--sb-linea)); transform: scale(1.06); }
+.sb-colapso:focus-visible { outline: 2px solid var(--sb-verde); outline-offset: 2px; }
+:root[data-tema="oscuro"] .sb-colapso { background: var(--superficie-2); border-color: rgba(255, 255, 255, 0.12); }
 
 /* ---------- Tooltip (uno solo, fuera del scroll del menú) ---------- */
 .sb-tooltip {
@@ -372,8 +398,7 @@
   flex: none;
   width: 40px;
   height: 40px;
-  margin-right: 0.5rem;
-  border: 1px solid var(--borde);
+  border: 1px solid color-mix(in srgb, var(--borde) 85%, transparent);
   border-radius: 10px;
   color: var(--dark);
   background: var(--superficie);
@@ -386,7 +411,9 @@
   .sb-velo,
   .sb-item,
   .sb-icono,
-  .sb-grupo-flecha { transition: none; }
+  .sb-grupo-flecha,
+  .sb-colapso,
+  .sb-colapso svg { transition: none; }
   .sb-item.activo::before,
   .sb-badge,
   .sb-tooltip { animation: none; }

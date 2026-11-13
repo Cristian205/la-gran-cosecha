@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from apps.common.permissions import EsStaff
 from apps.tenancy.viewsets import ExigeNegocioMixin, TenantScopedMixin
 
-from .aspecto_panel import variables_del_panel
+from .aspecto_panel import tipografia_de_marca, variables_del_panel
 from .models import Anuncio, BeneficioComercial, OfertaProducto, PromoBanner, StoreSettings, Testimonio, TrustBadge
 from .serializers import (
     AnuncioSerializer,
@@ -55,6 +55,9 @@ class SiteConfigView(ExigeNegocioMixin, APIView):
                 # el tema del negocio (ver `aspecto_panel`); no es parte del
                 # modelo, así que no ensucia lo que PATCH acepta guardar.
                 "panel_variables": variables_del_panel(config),
+                # Con qué letra escribe la tienda el nombre del negocio, para
+                # que el panel lo escriba igual (sidebar).
+                "marca_tipografia": tipografia_de_marca(config),
             }
         )
 

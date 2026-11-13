@@ -2,12 +2,20 @@ export type NodoSidebar =
   | { tipo: "item"; clave: string }
   | { tipo: "grupo"; id: string; titulo: string; items: string[] };
 
+/** Los documentos que acepta el backend (`Usuario.TIPOS_DOCUMENTO`). */
+export type TipoDocumento = "CC" | "CE" | "TI" | "PA" | "PPT";
+
 export interface Usuario {
   id: number;
   uid: string;
   nombre_usuario: string;
   email_usuario: string;
   rol_usuario: string;
+  /** Datos personales. Vacíos en las cuentas creadas antes de pedirlos. */
+  telefono_usuario: string;
+  direccion_usuario: string;
+  tipo_documento: TipoDocumento | "";
+  numero_documento: string;
   is_active: boolean;
   is_staff: boolean;
   is_superuser: boolean;
@@ -301,6 +309,8 @@ export interface SiteConfig {
    * PATCH acepte guardar.
    */
   panel_variables?: Record<string, string>;
+  /** Con qué letra escribe la tienda el nombre del negocio (para el sidebar). */
+  marca_tipografia?: { fuente: string; italica: boolean };
 }
 
 export interface PromoBanner {
@@ -448,41 +458,6 @@ export type EstadoPedido = "PENDIENTE" | "EDITADO" | "CERRADO" | "IMPRESO" | "EN
  * el backend. Venta = pedido ENTREGADO; "anterior" = los mismos días justo
  * antes del período.
  */
-export interface PanelEstadisticas {
-  desde: string;
-  hasta: string;
-  anterior: { desde: string; hasta: string };
-  ventas: { total: number; anterior: number };
-  pedidos: { total: number; anterior: number; por_estado: Partial<Record<EstadoPedido, number>> };
-  /** `null` cuando no hubo pedidos entregados: no hay promedio que dar. */
-  ticket: { promedio: number | null; anterior: number | null; entregados: number };
-  clientes: {
-    nuevos: number;
-    nuevos_anterior: number;
-    activos: number;
-    /** Activos del período que ya habían pedido antes. */
-    recurrentes: number;
-    top: { id: number; nombre: string; pedidos: number; total: number }[];
-  };
-  granularidad: "hora" | "dia" | "semana";
-  serie: { inicio: string; total: number; pedidos: number }[];
-  /** En cuántos pedidos del período aparece cada producto. */
-  productos: { nombre: string; pedidos: number; total: number }[];
-  categorias: { categoria: string; total: number }[];
-  operacion: {
-    abiertos: Record<"PENDIENTE" | "EDITADO" | "CERRADO" | "IMPRESO", number>;
-    entregados_hoy: number;
-  };
-  recientes: {
-    id: number;
-    cliente: string;
-    estado: EstadoPedido;
-    fecha: string;
-    total: number;
-    num_items: number;
-  }[];
-}
-
 export interface Archivo {
   id: number;
   url: string | null;

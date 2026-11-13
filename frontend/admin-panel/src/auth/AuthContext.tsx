@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { pilaFuente, radioPx } from "../api/apariencia";
+import { aplicarTipografiaDeMarca, pilaFuente, radioPx } from "../api/apariencia";
 import { cambiarNegocio as apiCambiarNegocio, cerrarSesion as apiLogout, obtenerPerfil } from "../api/auth";
 import { tokenStore } from "../api/client";
 import { obtenerSiteConfig } from "../api/content";
@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const color = /^#[0-9a-f]{6}$/i.test(c.color_primario) ? c.color_primario : "#16a34a";
         setMarca({ nombreEmpresa: c.nombre_empresa, logoUrl: c.logo_url, color });
         aplicarVariablesDelTema(color, c.fuente, c.radio_boton, c.panel_variables);
+        aplicarTipografiaDeMarca(c.marca_tipografia);
       })
       .catch(() => {});
   };

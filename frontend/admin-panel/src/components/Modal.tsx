@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 interface Props {
@@ -17,6 +18,12 @@ interface Props {
   cerrarConEscape?: boolean;
   /** Texto bajo el título, para dar contexto ("Producto: Papa sabanera"). */
   subtitulo?: ReactNode;
+  /** Muestra un botón para llevar el modal a casi toda la pantalla y volver. */
+  expandible?: boolean;
+  /** Va pegado bajo el encabezado y no se desplaza con el cuerpo (pestañas, pasos). */
+  subcabecera?: ReactNode;
+  /** Clase extra en la caja del modal, para el estilo propio de un modal concreto. */
+  clase?: string;
 }
 
 /**
@@ -39,8 +46,12 @@ export function Modal({
   medio,
   cerrarConEscape,
   subtitulo,
+  expandible,
+  subcabecera,
+  clase,
 }: Props) {
   const id = useId();
+  const [expandido, setExpandido] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
   const cerrarRef = useRef(onCerrar);
   cerrarRef.current = onCerrar;
@@ -87,18 +98,33 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-titulo`}
-        className={`modal ${ancho ? "ancho" : ""} ${lateral ? "lateral" : ""} ${amplio ? "amplio" : ""} ${medio ? "medio" : ""}`}
+        className={`modal ${ancho ? "ancho" : ""} ${lateral ? "lateral" : ""} ${amplio ? "amplio" : ""} ${medio ? "medio" : ""} ${expandido ? "expandido" : ""} ${clase ?? ""}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <header>
+        <header className={subcabecera ? "con-subcabecera" : undefined}>
           <div className="modal-titulos">
             <h2 id={`${id}-titulo`}>{titulo}</h2>
             {subtitulo && <p className="modal-subtitulo">{subtitulo}</p>}
           </div>
-          <button type="button" className="cerrar-x" onClick={onCerrar} aria-label="Cerrar">
-            ×
-          </button>
+          <div className="modal-acciones-cabecera">
+            {expandible && (
+              <button
+                type="button"
+                className="cerrar-x modal-expandir"
+                onClick={() => setExpandido((v) => !v)}
+                aria-pressed={expandido}
+                aria-label={expandido ? "Restaurar tamaño" : "Expandir"}
+                title={expandido ? "Restaurar tamaño" : "Expandir"}
+              >
+                {expandido ? <Minimize2 size={17} aria-hidden /> : <Maximize2 size={17} aria-hidden />}
+              </button>
+            )}
+            <button type="button" className="cerrar-x" onClick={onCerrar} aria-label="Cerrar">
+              ×
+            </button>
+          </div>
         </header>
+        {subcabecera && <div className="modal-subcabecera">{subcabecera}</div>}
         <div className="cuerpo">{children}</div>
         {footer && <footer>{footer}</footer>}
       </div>

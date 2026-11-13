@@ -1,0 +1,169 @@
+/* ==========================================================================
+   NAVBAR — la barra superior del panel
+   --------------------------------------------------------------------------
+   Tres zonas en una rejilla, para que el buscador quede de verdad CENTRADO
+   (con `space-between` se corría según lo ancho que fuera cada lado):
+
+     [ indicadores rápidos ]   [ buscador ]   [ perfil ]
+
+   Mismo sistema que el sidebar: blanco frío, bordes gris azulados de 1 px,
+   verde solo como acento, radios de 10 px, sombras mínimas, 150–200 ms.
+   ========================================================================== */
+.navbar-global {
+  --nb-alto: 64px;
+  --nb-control: 40px;
+  --nb-radio: 10px;
+  --nb-linea: color-mix(in srgb, var(--borde) 85%, transparent);
+  --nb-campo: var(--gris-claro);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 520px) minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  min-height: var(--nb-alto);
+  padding: 0.6rem 1.5rem;
+  border-bottom: 1px solid var(--nb-linea);
+  background: var(--navbar-bg);
+  backdrop-filter: saturate(1.4) blur(10px);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px);
+}
+.navbar-zona { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.navbar-zona--izq { justify-self: start; }
+.navbar-zona--der { justify-self: end; }
+
+.navbar-global :is(button):focus-visible { outline: 2px solid var(--verde-500); outline-offset: 2px; }
+
+/* ---------- Indicadores rápidos ---------- */
+.navbar-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  height: var(--nb-control);
+  padding: 0 0.85rem 0 0.35rem;
+  border: 1px solid var(--nb-linea);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--dark);
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.navbar-chip:hover { border-color: color-mix(in srgb, var(--verde-400) 55%, var(--borde)); }
+.navbar-chip-icono { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; }
+.navbar-chip-icono.verde { background: var(--verde-claro); color: var(--verde-texto); }
+.navbar-chip-icono.amber { background: var(--ambar-claro); color: var(--ambar-texto); }
+.navbar-chip-texto { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+.navbar-chip-label { font-size: 0.66rem; font-weight: 600; color: var(--gris); letter-spacing: 0.01em; }
+.navbar-chip-valor { font-size: 0.86rem; font-weight: 700; color: var(--dark); font-variant-numeric: tabular-nums; }
+/* Pendientes por atender: el número en ámbar, sin parpadeos que distraigan. */
+.navbar-chip--alerta .navbar-chip-valor { color: var(--ambar-texto); }
+
+/* ---------- Buscador (abre la paleta Ctrl/Cmd + K) ---------- */
+.navbar-buscar-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  height: var(--nb-control);
+  padding: 0 0.45rem 0 0.8rem;
+  border: 1px solid var(--nb-linea);
+  border-radius: var(--nb-radio);
+  background: var(--nb-campo);
+  color: var(--gris);
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-align: left;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.navbar-buscar-btn svg { flex: none; }
+.navbar-buscar-btn .texto { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.navbar-buscar-btn:hover { background: var(--superficie); border-color: var(--borde); color: var(--dark); }
+.navbar-buscar-btn:focus-visible {
+  outline: none;
+  background: var(--superficie);
+  border-color: var(--verde-400);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--verde-400) 22%, transparent);
+}
+.navbar-buscar-btn .cmdk-atajo { flex: none; background: var(--superficie); font-family: inherit; }
+
+/* ---------- Perfil ---------- */
+.navbar-usuario { position: relative; }
+.navbar-usuario-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: var(--nb-control);
+  padding: 0 0.5rem 0 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.navbar-usuario-btn:hover,
+.navbar-usuario-btn[aria-expanded="true"] { background: var(--superficie); border-color: var(--nb-linea); }
+.navbar-usuario-btn .avatar { width: 32px; height: 32px; min-width: 32px; font-size: 0.78rem; }
+.navbar-usuario-info { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: 1.2; }
+.navbar-usuario-info .n { max-width: 160px; overflow: hidden; font-size: 0.84rem; font-weight: 600; color: var(--dark); text-overflow: ellipsis; white-space: nowrap; }
+.navbar-usuario-info .r { font-size: 0.72rem; font-weight: 500; color: var(--gris); }
+.navbar-usuario-btn .chevron { color: var(--gris); transition: transform 0.15s ease; }
+.navbar-usuario-btn .chevron.abierto { transform: rotate(180deg); }
+
+.navbar-usuario .menu-usuario { animation: nb-menu 0.15s ease both; }
+.menu-usuario-rol {
+  display: inline-block;
+  margin-top: 0.3rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--verde-claro);
+  color: var(--verde-texto);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+@keyframes nb-menu { from { opacity: 0; transform: translateY(-4px); } }
+
+/* En escritorio el botón redondo de contraer el menú sobresale 14 px sobre
+   la barra: el contenido de la izquierda se aparta para no quedar pegado. */
+@media (min-width: 1025px) {
+  .navbar-global { padding-left: 2.25rem; }
+}
+
+/* ---------- Responsive ---------- */
+/* Portátil estrecho: el buscador deja de ocupar el centro fijo. */
+@media (max-width: 1180px) {
+  .navbar-global { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .navbar-zona--centro { justify-self: stretch; max-width: 440px; }
+  .navbar-usuario-info { display: none; }
+}
+
+/* Tableta: las cápsulas pierden la etiqueta y conservan el dato. */
+@media (max-width: 900px) {
+  .navbar-global { padding-inline: 1rem; gap: 0.6rem; }
+  .navbar-chip { padding-right: 0.7rem; }
+  .navbar-chip-label { display: none; }
+  .navbar-buscar-btn .cmdk-atajo { display: none; }
+}
+
+/* Móvil: menú, indicadores en iconos con su número, lupa y avatar. Nada
+   compite por el espacio y todo sigue a un toque. */
+@media (max-width: 640px) {
+  .navbar-global { grid-template-columns: minmax(0, 1fr) auto auto; padding-inline: 0.75rem; gap: 0.4rem; }
+  .navbar-zona { gap: 0.4rem; }
+  .navbar-chip { gap: 0.35rem; padding: 0 0.55rem 0 0.25rem; }
+  .navbar-chip-icono { width: 28px; height: 28px; }
+  .navbar-chip-valor { font-size: 0.8rem; }
+  .navbar-buscar-btn { width: var(--nb-control); padding: 0; justify-content: center; }
+  .navbar-buscar-btn .texto { display: none; }
+  .navbar-usuario-btn { padding-right: 0.25rem; }
+  .navbar-usuario-btn .chevron { display: none; }
+}
+@media (max-width: 400px) {
+  /* Muy estrecho: la caja se lee entrando al resumen; queda su icono. */
+  .navbar-chip--caja .navbar-chip-texto { display: none; }
+  .navbar-chip--caja { padding-right: 0.25rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar-usuario .menu-usuario { animation: none; }
+}

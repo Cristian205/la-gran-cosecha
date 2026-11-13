@@ -5,6 +5,8 @@ from rest_framework import serializers
 from apps.common.permissions import es_owner_de, permisos_de
 from apps.common.utils import convertir_texto_a_decimal  # noqa: F401 (reservado)
 
+from .datos_personales import TIPOS_DOCUMENTO, DatosPersonalesMixin
+
 Usuario = get_user_model()
 
 
@@ -20,6 +22,7 @@ def _codenames_activos():
     from apps.billing.models import PermisoDisponible  # noqa: PLC0415
 
     return set(PermisoDisponible.objects.filter(activo=True).values_list("codename", flat=True))
+
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -39,6 +42,10 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "nombre_usuario",
             "email_usuario",
             "rol_usuario",
+            "telefono_usuario",
+            "direccion_usuario",
+            "tipo_documento",
+            "numero_documento",
             "is_active",
             "is_staff",
             "is_superuser",
@@ -125,14 +132,27 @@ class UsuarioSerializer(serializers.ModelSerializer):
         ]
 
 
-class EditarUsuarioSerializer(serializers.Serializer):
-    """Edición administrativa de un usuario (nombre, rol, estado)."""
+class EditarUsuarioSerializer(DatosPersonalesMixin):
+    """
+    Edición administrativa de un usuario (nombre, rol, estado y datos
+    personales). Todo opcional: se cambia lo que se envía. La vista pasa el
+    usuario en `context["actual"]` para validar el documento contra el resto.
+    """
+
+    telefono_usuario = serializers.CharField(max_length=30, allow_blank=True, required=False)
+    direccion_usuario = serializers.CharField(max_length=255, allow_blank=True, required=False)
+    tipo_documento = serializers.ChoiceField(choices=TIPOS_DOCUMENTO, allow_blank=True, required=False)
+    numero_documento = serializers.CharField(max_length=30, allow_blank=True, required=False)
 
     nombre_usuario = serializers.CharField(max_length=150, required=False)
     rol_usuario = serializers.ChoiceField(
         choices=[r[0] for r in Usuario.ROLES], required=False
     )
     is_active = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        actual = self.context.get("actual")
+        return self.validar_documento(attrs, actual=actual, excluir_id=getattr(actual, "pk", None))
 
 
 class PermisosUsuarioSerializer(serializers.Serializer):
@@ -183,8 +203,16 @@ class VerifyOtpSerializer(serializers.Serializer):
     otp_token = serializers.CharField(max_length=6)
 
 
-class CrearUsuarioSerializer(serializers.Serializer):
-    """Alta de usuario administrativo (genera clave temporal)."""
+class CrearUsuarioSerializer(DatosPersonalesMixin):
+    """
+    Alta de usuario administrativo (genera clave temporal). Exige los datos
+    personales completos: teléfono, dirección, tipo y número de documento.
+    """
+
+    telefono_usuario = serializers.CharField(max_length=30)
+    direccion_usuario = serializers.CharField(max_length=255)
+    tipo_documento = serializers.ChoiceField(choices=TIPOS_DOCUMENTO)
+    numero_documento = serializers.CharField(max_length=30)
 
     email = serializers.EmailField()
     nombre = serializers.CharField(max_length=150)
@@ -198,6 +226,9 @@ class CrearUsuarioSerializer(serializers.Serializer):
                 "Ya existe una cuenta registrada con este correo."
             )
         return value
+
+    def validate(self, attrs):
+        return self.validar_documento(attrs)
 
 
 class PreferenciasSerializer(serializers.Serializer):

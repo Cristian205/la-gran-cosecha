@@ -522,6 +522,10 @@ class UsuarioViewSet(ExigeNegocioMixin, viewsets.ViewSet):
             nombre_usuario=data["nombre"],
             password=password_temp,
             rol_usuario=data["rol"],
+            telefono_usuario=data["telefono_usuario"],
+            direccion_usuario=data["direccion_usuario"],
+            tipo_documento=data["tipo_documento"],
+            numero_documento=data["numero_documento"],
             is_staff=True,
             debe_cambiar_password=True,
         )
@@ -562,7 +566,7 @@ class UsuarioViewSet(ExigeNegocioMixin, viewsets.ViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        serializer = EditarUsuarioSerializer(data=request.data, partial=True)
+        serializer = EditarUsuarioSerializer(data=request.data, partial=True, context={"actual": usuario})
         serializer.is_valid(raise_exception=True)
         datos = dict(serializer.validated_data)
 
