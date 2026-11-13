@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Paginacion, usePaginacion } from "../components/gestion/Paginacion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Loader2,
@@ -336,6 +337,8 @@ export function ClientsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, segmento, filtros.aplicar, columnaOrden, direccionOrden]);
 
+  const pag = usePaginacion(lista, "clientes", [busqueda, segmento, filtros.valores]);
+
   const hayFiltros = Boolean(busqueda || segmento !== "todos" || filtros.activos);
 
   function limpiarFiltros() {
@@ -658,7 +661,7 @@ export function ClientsPage() {
                     <td colSpan={columnas}>{cuerpoVacio}</td>
                   </tr>
                 ) : (
-                  lista.map((c) => {
+                  pag.visibles.map((c) => {
                     const acciones = accionesDe(c);
                     return (
                       <tr
@@ -715,6 +718,7 @@ export function ClientsPage() {
               </tbody>
             </table>
           </div>
+          {!cargando && !error && <Paginacion {...pag} etiqueta="clientes" />}
         </section>
       </div>
 

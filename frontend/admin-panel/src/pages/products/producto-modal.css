@@ -1,0 +1,143 @@
+/* ==========================================================================
+   NUEVO / EDITAR PRODUCTO (ProductFormModal, clase `modal-producto`)
+   --------------------------------------------------------------------------
+   Asistente de catálogo: tarjeta del producto a la izquierda (la zona de
+   imagen es la vista previa, con nombre, categoría y estado debajo) y el
+   formulario a la derecha en dos grupos: principal y complementaria.
+   Encabezado, pasos y pie fijos; solo el cuerpo se desplaza (ver .modal).
+   ========================================================================== */
+.modal.modal-producto { --prd-linea: color-mix(in srgb, var(--borde) 85%, transparent); }
+/* Encabezado en DOS líneas: 1) título (con el subtítulo en gris a su lado,
+   cortado con «…» si no cabe) y 2) los pasos. */
+.modal.modal-producto header { padding: .8rem 1.6rem .45rem; }
+.modal.modal-producto header .modal-titulos { display: flex; align-items: baseline; gap: .65rem; min-width: 0; }
+.modal.modal-producto header h2 { flex: none; font-size: 1.1rem; letter-spacing: -.01em; }
+.modal.modal-producto header .modal-subtitulo {
+  min-width: 0; margin: 0; overflow: hidden; font-size: .8rem; color: var(--gris); text-overflow: ellipsis; white-space: nowrap;
+}
+.modal.modal-producto .modal-subcabecera { padding-top: 0; border-bottom-color: var(--prd-linea); }
+.modal.modal-producto .cuerpo { padding: 1.4rem 1.6rem 1.6rem; }
+.modal.modal-producto footer { gap: .6rem; padding: .85rem 1.6rem; border-top-color: var(--prd-linea); background: var(--superficie); }
+.modal.modal-producto footer .btn { min-height: 40px; padding-inline: 1.1rem; }
+
+/* ---------- Paso 1: tarjeta + formulario ---------- */
+.prd-info { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 1.75rem; align-items: start; }
+.prd-tarjeta {
+  position: sticky; top: 0; padding: .7rem; border: 1px solid var(--prd-linea); border-radius: 16px;
+  background: var(--superficie); box-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 10px 28px -22px rgba(15, 23, 42, .3);
+}
+.prd-tarjeta-pie { padding: .7rem .2rem .1rem; }
+.prd-tarjeta-nombre {
+  margin: 0 0 .45rem; overflow: hidden; font-size: .95rem; font-weight: 700; line-height: 1.3; color: var(--dark);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere;
+}
+.prd-tarjeta-nombre.vacio { color: var(--gris); font-weight: 600; opacity: .7; }
+.prd-tarjeta-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem; }
+.prd-chip {
+  max-width: 100%; overflow: hidden; padding: .15rem .55rem; border-radius: 999px; background: var(--gris-claro);
+  font-size: .72rem; font-weight: 600; color: var(--dark); text-overflow: ellipsis; white-space: nowrap;
+}
+.prd-chip.vacio { color: var(--gris); }
+.prd-estado { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 600; color: var(--gris); }
+.prd-estado-punto { width: 7px; height: 7px; border-radius: 50%; background: var(--gris); }
+.prd-estado.visible { color: var(--verde-texto); }
+.prd-estado.visible .prd-estado-punto { background: var(--verde-500); box-shadow: 0 0 0 3px color-mix(in srgb, var(--verde-500) 20%, transparent); }
+
+.prd-campos { display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; }
+.prd-grupo { display: flex; flex-direction: column; gap: 1rem; }
+.prd-grupo + .prd-grupo { padding-top: 1.4rem; border-top: 1px solid var(--prd-linea); }
+.prd-grupo-titulo {
+  margin: 0; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gris);
+}
+.prd-dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.modal-producto .prd-campo { margin: 0; }
+.modal-producto .prd-campo label {
+  display: flex; align-items: center; gap: .45rem; margin-bottom: .3rem; font-size: .82rem; font-weight: 600; color: var(--dark);
+}
+.prd-req, .prd-opc { padding: .05rem .4rem; border-radius: 999px; font-size: .66rem; font-weight: 600; letter-spacing: .01em; }
+.prd-req { background: var(--verde-claro); color: var(--verde-texto); }
+.prd-opc { background: var(--gris-claro); color: var(--gris); }
+
+/* Inputs más refinados, solo dentro de este modal. */
+.modal-producto .prd-campo :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  width: 100%; height: 38px; padding: 0 .75rem; border: 1px solid var(--borde); border-radius: 10px;
+  background: var(--superficie); font-size: .9rem; color: var(--dark);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.modal-producto .prd-campo textarea { height: auto; min-height: 84px; padding: .5rem .75rem; line-height: 1.5; resize: vertical; }
+.modal-producto .prd-campo :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):hover { border-color: color-mix(in srgb, var(--gris) 45%, var(--borde)); }
+.modal-producto .prd-campo :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
+  outline: none; border-color: var(--verde-400); box-shadow: 0 0 0 3px color-mix(in srgb, var(--verde-400) 20%, transparent);
+}
+.modal-producto .prd-campo .campo-invalido { border-color: var(--rojo); }
+.modal-producto .prd-campo .campo-ayuda { margin-top: .4rem; font-size: .76rem; }
+
+.prd-con-icono { position: relative; }
+.prd-con-icono > svg { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--gris); pointer-events: none; }
+.modal-producto .prd-con-icono :is(input, select) { padding-left: 2.25rem; }
+
+.prd-nota {
+  display: flex; gap: .55rem; align-items: flex-start; margin: -.2rem 0 0; padding: .65rem .8rem;
+  border-radius: 10px; background: var(--superficie-2); border: 1px solid var(--prd-linea);
+  font-size: .78rem; line-height: 1.5; color: var(--gris);
+}
+.prd-nota svg { flex: none; margin-top: .15rem; color: var(--azul-texto); }
+.prd-nota strong { color: var(--dark); font-weight: 600; }
+
+.prd-ayuda-fila { display: flex; justify-content: space-between; gap: 1rem; }
+.prd-contador { flex: none; font-variant-numeric: tabular-nums; }
+.prd-contador.cerca { color: var(--ambar-texto); font-weight: 600; }
+
+/* ---------- Presentación (PresentacionFormModal comparte este diseño) ---------- */
+.prd-etiqueta { display: block; margin-bottom: .4rem; font-size: .84rem; font-weight: 600; color: var(--dark); }
+.prd-interruptor {
+  display: flex; align-items: center; gap: .7rem; min-height: 38px; padding: .3rem .75rem;
+  border: 1px solid var(--borde); border-radius: 10px; background: var(--superficie); cursor: pointer;
+}
+.prd-interruptor > span:last-child { display: flex; flex-direction: column; line-height: 1.25; }
+.prd-interruptor strong { font-size: .86rem; color: var(--dark); }
+.prd-interruptor small { font-size: .72rem; color: var(--gris); }
+.prd-tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.prd-paso-ancho { max-width: 860px; margin: 0 auto; }
+.prd-dos-precio { align-items: start; }
+.prd-nota-precio { margin: 1.5rem 0 0; }
+.prd-tarjeta-precio { margin: 0 0 .5rem; font-size: 1.05rem; font-weight: 800; color: var(--verde-texto); font-variant-numeric: tabular-nums; }
+.prd-tarjeta-precio small { font-size: .72rem; font-weight: 500; color: var(--gris); }
+.prd-resumen-pres { margin-top: 0; }
+
+/* El precio: el contenedor es el «campo»; el input de dentro no lleva borde propio. */
+.modal-producto .prd-precio {
+  display: flex; align-items: center; gap: .4rem; height: 40px; padding: 0 .8rem;
+  border: 1px solid var(--borde); border-radius: 10px; background: var(--superficie);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.modal-producto .prd-precio:focus-within { border-color: var(--verde-400); box-shadow: 0 0 0 3px color-mix(in srgb, var(--verde-400) 20%, transparent); }
+.modal-producto .prd-precio.campo-invalido { border-color: var(--rojo); }
+.modal-producto .prd-campo .prd-precio input {
+  min-height: 0; padding: 0; border: 0; box-shadow: none; background: transparent;
+  font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.modal-producto .prd-campo .prd-precio input:focus { box-shadow: none; }
+.modal-presentacion .pf-unidad-nueva input { height: 38px; }
+.modal-presentacion .pf-presets { margin-bottom: .2rem; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 860px) {
+  .prd-info { grid-template-columns: 200px minmax(0, 1fr); gap: 1.25rem; }
+}
+@media (max-width: 640px) {
+  .prd-info { grid-template-columns: minmax(0, 1fr); }
+  .prd-tarjeta { position: static; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: .8rem; align-items: start; }
+  .prd-tarjeta .media-zona-tarjeta { display: contents; }
+  .prd-tarjeta .media-zona { grid-row: span 2; }
+  .prd-tarjeta .media-zona-botones { max-width: none; }
+  .prd-tarjeta .media-zona-titulo, .prd-tarjeta .media-zona-sub, .prd-tarjeta .media-zona-icono { display: none; }
+  .prd-tarjeta-pie { padding: .1rem 0 0; }
+  .prd-tarjeta .media-zona-notas { grid-column: 2; margin-top: 0; }
+  .prd-dos, .prd-tres { grid-template-columns: minmax(0, 1fr); }
+  .prd-nota-precio { margin-top: 0; }
+  .modal.modal-producto .cuerpo { padding: 1rem; }
+  .modal.modal-producto footer { padding: .75rem 1rem; }
+  .modal.modal-producto header .modal-subtitulo { display: none; }
+  .pasos-modal--progreso .pasos-modal-texto strong { font-size: .74rem; }
+}

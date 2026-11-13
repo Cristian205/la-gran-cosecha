@@ -11,7 +11,6 @@ import type {
   Pedido,
   PedidoDetalle,
   Presentacion,
-  PanelEstadisticas,
   Producto,
   ProductoPendiente,
   ReporteVentas,
@@ -27,12 +26,6 @@ function unwrap<T>(data: Paginated<T> | T[]): T[] {
 // ---------- Estadísticas ----------
 export async function obtenerEstadisticas(): Promise<Estadisticas> {
   const { data } = await api.get<Estadisticas>("/admin/stats/");
-  return data;
-}
-
-/** Todo el dashboard de un período en una sola petición (ver `PanelEstadisticasView`). */
-export async function obtenerPanel(params: { desde: string; hasta: string }): Promise<PanelEstadisticas> {
-  const { data } = await api.get<PanelEstadisticas>("/admin/stats/panel/", { params });
   return data;
 }
 
@@ -194,6 +187,28 @@ export async function desactivarProducto(id: number): Promise<void> {
   await api.delete(`/catalog/products/${id}/`);
 }
 
+/**
+ * Cambia el precio de una o varias presentaciones de un producto, todo o nada
+ * (ver `actualizar_precios` en catalog/views.py). Devuelve todas las
+ * presentaciones del producto ya actualizadas.
+ */
+export async function actualizarPreciosPresentaciones(
+  productoId: number,
+  cambios: { id: number; precio: string; version?: number }[]
+): Promise<{ cambiadas: number; presentaciones: Presentacion[] }> {
+  const { data } = await api.post<{ cambiadas: number; presentaciones: Presentacion[] }>(
+    "/catalog/presentations/actualizar-precios/",
+    { producto: productoId, cambios }
+  );
+  return data;
+}
+
+/** Los cambios de precio de UNA presentación, del más reciente al más viejo. */
+export async function obtenerHistorialPresentacion(presentacionId: number): Promise<HistorialPrecio[]> {
+  const { data } = await api.get<HistorialPrecio[]>(`/catalog/presentations/${presentacionId}/historial-precios/`);
+  return data;
+}
+
 export async function obtenerHistorialPrecios(
   productoId: number
 ): Promise<HistorialPrecio[]> {
@@ -280,9 +295,11 @@ export async function obtenerPedidos(params?: {
   estado?: string;
   desde?: string;
   hasta?: string;
+  /** Cuántos traer como máximo (la API admite hasta 500). */
+  page_size?: number;
 }): Promise<Pedido[]> {
   const { data } = await api.get<Paginated<Pedido>>("/orders/", {
-    params: { ...params, page_size: 100 },
+    params: { page_size: 100, ...params },
   });
   return unwrap(data);
 }
@@ -510,11 +527,20 @@ export interface CrearUsuarioResp {
   usuario: Usuario;
 }
 
-export async function crearUsuario(payload: {
-  email: string;
-  nombre: string;
-  rol: string;
-}): Promise<CrearUsuarioResp> {
+export interface DatosPersonalesUsuario {
+  telefono_usuario: string;
+  direccion_usuario: string;
+  tipo_documento: string;
+  numero_documento: string;
+}
+
+export async function crearUsuario(
+  payload: {
+    email: string;
+    nombre: string;
+    rol: string;
+  } & DatosPersonalesUsuario
+): Promise<CrearUsuarioResp> {
   const { data } = await api.post<CrearUsuarioResp>("/auth/users/", payload);
   return data;
 }
@@ -523,7 +549,7 @@ export async function eliminarUsuario(id: number): Promise<void> {
   await api.delete(`/auth/users/${id}/`);
 }
 
-export interface EditarUsuarioPayload {
+export interface EditarUsuarioPayload extends Partial<DatosPersonalesUsuario> {
   nombre_usuario?: string;
   rol_usuario?: string;
   is_active?: boolean;

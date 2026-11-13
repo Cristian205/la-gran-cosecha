@@ -1,4 +1,5 @@
 import { CheckCircle2, PackagePlus, XCircle } from "lucide-react";
+import { Paginacion, usePaginacion } from "../components/gestion/Paginacion";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   obtenerCategorias,
@@ -97,6 +98,8 @@ export function PendingProductsPage() {
     }
   }
 
+  const pag = usePaginacion(ordenar(filtros.aplicar(pendientes), EXTRACTORES_PENDIENTES), "pendientes", [filtros.valores]);
+
   return (
     <>
       <div className="topbar">
@@ -165,7 +168,7 @@ export function PendingProductsPage() {
                     </td>
                   </tr>
                 ) : (
-                  ordenar(filtros.aplicar(pendientes), EXTRACTORES_PENDIENTES).map((p) => (
+                  pag.visibles.map((p) => (
                     <tr key={p.id}>
                       {columnasVisibles.map((clave) => (
                         <td key={clave}>{DEFINICIONES_PENDIENTES[clave].render(p)}</td>
@@ -201,6 +204,7 @@ export function PendingProductsPage() {
               </tbody>
             </table>
           </div>
+          <Paginacion {...pag} etiqueta="productos" />
         </div>
       </div>
 

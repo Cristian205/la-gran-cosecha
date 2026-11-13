@@ -1,6 +1,9 @@
-import { useMemo, useRef, useState } from "react";
-import { AlertTriangle, Calculator, Check, ImageIcon, Scale, Tag } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Calculator, Check, Info, Ruler, Save, Scale } from "lucide-react";
+import { Combobox } from "../../components/Combobox";
+import { MediaField } from "../../components/MediaField";
 import { Modal } from "../../components/Modal";
+import { PasosModal, type PasoModal } from "../../components/PasosModal";
 import { crearUnidad } from "../../api/resources";
 import type { UnidadMedida } from "../../types";
 import { extraerMensajeError, formatoPrecio } from "../../utils";
@@ -13,7 +16,6 @@ import {
   formatearCantidad,
   leerNumero,
 } from "../../utils/cantidades";
-import { FotoPresentacion } from "./FotoPresentacion";
 import {
   ORDEN_CAMPOS,
   textoPrecio,
@@ -22,8 +24,24 @@ import {
   type CampoPresentacion,
   type ErroresPresentacion,
 } from "./presentaciones";
+import "./producto-modal.css";
 
 export type ModoFormulario = "crear" | "editar" | "duplicar";
+
+/**
+ * Los pasos del asistente, igual que «Nuevo producto»: crear y duplicar van
+ * en orden; editar usa las mismas secciones como pestañas libres.
+ */
+type Paso = "identificacion" | "precio" | "revision";
+const ORDEN: Paso[] = ["identificacion", "precio", "revision"];
+const CAMPOS_DE: Record<Exclude<Paso, "revision">, CampoPresentacion[]> = {
+  identificacion: ["nombre_presentacion", "unidad_venta", "factor_conversion"],
+  precio: ["precio_unitario", "cantidad_minima", "incremento_cantidad", "decimales_cantidad"],
+};
+/** En qué paso está un campo (para volver a él si tiene un error). */
+function pasoDe(campo: CampoPresentacion): Paso {
+  return CAMPOS_DE.identificacion.includes(campo) ? "identificacion" : "precio";
+}
 
 interface Props {
   modo: ModoFormulario;
@@ -81,6 +99,12 @@ export function PresentacionFormModal({
   const [errores, setErrores] = useState<ErroresPresentacion>(inicial.erroresServidor ?? {});
   const [intento, setIntento] = useState(Boolean(inicial.erroresServidor));
   const [guardando, setGuardando] = useState(false);
+  const [paso, setPaso] = useState<Paso>(() => {
+    // Si vuelve con errores del servidor, abre en el paso del primero.
+    const primero = ORDEN_CAMPOS.find((c) => inicial.erroresServidor?.[c]);
+    return primero ? pasoDe(primero) : "identificacion";
+  });
+  const enOrden = modo !== "editar";
   const huellaInicial = useRef(modo === "duplicar" ? "" : huella(inicial));
   const refs = useRef<Partial<Record<CampoPresentacion, HTMLElement | null>>>({});
 
@@ -139,7 +163,32 @@ export function PresentacionFormModal({
 
   function enfocarPrimerError(e: ErroresPresentacion) {
     const campo = ORDEN_CAMPOS.find((c) => e[c]);
-    if (campo) refs.current[campo]?.focus();
+    if (!campo) return;
+    setPaso(pasoDe(campo));
+    // El campo existe en el siguiente pintado si estaba en otro paso.
+    requestAnimationFrame(() => refs.current[campo]?.focus());
+  }
+
+  /** Los errores de los campos de un paso (para no avanzar sin corregirlos). */
+  function erroresDePaso(p: Exclude<Paso, "revision">): ErroresPresentacion {
+    const todos = validarBorrador(b, hermanas);
+    return Object.fromEntries(CAMPOS_DE[p].filter((c) => todos[c]).map((c) => [c, todos[c]]));
+  }
+
+  function irA(destino: string) {
+    const d = destino as Paso;
+    if (enOrden) {
+      const hasta = ORDEN.indexOf(d);
+      for (const previo of ORDEN.slice(0, hasta) as Exclude<Paso, "revision">[]) {
+        const e = erroresDePaso(previo);
+        if (Object.keys(e).length > 0) {
+          setIntento(true);
+          enfocarPrimerError(e);
+          return;
+        }
+      }
+    }
+    setPaso(d);
   }
 
   async function guardar(ev?: React.FormEvent) {
@@ -149,8 +198,7 @@ export function PresentacionFormModal({
     setErrores({});
     const locales = validarBorrador(b, hermanas);
     if (Object.keys(locales).length > 0) {
-      // Tras el render, para que el campo ya tenga su mensaje de error.
-      requestAnimationFrame(() => enfocarPrimerError(locales));
+      enfocarPrimerError(locales);
       return;
     }
     setGuardando(true);
@@ -158,7 +206,7 @@ export function PresentacionFormModal({
       const delServidor = await onGuardar(b);
       if (delServidor) {
         setErrores(delServidor);
-        requestAnimationFrame(() => enfocarPrimerError(delServidor));
+        enfocarPrimerError(delServidor);
       }
     } finally {
       setGuardando(false);
@@ -212,328 +260,547 @@ export function PresentacionFormModal({
     );
   }
 
+  const indice = ORDEN.indexOf(paso);
+  const precioApi = precioValido ? aDecimalApi(textoPrecio(b.precio_unitario)) : null;
+  const idValida = Object.keys(erroresDePaso("identificacion")).length === 0;
+  const precioPasoValido = Object.keys(erroresDePaso("precio")).length === 0;
+  const textoRegla = reglaValida
+    ? `Desde ${formatearCantidad(b.cantidad_minima)} ${abreviatura}, de ${formatearCantidad(b.incremento_cantidad)} en ${formatearCantidad(b.incremento_cantidad)}`
+    : "Por definir";
+
+  const pasos: PasoModal[] = [
+    {
+      clave: "identificacion",
+      titulo: "Identificación",
+      detalle: b.nombre_presentacion.trim()
+        ? `${b.nombre_presentacion.trim()}${unidad ? ` · ${unidad.abreviatura_unidad}` : ""}`
+        : "Nombre, unidad y foto",
+      hecho: enOrden && indice > 0,
+    },
+    {
+      clave: "precio",
+      titulo: "Precio y cantidades",
+      detalle: precioApi ? `${formatoPrecio(precioApi)}${abreviatura ? ` / ${abreviatura}` : ""}` : "Precio y forma de pedir",
+      bloqueado: enOrden && !idValida,
+      hecho: enOrden && indice > 1,
+    },
+    {
+      clave: "revision",
+      titulo: "Revisión",
+      detalle: b.estado_presentacion ? "Activa" : "Inactiva",
+      bloqueado: enOrden && (!idValida || !precioPasoValido),
+    },
+  ];
+
+  const tituloGuardar = guardando ? "Guardando…" : modo === "editar" ? "Guardar cambios" : "Guardar presentación";
+  const pie = !enOrden ? (
+    <>
+      <button type="button" className="btn secundario" onClick={cerrar} disabled={guardando}>
+        Cancelar
+      </button>
+      <button type="submit" form="form-presentacion" className="btn primario btn-con-icono" disabled={guardando} aria-busy={guardando}>
+        <Save size={16} aria-hidden /> {tituloGuardar}
+      </button>
+    </>
+  ) : (
+    <>
+      {indice === 0 ? (
+        <button type="button" className="btn secundario" onClick={cerrar} disabled={guardando}>
+          Cancelar
+        </button>
+      ) : (
+        <button type="button" className="btn secundario btn-con-icono" onClick={() => irA(ORDEN[indice - 1])} disabled={guardando}>
+          <ArrowLeft size={16} aria-hidden /> Atrás
+        </button>
+      )}
+      {paso === "revision" ? (
+        <button type="submit" form="form-presentacion" className="btn primario btn-con-icono" disabled={guardando} aria-busy={guardando}>
+          <Save size={16} aria-hidden /> {tituloGuardar}
+        </button>
+      ) : (
+        <button type="button" className="btn primario btn-con-icono" onClick={() => irA(ORDEN[indice + 1])}>
+          {paso === "identificacion" ? "Continuar a precio y cantidades" : "Continuar a revisión"}
+          <ArrowRight size={16} aria-hidden />
+        </button>
+      )}
+    </>
+  );
+
   return (
     <Modal
       amplio
+      ancho
+      expandible
       cerrarConEscape
+      clase="modal-producto modal-presentacion"
       titulo={TITULOS[modo]}
-      subtitulo={productoNombre ? `Producto: ${productoNombre}` : "Producto nuevo"}
-      onCerrar={cerrar}
-      footer={
-        <>
-          <button type="button" className="btn secundario" onClick={cerrar} disabled={guardando}>
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            form="form-presentacion"
-            className="btn primario"
-            disabled={guardando}
-            aria-busy={guardando}
-          >
-            {guardando ? "Guardando…" : modo === "editar" ? "Guardar cambios" : "Guardar presentación"}
-          </button>
-        </>
+      subtitulo={
+        productoNombre
+          ? `Define cómo se vende ${productoNombre}: unidad, precio y cantidades.`
+          : "Define cómo se vende el producto: unidad, precio y cantidades."
       }
+      subcabecera={
+        <PasosModal
+          etiqueta={enOrden ? "Pasos para crear la presentación" : "Secciones de la presentación"}
+          pasos={pasos}
+          activo={paso}
+          onCambiar={irA}
+          numerados={enOrden}
+          variante={enOrden ? "progreso" : "pestanas"}
+        />
+      }
+      onCerrar={cerrar}
+      footer={pie}
     >
-      <form id="form-presentacion" className="form-presentacion" onSubmit={guardar} noValidate>
+      <form
+        id="form-presentacion"
+        className="form-presentacion"
+        onSubmit={(e) => {
+          // En crear/duplicar, Enter en un paso intermedio avanza en vez de guardar.
+          if (enOrden && paso !== "revision") {
+            e.preventDefault();
+            irA(ORDEN[indice + 1]);
+            return;
+          }
+          guardar(e);
+        }}
+        noValidate
+      >
         {erroresVisibles.general && (
           <div className="error-box" role="alert">
             <AlertTriangle size={15} aria-hidden /> {erroresVisibles.general}
           </div>
         )}
 
-        {/* ---------- A. Identificación comercial ---------- */}
-        <section className="pf-seccion" aria-labelledby="pf-a">
-          <h3 id="pf-a" className="pf-seccion-titulo">
-            <Tag size={15} aria-hidden /> Identificación comercial
-          </h3>
-          <div className="pf-grid">
-            <div className="campo pf-col-2">
-              <label htmlFor="pf-nombre_presentacion">Nombre de la presentación *</label>
-              <input
-                {...campo("nombre_presentacion")}
-                autoFocus
-                maxLength={200}
-                placeholder="Ej: Kilo, Caja x 12, Frasco 100 ml"
-                value={b.nombre_presentacion}
-                onChange={(e) => cambiar("nombre_presentacion", e.target.value)}
+        {/* --------------------------------------------- 1 · Identificación
+            A la izquierda, la tarjeta de la presentación: su foto (opcional;
+            sin ella se usa la del producto) con nombre, unidad, precio y
+            estado debajo. A la derecha, el formulario. */}
+        {paso === "identificacion" && (
+          <div className="producto-paso prd-info" role="tabpanel">
+            <aside className="prd-tarjeta" aria-label="Vista previa de la presentación">
+              <MediaField
+                variante="zona"
+                valor={b.archivo ?? null}
+                urlActual={b.imagen_url ?? null}
+                quitada={Boolean(b.quitarImagen)}
+                onCambiar={(archivo) => setB((prev) => ({ ...prev, archivo, quitarImagen: false }))}
+                onQuitarActual={(quitar) => setB((prev) => ({ ...prev, archivo: null, quitarImagen: quitar }))}
+                accept="image/png,image/jpeg,image/webp"
+                ayuda="Opcional: sin foto, la tienda muestra la del producto."
+                pie={<TarjetaPie b={b} unidad={unidad?.nombre_unidad ?? ""} precio={precioApi} abreviatura={abreviatura} />}
               />
-              <ErrorCampo de="nombre_presentacion" />
-              {!erroresVisibles.nombre_presentacion && (
-                <p className="campo-ayuda" id="pf-nombre_presentacion-ayuda">
-                  Es lo que el cliente elige en la tienda.
-                </p>
-              )}
-            </div>
+            </aside>
 
-            <div className="campo">
-              <label htmlFor="pf-unidad_venta">Unidad comercial *</label>
-              {!creandoUnidad ? (
-                <select
-                  {...campo("unidad_venta")}
-                  value={b.unidad_venta}
-                  onChange={(e) => {
-                    if (e.target.value === "__nueva") {
-                      setCreandoUnidad(true);
-                      return;
-                    }
-                    cambiar("unidad_venta", e.target.value === "" ? "" : Number(e.target.value));
-                  }}
-                >
-                  <option value="">Elegir unidad…</option>
-                  {unidadesVisibles.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombre_unidad} ({u.abreviatura_unidad})
-                    </option>
-                  ))}
-                  {puedeCrearUnidad && <option value="__nueva">+ Crear unidad nueva…</option>}
-                </select>
-              ) : (
-                <div className="pf-unidad-nueva" role="group" aria-label="Crear unidad nueva">
+            <div className="prd-campos">
+              <section className="prd-grupo" aria-labelledby="pre-grupo-id">
+                <h3 id="pre-grupo-id" className="prd-grupo-titulo">Identificación comercial</h3>
+
+                <div className="campo prd-campo">
+                  <label htmlFor="pf-nombre_presentacion">
+                    Nombre de la presentación <span className="prd-req">Obligatorio</span>
+                  </label>
                   <input
+                    {...campo("nombre_presentacion")}
                     autoFocus
-                    aria-label="Nombre de la unidad"
-                    placeholder="Nombre (ej: Caja)"
-                    maxLength={100}
-                    value={unidadNueva.nombre}
-                    onChange={(e) => setUnidadNueva((u) => ({ ...u, nombre: e.target.value }))}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), guardarUnidad())}
+                    maxLength={200}
+                    placeholder="Ej: Kilo, Caja x 12, Frasco 100 ml"
+                    value={b.nombre_presentacion}
+                    onChange={(e) => cambiar("nombre_presentacion", e.target.value)}
                   />
-                  <input
-                    aria-label="Abreviatura de la unidad"
-                    placeholder="Abrev. (cj)"
-                    maxLength={10}
-                    value={unidadNueva.abreviatura}
-                    onChange={(e) => setUnidadNueva((u) => ({ ...u, abreviatura: e.target.value }))}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), guardarUnidad())}
-                  />
-                  <div className="pf-unidad-nueva-acciones">
-                    <button type="button" className="btn primario sm" onClick={guardarUnidad} disabled={guardandoUnidad}>
-                      {guardandoUnidad ? "Creando…" : "Crear"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn secundario sm"
-                      onClick={() => {
-                        setCreandoUnidad(false);
-                        setErrorUnidad(null);
-                      }}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                  {errorUnidad && (
-                    <p className="campo-error" role="alert">
-                      <AlertTriangle size={13} aria-hidden /> {errorUnidad}
+                  <ErrorCampo de="nombre_presentacion" />
+                  {!erroresVisibles.nombre_presentacion && (
+                    <p className="campo-ayuda" id="pf-nombre_presentacion-ayuda">
+                      Es lo que el cliente elige en la tienda.
                     </p>
                   )}
                 </div>
-              )}
-              <ErrorCampo de="unidad_venta" />
-            </div>
 
-            <div className="campo">
-              <span className="pf-etiqueta" id="pf-estado-etiqueta">Estado</span>
-              <label className="pf-estado">
-                <span className="switch">
-                  <input
-                    type="checkbox"
-                    aria-labelledby="pf-estado-etiqueta pf-estado-texto"
-                    checked={b.estado_presentacion}
-                    onChange={(e) => cambiar("estado_presentacion", e.target.checked)}
-                  />
-                  <span className="switch-riel" />
-                </span>
-                <span id="pf-estado-texto">
-                  {b.estado_presentacion ? "Activa · se puede pedir" : "Inactiva · oculta en la tienda"}
-                </span>
-              </label>
-            </div>
-          </div>
-        </section>
+                <div className="prd-dos">
+                  <div className="campo prd-campo">
+                    <label htmlFor="pf-unidad_venta">
+                      Unidad comercial <span className="prd-req">Obligatorio</span>
+                    </label>
+                    {!creandoUnidad ? (
+                      <Combobox
+                        id="pf-unidad_venta"
+                        ref={(h) => {
+                          refs.current.unidad_venta = h as unknown as HTMLElement | null;
+                        }}
+                        valor={b.unidad_venta}
+                        opciones={unidadesVisibles.map((u) => ({ valor: u.id, etiqueta: u.nombre_unidad, detalle: u.abreviatura_unidad }))}
+                        onCambiar={(v) => cambiar("unidad_venta", v)}
+                        placeholder="Elige una unidad"
+                        invalido={Boolean(erroresVisibles.unidad_venta)}
+                        describedBy={erroresVisibles.unidad_venta ? "pf-unidad_venta-error" : undefined}
+                        accion={puedeCrearUnidad ? { etiqueta: "+ Crear unidad nueva…", onElegir: () => setCreandoUnidad(true) } : undefined}
+                      />
+                    ) : (
+                      <div className="pf-unidad-nueva" role="group" aria-label="Crear unidad nueva">
+                        <input
+                          autoFocus
+                          aria-label="Nombre de la unidad"
+                          placeholder="Nombre (ej: Caja)"
+                          maxLength={100}
+                          value={unidadNueva.nombre}
+                          onChange={(e) => setUnidadNueva((u) => ({ ...u, nombre: e.target.value }))}
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), guardarUnidad())}
+                        />
+                        <input
+                          aria-label="Abreviatura de la unidad"
+                          placeholder="Abrev. (cj)"
+                          maxLength={10}
+                          value={unidadNueva.abreviatura}
+                          onChange={(e) => setUnidadNueva((u) => ({ ...u, abreviatura: e.target.value }))}
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), guardarUnidad())}
+                        />
+                        <div className="pf-unidad-nueva-acciones">
+                          <button type="button" className="btn primario sm" onClick={guardarUnidad} disabled={guardandoUnidad}>
+                            {guardandoUnidad ? "Creando…" : "Crear"}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn secundario sm"
+                            onClick={() => {
+                              setCreandoUnidad(false);
+                              setErrorUnidad(null);
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                        {errorUnidad && (
+                          <p className="campo-error" role="alert">
+                            <AlertTriangle size={13} aria-hidden /> {errorUnidad}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <ErrorCampo de="unidad_venta" />
+                  </div>
 
-        {/* ---------- B. Precio de venta ---------- */}
-        <section className="pf-seccion" aria-labelledby="pf-b">
-          <h3 id="pf-b" className="pf-seccion-titulo">
-            <Calculator size={15} aria-hidden /> Precio de venta
-          </h3>
-          <div className="pf-grid">
-            <div className="campo">
-              <label htmlFor="pf-precio_unitario">
-                Precio {unidad ? `por 1 ${unidad.nombre_unidad.toLowerCase()}` : ""} *
-              </label>
-              <div className={`input-precio ${erroresVisibles.precio_unitario ? "campo-invalido" : ""}`}>
-                <span aria-hidden>$</span>
-                <input
-                  {...campo("precio_unitario")}
-                  className={undefined}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  placeholder="0"
-                  value={b.precio_unitario}
-                  onChange={(e) => cambiar("precio_unitario", e.target.value)}
-                />
-                <span className="pf-moneda" aria-hidden>COP</span>
-              </div>
-              <ErrorCampo de="precio_unitario" />
-            </div>
-            <div className="pf-ayuda-contextual" id="pf-precio_unitario-ayuda" aria-live="polite">
-              {precioValido && unidad ? (
-                <>
-                  <strong>
-                    {formatoPrecio(aDecimalApi(textoPrecio(b.precio_unitario)) ?? "0")} por {unidad.nombre_unidad.toLowerCase()}
-                  </strong>
-                  {costoMinimo && b.cantidad_minima !== "1" && (
-                    <span>
-                      El pedido mínimo ({formatearCantidad(b.cantidad_minima)} {abreviatura}) cuesta {costoMinimo}.
+                  <div className="campo prd-campo">
+                    <span className="prd-etiqueta" id="pf-estado-etiqueta">
+                      Estado
                     </span>
-                  )}
-                  <span>Cada presentación tiene su propio precio; no se calcula a partir de otras.</span>
-                </>
-              ) : (
-                <span>Elige la unidad y escribe el precio: aquí verás a qué corresponde.</span>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* ---------- C. Reglas de cantidad ---------- */}
-        <section className="pf-seccion" aria-labelledby="pf-c">
-          <h3 id="pf-c" className="pf-seccion-titulo">
-            <Scale size={15} aria-hidden /> Reglas de cantidad
-          </h3>
-          <div className="pf-presets" role="radiogroup" aria-label="Forma de pedir">
-            {PRESETS_CANTIDAD.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                role="radio"
-                aria-checked={presetActivo === p.id}
-                className={`pf-preset ${presetActivo === p.id ? "activo" : ""}`}
-                onClick={() => {
-                  setB((prev) => ({
-                    ...prev,
-                    cantidad_minima: p.minima,
-                    incremento_cantidad: p.incremento,
-                    decimales_cantidad: p.decimales,
-                  }));
-                  setErrores({});
-                }}
-              >
-                {presetActivo === p.id && <Check size={13} aria-hidden />}
-                <span className="pf-preset-titulo">{p.titulo}</span>
-                <span className="pf-preset-ejemplo">{p.ejemplo}</span>
-              </button>
-            ))}
-            <span className={`pf-preset pf-preset-info ${presetActivo === "personalizado" ? "activo" : ""}`} aria-hidden>
-              {presetActivo === "personalizado" && <Check size={13} />}
-              <span className="pf-preset-titulo">Personalizada</span>
-              <span className="pf-preset-ejemplo">Ajusta los campos</span>
-            </span>
-          </div>
-
-          <div className="pf-grid pf-grid-3">
-            <div className="campo">
-              <label htmlFor="pf-cantidad_minima">Cantidad mínima *</label>
-              <input
-                {...campo("cantidad_minima")}
-                inputMode="decimal"
-                autoComplete="off"
-                value={b.cantidad_minima}
-                onChange={(e) => cambiar("cantidad_minima", e.target.value)}
-              />
-              <ErrorCampo de="cantidad_minima" />
-            </div>
-            <div className="campo">
-              <label htmlFor="pf-incremento_cantidad">Incremento *</label>
-              <input
-                {...campo("incremento_cantidad")}
-                inputMode="decimal"
-                autoComplete="off"
-                value={b.incremento_cantidad}
-                onChange={(e) => cambiar("incremento_cantidad", e.target.value)}
-              />
-              <ErrorCampo de="incremento_cantidad" />
-            </div>
-            <div className="campo">
-              <label htmlFor="pf-decimales_cantidad">Decimales admitidos</label>
-              <select
-                {...campo("decimales_cantidad")}
-                value={b.decimales_cantidad}
-                onChange={(e) => cambiar("decimales_cantidad", Number(e.target.value))}
-              >
-                {Array.from({ length: MAX_DECIMALES + 1 }, (_, n) => (
-                  <option key={n} value={n}>
-                    {n === 0 ? "Sin decimales (1, 2, 3)" : n === 1 ? "1 decimal (0,5)" : "2 decimales (0,25)"}
-                  </option>
-                ))}
-              </select>
-              <ErrorCampo de="decimales_cantidad" />
-            </div>
-          </div>
-
-          <div className={`pf-vista-previa ${reglaValida ? "" : "invalida"}`} aria-live="polite">
-            <span className="pf-etiqueta">Cantidades válidas</span>
-            {reglaValida ? (
-              <>
-                <div className="pf-secuencia">
-                  {ejemplos.map((x) => (
-                    <span key={x} className="pf-cantidad">
-                      {x}
-                      {abreviatura && <small> {abreviatura}</small>}
-                    </span>
-                  ))}
-                  <span className="pf-cantidad pf-cantidad-mas" aria-hidden>…</span>
+                    <label className="prd-interruptor">
+                      <span className="switch">
+                        <input
+                          type="checkbox"
+                          aria-labelledby="pf-estado-etiqueta pf-estado-texto"
+                          checked={b.estado_presentacion}
+                          onChange={(e) => cambiar("estado_presentacion", e.target.checked)}
+                        />
+                        <span className="switch-riel" />
+                      </span>
+                      <span id="pf-estado-texto">
+                        <strong>{b.estado_presentacion ? "Activa" : "Inactiva"}</strong>
+                        <small>{b.estado_presentacion ? "Se puede pedir en la tienda" : "Oculta en la tienda"}</small>
+                      </span>
+                    </label>
+                  </div>
                 </div>
-                <p>
-                  Desde {formatearCantidad(b.cantidad_minima)} {abreviatura} y luego sumando{" "}
-                  {formatearCantidad(b.incremento_cantidad)} {abreviatura} cada vez. El cliente no podrá pedir
-                  cantidades intermedias.
-                </p>
-              </>
-            ) : (
-              <p>Corrige la cantidad mínima y el incremento para ver la secuencia.</p>
-            )}
-          </div>
-        </section>
+              </section>
 
-        {/* ---------- D. Equivalencia e imagen ---------- */}
-        <section className="pf-seccion" aria-labelledby="pf-d">
-          <h3 id="pf-d" className="pf-seccion-titulo">
-            <ImageIcon size={15} aria-hidden /> Equivalencia e imagen <span className="pf-opcional">Opcional</span>
-          </h3>
-          <div className="pf-grid">
-            <div className="campo">
-              <label htmlFor="pf-factor_conversion">
-                Equivale a {unidadBase ? `(${unidadBase.nombre_unidad.toLowerCase()})` : "(unidades base)"}
-              </label>
-              <input
-                {...campo("factor_conversion")}
-                inputMode="decimal"
-                autoComplete="off"
-                value={b.factor_conversion}
-                onChange={(e) => cambiar("factor_conversion", e.target.value)}
-              />
-              <ErrorCampo de="factor_conversion" />
-              {!erroresVisibles.factor_conversion && (
-                <p className="campo-ayuda" id="pf-factor_conversion-ayuda">
-                  1 {b.nombre_presentacion.trim() || "presentación"} = {formatearCantidad(b.factor_conversion || "1")}{" "}
-                  {unidadBase?.abreviatura_unidad ?? "unidad base"}. Solo para inventario; no cambia el precio.
+              <section className="prd-grupo" aria-labelledby="pre-grupo-eq">
+                <h3 id="pre-grupo-eq" className="prd-grupo-titulo">Equivalencia para inventario</h3>
+                <div className="campo prd-campo">
+                  <label htmlFor="pf-factor_conversion">
+                    Equivale a {unidadBase ? unidadBase.nombre_unidad.toLowerCase() : "unidades base"}{" "}
+                    <span className="prd-opc">Opcional</span>
+                  </label>
+                  <div className="prd-con-icono">
+                    <Ruler size={15} aria-hidden />
+                    <input
+                      {...campo("factor_conversion")}
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={b.factor_conversion}
+                      onChange={(e) => cambiar("factor_conversion", e.target.value)}
+                    />
+                  </div>
+                  <ErrorCampo de="factor_conversion" />
+                </div>
+                <p className="prd-nota" id="pf-factor_conversion-ayuda">
+                  <Info size={14} aria-hidden />
+                  <span>
+                    <strong>
+                      1 {b.nombre_presentacion.trim() || "presentación"} = {formatearCantidad(b.factor_conversion || "1")}{" "}
+                      {unidadBase?.abreviatura_unidad ?? "unidad base"}
+                    </strong>
+                    . Solo se usa para descontar inventario; no cambia el precio.
+                  </span>
                 </p>
-              )}
+              </section>
             </div>
-            <FotoPresentacion
-              urlActual={b.imagen_url ?? null}
-              archivo={b.archivo ?? null}
-              quitar={Boolean(b.quitarImagen)}
-              nombre={b.nombre_presentacion}
-              onCambiar={({ archivo, quitar }) => setB((prev) => ({ ...prev, archivo, quitarImagen: quitar }))}
-            />
           </div>
-        </section>
+        )}
 
+        {/* ------------------------------------------ 2 · Precio y cantidades */}
+        {paso === "precio" && (
+          <div className="producto-paso prd-campos prd-paso-ancho" role="tabpanel">
+            <section className="prd-grupo" aria-labelledby="pre-grupo-precio">
+              <h3 id="pre-grupo-precio" className="prd-grupo-titulo">
+                <Calculator size={14} aria-hidden /> Precio de venta
+              </h3>
+              <div className="prd-dos prd-dos-precio">
+                <div className="campo prd-campo">
+                  <label htmlFor="pf-precio_unitario">
+                    Precio {unidad ? `por 1 ${unidad.nombre_unidad.toLowerCase()}` : ""} <span className="prd-req">Obligatorio</span>
+                  </label>
+                  <div className={`input-precio prd-precio ${erroresVisibles.precio_unitario ? "campo-invalido" : ""}`}>
+                    <span aria-hidden>$</span>
+                    <input
+                      {...campo("precio_unitario")}
+                      className={undefined}
+                      inputMode="decimal"
+                      autoComplete="off"
+                      autoFocus
+                      placeholder="0"
+                      value={b.precio_unitario}
+                      onChange={(e) => cambiar("precio_unitario", e.target.value)}
+                    />
+                    <span className="pf-moneda" aria-hidden>
+                      COP
+                    </span>
+                  </div>
+                  <ErrorCampo de="precio_unitario" />
+                </div>
+                <div className="prd-nota prd-nota-precio" id="pf-precio_unitario-ayuda" aria-live="polite">
+                  <Info size={14} aria-hidden />
+                  {precioValido && unidad ? (
+                    <span>
+                      <strong>
+                        {formatoPrecio(precioApi ?? "0")} por {unidad.nombre_unidad.toLowerCase()}
+                      </strong>
+                      {costoMinimo && b.cantidad_minima !== "1" && (
+                        <>
+                          . El pedido mínimo ({formatearCantidad(b.cantidad_minima)} {abreviatura}) cuesta {costoMinimo}
+                        </>
+                      )}
+                      . Cada presentación tiene su propio precio; no se calcula a partir de otras.
+                    </span>
+                  ) : (
+                    <span>Escribe el precio: aquí verás a qué corresponde.</span>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="prd-grupo" aria-labelledby="pre-grupo-cant">
+              <h3 id="pre-grupo-cant" className="prd-grupo-titulo">
+                <Scale size={14} aria-hidden /> Reglas de cantidad
+              </h3>
+              <div className="pf-presets" role="radiogroup" aria-label="Forma de pedir">
+                {PRESETS_CANTIDAD.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={presetActivo === p.id}
+                    className={`pf-preset ${presetActivo === p.id ? "activo" : ""}`}
+                    onClick={() => {
+                      setB((prev) => ({
+                        ...prev,
+                        cantidad_minima: p.minima,
+                        incremento_cantidad: p.incremento,
+                        decimales_cantidad: p.decimales,
+                      }));
+                      setErrores({});
+                    }}
+                  >
+                    {presetActivo === p.id && <Check size={13} aria-hidden />}
+                    <span className="pf-preset-titulo">{p.titulo}</span>
+                    <span className="pf-preset-ejemplo">{p.ejemplo}</span>
+                  </button>
+                ))}
+                <span className={`pf-preset pf-preset-info ${presetActivo === "personalizado" ? "activo" : ""}`} aria-hidden>
+                  {presetActivo === "personalizado" && <Check size={13} />}
+                  <span className="pf-preset-titulo">Personalizada</span>
+                  <span className="pf-preset-ejemplo">Ajusta los campos</span>
+                </span>
+              </div>
+
+              <div className="prd-tres">
+                <div className="campo prd-campo">
+                  <label htmlFor="pf-cantidad_minima">
+                    Cantidad mínima <span className="prd-req">Obligatorio</span>
+                  </label>
+                  <input
+                    {...campo("cantidad_minima")}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={b.cantidad_minima}
+                    onChange={(e) => cambiar("cantidad_minima", e.target.value)}
+                  />
+                  <ErrorCampo de="cantidad_minima" />
+                </div>
+                <div className="campo prd-campo">
+                  <label htmlFor="pf-incremento_cantidad">
+                    Incremento <span className="prd-req">Obligatorio</span>
+                  </label>
+                  <input
+                    {...campo("incremento_cantidad")}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={b.incremento_cantidad}
+                    onChange={(e) => cambiar("incremento_cantidad", e.target.value)}
+                  />
+                  <ErrorCampo de="incremento_cantidad" />
+                </div>
+                <div className="campo prd-campo">
+                  <label htmlFor="pf-decimales_cantidad">Decimales admitidos</label>
+                  <Combobox
+                    id="pf-decimales_cantidad"
+                    ref={(h) => {
+                      refs.current.decimales_cantidad = h as unknown as HTMLElement | null;
+                    }}
+                    valor={b.decimales_cantidad}
+                    opciones={Array.from({ length: MAX_DECIMALES + 1 }, (_, n) => ({
+                      valor: n,
+                      etiqueta: n === 0 ? "Sin decimales" : n === 1 ? "1 decimal" : "2 decimales",
+                      detalle: n === 0 ? "1, 2, 3" : n === 1 ? "0,5" : "0,25",
+                    }))}
+                    onCambiar={(v) => cambiar("decimales_cantidad", v === "" ? 0 : v)}
+                    invalido={Boolean(erroresVisibles.decimales_cantidad)}
+                    describedBy={erroresVisibles.decimales_cantidad ? "pf-decimales_cantidad-error" : undefined}
+                  />
+                  <ErrorCampo de="decimales_cantidad" />
+                </div>
+              </div>
+
+              <div className={`pf-vista-previa ${reglaValida ? "" : "invalida"}`} aria-live="polite">
+                <span className="pf-etiqueta">Cantidades válidas</span>
+                {reglaValida ? (
+                  <>
+                    <div className="pf-secuencia">
+                      {ejemplos.map((x) => (
+                        <span key={x} className="pf-cantidad">
+                          {x}
+                          {abreviatura && <small> {abreviatura}</small>}
+                        </span>
+                      ))}
+                      <span className="pf-cantidad pf-cantidad-mas" aria-hidden>
+                        …
+                      </span>
+                    </div>
+                    <p>
+                      Desde {formatearCantidad(b.cantidad_minima)} {abreviatura} y luego sumando{" "}
+                      {formatearCantidad(b.incremento_cantidad)} {abreviatura} cada vez. El cliente no podrá pedir cantidades
+                      intermedias.
+                    </p>
+                  </>
+                ) : (
+                  <p>Corrige la cantidad mínima y el incremento para ver la secuencia.</p>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* -------------------------------------------------- 3 · Revisión */}
+        {paso === "revision" && (
+          <div className="producto-paso prd-info" role="tabpanel">
+            <aside className="prd-tarjeta" aria-label="Así se verá la presentación">
+              <div className="media-zona-tarjeta">
+                <div className={`media-zona ${b.archivo || (b.imagen_url && !b.quitarImagen) ? "con-imagen" : ""}`}>
+                  <VistaFoto b={b} />
+                </div>
+                <TarjetaPie b={b} unidad={unidad?.nombre_unidad ?? ""} precio={precioApi} abreviatura={abreviatura} />
+              </div>
+            </aside>
+            <div className="producto-resumen prd-resumen-pres">
+              <p className="producto-resumen-titulo">Así quedará la presentación</p>
+              <dl>
+                <div>
+                  <dt>Nombre</dt>
+                  <dd>{b.nombre_presentacion.trim()}</dd>
+                </div>
+                <div>
+                  <dt>Unidad comercial</dt>
+                  <dd>{unidad ? `${unidad.nombre_unidad} (${unidad.abreviatura_unidad})` : "—"}</dd>
+                </div>
+                <div>
+                  <dt>Precio</dt>
+                  <dd>{precioApi ? `${formatoPrecio(precioApi)} / ${abreviatura || "u"}` : "—"}</dd>
+                </div>
+                <div>
+                  <dt>Estado</dt>
+                  <dd>{b.estado_presentacion ? "Activa" : "Inactiva"}</dd>
+                </div>
+                <div className="producto-resumen-ancho">
+                  <dt>Cantidades</dt>
+                  <dd>{textoRegla}</dd>
+                </div>
+                <div className="producto-resumen-ancho">
+                  <dt>Equivalencia</dt>
+                  <dd>
+                    1 {b.nombre_presentacion.trim() || "presentación"} = {formatearCantidad(b.factor_conversion || "1")}{" "}
+                    {unidadBase?.abreviatura_unidad ?? "unidad base"}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        )}
       </form>
     </Modal>
+  );
+}
+
+/** Debajo de la foto: nombre, unidad, precio y estado (se actualiza al escribir). */
+function TarjetaPie({
+  b,
+  unidad,
+  precio,
+  abreviatura,
+}: {
+  b: BorradorPresentacion;
+  unidad: string;
+  precio: string | null;
+  abreviatura: string;
+}) {
+  return (
+    <div className="prd-tarjeta-pie">
+      <p className={`prd-tarjeta-nombre ${b.nombre_presentacion.trim() ? "" : "vacio"}`}>
+        {b.nombre_presentacion.trim() || "Nombre de la presentación"}
+      </p>
+      <p className="prd-tarjeta-precio">
+        {precio ? formatoPrecio(precio) : "$ —"}
+        {abreviatura && <small> / {abreviatura}</small>}
+      </p>
+      <div className="prd-tarjeta-meta">
+        <span className={`prd-chip ${unidad ? "" : "vacio"}`}>{unidad || "Sin unidad"}</span>
+        <span className={`prd-estado ${b.estado_presentacion ? "visible" : ""}`}>
+          <span aria-hidden className="prd-estado-punto" />
+          {b.estado_presentacion ? "Activa" : "Inactiva"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** La foto en la revisión (sin acciones): la nueva, la actual o el ícono. */
+function VistaFoto({ b }: { b: BorradorPresentacion }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!b.archivo) {
+      setUrl(null);
+      return;
+    }
+    const u = URL.createObjectURL(b.archivo);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [b.archivo]);
+  const src = url ?? (b.quitarImagen ? null : b.imagen_url ?? null);
+  return src ? (
+    <img src={src} alt="" />
+  ) : (
+    <div className="media-zona-vacia">
+      <span className="media-zona-icono" aria-hidden>
+        <Info size={20} />
+      </span>
+      <p className="media-zona-sub">Sin foto propia: se usa la del producto.</p>
+    </div>
   );
 }

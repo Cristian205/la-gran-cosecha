@@ -13,7 +13,7 @@ from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Q, Sum, Value
+from django.db.models import Count, Sum, Value
 from django.db.models.functions import Coalesce, TruncDay, TruncHour, TruncWeek
 from django.utils import timezone
 from rest_framework.response import Response
@@ -25,6 +25,7 @@ from apps.catalog.models import Categoria, Producto
 
 from apps.common.permissions import EsStaff
 
+from .analitica import operacion_abierta
 from .models import Cliente, DetallePedido, Pedido
 
 Usuario = get_user_model()
@@ -501,23 +502,8 @@ class PanelEstadisticasView(ExigeNegocioMixin, APIView):
             .order_by("-total")
         )
 
-        # --- operación -----------------------------------------------------
-        hoy = timezone.localdate()
-        abiertos = {
-            x["estado"]: x["n"]
-            for x in Pedido.objects.filter(estado__in=ESTADOS_ABIERTOS)
-            .values("estado")
-            .annotate(n=Count("id"))
-        }
-        entregados_hoy = (
-            Pedido.objects.filter(estado=ESTADO_VENTA)
-            .filter(
-                Q(lotes__tipo="ENTREGA", lotes__fecha_creacion__date=hoy)
-                | (Q(fecha_modificacion__date=hoy) & ~Q(lotes__tipo="ENTREGA"))
-            )
-            .distinct()
-            .count()
-        )
+        # --- operación (mismo cálculo que el dashboard ejecutivo) -----------
+        operacion = operacion_abierta()
 
         recientes = (
             Pedido.objects.select_related("cliente")
@@ -568,10 +554,7 @@ class PanelEstadisticasView(ExigeNegocioMixin, APIView):
                     {"categoria": c["categoria"], "total": float(c["total"] or 0)}
                     for c in por_categoria
                 ],
-                "operacion": {
-                    "abiertos": {e: abiertos.get(e, 0) for e in ESTADOS_ABIERTOS},
-                    "entregados_hoy": entregados_hoy,
-                },
+                "operacion": operacion,
                 "recientes": [
                     {
                         "id": p.id,

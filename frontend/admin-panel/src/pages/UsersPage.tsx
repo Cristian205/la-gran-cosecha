@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Paginacion, usePaginacion } from "../components/gestion/Paginacion";
 import {
   Copy,
   Key,
@@ -293,6 +294,7 @@ export function UsersPage() {
     return ordenar(l, EXTRACTORES_USUARIOS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarios, busqueda, segmento, filtros.aplicar, soloDelegados, columnaOrden, direccionOrden]);
+  const pag = usePaginacion(lista, "usuarios", [busqueda, segmento, soloDelegados, filtros.valores]);
 
   const hayFiltros = Boolean(busqueda || segmento !== "todos" || filtros.activos || soloDelegados);
 
@@ -633,7 +635,7 @@ export function UsersPage() {
                     <td colSpan={columnas}>{cuerpoVacio}</td>
                   </tr>
                 ) : (
-                  lista.map((u) => {
+                  pag.visibles.map((u) => {
                     const acciones = accionesDe(u);
                     return (
                       <tr key={u.id} className={u.is_active ? "" : "usuario-fila-inactiva"}>
@@ -671,6 +673,7 @@ export function UsersPage() {
               </tbody>
             </table>
           </div>
+          {!cargando && !error && <Paginacion {...pag} etiqueta="usuarios" />}
         </section>
       </div>
 

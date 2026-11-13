@@ -13,6 +13,7 @@ from apps.tenancy.viewsets import TenantScopedMixin
 from .filters import ProductoFilter
 from .models import Categoria, HistorialPrecio, PresentacionProducto, Producto, UnidadMedida
 from .serializers import (
+    ActualizarPreciosSerializer,
     CategoriaSerializer,
     HistorialPrecioSerializer,
     PresentacionGestionSerializer,
@@ -285,6 +286,7 @@ class PresentacionProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         "destroy",
         "imagen",
         "reordenar",
+        "actualizar_precios",
     )
 
     def get_permissions(self):
@@ -369,6 +371,97 @@ class PresentacionProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         return Response(
             PresentacionProductoSerializer(ordenadas, many=True, context={"request": request}).data
         )
+
+    @action(detail=False, methods=["post"], url_path="actualizar-precios")
+    def actualizar_precios(self, request):
+        """
+        Cambia el precio de una o varias presentaciones de UN producto:
+
+            {"producto": 7, "cambios": [{"id": 12, "precio": "3500", "version": 4}, ...]}
+
+        Todo o nada (una transacción): si una sola falla —no es del producto,
+        está inactiva, alguien la cambió mientras tanto—, no se guarda
+        ninguna. Cada precio que de verdad cambia deja su `HistorialPrecio`
+        con el usuario y la hora. Solo se toca `precio_unitario`: ni unidades,
+        ni factores, ni pedidos (cada línea de pedido congeló su precio al
+        venderse).
+
+        Lo usan la edición rápida de un precio (un cambio) y «Actualizar
+        precios» (varios): una sola ruta, una sola validación.
+        """
+        datos = ActualizarPreciosSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        producto_id = datos.validated_data["producto"]
+        cambios = {c["id"]: c for c in datos.validated_data["cambios"]}
+
+        with transaction.atomic():
+            presentaciones = {
+                p.id: p
+                for p in self.get_queryset()
+                .filter(producto_id=producto_id, id__in=cambios)
+                .select_for_update()
+            }
+            ajenas = sorted(set(cambios) - set(presentaciones))
+            if ajenas:
+                return Response(
+                    {"cambios": [f"Las presentaciones {ajenas} no son de este producto."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            inactivas = [p.nombre_presentacion for p in presentaciones.values() if not p.estado_presentacion]
+            if inactivas:
+                # Una inactiva no se cambia «de paso»: se activa primero, a propósito.
+                return Response(
+                    {"cambios": [f"No se puede cambiar el precio de una presentación inactiva: {', '.join(inactivas)}."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            vencidas = [
+                p.nombre_presentacion
+                for pid, p in presentaciones.items()
+                if cambios[pid].get("version") is not None and cambios[pid]["version"] != p.version
+            ]
+            if vencidas:
+                return Response(
+                    {
+                        "detail": "Otra persona modificó estas presentaciones mientras editabas: "
+                        f"{', '.join(vencidas)}. Recarga para ver los precios actuales."
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            cambiadas = 0
+            for pid, presentacion in presentaciones.items():
+                nuevo = cambios[pid]["precio"]
+                if nuevo == presentacion.precio_unitario:
+                    continue
+                HistorialPrecio.objects.create(
+                    presentacion=presentacion,
+                    precio_anterior=presentacion.precio_unitario,
+                    precio_nuevo=nuevo,
+                    usuario=request.user,
+                )
+                presentacion.precio_unitario = nuevo
+                # `save()` sube la versión: quien tenga la fila abierta lo sabrá.
+                presentacion.save(update_fields=["precio_unitario"])
+                cambiadas += 1
+
+        todas = self.get_queryset().filter(producto_id=producto_id)
+        return Response(
+            {
+                "cambiadas": cambiadas,
+                "presentaciones": PresentacionProductoSerializer(todas, many=True, context={"request": request}).data,
+            }
+        )
+
+    @action(detail=True, methods=["get"], url_path="historial-precios")
+    def historial_precios(self, request, pk=None):
+        """Los cambios de precio de ESTA presentación, del más reciente al más viejo."""
+        presentacion = self.get_object()
+        historial = (
+            HistorialPrecio.objects.filter(presentacion=presentacion)
+            .select_related("presentacion", "usuario")
+            .order_by("-fecha_cambio")[:100]
+        )
+        return Response(HistorialPrecioSerializer(historial, many=True).data)
 
     def destroy(self, request, *args, **kwargs):
         presentacion = self.get_object()

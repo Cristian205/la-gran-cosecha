@@ -1,6 +1,7 @@
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { AlertCircle, Eye, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserRound, type LucideIcon } from "lucide-react";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { AlertCircle, ArrowLeft, ArrowRight, Check, Copy, KeyRound, ShieldCheck, UserPlus } from "lucide-react";
 import { Modal } from "../../components/Modal";
+import { PasosModal, type PasoModal } from "../../components/PasosModal";
 import {
   actualizarPermisosUsuario,
   actualizarUsuario,
@@ -8,15 +9,40 @@ import {
   obtenerPermisosDisponibles,
   obtenerPermisosUsuario,
 } from "../../api/resources";
-import type { ModuloPermisos, PermisoItem, Usuario } from "../../types";
+import type { ModuloPermisos, Usuario } from "../../types";
 import { extraerMensajeError } from "../../utils";
+import { ConsolaPermisos } from "./ConsolaPermisos";
 
-const ROLES = ["ANALISTA", "ADMIN", "GERENTE"];
+const ROLES: { valor: string; nombre: string; ayuda: string }[] = [
+  { valor: "ANALISTA", nombre: "Analista", ayuda: "Trabajo del día a día, con los permisos que le des." },
+  { valor: "ADMIN", nombre: "Administrador", ayuda: "Gestión del negocio, con los permisos que le des." },
+  { valor: "GERENTE", nombre: "Gerente", ayuda: "Dueño de la cuenta: acceso total, sin permisos que repartir." },
+];
 /** Un Gerente es dueño de la cuenta: tiene acceso total y no se le reparten permisos. */
 const ROL_DUENO = "GERENTE";
 const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Los mismos tipos y reglas que valida el backend (`accounts/datos_personales.py`). */
+const TIPOS_DOCUMENTO: { valor: string; nombre: string }[] = [
+  { valor: "CC", nombre: "Cédula de ciudadanía" },
+  { valor: "CE", nombre: "Cédula de extranjería" },
+  { valor: "TI", nombre: "Tarjeta de identidad" },
+  { valor: "PA", nombre: "Pasaporte" },
+  { valor: "PPT", nombre: "Permiso por protección temporal (PPT)" },
+];
+const REGLAS_DOCUMENTO: Record<string, { patron: RegExp; mensaje: string; numerico: boolean }> = {
+  CC: { patron: /^\d{6,10}$/, mensaje: "La cédula lleva entre 6 y 10 dígitos.", numerico: true },
+  TI: { patron: /^\d{10,11}$/, mensaje: "La tarjeta de identidad lleva 10 u 11 dígitos.", numerico: true },
+  CE: { patron: /^[A-Z0-9]{3,15}$/, mensaje: "Letras y números, de 3 a 15.", numerico: false },
+  PA: { patron: /^[A-Z0-9]{3,15}$/, mensaje: "Letras y números, de 3 a 15.", numerico: false },
+  PPT: { patron: /^[A-Z0-9]{3,15}$/, mensaje: "Letras y números, de 3 a 15.", numerico: false },
+};
+const limpiarDocumento = (n: string) => n.replace(/[\s.\-]/g, "").toUpperCase();
+const digitosTelefono = (t: string) => t.replace(/\D/g, "");
+const nombreDocumento = (t: string) => TIPOS_DOCUMENTO.find((x) => x.valor === t)?.nombre ?? t;
+
 export type PestanaUsuario = "info" | "permisos";
+type Paso = "info" | "permisos" | "confirmar";
 
 interface Props {
   /** null: alta de un usuario nuevo. */
@@ -29,65 +55,21 @@ interface Props {
   onGuardado: () => void;
 }
 
-// El catálogo del backend no distingue "vista" de "acción" como campo aparte:
-// se infiere del verbo de Django en el codename (view_/add_/change_/delete_),
-// que es la misma convención que ya usa todo el resto del sistema de permisos.
-function esPermisoDeVista(codename: string): boolean {
-  return /\.view_/.test(codename);
-}
-
-const ICONOS_ACCION: Record<string, LucideIcon> = { add: Plus, change: Pencil, delete: Trash2 };
-
-function iconoAccion(codename: string): LucideIcon {
-  const verbo = codename.match(/\.(add|change|delete)_/)?.[1];
-  return (verbo && ICONOS_ACCION[verbo]) || Pencil;
-}
-
 function mismosPermisos(a: Set<string>, b: Set<string>): boolean {
   return a.size === b.size && [...a].every((c) => b.has(c));
 }
 
-function GrupoPermisos({
-  titulo,
-  icono: Icono,
-  permisos,
-  seleccionados,
-  onAlternar,
-  iconoPorItem,
-}: {
-  titulo: string;
-  icono: LucideIcon;
-  permisos: PermisoItem[];
-  seleccionados: Set<string>;
-  onAlternar: (codename: string) => void;
-  iconoPorItem?: (codename: string) => LucideIcon;
-}) {
-  if (permisos.length === 0) return null;
-  return (
-    <fieldset className="permisos-subgrupo">
-      <legend className="permisos-subgrupo-titulo">
-        <Icono size={13} aria-hidden="true" /> {titulo}
-      </legend>
-      <div className="permisos-grid">
-        {permisos.map((p) => {
-          const IconoItem = iconoPorItem?.(p.codename);
-          return (
-            <label className="permiso-chip" key={p.codename}>
-              <input type="checkbox" checked={seleccionados.has(p.codename)} onChange={() => onAlternar(p.codename)} />
-              {IconoItem && <IconoItem size={13} aria-hidden="true" />}
-              {p.etiqueta}
-            </label>
-          );
-        })}
-      </div>
-    </fieldset>
-  );
-}
+const nombreRol = (r: string) => ROLES.find((x) => x.valor === r)?.nombre ?? r;
 
 /**
- * Editar un usuario y lo que puede hacer, en un solo lugar: «Información de
- * usuario» y «Módulos y permisos». Un solo «Guardar» guarda las dos pestañas;
- * los permisos solo se envían si cambiaron.
+ * Crear o editar a un usuario del equipo.
+ *
+ * - CREAR es un asistente, igual que «Exportar informe»: 1 · Datos,
+ *   2 · Permisos (la consola por vistas), 3 · Confirmar. No se avanza sin
+ *   datos válidos, y al final queda la clave temporal para compartir.
+ * - EDITAR usa las mismas pestañas, pero sin orden: se salta libremente entre
+ *   «Información» y «Permisos» y un solo «Guardar» guarda las dos (los
+ *   permisos solo se envían si cambiaron).
  */
 export function UserEditorModal({
   usuario,
@@ -100,15 +82,20 @@ export function UserEditorModal({
   const esEdicion = usuario !== null;
   const id = useId();
 
-  const [pestana, setPestana] = useState<PestanaUsuario>(pestanaInicial);
+  const [paso, setPaso] = useState<Paso>(pestanaInicial);
   const [nombre, setNombre] = useState(usuario?.nombre_usuario ?? "");
   const [email, setEmail] = useState(usuario?.email_usuario ?? "");
   const [rol, setRol] = useState(usuario?.rol_usuario ?? "ANALISTA");
   const [activo, setActivo] = useState(usuario?.is_active ?? true);
-  const [intentoGuardar, setIntentoGuardar] = useState(false);
+  const [telefono, setTelefono] = useState(usuario?.telefono_usuario ?? "");
+  const [direccion, setDireccion] = useState(usuario?.direccion_usuario ?? "");
+  const [tipoDoc, setTipoDoc] = useState<string>(usuario?.tipo_documento || "CC");
+  const [numeroDoc, setNumeroDoc] = useState(usuario?.numero_documento ?? "");
+  const [intentoDatos, setIntentoDatos] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [passwordTemporal, setPasswordTemporal] = useState<string | null>(null);
+  const [copiada, setCopiada] = useState(false);
 
   const [catalogo, setCatalogo] = useState<ModuloPermisos[]>([]);
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
@@ -118,7 +105,7 @@ export function UserEditorModal({
 
   // Quien es (o pasa a ser) Gerente tiene acceso total: no hay permisos que repartir.
   const tieneAccesoTotal = (usuario?.es_administrador ?? false) || rol === ROL_DUENO;
-  const conPestanaPermisos = puedeGestionarPermisos;
+  const conPermisos = puedeGestionarPermisos;
 
   useEffect(() => {
     if (!puedeGestionarPermisos) return;
@@ -132,45 +119,130 @@ export function UserEditorModal({
       .finally(() => setCargandoPermisos(false));
   }, [puedeGestionarPermisos, usuario]);
 
+  // Al crear todo es obligatorio. Al editar, una cuenta antigua puede seguir
+  // sin datos personales, pero lo que se escriba debe ser válido.
   const errores = useMemo(() => {
-    const e: { nombre?: string; email?: string } = {};
+    const e: { nombre?: string; email?: string; telefono?: string; direccion?: string; documento?: string } = {};
     if (nombre.trim().length < 2) e.nombre = "Escribe el nombre completo.";
     if (!esEdicion) {
       if (!email.trim()) e.email = "El correo es obligatorio.";
       else if (!CORREO_VALIDO.test(email.trim())) e.email = "Revisa el correo: no parece válido.";
     }
-    return e;
-  }, [nombre, email, esEdicion]);
+    const obligatorio = !esEdicion;
 
-  const totalPermisos = catalogo.reduce((n, m) => n + m.permisos.length, 0);
+    const tel = telefono.trim();
+    if (!tel) {
+      if (obligatorio) e.telefono = "El teléfono es obligatorio.";
+    } else if (!/^\+?[\d\s\-().]+$/.test(tel)) e.telefono = "Escribe solo números (puede empezar con +).";
+    else if (digitosTelefono(tel).length < 7 || digitosTelefono(tel).length > 15)
+      e.telefono = "El teléfono debe tener entre 7 y 15 dígitos.";
+
+    const dir = direccion.trim();
+    if (!dir) {
+      if (obligatorio) e.direccion = "La dirección es obligatoria.";
+    } else if (dir.length < 5) e.direccion = "Escribe la dirección completa.";
+
+    const doc = limpiarDocumento(numeroDoc);
+    if (!doc) {
+      if (obligatorio) e.documento = "El número de documento es obligatorio.";
+    } else if (!REGLAS_DOCUMENTO[tipoDoc]?.patron.test(doc)) e.documento = REGLAS_DOCUMENTO[tipoDoc]?.mensaje;
+    return e;
+  }, [nombre, email, esEdicion, telefono, direccion, tipoDoc, numeroDoc]);
+  const datosValidos = Object.values(errores).every((v) => !v);
+  const faltanDatosPersonales =
+    esEdicion && (!telefono.trim() || !direccion.trim() || !numeroDoc.trim());
   const permisosCambiados = !mismosPermisos(seleccionados, originales);
 
-  function alternar(codename: string) {
-    setSeleccionados((prev) => {
-      const next = new Set(prev);
-      if (next.has(codename)) next.delete(codename);
-      else next.add(codename);
-      return next;
-    });
+  // Cuántas vistas quedan habilitadas (para los resúmenes).
+  const vistasHabilitadas = useMemo(
+    () =>
+      catalogo.filter((m) => {
+        const vista = m.permisos.find((p) => /\.view_/.test(p.codename));
+        return vista ? seleccionados.has(vista.codename) : m.permisos.some((p) => seleccionados.has(p.codename));
+      }),
+    [catalogo, seleccionados]
+  );
+  const resumenPermisos = tieneAccesoTotal
+    ? "Acceso total"
+    : cargandoPermisos
+      ? "Cargando…"
+      : `${vistasHabilitadas.length} de ${catalogo.length} vistas`;
+
+  // ---------------------------------------------------------------- pasos
+  const ordenPasos: Paso[] = esEdicion
+    ? ["info", ...(conPermisos ? (["permisos"] as const) : [])]
+    : ["info", ...(conPermisos ? (["permisos"] as const) : []), "confirmar"];
+  const indice = ordenPasos.indexOf(paso);
+  const ultimo = indice === ordenPasos.length - 1;
+
+  const pasos: PasoModal[] = ordenPasos.map((p, i) => {
+    if (p === "info")
+      return {
+        clave: p,
+        titulo: esEdicion ? "Información" : "Datos",
+        detalle: nombre.trim() ? `${nombre.trim()} · ${nombreRol(rol)}` : "Datos personales y rol",
+        hecho: !esEdicion && (i < indice || Boolean(passwordTemporal)),
+      };
+    if (p === "permisos")
+      return {
+        clave: p,
+        titulo: "Permisos por vista",
+        detalle: resumenPermisos,
+        // Al crear, no se llega a los permisos sin datos válidos.
+        bloqueado: !esEdicion && !datosValidos && !passwordTemporal,
+        hecho: !esEdicion && (i < indice || Boolean(passwordTemporal)),
+      };
+    return {
+      clave: p,
+      titulo: "Confirmar",
+      detalle: passwordTemporal ? "Creado" : "Revisa y crea",
+      bloqueado: !datosValidos && !passwordTemporal,
+      hecho: Boolean(passwordTemporal),
+    };
+  });
+
+  function irA(destino: string) {
+    if (passwordTemporal) return;
+    const d = destino as Paso;
+    if (!esEdicion && d !== "info" && !datosValidos) {
+      setIntentoDatos(true);
+      setPaso("info");
+      return;
+    }
+    setError(null);
+    setPaso(d);
   }
 
-  function alternarModulo(m: ModuloPermisos, marcar: boolean) {
-    setSeleccionados((prev) => {
-      const next = new Set(prev);
-      for (const p of m.permisos) {
-        if (marcar) next.add(p.codename);
-        else next.delete(p.codename);
-      }
-      return next;
-    });
+  function siguiente() {
+    if (paso === "info" && !datosValidos) {
+      setIntentoDatos(true);
+      return;
+    }
+    irA(ordenPasos[indice + 1]);
   }
 
+  /** Lo que se envía. Al editar, el documento solo viaja si se escribió (una
+   *  cuenta antigua puede seguir sin él). */
+  function datosPersonalesCompletos() {
+    return {
+      telefono_usuario: telefono.trim(),
+      direccion_usuario: direccion.trim(),
+      tipo_documento: tipoDoc,
+      numero_documento: limpiarDocumento(numeroDoc),
+    };
+  }
+  function datosPersonales() {
+    const { tipo_documento, numero_documento, ...resto } = datosPersonalesCompletos();
+    return numero_documento ? { ...resto, tipo_documento, numero_documento } : resto;
+  }
+
+  // -------------------------------------------------------------- guardar
   async function guardar(e?: FormEvent) {
     e?.preventDefault();
-    setIntentoGuardar(true);
+    setIntentoDatos(true);
     setError(null);
-    if (errores.nombre || errores.email) {
-      setPestana("info");
+    if (!datosValidos) {
+      setPaso("info");
       return;
     }
 
@@ -182,23 +254,22 @@ export function UserEditorModal({
           nombre_usuario: nombre.trim(),
           is_active: activo,
           ...(puedeEditarRol ? { rol_usuario: rol } : {}),
+          ...datosPersonales(),
         });
       } else {
-        const resp = await crearUsuario({ email: email.trim(), nombre: nombre.trim(), rol });
+        const resp = await crearUsuario({ email: email.trim(), nombre: nombre.trim(), rol, ...datosPersonalesCompletos() });
         destino = resp.usuario;
         setPasswordTemporal(resp.password_temporal);
       }
 
-      if (conPestanaPermisos && !tieneAccesoTotal && destino && permisosCambiados) {
+      if (conPermisos && !tieneAccesoTotal && destino && permisosCambiados) {
         try {
           await actualizarPermisosUsuario(destino.id, [...seleccionados]);
           setOriginales(new Set(seleccionados));
         } catch (err) {
           // Los datos ya quedaron guardados: se dice qué faltó, sin perderlo.
-          setPestana("permisos");
-          setError(
-            extraerMensajeError(err, "Los datos se guardaron, pero los permisos no. Vuelve a intentarlo.")
-          );
+          if (esEdicion) setPaso("permisos");
+          setError(extraerMensajeError(err, "Los datos se guardaron, pero los permisos no. Vuelve a intentarlo."));
           return;
         }
       }
@@ -217,18 +288,64 @@ export function UserEditorModal({
     else onCerrar();
   }
 
-  // Pestañas accesibles: flechas izquierda/derecha para moverse entre ellas.
-  const refPestanas = useRef<(HTMLButtonElement | null)[]>([]);
-  const pestanas: { clave: PestanaUsuario; etiqueta: string; icono: LucideIcon }[] = [
-    { clave: "info", etiqueta: "Información de usuario", icono: UserRound },
-    ...(conPestanaPermisos ? [{ clave: "permisos" as const, etiqueta: "Módulos y permisos", icono: KeyRound }] : []),
-  ];
-  function alTeclado(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-    const i = pestanas.findIndex((p) => p.clave === pestana);
-    const siguiente = (i + (e.key === "ArrowRight" ? 1 : -1) + pestanas.length) % pestanas.length;
-    setPestana(pestanas[siguiente].clave);
-    refPestanas.current[siguiente]?.focus();
+  async function copiarClave() {
+    if (!passwordTemporal) return;
+    try {
+      await navigator.clipboard.writeText(passwordTemporal);
+      setCopiada(true);
+      setTimeout(() => setCopiada(false), 2000);
+    } catch {
+      // Sin permiso de portapapeles: la clave sigue a la vista para copiarla a mano.
+    }
+  }
+
+  // ------------------------------------------------------------------ pie
+  let pie;
+  if (passwordTemporal) {
+    pie = (
+      <button type="button" className="btn primario" onClick={cerrar}>
+        Listo
+      </button>
+    );
+  } else if (esEdicion) {
+    pie = (
+      <>
+        {conPermisos && !tieneAccesoTotal && permisosCambiados && (
+          <span className="pie-aviso" role="status">
+            Permisos sin guardar
+          </span>
+        )}
+        <button type="button" className="btn secundario" onClick={cerrar} disabled={guardando}>
+          Cancelar
+        </button>
+        <button type="submit" form={`${id}-form`} className="btn primario" disabled={guardando}>
+          {guardando ? "Guardando…" : "Guardar cambios"}
+        </button>
+      </>
+    );
+  } else {
+    pie = (
+      <>
+        {indice === 0 ? (
+          <button type="button" className="btn secundario" onClick={cerrar} disabled={guardando}>
+            Cancelar
+          </button>
+        ) : (
+          <button type="button" className="btn secundario btn-con-icono" onClick={() => irA(ordenPasos[indice - 1])} disabled={guardando}>
+            <ArrowLeft size={16} aria-hidden="true" /> Atrás
+          </button>
+        )}
+        {ultimo ? (
+          <button type="submit" form={`${id}-form`} className="btn primario btn-con-icono" disabled={guardando}>
+            <UserPlus size={16} aria-hidden="true" /> {guardando ? "Creando…" : "Crear usuario"}
+          </button>
+        ) : (
+          <button type="button" className="btn primario btn-con-icono" onClick={siguiente}>
+            Siguiente: {ordenPasos[indice + 1] === "permisos" ? "permisos" : "confirmar"} <ArrowRight size={16} aria-hidden="true" />
+          </button>
+        )}
+      </>
+    );
   }
 
   const titulo = esEdicion ? `Editar a ${usuario!.nombre_usuario}` : "Nuevo usuario";
@@ -237,252 +354,297 @@ export function UserEditorModal({
     <Modal
       amplio
       ancho
+      expandible
       titulo={titulo}
       subtitulo={esEdicion ? usuario!.email_usuario : "Recibirá una clave temporal para su primer ingreso."}
+      subcabecera={
+        ordenPasos.length > 1 ? (
+          <PasosModal
+            etiqueta={esEdicion ? "Secciones del usuario" : "Pasos para crear el usuario"}
+            pasos={pasos}
+            activo={passwordTemporal ? "confirmar" : paso}
+            onCambiar={irA}
+            numerados={!esEdicion}
+          />
+        ) : undefined
+      }
       onCerrar={cerrar}
       cerrarConEscape={!guardando}
-      footer={
-        passwordTemporal ? (
-          <button type="button" className="btn primario" onClick={cerrar}>
-            Listo
-          </button>
-        ) : (
-          <>
-            {conPestanaPermisos && !tieneAccesoTotal && permisosCambiados && (
-              <span className="pie-aviso" role="status">
-                Permisos sin guardar
-              </span>
-            )}
-            <button type="button" className="btn secundario" onClick={cerrar} disabled={guardando}>
-              Cancelar
-            </button>
-            <button type="submit" form={`${id}-form`} className="btn primario" disabled={guardando}>
-              {guardando ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear usuario"}
-            </button>
-          </>
-        )
-      }
+      footer={pie}
     >
       {passwordTemporal ? (
-        <div className="ok-box" role="status">
-          Usuario creado. Clave temporal: <strong style={{ fontSize: "1.1rem" }}>{passwordTemporal}</strong>
-          <br />
-          Compártela con el usuario; deberá cambiarla al ingresar.
-          {error && (
-            <>
-              <br />
-              <strong>{error}</strong>
-            </>
-          )}
+        <div className="usuario-creado" role="status">
+          <span className="usuario-creado-icono" aria-hidden="true">
+            <Check size={22} />
+          </span>
+          <h3>{nombre.trim()} ya forma parte del equipo</h3>
+          <p>Comparte esta clave temporal; deberá cambiarla en su primer ingreso.</p>
+          <div className="usuario-clave">
+            <KeyRound size={16} aria-hidden="true" />
+            <code>{passwordTemporal}</code>
+            <button type="button" className="btn secundario sm btn-con-icono" onClick={copiarClave}>
+              {copiada ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+              {copiada ? "Copiada" : "Copiar"}
+            </button>
+          </div>
+          {error && <div className="error-box">{error}</div>}
         </div>
       ) : (
-        <form id={`${id}-form`} onSubmit={guardar} noValidate className="usuario-editor">
-          {pestanas.length > 1 && (
-            <div className="gestion-tabs usuario-editor-tabs" role="tablist" aria-label="Secciones del usuario" onKeyDown={alTeclado}>
-              {pestanas.map((p, i) => {
-                const Icono = p.icono;
-                const activa = pestana === p.clave;
-                return (
-                  <button
-                    key={p.clave}
-                    ref={(el) => {
-                      refPestanas.current[i] = el;
-                    }}
-                    type="button"
-                    role="tab"
-                    id={`${id}-tab-${p.clave}`}
-                    aria-selected={activa}
-                    aria-controls={`${id}-panel-${p.clave}`}
-                    tabIndex={activa ? 0 : -1}
-                    className={activa ? "activo" : ""}
-                    onClick={() => setPestana(p.clave)}
-                  >
-                    <Icono size={15} aria-hidden="true" /> {p.etiqueta}
-                    {p.clave === "permisos" && !tieneAccesoTotal && !cargandoPermisos && (
-                      <span className="gestion-tab-num">{seleccionados.size}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
+        <form
+          id={`${id}-form`}
+          onSubmit={(e) => {
+            // Al crear, Enter en un paso intermedio avanza en vez de crear.
+            if (!esEdicion && !ultimo) {
+              e.preventDefault();
+              siguiente();
+              return;
+            }
+            guardar(e);
+          }}
+          noValidate
+          className="usuario-editor"
+        >
           {error && (
             <div className="error-box" role="alert">
               {error}
             </div>
           )}
 
-          <div
-            role={pestanas.length > 1 ? "tabpanel" : undefined}
-            id={`${id}-panel-info`}
-            aria-labelledby={pestanas.length > 1 ? `${id}-tab-info` : undefined}
-            hidden={pestana !== "info"}
-          >
-            <div className="campo">
-              <label htmlFor={`${id}-nombre`}>Nombre completo *</label>
-              <input
-                id={`${id}-nombre`}
-                value={nombre}
-                maxLength={150}
-                autoComplete="off"
-                aria-invalid={intentoGuardar && Boolean(errores.nombre)}
-                aria-describedby={intentoGuardar && errores.nombre ? `${id}-nombre-error` : undefined}
-                onChange={(e) => setNombre(e.target.value)}
-              />
-              {intentoGuardar && errores.nombre && (
-                <p className="campo-error" id={`${id}-nombre-error`}>
-                  <AlertCircle size={14} aria-hidden="true" /> {errores.nombre}
-                </p>
-              )}
-            </div>
-
-            <div className="campo">
-              <label htmlFor={`${id}-email`}>Correo electrónico {esEdicion ? "" : "*"}</label>
-              <input
-                id={`${id}-email`}
-                type="email"
-                value={email}
-                disabled={esEdicion}
-                aria-invalid={intentoGuardar && Boolean(errores.email)}
-                aria-describedby={
-                  esEdicion ? `${id}-email-ayuda` : intentoGuardar && errores.email ? `${id}-email-error` : undefined
-                }
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              {esEdicion && (
-                <p className="campo-ayuda" id={`${id}-email-ayuda`}>
-                  Es su usuario de acceso; no se cambia desde aquí.
-                </p>
-              )}
-              {!esEdicion && intentoGuardar && errores.email && (
-                <p className="campo-error" id={`${id}-email-error`}>
-                  <AlertCircle size={14} aria-hidden="true" /> {errores.email}
-                </p>
-              )}
-            </div>
-
-            <div className="campo">
-              <label htmlFor={`${id}-rol`}>
-                Rol {!puedeEditarRol && esEdicion && "(solo un Gerente puede cambiarlo)"}
-              </label>
-              <select
-                id={`${id}-rol`}
-                value={rol}
-                onChange={(e) => setRol(e.target.value)}
-                disabled={esEdicion && !puedeEditarRol}
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-              {rol === ROL_DUENO && <p className="campo-ayuda">Un Gerente tiene acceso total al panel.</p>}
-            </div>
-
-            {esEdicion && (
-              <div className="campo">
-                <label style={{ display: "flex", gap: ".5rem", alignItems: "center" }}>
+          {/* ------------------------------------------------ 1 · Datos */}
+          {paso === "info" && (
+            <div className="usuario-paso" role="tabpanel">
+              {/* Todo lo que identifica a la persona, en un solo bloque:
+                  nombre, correo, documento, teléfono y dirección. */}
+              <fieldset className="usuario-personales">
+                <legend>
+                  Datos personales
+                  {faltanDatosPersonales && <span className="usuario-falta">Incompletos</span>}
+                </legend>
+                <div className="usuario-datos">
+                <div className="campo">
+                  <label htmlFor={`${id}-nombre`}>Nombre completo *</label>
                   <input
-                    type="checkbox"
-                    checked={activo}
-                    onChange={(e) => setActivo(e.target.checked)}
-                    style={{ width: "auto" }}
+                    id={`${id}-nombre`}
+                    value={nombre}
+                    maxLength={150}
+                    autoComplete="off"
+                    autoFocus
+                    aria-invalid={intentoDatos && Boolean(errores.nombre)}
+                    aria-describedby={intentoDatos && errores.nombre ? `${id}-nombre-error` : undefined}
+                    onChange={(e) => setNombre(e.target.value)}
                   />
-                  Cuenta activa
-                </label>
-              </div>
-            )}
-          </div>
+                  {intentoDatos && errores.nombre && (
+                    <p className="campo-error" id={`${id}-nombre-error`}>
+                      <AlertCircle size={14} aria-hidden="true" /> {errores.nombre}
+                    </p>
+                  )}
+                </div>
 
-          {conPestanaPermisos && (
-            <div
-              role="tabpanel"
-              id={`${id}-panel-permisos`}
-              aria-labelledby={`${id}-tab-permisos`}
-              hidden={pestana !== "permisos"}
-            >
+                <div className="campo">
+                  <label htmlFor={`${id}-email`}>Correo electrónico {esEdicion ? "" : "*"}</label>
+                  <input
+                    id={`${id}-email`}
+                    type="email"
+                    value={email}
+                    disabled={esEdicion}
+                    aria-invalid={intentoDatos && Boolean(errores.email)}
+                    aria-describedby={
+                      esEdicion ? `${id}-email-ayuda` : intentoDatos && errores.email ? `${id}-email-error` : undefined
+                    }
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  {esEdicion ? (
+                    <p className="campo-ayuda" id={`${id}-email-ayuda`}>
+                      Es su usuario de acceso; no se cambia desde aquí.
+                    </p>
+                  ) : intentoDatos && errores.email ? (
+                    <p className="campo-error" id={`${id}-email-error`}>
+                      <AlertCircle size={14} aria-hidden="true" /> {errores.email}
+                    </p>
+                  ) : (
+                    <p className="campo-ayuda">Con este correo entrará al panel.</p>
+                  )}
+                </div>
+
+                  <div className="campo">
+                    <label htmlFor={`${id}-tipodoc`}>Tipo de documento {esEdicion ? "" : "*"}</label>
+                    <select id={`${id}-tipodoc`} value={tipoDoc} onChange={(e) => setTipoDoc(e.target.value)}>
+                      {TIPOS_DOCUMENTO.map((t) => (
+                        <option key={t.valor} value={t.valor}>
+                          {t.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="campo">
+                    <label htmlFor={`${id}-numdoc`}>Número de documento {esEdicion ? "" : "*"}</label>
+                    <input
+                      id={`${id}-numdoc`}
+                      value={numeroDoc}
+                      maxLength={20}
+                      autoComplete="off"
+                      inputMode={REGLAS_DOCUMENTO[tipoDoc]?.numerico ? "numeric" : "text"}
+                      aria-invalid={intentoDatos && Boolean(errores.documento)}
+                      aria-describedby={intentoDatos && errores.documento ? `${id}-numdoc-error` : undefined}
+                      onChange={(e) => setNumeroDoc(e.target.value)}
+                    />
+                    {intentoDatos && errores.documento && (
+                      <p className="campo-error" id={`${id}-numdoc-error`}>
+                        <AlertCircle size={14} aria-hidden="true" /> {errores.documento}
+                      </p>
+                    )}
+                  </div>
+                  <div className="campo">
+                    <label htmlFor={`${id}-telefono`}>Teléfono {esEdicion ? "" : "*"}</label>
+                    <input
+                      id={`${id}-telefono`}
+                      type="tel"
+                      value={telefono}
+                      maxLength={20}
+                      autoComplete="off"
+                      inputMode="tel"
+                      placeholder="300 123 4567"
+                      aria-invalid={intentoDatos && Boolean(errores.telefono)}
+                      aria-describedby={intentoDatos && errores.telefono ? `${id}-telefono-error` : undefined}
+                      onChange={(e) => setTelefono(e.target.value)}
+                    />
+                    {intentoDatos && errores.telefono && (
+                      <p className="campo-error" id={`${id}-telefono-error`}>
+                        <AlertCircle size={14} aria-hidden="true" /> {errores.telefono}
+                      </p>
+                    )}
+                  </div>
+                  <div className="campo">
+                    <label htmlFor={`${id}-direccion`}>Dirección {esEdicion ? "" : "*"}</label>
+                    <input
+                      id={`${id}-direccion`}
+                      value={direccion}
+                      maxLength={255}
+                      autoComplete="off"
+                      placeholder="Calle, número, barrio y ciudad"
+                      aria-invalid={intentoDatos && Boolean(errores.direccion)}
+                      aria-describedby={intentoDatos && errores.direccion ? `${id}-direccion-error` : undefined}
+                      onChange={(e) => setDireccion(e.target.value)}
+                    />
+                    {intentoDatos && errores.direccion && (
+                      <p className="campo-error" id={`${id}-direccion-error`}>
+                        <AlertCircle size={14} aria-hidden="true" /> {errores.direccion}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset className="usuario-roles" disabled={esEdicion && !puedeEditarRol}>
+                <legend>
+                  Rol {!puedeEditarRol && esEdicion && <span className="usuario-nota">(solo un Gerente puede cambiarlo)</span>}
+                </legend>
+                <div className="usuario-roles-lista">
+                  {ROLES.map((r) => (
+                    <label key={r.valor} className={`usuario-rol ${rol === r.valor ? "activo" : ""}`}>
+                      <input type="radio" name={`${id}-rol`} value={r.valor} checked={rol === r.valor} onChange={() => setRol(r.valor)} />
+                      <strong>{r.nombre}</strong>
+                      <small>{r.ayuda}</small>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {esEdicion && (
+                <label className="usuario-activo">
+                  <span>
+                    <strong>Cuenta activa</strong>
+                    <small>Si la desactivas, no podrá entrar al panel.</small>
+                  </span>
+                  <span className="switch">
+                    <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
+                    <span className="switch-riel" />
+                  </span>
+                </label>
+              )}
+            </div>
+          )}
+
+          {/* --------------------------------------------- 2 · Permisos */}
+          {paso === "permisos" && conPermisos && (
+            <div className="usuario-paso" role="tabpanel">
               {tieneAccesoTotal ? (
                 <div className="ok-box usuario-editor-aviso">
                   <ShieldCheck size={18} aria-hidden="true" />
                   <span>
-                    Un <strong>Gerente</strong> es dueño de la cuenta: tiene acceso total a todos los módulos, así que no
-                    se le asignan permisos uno a uno.
+                    Un <strong>Gerente</strong> es dueño de la cuenta: tiene acceso total a todas las vistas, así que no se
+                    le asignan permisos uno a uno.
                   </span>
                 </div>
+              ) : errorPermisos ? (
+                <div className="error-box">{errorPermisos}</div>
+              ) : cargandoPermisos ? (
+                <div className="vacio">Cargando permisos…</div>
+              ) : catalogo.length === 0 ? (
+                <div className="vacio">El plan de este negocio no incluye vistas que repartir.</div>
               ) : (
-                <>
-                  <div className="ok-box usuario-editor-aviso">
-                    <ShieldCheck size={18} aria-hidden="true" />
-                    <span>
-                      Por cada módulo, elige qué puede <strong>ver</strong> y qué puede <strong>hacer</strong>
-                      {nombre.trim() ? (
-                        <>
-                          {" "}
-                          <strong>{nombre.trim()}</strong>
-                        </>
-                      ) : null}
-                      . Todo lo demás quedará bloqueado, incluso si es un usuario ADMIN o ANALISTA. Solo aparecen los
-                      módulos que incluye el plan del negocio.
-                    </span>
-                  </div>
-                  {errorPermisos && <div className="error-box">{errorPermisos}</div>}
-                  {cargandoPermisos ? (
-                    <div className="vacio">Cargando…</div>
-                  ) : catalogo.length === 0 ? (
-                    !errorPermisos && <div className="vacio">El plan de este negocio no incluye módulos que repartir.</div>
-                  ) : (
-                    <>
-                      <p className="usuario-editor-resumen" aria-live="polite">
-                        <strong>{seleccionados.size}</strong> de {totalPermisos} permisos concedidos
-                      </p>
-                      <div className="permisos-lista">
-                        {catalogo.map((m) => {
-                          const vistas = m.permisos.filter((p) => esPermisoDeVista(p.codename));
-                          const acciones = m.permisos.filter((p) => !esPermisoDeVista(p.codename));
-                          const marcados = m.permisos.filter((p) => seleccionados.has(p.codename)).length;
-                          const todos = marcados === m.permisos.length;
-                          return (
-                            <section className="permisos-modulo" key={m.modulo} aria-label={m.modulo}>
-                              <div className="permisos-modulo-cab">
-                                <h3>
-                                  {m.modulo}{" "}
-                                  <span className="permisos-modulo-cuenta">
-                                    {marcados}/{m.permisos.length}
-                                  </span>
-                                </h3>
-                                <button
-                                  type="button"
-                                  className="btn secundario sm"
-                                  onClick={() => alternarModulo(m, !todos)}
-                                  aria-label={`${todos ? "Quitar" : "Conceder"} todos los permisos de ${m.modulo}`}
-                                >
-                                  {todos ? "Quitar todo" : "Conceder todo"}
-                                </button>
-                              </div>
-                              <GrupoPermisos
-                                titulo="Puede ver"
-                                icono={Eye}
-                                permisos={vistas}
-                                seleccionados={seleccionados}
-                                onAlternar={alternar}
-                              />
-                              <GrupoPermisos
-                                titulo="Puede hacer"
-                                icono={Pencil}
-                                permisos={acciones}
-                                seleccionados={seleccionados}
-                                onAlternar={alternar}
-                                iconoPorItem={iconoAccion}
-                              />
-                            </section>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </>
+                <ConsolaPermisos catalogo={catalogo} seleccionados={seleccionados} onCambiar={setSeleccionados} nombre={nombre} />
+              )}
+            </div>
+          )}
+
+          {/* --------------------------------------------- 3 · Confirmar */}
+          {paso === "confirmar" && (
+            <div className="usuario-paso" role="tabpanel">
+              <p className="usuario-intro">Revisa los datos antes de crear la cuenta.</p>
+              <dl className="usuario-resumen">
+                <div>
+                  <dt>Nombre</dt>
+                  <dd>{nombre.trim()}</dd>
+                </div>
+                <div>
+                  <dt>Correo</dt>
+                  <dd>{email.trim()}</dd>
+                </div>
+                <div>
+                  <dt>Documento</dt>
+                  <dd>
+                    {nombreDocumento(tipoDoc)} · {limpiarDocumento(numeroDoc)}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Teléfono</dt>
+                  <dd>{telefono.trim()}</dd>
+                </div>
+                <div className="usuario-resumen-ancho">
+                  <dt>Dirección</dt>
+                  <dd>{direccion.trim()}</dd>
+                </div>
+                <div>
+                  <dt>Rol</dt>
+                  <dd>{nombreRol(rol)}</dd>
+                </div>
+                <div>
+                  <dt>Acceso</dt>
+                  <dd>
+                    {tieneAccesoTotal
+                      ? "Total (dueño de la cuenta)"
+                      : !conPermisos
+                        ? "Sin permisos asignados"
+                        : vistasHabilitadas.length === 0
+                          ? "Ninguna vista: no podrá ver nada hasta que le des permisos"
+                          : `${vistasHabilitadas.length} ${vistasHabilitadas.length === 1 ? "vista" : "vistas"} · ${seleccionados.size} permisos`}
+                  </dd>
+                </div>
+              </dl>
+              {!tieneAccesoTotal && vistasHabilitadas.length > 0 && (
+                <ul className="usuario-vistas">
+                  {vistasHabilitadas.map((m) => (
+                    <li key={m.modulo}>
+                      <Check size={13} aria-hidden="true" /> {m.modulo}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {conPermisos && !tieneAccesoTotal && (
+                <button type="button" className="usuario-editar-paso" onClick={() => irA("permisos")}>
+                  Cambiar permisos
+                </button>
               )}
             </div>
           )}

@@ -53,6 +53,23 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         "Rol en el Sistema", max_length=20, choices=ROLES, default="ANALISTA"
     )
 
+    # Datos personales de quien trabaja en el negocio. En blanco por defecto
+    # para no romper las cuentas que existían antes; el alta desde el panel
+    # los exige (ver `CrearUsuarioSerializer` y `datos_personales.py`).
+    TIPOS_DOCUMENTO = [
+        ("CC", "Cédula de ciudadanía"),
+        ("CE", "Cédula de extranjería"),
+        ("TI", "Tarjeta de identidad"),
+        ("PA", "Pasaporte"),
+        ("PPT", "Permiso por protección temporal"),
+    ]
+    telefono_usuario = models.CharField("Teléfono", max_length=20, blank=True, default="")
+    direccion_usuario = models.CharField("Dirección", max_length=255, blank=True, default="")
+    tipo_documento = models.CharField(
+        "Tipo de documento", max_length=3, choices=TIPOS_DOCUMENTO, blank=True, default=""
+    )
+    numero_documento = models.CharField("Número de documento", max_length=20, blank=True, default="")
+
     is_active = models.BooleanField("Cuenta Activa", default=True)
     is_staff = models.BooleanField("Acceso al Staff", default=False)
 
@@ -119,6 +136,15 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         verbose_name = "Usuario de Sistema"
         verbose_name_plural = "Usuarios del Fruver"
         ordering = ["-fecha_creacion"]
+        constraints = [
+            # Una persona, una cuenta: el mismo documento no identifica a dos
+            # usuarios. Solo cuando se escribió (las cuentas viejas van vacías).
+            models.UniqueConstraint(
+                fields=["tipo_documento", "numero_documento"],
+                condition=~models.Q(numero_documento=""),
+                name="accounts_usuario_documento_unico",
+            )
+        ]
 
     def __str__(self):
         return f"{self.nombre_usuario} ({self.rol_usuario})"

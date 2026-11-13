@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Check, FileSpreadsheet, FileText, ImageOff, Palette, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, FileSpreadsheet, FileText, ImageOff, Palette, SlidersHorizontal } from "lucide-react";
 import { Modal } from "../../components/Modal";
+import { PasosModal } from "../../components/PasosModal";
 import { obtenerEstadisticas, obtenerReporteVentas } from "../../api/resources";
 import { useAuth } from "../../auth/AuthContext";
 import { alertaExito } from "../../utils/alertas";
@@ -10,6 +11,7 @@ import { VERDE_PANEL, cargarLogo, paleta } from "../../reportes/estilo";
 import type { EstiloInforme, FormatoInforme } from "../../reportes/tipos";
 import { aFecha, type Rango } from "./periodo";
 import { rutaDe } from "../configuracion/rutas";
+import "./exportar.css";
 
 /** Lo que se recuerda entre exportaciones (en este navegador). */
 interface Preferencias {
@@ -70,6 +72,13 @@ export function ExportModal({ rango, onCerrar }: { rango: Rango; onCerrar: () =>
   const [notas, setNotas] = useState("");
   const [generando, setGenerando] = useState(false);
   const [aviso, setAviso] = useState<{ tipo: "error" | "info"; texto: string } | null>(null);
+  /** El modal va en dos pasos: 1 · qué informe, 2 · cómo se ve. */
+  const [paso, setPaso] = useState<1 | 2>(1);
+
+  function irA(destino: 1 | 2) {
+    setPaso(destino);
+    setAviso(null);
+  }
 
   const colorMarca = marca?.color ?? VERDE_PANEL;
   const color =
@@ -79,6 +88,7 @@ export function ExportModal({ rango, onCerrar }: { rango: Rango; onCerrar: () =>
   const conLogo = pref.incluirLogo && Boolean(logoUrl);
   const periodo = informe.usaPeriodo ? periodoLegible(rango) : "Corte a la fecha de generación";
   const tituloVisible = titulo.trim() || informe.etiqueta;
+  const IconoInforme = informe.icono;
 
   function cambiar<K extends keyof Preferencias>(campo: K, valor: Preferencias[K]) {
     setPref((p) => {
@@ -157,24 +167,51 @@ export function ExportModal({ rango, onCerrar }: { rango: Rango; onCerrar: () =>
     }
   }
 
+  // Los pasos van pegados al encabezado (fuera del área que se desplaza):
+  // se puede volver al 1 en cualquier momento.
+  const pestañas = (
+    <PasosModal
+      etiqueta="Pasos para exportar"
+      activo={String(paso)}
+      onCambiar={(clave) => irA(clave === "2" ? 2 : 1)}
+      pasos={[
+        { clave: "1", titulo: "Tipo de informe", detalle: informe.etiqueta, hecho: paso > 1 },
+        { clave: "2", titulo: "Personalizar", detalle: pref.formato === "pdf" ? "PDF" : "Excel" },
+      ]}
+    />
+  );
+
   return (
     <Modal
       amplio
       ancho
+      expandible
       cerrarConEscape
+      subcabecera={pestañas}
       titulo="Exportar informe"
       subtitulo={`Período del dashboard: ${periodoLegible(rango)}`}
       onCerrar={() => !generando && onCerrar()}
       footer={
-        <>
-          <button type="button" className="btn secundario" onClick={onCerrar} disabled={generando}>
-            Cancelar
-          </button>
-          <button type="button" className="btn primario rx-generar" onClick={generar} disabled={generando} aria-busy={generando}>
-            {pref.formato === "pdf" ? <FileText size={16} aria-hidden /> : <FileSpreadsheet size={16} aria-hidden />}
-            {generando ? "Generando…" : pref.formato === "pdf" ? "Generar PDF" : "Descargar Excel"}
-          </button>
-        </>
+        paso === 1 ? (
+          <>
+            <button type="button" className="btn secundario" onClick={onCerrar}>
+              Cancelar
+            </button>
+            <button type="button" className="btn primario rx-generar" onClick={() => irA(2)}>
+              Siguiente: personalizar <ArrowRight size={16} aria-hidden />
+            </button>
+          </>
+        ) : (
+          <>
+            <button type="button" className="btn secundario rx-generar" onClick={() => irA(1)} disabled={generando}>
+              <ArrowLeft size={16} aria-hidden /> Atrás
+            </button>
+            <button type="button" className="btn primario rx-generar" onClick={generar} disabled={generando} aria-busy={generando}>
+              {pref.formato === "pdf" ? <FileText size={16} aria-hidden /> : <FileSpreadsheet size={16} aria-hidden />}
+              {generando ? "Generando…" : pref.formato === "pdf" ? "Generar PDF" : "Descargar Excel"}
+            </button>
+          </>
+        )
       }
     >
       {/* Arriba, donde se ve sin desplazarse en un modal largo. */}
@@ -183,13 +220,11 @@ export function ExportModal({ rango, onCerrar }: { rango: Rango; onCerrar: () =>
           <AlertTriangle size={15} aria-hidden /> {aviso.texto}
         </div>
       )}
-      <div className="rx">
-        {/* ---------- 1. Qué informe ---------- */}
-        <section className="rx-col" aria-labelledby="rx-informe">
-          <h3 id="rx-informe" className="rx-paso">
-            <span>1</span> Elige el informe
-          </h3>
-          <div className="rx-informes" role="radiogroup" aria-labelledby="rx-informe">
+      {/* ---------- Paso 1: qué informe ---------- */}
+      {paso === 1 && (
+        <section className="rx-panel" role="tabpanel" id="rx-panel-1" aria-labelledby="rx-tab-1">
+          <p className="rx-intro">¿Qué quieres exportar? Puedes cambiarlo después sin perder lo que personalices.</p>
+          <div className="rx-informes" role="radiogroup" aria-label="Tipo de informe">
             {INFORMES.map((inf) => {
               const Icono = inf.icono;
               const activo = inf.clave === informe.clave;
@@ -203,6 +238,10 @@ export function ExportModal({ rango, onCerrar }: { rango: Rango; onCerrar: () =>
                   onClick={() => {
                     setInforme(inf);
                     setAviso(null);
+                  }}
+                  onDoubleClick={() => {
+                    setInforme(inf);
+                    irA(2);
                   }}
                 >
                   <span className="rx-informe-icono">
@@ -218,12 +257,24 @@ export function ExportModal({ rango, onCerrar }: { rango: Rango; onCerrar: () =>
             })}
           </div>
         </section>
+      )}
 
-        {/* ---------- 2. Cómo se ve ---------- */}
-        <section className="rx-col" aria-labelledby="rx-estilo">
-          <h3 id="rx-estilo" className="rx-paso">
-            <span>2</span> Personaliza
-          </h3>
+      {/* ---------- Paso 2: cómo se ve ---------- */}
+      {paso === 2 && (
+        <section className="rx-panel rx-personaliza" role="tabpanel" id="rx-panel-2" aria-labelledby="rx-tab-2">
+          <div className="rx-col">
+            <div className="rx-elegido">
+              <span className="rx-informe-icono">
+                <IconoInforme size={16} aria-hidden />
+              </span>
+              <span className="rx-informe-texto">
+                <small>Informe</small>
+                <strong>{informe.etiqueta}</strong>
+              </span>
+              <button type="button" className="rx-cambiar" onClick={() => irA(1)}>
+                Cambiar
+              </button>
+            </div>
 
           <div className="rx-campo">
             <span className="rx-etiqueta" id="rx-formato">Formato</span>
@@ -283,6 +334,7 @@ export function ExportModal({ rango, onCerrar }: { rango: Rango; onCerrar: () =>
             />
           </div>
 
+          <span className="rx-etiqueta">Contenido</span>
           <div className="rx-opciones">
             <label className={`rx-opcion ${logoUrl ? "" : "deshabilitada"}`}>
               <span className="switch">
@@ -399,8 +451,10 @@ export function ExportModal({ rango, onCerrar }: { rango: Rango; onCerrar: () =>
             )}
           </div>
 
-          {/* ---------- Vista previa ---------- */}
-          <div className="rx-previa-marco" aria-label="Vista previa del encabezado del informe">
+          </div>
+
+          {/* ---------- Vista previa (fija mientras se desplaza el formulario) ---------- */}
+          <aside className="rx-previa-marco" aria-label="Vista previa del encabezado del informe">
             <span className="rx-etiqueta">Vista previa</span>
             <div className={`rx-previa ${pref.formato === "pdf" && pref.orientacion === "horizontal" ? "horizontal" : ""}`}>
               <div className="rx-previa-cabecera" style={{ borderColor: colores.acento }}>
@@ -454,10 +508,12 @@ export function ExportModal({ rango, onCerrar }: { rango: Rango; onCerrar: () =>
                 </div>
               )}
             </div>
-          </div>
+            <p className="rx-previa-nota">
+              {pref.formato === "pdf" ? "PDF" : "Excel"} · {periodo}
+            </p>
+          </aside>
         </section>
-      </div>
-
+      )}
     </Modal>
   );
 }

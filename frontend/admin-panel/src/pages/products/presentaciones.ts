@@ -123,6 +123,23 @@ export function textoPrecio(texto: string): string {
   return /^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t) ? t.replace(/\./g, "") : t;
 }
 
+/**
+ * Un precio escrito a mano: el valor listo para la API ("3500.5") o el
+ * error, con los mismos mensajes que el servidor. Lo usan el formulario de
+ * presentación y la edición rápida de precios.
+ */
+export function validarPrecio(texto: string): { valor: string | null; error?: string } {
+  const precioTexto = textoPrecio(texto);
+  const precio = leerNumero(precioTexto);
+  if (!precioTexto) return { valor: null, error: "Escribe el precio de venta." };
+  if (precioTexto.startsWith("-")) return { valor: null, error: "El precio no puede ser negativo." };
+  if (!precio) return { valor: null, error: "Escribe solo números (ej: 2000 o 2000,50)." };
+  if (precio.decimales > 2) return { valor: null, error: "El precio admite como máximo 2 decimales." };
+  if (precio.escalado === 0) return { valor: null, error: "El precio debe ser mayor que cero." };
+  if (precio.escalado > 9_999_999_999.99 * 1_000_000) return { valor: null, error: "El precio es demasiado grande." };
+  return { valor: aDecimalApi(precioTexto) };
+}
+
 const normalizar = (texto: string) => texto.split(/\s+/).filter(Boolean).join(" ").toLocaleLowerCase("es");
 
 /**
@@ -143,14 +160,8 @@ export function validarBorrador(
     errores.nombre_presentacion = "El nombre admite como máximo 200 caracteres.";
   if (b.unidad_venta === "") errores.unidad_venta = "Elige la unidad en la que se vende.";
 
-  const precioTexto = textoPrecio(b.precio_unitario);
-  const precio = leerNumero(precioTexto);
-  if (!precioTexto) errores.precio_unitario = "Escribe el precio de venta.";
-  else if (precioTexto.startsWith("-")) errores.precio_unitario = "El precio no puede ser negativo.";
-  else if (!precio) errores.precio_unitario = "Escribe solo números (ej: 2000 o 2000,50).";
-  else if (precio.decimales > 2) errores.precio_unitario = "El precio admite como máximo 2 decimales.";
-  else if (precio.escalado === 0) errores.precio_unitario = "El precio debe ser mayor que cero.";
-  else if (precio.escalado > 9_999_999_999.99 * 1_000_000) errores.precio_unitario = "El precio es demasiado grande.";
+  const precio = validarPrecio(b.precio_unitario);
+  if (precio.error) errores.precio_unitario = precio.error;
 
   const factor = leerNumero(b.factor_conversion || "1");
   if (!factor || factor.escalado === 0) errores.factor_conversion = "La equivalencia debe ser un número mayor que cero.";

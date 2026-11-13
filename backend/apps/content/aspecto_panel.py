@@ -29,3 +29,52 @@ def variables_del_panel(config) -> dict[str, str]:
         for var, valor in motor.variables_css(config).items()
         if var in VARIABLES
     }
+
+
+# ==========================================================================
+# EL NOMBRE DEL NEGOCIO, CON LA LETRA DE SU TIENDA
+# ==========================================================================
+#: Las fuentes de titulos que la tienda sabe cargar (token `fuente-titulos`,
+#: ver `tienda/src/lib/tema.ts → FUENTES_TITULO`). El panel traduce la clave
+#: a la familia y carga la misma hoja de Google.
+FUENTES_TITULO = ("playfair", "cormorant", "dm-serif", "fraunces")
+
+#: Variantes de cabecera que fijan su propia letra para el nombre, en vez de
+#: la de los titulos. «comercio» lo escribe en Fraunces italica (ver
+#: `.navbar--comercio .marca-txt` en `tienda/src/app/global.css`).
+LETRA_DE_CABECERA = {"comercio": {"fuente": "fraunces", "italica": True}}
+
+
+def _variante_de_cabecera(tenant) -> str:
+    """La variante del bloque `cabecera` del armazon PUBLICADO, o ''."""
+    from apps.storefront.models import VersionPagina
+
+    if tenant is None:
+        return ""
+    version = (
+        VersionPagina.all_tenants.filter(
+            tenant=tenant, pagina__ruta="/_layout", estado=VersionPagina.Estado.PUBLICADA
+        )
+        .only("composicion")
+        .first()
+    )
+    for bloque in (version.composicion if version else None) or []:
+        if isinstance(bloque, dict) and bloque.get("tipo") == "cabecera":
+            return str(bloque.get("variante") or "")
+    return ""
+
+
+def tipografia_de_marca(config) -> dict:
+    """
+    Como escribe la tienda el nombre del negocio en su cabecera, para que el
+    panel lo escriba igual: `{"fuente": clave, "italica": bool}`.
+
+    Primero manda la cabecera publicada (hay variantes con letra propia);
+    despues, la tipografia de titulos elegida en Apariencia. «heredada» quiere
+    decir la fuente del texto, que el panel ya usa (`--fuente-panel`).
+    """
+    fija = LETRA_DE_CABECERA.get(_variante_de_cabecera(getattr(config, "tenant", None)))
+    if fija:
+        return dict(fija)
+    titulos = motor.resolver(config).get("fuente-titulos", "heredada")
+    return {"fuente": titulos if titulos in FUENTES_TITULO else "heredada", "italica": False}

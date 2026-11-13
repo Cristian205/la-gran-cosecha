@@ -117,7 +117,13 @@ class Pedido(ModeloConTenant):
     class Meta:
         db_table = "ui_pedido"
         ordering = ["fecha_pedido"]
-        indexes = [models.Index(fields=["tenant", "estado"], name="ui_pedido_tenant_estado_idx")]
+        indexes = [
+            models.Index(fields=["tenant", "estado"], name="ui_pedido_tenant_estado_idx"),
+            # Toda la analítica del dashboard filtra por rango de `fecha_pedido`
+            # dentro del negocio; sin este índice cada consulta recorre todos
+            # los pedidos del negocio para quedarse con un mes.
+            models.Index(fields=["tenant", "fecha_pedido"], name="ui_pedido_tenant_fecha_idx"),
+        ]
 
     @property
     def direccion_de_entrega(self) -> str:

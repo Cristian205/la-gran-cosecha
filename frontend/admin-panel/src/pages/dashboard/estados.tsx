@@ -1,5 +1,6 @@
-import { AlertTriangle, RotateCw, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Info, RotateCw, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { Tooltip } from "../../components/Tooltip";
 import type { EstadoPedido } from "../../types";
 
 /**
@@ -80,10 +81,22 @@ export function LoadingState({ filas = 4, alto = 12 }: { filas?: number; alto?: 
   );
 }
 
-/** El marco común de una sección: título, acción a la derecha y cuerpo. */
+/** Un «i» discreto que explica cómo se calcula una cifra. */
+export function InfoTip({ texto, posicion = "arriba" }: { texto: string; posicion?: "arriba" | "abajo" | "izquierda" | "derecha" }) {
+  return (
+    <Tooltip label={texto} posicion={posicion}>
+      <button type="button" className="db-info" aria-label={texto}>
+        <Info size={13} aria-hidden="true" />
+      </button>
+    </Tooltip>
+  );
+}
+
+/** El marco común de una sección: título, ayuda, acción a la derecha y cuerpo. */
 export function Tarjeta({
   titulo,
   subtitulo,
+  info,
   accion,
   children,
   className = "",
@@ -91,21 +104,44 @@ export function Tarjeta({
 }: {
   titulo: string;
   subtitulo?: ReactNode;
+  info?: string;
   accion?: ReactNode;
   children: ReactNode;
   className?: string;
   actualizando?: boolean;
 }) {
   return (
-    <section className={`db-tarjeta ${actualizando ? "db-actualizando" : ""} ${className}`}>
+    <section className={`db-tarjeta ${actualizando ? "db-actualizando" : ""} ${className}`} aria-busy={actualizando}>
       <header className="db-tarjeta-cabecera">
-        <div>
-          <h2>{titulo}</h2>
+        <div className="db-tarjeta-titulos">
+          <h2>
+            {titulo}
+            {info && <InfoTip texto={info} />}
+          </h2>
           {subtitulo && <p className="db-tarjeta-sub">{subtitulo}</p>}
         </div>
-        {accion}
+        {accion && <div className="db-tarjeta-accion">{accion}</div>}
       </header>
       {children}
     </section>
   );
+}
+
+/** El cuerpo de una tarjeta según el estado de su módulo. */
+export function CuerpoModulo<T>({
+  estado,
+  filas = 4,
+  error = "No pudimos cargar esta sección.",
+  onReintentar,
+  children,
+}: {
+  estado: { tipo: "cargando" } | { tipo: "error"; mensaje: string } | { tipo: "listo"; datos: T };
+  filas?: number;
+  error?: string;
+  onReintentar: () => void;
+  children: (datos: T) => ReactNode;
+}) {
+  if (estado.tipo === "cargando") return <LoadingState filas={filas} />;
+  if (estado.tipo === "error") return <ErrorState mensaje={error} onReintentar={onReintentar} />;
+  return <>{children(estado.datos)}</>;
 }

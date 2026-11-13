@@ -164,3 +164,24 @@ def test_restablecer_desbloquea_la_cuenta(api, usuario_owner):
     usuario_owner.refresh_from_db()
     assert usuario_owner.intentos_fallidos == 0
     assert usuario_owner.debe_cambiar_password is False
+
+
+def test_un_administrador_de_plataforma_sin_negocio_puede_restablecer(api, db):
+    """
+    Crafteech Root usa el mismo flujo. Su personal puede no pertenecer a ningún
+    negocio: el correo sale con la marca de la plataforma y el cambio funciona.
+    """
+    from django.contrib.auth import get_user_model
+
+    root = get_user_model().objects.create_superuser(
+        email_usuario="root@ejemplo.test", nombre_usuario="Root", password=CLAVE
+    )
+    root.es_staff_plataforma = True
+    root.save(update_fields=["es_staff_plataforma"])
+
+    paso1 = _solicitar(api, root.email_usuario)
+    assert mail.outbox[-1].to == [root.email_usuario]
+    cambio = _verificar(api, paso1["reset_ticket"], _codigo()).json()["cambio_ticket"]
+    assert _nueva(api, cambio).status_code == 200
+    root.refresh_from_db()
+    assert root.check_password(NUEVA)

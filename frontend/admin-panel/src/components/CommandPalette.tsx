@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   Building2,
@@ -73,9 +73,14 @@ interface ResultadoItem {
   clave: string;
   icono: LucideIcon;
   nombre: string;
+  /** Segunda línea: a quién o a qué pertenece (cliente, categoría, teléfono). */
+  detalle?: string;
   meta?: string;
   ir: () => void;
 }
+
+/** "ENTREGADO" → "Entregado". */
+const estadoLegible = (e: string) => e.charAt(0) + e.slice(1).toLowerCase();
 
 export function CommandPalette({ onCerrar }: Props) {
   const navigate = useNavigate();
@@ -84,6 +89,9 @@ export function CommandPalette({ onCerrar }: Props) {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [indice, setIndice] = useState(0);
+  /** Cuántas de las tres búsquedas siguen en camino. */
+  const [buscando, setBuscando] = useState(0);
+  const lista = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const texto = q.trim();
@@ -93,18 +101,28 @@ export function CommandPalette({ onCerrar }: Props) {
       setClientes([]);
       return;
     }
+    let vigente = true;
+    const fin = () => vigente && setBuscando((n) => Math.max(0, n - 1));
     const id = setTimeout(() => {
+      setBuscando(3);
       obtenerProductos({ search: texto })
-        .then((r) => setProductos(r.slice(0, 5)))
-        .catch(() => setProductos([]));
+        .then((r) => vigente && setProductos(r.slice(0, 5)))
+        .catch(() => vigente && setProductos([]))
+        .finally(fin);
       obtenerPedidos({ search: texto })
-        .then((r) => setPedidos(r.slice(0, 5)))
-        .catch(() => setPedidos([]));
+        .then((r) => vigente && setPedidos(r.slice(0, 5)))
+        .catch(() => vigente && setPedidos([]))
+        .finally(fin);
       obtenerClientes(texto)
-        .then((r) => setClientes(r.slice(0, 5)))
-        .catch(() => setClientes([]));
+        .then((r) => vigente && setClientes(r.slice(0, 5)))
+        .catch(() => vigente && setClientes([]))
+        .finally(fin);
     }, 250);
-    return () => clearTimeout(id);
+    return () => {
+      vigente = false;
+      clearTimeout(id);
+      setBuscando(0);
+    };
   }, [q]);
 
   useEffect(() => {
@@ -131,26 +149,15 @@ export function CommandPalette({ onCerrar }: Props) {
 
   const grupos = useMemo(() => {
     const g: { titulo: string; items: ResultadoItem[] }[] = [];
-    if (productos.length > 0) {
-      g.push({
-        titulo: "Productos",
-        items: productos.map((p) => ({
-          clave: `p-${p.id}`,
-          icono: Package,
-          nombre: p.nombre_producto,
-          meta: p.categoria_nombre,
-          ir: () => ir("/productos", p.nombre_producto),
-        })),
-      });
-    }
     if (pedidos.length > 0) {
       g.push({
         titulo: "Pedidos",
         items: pedidos.map((p) => ({
           clave: `o-${p.id}`,
           icono: Receipt,
-          nombre: `Pedido #${p.id} · ${p.cliente_nombre || "—"}`,
-          meta: p.estado,
+          nombre: `Pedido #${p.id}`,
+          detalle: p.cliente_nombre || "Sin cliente",
+          meta: estadoLegible(p.estado),
           ir: () => ir("/pedidos", String(p.id)),
         })),
       });
@@ -162,8 +169,20 @@ export function CommandPalette({ onCerrar }: Props) {
           clave: `c-${c.id}`,
           icono: Users,
           nombre: c.nombre_cliente,
-          meta: c.telefono_cliente || undefined,
+          detalle: c.telefono_cliente || undefined,
           ir: () => ir("/clientes", c.nombre_cliente),
+        })),
+      });
+    }
+    if (productos.length > 0) {
+      g.push({
+        titulo: "Productos",
+        items: productos.map((p) => ({
+          clave: `p-${p.id}`,
+          icono: Package,
+          nombre: p.nombre_producto,
+          detalle: p.categoria_nombre || undefined,
+          ir: () => ir("/productos", p.nombre_producto),
         })),
       });
     }
@@ -199,55 +218,80 @@ export function CommandPalette({ onCerrar }: Props) {
     }
   }
 
+  useEffect(() => {
+    lista.current?.querySelector<HTMLElement>(".cmdk-item.activo")?.scrollIntoView({ block: "nearest" });
+  }, [indice]);
+
   const hayTexto = q.trim().length >= 2;
   let contador = -1;
 
   return (
     <div className="cmdk-overlay" onClick={onCerrar}>
-      <div className="cmdk-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="cmdk-panel" role="dialog" aria-label="Buscar en el panel" onClick={(e) => e.stopPropagation()}>
         <div className="cmdk-input-row">
-          <Search size={17} />
+          <Search size={18} aria-hidden="true" />
           <input
             autoFocus
             type="text"
-            placeholder="Buscar productos, pedidos, clientes, páginas…"
+            placeholder="Buscar pedidos, clientes o productos..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={alPresionarTecla}
+            aria-label="Buscar pedidos, clientes o productos"
           />
-          <span className="cmdk-atajo">Esc</span>
+          {buscando > 0 && <span className="cmdk-buscando" aria-label="Buscando" />}
+          <kbd className="cmdk-atajo">Esc</kbd>
         </div>
 
-        {hayTexto && (
-          <div className="cmdk-lista">
-            {planos.length === 0 ? (
-              <div className="cmdk-vacio">Sin resultados para "{q.trim()}"</div>
-            ) : (
-              grupos.map((g) => (
-                <div className="cmdk-grupo" key={g.titulo}>
-                  <span className="cmdk-grupo-titulo">{g.titulo}</span>
-                  {g.items.map((item) => {
-                    contador += 1;
-                    const posicion = contador;
-                    return (
-                      <button
-                        type="button"
-                        key={item.clave}
-                        className={`cmdk-item ${posicion === indice ? "activo" : ""}`}
-                        onMouseEnter={() => setIndice(posicion)}
-                        onClick={item.ir}
-                      >
+        <div className="cmdk-lista" ref={lista}>
+          {!hayTexto ? (
+            <div className="cmdk-vacio">
+              <strong>Busca en todo el panel</strong>
+              Escribe al menos 2 caracteres: número de pedido, nombre o teléfono de un cliente, o un producto.
+            </div>
+          ) : planos.length === 0 ? (
+            <div className="cmdk-vacio">
+              {buscando > 0 ? "Buscando…" : <>Sin resultados para «{q.trim()}»</>}
+            </div>
+          ) : (
+            grupos.map((g) => (
+              <div className="cmdk-grupo" key={g.titulo} role="group" aria-label={g.titulo}>
+                <span className="cmdk-grupo-titulo">
+                  {g.titulo}
+                  <span className="cmdk-grupo-n">{g.items.length}</span>
+                </span>
+                {g.items.map((item) => {
+                  contador += 1;
+                  const posicion = contador;
+                  return (
+                    <button
+                      type="button"
+                      key={item.clave}
+                      className={`cmdk-item ${posicion === indice ? "activo" : ""}`}
+                      onMouseEnter={() => setIndice(posicion)}
+                      onClick={item.ir}
+                    >
+                      <span className="cmdk-item-icono" aria-hidden="true">
                         <item.icono size={16} />
+                      </span>
+                      <span className="cmdk-item-texto">
                         <span className="cmdk-item-nombre">{item.nombre}</span>
-                        {item.meta && <span className="cmdk-item-meta">{item.meta}</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))
-            )}
-          </div>
-        )}
+                        {item.detalle && <span className="cmdk-item-detalle">{item.detalle}</span>}
+                      </span>
+                      {item.meta && <span className="cmdk-item-meta">{item.meta}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="cmdk-pie" aria-hidden="true">
+          <span><kbd>↑</kbd><kbd>↓</kbd> navegar</span>
+          <span><kbd>Enter</kbd> abrir</span>
+          <span><kbd>Esc</kbd> cerrar</span>
+        </div>
       </div>
     </div>
   );

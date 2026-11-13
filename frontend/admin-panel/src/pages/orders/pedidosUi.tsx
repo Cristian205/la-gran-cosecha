@@ -26,10 +26,12 @@ export function EstadoPedido({ estado }: { estado: string }) {
 
 // ---------- Periodos ----------
 
-export type Periodo = "hoy" | "ayer" | "semana" | "todas" | "rango";
+/** «hoy» es la pestaña Pedidos de hoy; el resto, el filtro de la pestaña Historial. */
+export type Periodo = "hoy" | "anteriores" | "ayer" | "semana" | "todas" | "rango";
 
+/** Las fechas del Historial (los de hoy tienen su propia pestaña). */
 export const OPCIONES_PERIODO: { valor: Periodo; etiqueta: string }[] = [
-  { valor: "hoy", etiqueta: "Hoy" },
+  { valor: "anteriores", etiqueta: "Anteriores a hoy" },
   { valor: "ayer", etiqueta: "Ayer" },
   { valor: "semana", etiqueta: "Esta semana" },
   { valor: "todas", etiqueta: "Todas las fechas" },
@@ -46,6 +48,12 @@ export function rangoDelPeriodo(
   switch (periodo) {
     case "hoy":
       return { desde: fechaLocalISO(hoy), hasta: fechaLocalISO(hoy) };
+    case "anteriores": {
+      // Lo anterior a hoy, en el último año (lo que mostraba el historial).
+      const haceUnAnio = new Date(hoy);
+      haceUnAnio.setFullYear(hoy.getFullYear() - 1);
+      return { desde: fechaLocalISO(haceUnAnio), hasta: fechaLocalISO(sumarDias(hoy, -1)) };
+    }
     case "ayer": {
       const ayer = fechaLocalISO(sumarDias(hoy, -1));
       return { desde: ayer, hasta: ayer };
@@ -64,6 +72,7 @@ export function rangoDelPeriodo(
 
 /** Cómo se nombra el rango elegido en la cabecera de la tabla. */
 export function etiquetaPeriodo(periodo: Periodo, desde: string, hasta: string): string {
+  if (periodo === "hoy") return "Hoy";
   if (periodo !== "rango") return OPCIONES_PERIODO.find((o) => o.valor === periodo)?.etiqueta ?? "";
   const f = (iso: string) => diaCorto(new Date(`${iso}T00:00:00`));
   if (desde && hasta) return desde === hasta ? f(desde) : `${f(desde)} – ${f(hasta)}`;

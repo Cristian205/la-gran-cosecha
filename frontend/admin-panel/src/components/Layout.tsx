@@ -8,9 +8,12 @@ import { ColumnasAjustables } from "./ColumnasAjustables";
 import { CommandPalette } from "./CommandPalette";
 import { Sidebar, useModoSidebar } from "./Sidebar";
 import type { Estadisticas } from "../types";
+import "./navbar.css";
 import { formatoPrecio } from "../utils";
 
 const REFRESCO_RESUMEN_MS = 120_000;
+/** En Mac el atajo es ⌘K; en el resto, Ctrl K (el listener acepta ambos). */
+const ATAJO = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ K" : "Ctrl K";
 const REFRESCO_NOTIFICACIONES_MS = 60_000;
 
 function iniciales(nombre?: string): string {
@@ -21,6 +24,13 @@ function iniciales(nombre?: string): string {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase())
     .join("");
+}
+
+/** "GERENTE" → "Gerente": el rol se lee, no se grita. */
+function rolLegible(rol?: string): string {
+  if (!rol) return "";
+  const t = rol.replace(/_/g, " ").toLowerCase();
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 export function Layout() {
@@ -94,8 +104,15 @@ export function Layout() {
         setMenuAbierto(false);
       }
     }
+    function alEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuAbierto(false);
+    }
     document.addEventListener("mousedown", alClickFuera);
-    return () => document.removeEventListener("mousedown", alClickFuera);
+    document.addEventListener("keydown", alEscape);
+    return () => {
+      document.removeEventListener("mousedown", alClickFuera);
+      document.removeEventListener("keydown", alEscape);
+    };
   }, []);
 
   function salir() {
@@ -122,102 +139,112 @@ export function Layout() {
 
       <div className="main">
         <header className="navbar-global">
-          {modo === "movil" && (
+          {/* Izquierda: menú (móvil) e indicadores rápidos. */}
+          <div className="navbar-zona navbar-zona--izq">
+            {modo === "movil" && (
+              <button
+                type="button"
+                className="navbar-menu-btn"
+                onClick={() => setMenuMovil(true)}
+                aria-label="Abrir menú"
+                aria-expanded={menuMovil}
+                aria-controls="sidebar-principal"
+              >
+                <Menu size={19} />
+              </button>
+            )}
             <button
               type="button"
-              className="navbar-menu-btn"
-              onClick={() => setMenuMovil(true)}
-              aria-label="Abrir menú"
-              aria-expanded={menuMovil}
-              aria-controls="sidebar-principal"
+              className="navbar-chip navbar-chip--caja"
+              onClick={() => navigate("/")}
+              aria-label={`Caja de hoy: ${resumen ? formatoPrecio(resumen.caja_hoy) : "cargando"}`}
+              title="Caja de hoy"
             >
-              <Menu size={20} />
-            </button>
-          )}
-          <div className="navbar-resumen">
-            <button type="button" className="navbar-chip" onClick={() => navigate("/")}>
-              <span className="navbar-chip-icono verde">
+              <span className="navbar-chip-icono verde" aria-hidden="true">
                 <Wallet size={15} />
               </span>
-              <span className="navbar-chip-texto">
+              <span className="navbar-chip-texto" aria-hidden="true">
                 <span className="navbar-chip-label">Caja de hoy</span>
-                <span className="navbar-chip-valor">
-                  {resumen ? formatoPrecio(resumen.caja_hoy) : "—"}
-                </span>
+                <span className="navbar-chip-valor">{resumen ? formatoPrecio(resumen.caja_hoy) : "—"}</span>
               </span>
             </button>
             <button
               type="button"
-              className="navbar-chip"
+              className={`navbar-chip ${resumen && resumen.pedidos_pendientes > 0 ? "navbar-chip--alerta" : ""}`}
               onClick={() => navigate("/pedidos")}
+              aria-label={`Pedidos pendientes: ${resumen ? resumen.pedidos_pendientes : "cargando"}`}
+              title="Pedidos pendientes"
             >
-              <span className="navbar-chip-icono amber">
+              <span className="navbar-chip-icono amber" aria-hidden="true">
                 <Clock size={15} />
               </span>
-              <span className="navbar-chip-texto">
+              <span className="navbar-chip-texto" aria-hidden="true">
                 <span className="navbar-chip-label">Pendientes</span>
-                <span className="navbar-chip-valor">
-                  {resumen ? resumen.pedidos_pendientes : "—"}
-                </span>
+                <span className="navbar-chip-valor">{resumen ? resumen.pedidos_pendientes : "—"}</span>
               </span>
-              {resumen && resumen.pedidos_pendientes > 0 && (
-                <span className="navbar-chip-dot" />
-              )}
             </button>
           </div>
 
-          <button
-            type="button"
-            className="navbar-buscar-btn"
-            onClick={() => setPaletaAbierta(true)}
-            aria-label="Buscar en todo el panel (Ctrl K)"
-          >
-            <Search size={15} />
-            <span className="texto">Buscar pedidos, clientes, productos…</span>
-            <span className="cmdk-atajo">Ctrl K</span>
-          </button>
-
-          <div className="navbar-usuario" ref={menuRef}>
+          {/* Centro: el buscador global (abre la paleta, también con Ctrl/Cmd + K). */}
+          <div className="navbar-zona navbar-zona--centro">
             <button
               type="button"
-              className="navbar-usuario-btn"
-              onClick={() => setMenuAbierto((v) => !v)}
+              className="navbar-buscar-btn"
+              onClick={() => setPaletaAbierta(true)}
+              aria-label={`Buscar pedidos, clientes o productos (${ATAJO})`}
+              aria-haspopup="dialog"
             >
-              <span className="avatar">{iniciales(usuario?.nombre_usuario)}</span>
-              <span className="navbar-usuario-info">
-                <span className="n">{usuario?.nombre_usuario}</span>
-                <span className="r">{usuario?.rol_usuario}</span>
-              </span>
-              <ChevronDown
-                size={16}
-                className={`chevron ${menuAbierto ? "abierto" : ""}`}
-              />
+              <Search size={16} aria-hidden="true" />
+              <span className="texto">Buscar pedidos, clientes o productos...</span>
+              <kbd className="cmdk-atajo">{ATAJO}</kbd>
             </button>
+          </div>
 
-            {menuAbierto && (
-              <div className="menu-usuario">
-                <div className="menu-usuario-cab">
-                  <span className="avatar grande">
-                    {iniciales(usuario?.nombre_usuario)}
-                  </span>
-                  <div>
-                    <div className="n">{usuario?.nombre_usuario}</div>
-                    <div className="e">{usuario?.email_usuario}</div>
+          {/* Derecha: perfil. */}
+          <div className="navbar-zona navbar-zona--der">
+            <div className="navbar-usuario" ref={menuRef}>
+              <button
+                type="button"
+                className="navbar-usuario-btn"
+                onClick={() => setMenuAbierto((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={menuAbierto}
+                aria-label={`Cuenta de ${usuario?.nombre_usuario ?? "usuario"}`}
+              >
+                <span className="avatar" aria-hidden="true">{iniciales(usuario?.nombre_usuario)}</span>
+                <span className="navbar-usuario-info">
+                  <span className="n">{usuario?.nombre_usuario}</span>
+                  <span className="r">{rolLegible(usuario?.rol_usuario)}</span>
+                </span>
+                <ChevronDown size={15} className={`chevron ${menuAbierto ? "abierto" : ""}`} aria-hidden="true" />
+              </button>
+
+              {menuAbierto && (
+                <div className="menu-usuario" role="menu">
+                  <div className="menu-usuario-cab">
+                    <span className="avatar grande" aria-hidden="true">
+                      {iniciales(usuario?.nombre_usuario)}
+                    </span>
+                    <div>
+                      <div className="n">{usuario?.nombre_usuario}</div>
+                      <div className="e">{usuario?.email_usuario}</div>
+                      {usuario?.rol_usuario && <span className="menu-usuario-rol">{rolLegible(usuario.rol_usuario)}</span>}
+                    </div>
                   </div>
+                  <div className="menu-usuario-sep" />
+                  <button type="button" role="menuitem" onClick={() => irA("/perfil")}>
+                    <User size={16} /> Perfil
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => irA("/configuracion")}>
+                    <Settings size={16} /> Preferencias
+                  </button>
+                  <div className="menu-usuario-sep" />
+                  <button type="button" role="menuitem" className="salir" onClick={salir}>
+                    <LogOut size={16} /> Cerrar sesión
+                  </button>
                 </div>
-                <div className="menu-usuario-sep" />
-                <button type="button" onClick={() => irA("/perfil")}>
-                  <User size={16} /> Perfil
-                </button>
-                <button type="button" onClick={() => irA("/configuracion")}>
-                  <Settings size={16} /> Preferencias
-                </button>
-                <div className="menu-usuario-sep" />
-                <button type="button" className="salir" onClick={salir}>
-                  <LogOut size={16} /> Cerrar sesión
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </header>
 

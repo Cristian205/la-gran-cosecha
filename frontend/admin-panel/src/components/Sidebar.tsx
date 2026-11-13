@@ -1,10 +1,9 @@
 import {
   Bell,
   ChevronDown,
+  ChevronLeft,
   HelpCircle,
   Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
   Sprout,
   Sun,
   X,
@@ -141,8 +140,25 @@ export function Sidebar({ modo, colapsado, onAlternarColapso, abiertoEnMovil, on
         aria-label="Menú principal"
         aria-hidden={oculto || undefined}
       >
+        {/* Contraer / expandir: botón redondo arriba, sobre el borde entre el
+            menú y la barra superior (solo escritorio: en tableta el menú va
+            siempre compacto y en el móvil se abre y cierra desde la barra). */}
+        {modo === "escritorio" && (
+          <button
+            type="button"
+            className="sb-colapso"
+            onClick={onAlternarColapso}
+            aria-expanded={!colapsado}
+            aria-controls="sidebar-principal"
+            aria-label={colapsado ? "Expandir menú" : "Contraer menú"}
+            data-tooltip={colapsado ? "Expandir menú" : "Contraer menú"}
+          >
+            <ChevronLeft size={15} strokeWidth={2.2} aria-hidden="true" />
+          </button>
+        )}
+
         <div className="sb-cabecera">
-          <span className="sb-logo" aria-hidden={compacto ? undefined : true} data-tooltip={compacto ? nombre : undefined}>
+          <span className={`sb-logo ${marca?.logoUrl ? "sb-logo--imagen" : ""}`} aria-hidden={compacto ? undefined : true} data-tooltip={compacto ? nombre : undefined}>
             {marca?.logoUrl ? <img src={marca.logoUrl} alt="" /> : <Sprout size={20} />}
           </span>
           <span className="sb-marca">
@@ -181,7 +197,7 @@ export function Sidebar({ modo, colapsado, onAlternarColapso, abiertoEnMovil, on
               data-tooltip="Notificaciones"
               aria-label={noLeidas > 0 ? `Notificaciones, ${noLeidas} sin leer` : "Notificaciones"}
             >
-              <Bell size={18} strokeWidth={1.9} />
+              <Bell size={18} strokeWidth={1.8} />
               {noLeidas > 0 && (
                 <span className="sb-dock-badge" aria-hidden="true">
                   {noLeidas > 9 ? "9+" : noLeidas}
@@ -194,32 +210,18 @@ export function Sidebar({ modo, colapsado, onAlternarColapso, abiertoEnMovil, on
               data-tooltip="Centro de ayuda"
               aria-label="Centro de ayuda"
             >
-              <HelpCircle size={18} strokeWidth={1.9} />
+              <HelpCircle size={18} strokeWidth={1.8} />
             </NavLink>
             <button
               type="button"
               className="sb-dock-btn"
               onClick={alternarTema}
-              data-tooltip={tema === "oscuro" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
-              aria-label={tema === "oscuro" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+              data-tooltip={tema === "oscuro" ? "Apariencia: tema claro" : "Apariencia: tema oscuro"}
+              aria-label={tema === "oscuro" ? "Apariencia: cambiar a tema claro" : "Apariencia: cambiar a tema oscuro"}
             >
-              {tema === "oscuro" ? <Sun size={18} strokeWidth={1.9} /> : <Moon size={18} strokeWidth={1.9} />}
+              {tema === "oscuro" ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}
             </button>
           </div>
-
-          {modo === "escritorio" && (
-            <button
-              type="button"
-              className="sb-contraer"
-              onClick={onAlternarColapso}
-              aria-expanded={!colapsado}
-              aria-controls="sidebar-principal"
-              data-tooltip={colapsado ? "Expandir menú" : undefined}
-            >
-              {colapsado ? <PanelLeftOpen size={18} strokeWidth={1.9} /> : <PanelLeftClose size={18} strokeWidth={1.9} />}
-              <span className="sb-label">{colapsado ? "Expandir menú" : "Contraer menú"}</span>
-            </button>
-          )}
         </div>
       </aside>
 
@@ -303,7 +305,7 @@ function Item({ seccion, n, compacto }: { seccion: SeccionDisponible; n: number;
         data-tooltip={compacto ? (detalle ? `${seccion.label} · ${detalle}` : seccion.label) : undefined}
       >
         <span className="sb-icono" aria-hidden="true">
-          <Icono size={18} strokeWidth={1.9} />
+          <Icono size={19} strokeWidth={1.8} />
           {compacto && n > 0 && <span className="sb-punto" />}
         </span>
         <span className="sb-label">{seccion.label}</span>
@@ -334,14 +336,16 @@ export function TooltipFlotante({ raiz, activo }: { raiz: RefObject<HTMLElement>
     if (!el) return;
     const mostrar = (e: Event) => {
       const objetivo = (e.target as HTMLElement).closest<HTMLElement>("[data-tooltip]");
-      const enDock = Boolean(objetivo?.classList.contains("sb-dock-btn"));
+      // El dock y el botón de contraer llevan tooltip siempre; las secciones, solo en compacto.
+      const enDock = Boolean(objetivo?.classList.contains("sb-dock-btn") || objetivo?.classList.contains("sb-colapso"));
       if (!objetivo || !el.contains(objetivo) || (!activo && !enDock)) {
         setInfo(null);
         return;
       }
       const r = objetivo.getBoundingClientRect();
       // Compacto: a la derecha del ícono. Expandido (solo el dock): encima.
-      const lateral = activo;
+      // El botón de contraer va pegado arriba: su globo siempre al costado.
+      const lateral = activo || objetivo.classList.contains("sb-colapso");
       setInfo({
         texto: objetivo.dataset.tooltip ?? "",
         x: lateral ? r.right + 10 : r.left + r.width / 2,
