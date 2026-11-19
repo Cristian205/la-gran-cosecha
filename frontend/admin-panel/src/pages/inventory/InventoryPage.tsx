@@ -273,7 +273,7 @@ export function InventoryPage() {
                               <>
                                 <Tooltip label="Registrar entrada">
                                   <button
-                                    className="btn-icon"
+                                    className="btn-icon exito"
                                     onClick={() => setOperando({ op: "entrada", fila: e })}
                                   >
                                     <PackagePlus size={15} />
@@ -281,7 +281,7 @@ export function InventoryPage() {
                                 </Tooltip>
                                 <Tooltip label="Ajustar por conteo">
                                   <button
-                                    className="btn-icon"
+                                    className="btn-icon editar"
                                     onClick={() => setOperando({ op: "ajuste", fila: e })}
                                   >
                                     <ClipboardCheck size={15} />
@@ -290,7 +290,7 @@ export function InventoryPage() {
                                 {ubicaciones.filter((u) => u.activa).length > 1 && (
                                   <Tooltip label="Trasladar a otra ubicación">
                                     <button
-                                      className="btn-icon"
+                                      className="btn-icon copiar"
                                       onClick={() => setOperando({ op: "traslado", fila: e })}
                                     >
                                       <ArrowLeftRight size={15} />
@@ -300,7 +300,7 @@ export function InventoryPage() {
                               </>
                             )}
                             <Tooltip label="Ver historial">
-                              <button className="btn-icon" onClick={() => setViendoKardex(e)}>
+                              <button className="btn-icon info" onClick={() => setViendoKardex(e)}>
                                 <History size={15} />
                               </button>
                             </Tooltip>

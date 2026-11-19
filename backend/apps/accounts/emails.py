@@ -1,9 +1,14 @@
-"""Envío del correo con el código OTP administrativo.
+"""Correos de autenticación y seguridad (código OTP, restablecer, aviso).
 
-Toma el nombre de empresa, color y logo desde `apps.content.models.StoreSettings`
-(mismo patrón que ya usa `apps/orders/pdf.py` para las facturas) en vez de
-tener la marca fija en el código, para que cada instalación del sistema vea
-su propia identidad en el correo.
+Hay dos identidades posibles:
+
+- **Plataforma (Crafteech)** — `_contexto_de_plataforma`. La usan los correos
+  generales de acceso y seguridad: logo, colores y firma son de la plataforma.
+  El negocio solo se NOMBRA (en texto) para que se sepa a qué panel va el
+  código; su logo y sus colores no aparecen. Plantilla: `correo_plataforma.html`.
+- **Negocio** — `_contexto_de_marca`. Toma nombre, color y logo de
+  `StoreSettings` (mismo patrón que las facturas). Queda para comunicaciones
+  propias de cada cliente. Plantilla: `correo_base.html`.
 """
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -75,6 +80,39 @@ def _contexto_de_marca(user, tenant):
     }
 
 
+def _nombre_del_negocio(tenant) -> str:
+    """
+    El nombre comercial del negocio al que se entra, solo como TEXTO: la marca
+    visual del correo sigue siendo Crafteech, pero sin decir de qué panel se
+    trata, quien trabaja con varios negocios no sabría a cuál va el código.
+    """
+    if tenant is None:
+        return ""
+    config = StoreSettings.get_para(tenant)
+    return ((config.nombre_empresa if config else "") or tenant.nombre or "").strip()
+
+
+def _contexto_de_plataforma(user, tenant=None):
+    """La identidad Crafteech, el nombre de la persona y el negocio de destino."""
+    marca = settings.CORREO_PLATAFORMA
+    logo_url = marca.get("logo_url", "")
+    return {
+        "nombre_empresa": marca["nombre"],
+        "nombre_negocio": _nombre_del_negocio(tenant),
+        "sitio": marca["sitio"],
+        # Solo una URL https pública: una ruta local del servidor no la puede
+        # resolver ningún cliente de correo.
+        "logo_url": logo_url if logo_url.startswith("https://") else "",
+        "nombre_usuario": user.nombre_usuario,
+        "anio": timezone.now().year,
+    }
+
+
+def _para(contexto) -> str:
+    """« para La Gran Cosecha» en el asunto; vacío si no hay negocio."""
+    return f" para {contexto['nombre_negocio']}" if contexto.get("nombre_negocio") else ""
+
+
 def _enviar(user, asunto: str, plantilla: str, contexto: dict) -> None:
     """
     Envía `templates/accounts/<plantilla>.html` y su versión `.txt`. Las
@@ -92,22 +130,26 @@ def _enviar(user, asunto: str, plantilla: str, contexto: dict) -> None:
     email.send(fail_silently=False)
 
 
+# Estos tres correos llevan la identidad de la plataforma (Crafteech); el
+# negocio (`tenant`) solo aparece nombrado, para saber a qué panel se entra.
+
+
 def enviar_codigo_otp(user, otp_code, tenant=None):
-    contexto = _contexto_de_marca(user, tenant)
+    contexto = _contexto_de_plataforma(user, tenant)
     contexto.update(otp_code=otp_code, minutos=settings.OTP_EXPIRY_MINUTES)
-    _enviar(user, f"🔐 Código de Verificación - {contexto['nombre_empresa']}", "correo_otp", contexto)
+    _enviar(user, f"Tu código de verificación{_para(contexto)} · {contexto['nombre_empresa']}", "correo_otp", contexto)
 
 
 def enviar_codigo_restablecer(user, codigo, tenant=None):
-    """El código para restablecer la contraseña («¿Olvidó su contraseña?»)."""
-    contexto = _contexto_de_marca(user, tenant)
+    """El código para restablecer la contraseña («¿Olvidaste tu contraseña?»)."""
+    contexto = _contexto_de_plataforma(user, tenant)
     contexto.update(otp_code=codigo, minutos=settings.OTP_EXPIRY_MINUTES)
-    _enviar(user, f"🔑 Restablecer contraseña - {contexto['nombre_empresa']}", "correo_restablecer", contexto)
+    _enviar(user, f"Restablecer contraseña{_para(contexto)} · {contexto['nombre_empresa']}", "correo_restablecer", contexto)
 
 
 def enviar_aviso_password_cambiada(user, tenant=None):
     """Aviso de que la contraseña cambió: si no fue la persona, se entera."""
-    contexto = _contexto_de_marca(user, tenant)
+    contexto = _contexto_de_plataforma(user, tenant)
     ahora = timezone.localtime()
     contexto["cuando"] = f"{ahora:%Y-%m-%d} a las {ahora:%H:%M}"
-    _enviar(user, f"Su contraseña cambió - {contexto['nombre_empresa']}", "correo_password_cambiada", contexto)
+    _enviar(user, f"Tu contraseña cambió{_para(contexto)} · {contexto['nombre_empresa']}", "correo_password_cambiada", contexto)

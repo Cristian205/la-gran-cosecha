@@ -54,7 +54,7 @@
     </div>
     <div class="info-group info-group-direccion">
         <span class="info-label">Direccion de entrega: </span>
-        <span class="info-value">{{ pedido.cliente.direccion_cliente|lower }}</span>
+        <span class="info-value">{{ pedido.direccion_de_entrega|default:pedido.cliente.direccion_cliente|lower }}</span>
     </div>
 </div>
 

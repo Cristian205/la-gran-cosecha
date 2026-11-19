@@ -73,7 +73,7 @@ function GrupoTrustBadges({
                   </td>
                   <td>
                     <div className="acciones">
-                      <button className="btn secundario sm" onClick={() => onEditar(b)}>
+                      <button className="btn editar sm" onClick={() => onEditar(b)}>
                         Editar
                       </button>
                       <button className="btn peligro sm" onClick={() => onEliminar(b)}>

@@ -442,6 +442,18 @@
 .gestion-tabla .btn-icon:focus-visible,
 .gestion-tabla .btn-icon.abierto { border-color: var(--p-linea); background: var(--superficie); }
 .gestion-tabla .btn-icon:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 1px; }
+/* Las acciones con tono (ver, editar, eliminar…) no se apagan dentro de la
+   tabla: su color es lo que permite distinguirlas de un vistazo. */
+.gestion-tabla .btn-icon:is(.ver, .editar, .exito, .info, .copiar, .peligro),
+.gestion-tabla tr:hover .btn-icon:is(.ver, .editar, .exito, .info, .copiar, .peligro) {
+  color: var(--tono-texto);
+  background: color-mix(in srgb, var(--tono-claro) 70%, var(--superficie));
+  border-color: color-mix(in srgb, var(--tono-texto) 25%, transparent);
+}
+.gestion-tabla .btn-icon:is(.ver, .editar, .exito, .info, .copiar, .peligro):hover:not(:disabled) {
+  background: var(--tono-claro);
+  border-color: color-mix(in srgb, var(--tono-texto) 45%, transparent);
+}
 
 .celda-id {
   font-weight: 700;
@@ -562,10 +574,19 @@
 .menu-fila button svg { color: var(--gris); }
 .menu-fila button:hover:not(:disabled),
 .menu-fila button:focus-visible { outline: none; background: var(--gris-claro); }
+/* Mismo código de color que los botones de ícono (ver index.css): el ícono
+   lleva el tono siempre; al pasar el mouse se tiñe también el fondo. */
+.menu-fila button.ver     { --tono-texto: var(--morado-texto); --tono-claro: var(--morado-claro); }
+.menu-fila button.editar  { --tono-texto: var(--azul-texto);   --tono-claro: var(--azul-claro); }
+.menu-fila button.exito   { --tono-texto: var(--verde-texto);  --tono-claro: var(--verde-claro); }
+.menu-fila button.info    { --tono-texto: var(--ambar-texto);  --tono-claro: var(--ambar-claro); }
+.menu-fila button.copiar  { --tono-texto: var(--cian-texto);   --tono-claro: var(--cian-claro); }
+.menu-fila button.peligro { --tono-texto: var(--rojo-texto);   --tono-claro: var(--rojo-claro); }
+.menu-fila button:is(.ver, .editar, .exito, .info, .copiar) svg { color: var(--tono-texto); }
 .menu-fila button.peligro,
-.menu-fila button.peligro svg { color: var(--rojo-texto); }
-.menu-fila button.peligro:hover,
-.menu-fila button.peligro:focus-visible { background: var(--rojo-claro); }
+.menu-fila button.peligro svg { color: var(--tono-texto); }
+.menu-fila button:is(.ver, .editar, .exito, .info, .copiar, .peligro):hover:not(:disabled),
+.menu-fila button:is(.ver, .editar, .exito, .info, .copiar, .peligro):focus-visible { background: var(--tono-claro); }
 .menu-fila button:disabled { opacity: 0.5; cursor: not-allowed; }
 @keyframes menu-fila-in {
   from { opacity: 0; transform: translateY(-3px) scale(0.98); }

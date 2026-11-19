@@ -47,5 +47,23 @@ def test_solo_vale_para_leer(con_panel):
     assert _resuelto("post", HTTP_ORIGIN=PANEL) is None
 
 
+def test_un_dominio_verificado_del_negocio_sirve_de_origen(api, con_panel):
+    """`panel.crafteech.com` no estaba en la lista fija y el panel salía sin marca."""
+    from apps.tenancy.models import Domain
+
+    Domain.objects.create(tenant=con_panel, hostname="panel.propio.app", verificado=True)
+    r = api.get("/api/content/site-config/", HTTP_ORIGIN="https://panel.propio.app", **BACKEND)
+    assert r.status_code == 200, r.content
+    assert "logo_url" in r.json()
+
+
+def test_un_dominio_sin_verificar_no_sirve_de_origen(con_panel):
+    from apps.tenancy.models import Domain
+
+    Domain.objects.create(tenant=con_panel, hostname="panel.pendiente.app", verificado=False)
+    assert _resuelto(HTTP_ORIGIN="https://panel.pendiente.app") is None
+    assert _resuelto("post", HTTP_ORIGIN="https://panel.pendiente.app") is None
+
+
 def test_con_token_manda_el_jwt_y_no_el_origen(con_panel):
     assert _resuelto(HTTP_ORIGIN=PANEL, HTTP_AUTHORIZATION="Bearer no-vale") is None

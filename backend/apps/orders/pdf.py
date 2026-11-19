@@ -169,7 +169,10 @@ def _contexto_de_lineas(pedido, lineas):
     previa: así la vista previa es la factura de verdad, no una imitación.
     """
     dias_entrega = 1
-    fecha_entrega = pedido.fecha_pedido + timedelta(days=dias_entrega)
+    # La programada, si el negocio la fijó; si no, el día siguiente al pedido.
+    fecha_entrega = getattr(pedido, "fecha_programada", None) or (
+        pedido.fecha_pedido + timedelta(days=dias_entrega)
+    )
 
     categorias_normales = OrderedDict()
     categorias_especiales = OrderedDict()
@@ -222,6 +225,16 @@ class GenerarPdfPedidoView(ExigeNegocioMixin, APIView):
         response = HttpResponse(content_type="application/pdf")
         response["Content-Disposition"] = f'inline; filename="Pedido_{pk}.pdf"'
         _html(string=html_string, base_url=request.build_absolute_uri()).write_pdf(response)
+
+        from .auditoria import registrar  # noqa: PLC0415
+
+        registrar(
+            pedido,
+            "FACTURA",
+            "Generó la factura",
+            usuario=request.user,
+            total=str(pedido.total_pedido),
+        )
         return response
 
 

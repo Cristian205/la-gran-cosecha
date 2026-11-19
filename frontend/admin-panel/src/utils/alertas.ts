@@ -57,6 +57,38 @@ export async function confirmarDescartar(detalle?: string): Promise<boolean> {
   return res.isConfirmed;
 }
 
+/**
+ * Una decisión con dos salidas además de cancelar (p. ej. «Guardar e
+ * imprimir» / «Imprimir lo guardado»). `null` = canceló.
+ */
+export async function elegirEntreDos(
+  titulo: string,
+  detalle: string,
+  principal: string,
+  alternativa: string
+): Promise<"principal" | "alternativa" | null> {
+  const res = await swalBase.fire({
+    icon: "question",
+    title: titulo,
+    text: detalle,
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText: principal,
+    denyButtonText: alternativa,
+    cancelButtonText: "Cancelar",
+    customClass: {
+      popup: "swal-panel",
+      title: "swal-panel-titulo",
+      confirmButton: "btn primario",
+      denyButton: "btn secundario",
+      cancelButton: "btn secundario",
+    },
+  });
+  if (res.isConfirmed) return "principal";
+  if (res.isDenied) return "alternativa";
+  return null;
+}
+
 export function confirmarEliminar(titulo: string, detalle?: string): Promise<boolean> {
   return confirmarAccion(titulo, detalle, "Eliminar");
 }

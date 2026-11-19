@@ -57,6 +57,7 @@ LOCAL_APPS = [
     "apps.pos",
     "apps.reservations",
     "apps.delivery",
+    "apps.logistica",
     "apps.contact",
     "apps.content",
     "apps.storefront",
@@ -400,6 +401,23 @@ DEFAULT_FROM_EMAIL = _sin_comillas(
     env("DEFAULT_FROM_EMAIL", default="Seguridad Kryon X <no-reply@kryonx.local>")
 )
 EMAIL_TIMEOUT = 15
+
+# Identidad de los correos GENERALES de la plataforma (código de acceso,
+# restablecer contraseña, aviso de cambio). Son de Crafteech, no de cada
+# negocio: la marca de un cliente nunca aparece en ellos. Los correos propios
+# de un negocio (si se agregan) siguen usando su StoreSettings.
+#
+# El logo vive en apps/accounts/static/correo/ y lo sirve WhiteNoise desde el
+# propio backend: una URL pública HTTPS, sin depender del bucket de media. Si
+# el backend cambia de dominio, basta con definir CORREO_PLATAFORMA_LOGO_URL.
+CORREO_PLATAFORMA = {
+    "nombre": env("CORREO_PLATAFORMA_NOMBRE", default="Crafteech"),
+    "sitio": env("CORREO_PLATAFORMA_SITIO", default="www.crafteech.com"),
+    "logo_url": env(
+        "CORREO_PLATAFORMA_LOGO_URL",
+        default="https://api.crafteech.com/static/correo/crafteech-logo.png",
+    ),
+}
 
 # Clave de la API de Brevo. Si esta puesta, produccion envia por HTTPS en vez
 # de SMTP (ver prod.py): Render bloquea los puertos SMTP salientes.

@@ -225,7 +225,7 @@ export function AutomatizacionesVista() {
                           )}
                           {puedeEditar && (
                             <Tooltip label="Enviar prueba">
-                              <button type="button" className="btn-icon" aria-label={`Probar ${evento.nombre}`} onClick={() => setProbando(evento)} disabled={!config.activo}>
+                              <button type="button" className="btn-icon exito" aria-label={`Probar ${evento.nombre}`} onClick={() => setProbando(evento)} disabled={!config.activo}>
                                 <Send size={15} />
                               </button>
                             </Tooltip>
@@ -322,7 +322,7 @@ export function AutomatizacionesVista() {
                               <Tooltip label="Reintentar">
                                 <button
                                   type="button"
-                                  className="btn-icon"
+                                  className="btn-icon info"
                                   aria-label="Reintentar envío"
                                   onClick={async () => {
                                     try {

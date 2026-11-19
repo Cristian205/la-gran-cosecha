@@ -11,6 +11,8 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@react-three/drei": "9.114.0",
+    "@react-three/fiber": "8.17.10",
     "axios": "^1.7.7",
     "exceljs": "^4.4.0",
     "lucide-react": "^0.454.0",
@@ -18,11 +20,13 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",
     "recharts": "^3.10.0",
-    "sweetalert2": "^11.26.25"
+    "sweetalert2": "^11.26.25",
+    "three": "0.169.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
+    "@types/three": "0.169.0",
     "@vitejs/plugin-react": "^4.3.2",
     "typescript": "^5.6.2",
     "vite": "^5.4.8"

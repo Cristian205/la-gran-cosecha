@@ -66,6 +66,14 @@ CATALOGO_PERMISOS = [
         ],
     },
     {
+        "modulo": "Plano de carga",
+        "permisos": [
+            {"codename": "logistica.view_planocarga", "etiqueta": "Ver los planos de carga"},
+            {"codename": "logistica.add_planocarga", "etiqueta": "Armar y guardar planos de carga"},
+            {"codename": "logistica.change_furgon", "etiqueta": "Administrar furgones y canastillas"},
+        ],
+    },
+    {
         "modulo": "Clientes",
         "permisos": [
             {"codename": "orders.view_cliente", "etiqueta": "Ver clientes"},

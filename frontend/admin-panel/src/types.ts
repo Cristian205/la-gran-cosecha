@@ -164,7 +164,19 @@ export interface DetallePedido {
   subtotal: string;
   personalizado: boolean;
   estado_revision: "PENDIENTE" | "ACEPTADO" | "RECHAZADO" | null;
+  /** CLIENTE: lo pidió en la tienda. ADMIN: lo agregó el negocio. */
+  origen: OrigenLinea;
+  agregado_por_nombre: string;
+  /** Lo que pidió el cliente. `null` en lo que agregó el negocio. */
+  cantidad_original: string | null;
+  precio_original: string | null;
+  fue_modificado: boolean;
+  /** Observación de la línea. */
+  nota: string;
+  categoria_id: number | null;
 }
+
+export type OrigenLinea = "CLIENTE" | "ADMIN";
 
 export interface ProductoPendiente {
   id: number;
@@ -178,6 +190,11 @@ export interface ProductoPendiente {
   pedido: number;
   cliente_nombre: string;
   fecha_modificacion: string;
+  pedido_fecha: string;
+  pedido_estado: string;
+  /** Lo que el cliente añadió sobre el producto. */
+  nota: string;
+  subtotal: string;
 }
 
 export interface PedidoDetalle {
@@ -193,6 +210,72 @@ export interface PedidoDetalle {
   direccion_entrega?: string;
   /** A dónde se lleva: la puntual si la hay, si no la del cliente. */
   direccion_de_entrega?: string;
+  fecha_modificacion: string | null;
+  editado_por_nombre: string;
+  cliente_telefono: string;
+  cliente_direccion: string;
+  cliente_documento: string;
+  /** Logística que anota el negocio (vacío = la del cliente / sin dato). */
+  telefono_entrega: string;
+  telefono_de_contacto: string;
+  recibe_nombre: string;
+  fecha_programada: string | null;
+  indicaciones_entrega: string;
+  /** Nunca se le muestran al cliente. */
+  notas_internas: string;
+}
+
+export type TipoEventoPedido =
+  | "RECIBIDO"
+  | "PRODUCTO_AGREGADO"
+  | "PRODUCTO_ELIMINADO"
+  | "CANTIDAD"
+  | "PRECIO"
+  | "PRESENTACION"
+  | "PRODUCTO_EDITADO"
+  | "ENTREGA"
+  | "NOTAS"
+  | "ESTADO"
+  | "FACTURA"
+  | "CATALOGO";
+
+/** Foto de una línea guardada en un evento: sobrevive a la línea. */
+export interface FotoLineaPedido {
+  detalle_id: number;
+  producto: string;
+  presentacion: string;
+  unidad: string;
+  cantidad: string;
+  precio_unitario: string;
+  subtotal: string;
+  origen: OrigenLinea;
+  personalizado: boolean;
+  cantidad_original?: string;
+}
+
+/** Un evento de la línea de tiempo del pedido (`/orders/<id>/linea-de-tiempo/`). */
+export interface EventoPedido {
+  id: string;
+  tipo: TipoEventoPedido;
+  descripcion: string;
+  datos: {
+    lineas?: FotoLineaPedido[];
+    linea?: FotoLineaPedido;
+    total?: string;
+    direccion?: string;
+    observaciones?: string;
+    producto?: string;
+    campo?: string;
+    anterior?: string;
+    nuevo?: string;
+    cambios?: { campo: string; etiqueta: string; anterior: string; nuevo: string }[];
+    sin_foto?: boolean;
+    presentacion?: string;
+  };
+  usuario_nombre: string;
+  fecha: string;
+  /** Registrado antes de la auditoría detallada. */
+  legado: boolean;
 }
 
 export interface HistorialDetallePedido {

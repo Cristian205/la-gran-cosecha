@@ -436,7 +436,7 @@ export function PresentacionesComerciales({
                       <Tooltip label="Historial de precios">
                         <button
                           type="button"
-                          className="btn-icon"
+                          className="btn-icon info"
                           onClick={() => setHistorialDe(p)}
                           aria-label={`Historial de precios de ${p.nombre_presentacion}`}
                         >
@@ -459,7 +459,7 @@ export function PresentacionesComerciales({
                     <Tooltip label="Duplicar">
                       <button
                         type="button"
-                        className="btn-icon info"
+                        className="btn-icon copiar"
                         onClick={() => setEdicion({ modo: "duplicar", borrador: duplicado(p) })}
                         disabled={ocupada}
                         aria-label={`Duplicar ${p.nombre_presentacion}`}

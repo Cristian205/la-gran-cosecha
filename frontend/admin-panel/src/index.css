@@ -45,6 +45,8 @@
   --morado-texto: #6d28d9;
   --rojo-claro: #fee2e2;
   --rojo-texto: var(--rojo);
+  --cian-claro: #cffafe;
+  --cian-texto: #0e7490;
   --ambar-600: #d97706;
   --dark: #0f172a;
   --dark2: #1e293b;
@@ -74,6 +76,8 @@
   --morado-texto: #c4b5fd;
   --rojo-claro: rgba(220, 38, 38, .18);
   --rojo-texto: #f87171;
+  --cian-claro: rgba(6, 182, 212, .18);
+  --cian-texto: #67e8f9;
   --dark: #e8ecf2;
   /* Azul noche menos saturado, en tres niveles de profundidad:
      fondo → superficie (tarjetas) → superficie-2 (pistas, controles). */
@@ -372,6 +376,8 @@ td.num input, td.num select { text-align: right; }
 .btn.secundario { background: var(--gris-claro); color: var(--dark); }
 .btn.peligro { background: #fee2e2; color: var(--rojo); }
 .btn.peligro:hover { background: #fecaca; }
+.btn.editar { background: var(--azul-claro); color: var(--azul-texto); }
+.btn.editar:hover { background: color-mix(in srgb, var(--azul-claro) 85%, var(--azul-texto)); }
 .btn.sm { padding: .35rem .7rem; font-size: .8rem; }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
 .acciones { display: flex; gap: .4rem; }
@@ -888,9 +894,30 @@ td .input:focus, td select:focus {
 }
 .btn-icon:hover { transform: translateY(-1px); }
 .btn-icon:active { transform: translateY(0); }
-.btn-icon.editar:hover { color: var(--azul); border-color: #bfdbfe; background: #eff6ff; }
-.btn-icon.peligro:hover { color: var(--rojo); border-color: #fecaca; background: #fef2f2; }
-.btn-icon.exito:hover { color: var(--verde-texto); border-color: #a7f3d0; background: var(--verde-claro); }
+/* Código de color de las acciones: cada tipo tiene su color SIEMPRE visible
+   (no solo al pasar el mouse), para reconocerlas de un vistazo en todas las
+   tablas. El mismo código se usa en el menú "⋯" de las filas (gestion.css).
+     ver      → morado  (abrir, ver detalle)
+     editar   → azul    (editar, modificar)
+     exito    → verde   (confirmar, activar, entregar, probar, contactar)
+     info     → ámbar   (historial, kardex, factura, reintentar)
+     copiar   → cian    (duplicar, copiar)
+     peligro  → rojo    (eliminar, quitar, desactivar, rechazar) */
+.btn-icon.ver     { --tono-texto: var(--morado-texto); --tono-claro: var(--morado-claro); }
+.btn-icon.editar  { --tono-texto: var(--azul-texto);   --tono-claro: var(--azul-claro); }
+.btn-icon.exito   { --tono-texto: var(--verde-texto);  --tono-claro: var(--verde-claro); }
+.btn-icon.info    { --tono-texto: var(--ambar-texto);  --tono-claro: var(--ambar-claro); }
+.btn-icon.copiar  { --tono-texto: var(--cian-texto);   --tono-claro: var(--cian-claro); }
+.btn-icon.peligro { --tono-texto: var(--rojo-texto);   --tono-claro: var(--rojo-claro); }
+.btn-icon:is(.ver, .editar, .exito, .info, .copiar, .peligro) {
+  color: var(--tono-texto);
+  background: color-mix(in srgb, var(--tono-claro) 70%, var(--superficie));
+  border-color: color-mix(in srgb, var(--tono-texto) 25%, transparent);
+}
+.btn-icon:is(.ver, .editar, .exito, .info, .copiar, .peligro):hover:not(:disabled) {
+  background: var(--tono-claro);
+  border-color: color-mix(in srgb, var(--tono-texto) 45%, transparent);
+}
 .btn-icon:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
 /* ---------- Barra de filtros del catálogo ---------- */
@@ -1013,7 +1040,6 @@ td .input:focus, td select:focus {
   display: flex; justify-content: space-between; align-items: center; background: var(--superficie-2);
 }
 .producto-footer .acciones { display: flex; gap: .4rem; }
-.btn-icon.info:hover { color: #b45309; border-color: #fde68a; background: #fffbeb; }
 
 /* ---------- Historial de precios ---------- */
 .historial-lista { display: flex; flex-direction: column; gap: .7rem; max-height: 60vh; overflow-y: auto; }

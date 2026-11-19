@@ -1,5 +1,5 @@
-{% extends "accounts/correo_base.html" %}
-{% block asunto %}Código de verificación{% endblock %}
-{% block preheader %}Su código para entrar al panel de {{ nombre_empresa }}. Vence en {{ minutos }} minutos.{% endblock %}
-{% block introduccion %}Recibimos una solicitud para iniciar sesión en el panel de {{ nombre_empresa }}. Escriba este código para confirmar que es usted:{% endblock %}
-{% block cierre %}¿No intentó iniciar sesión? Ignore este mensaje: sin el código nadie puede entrar. Como este correo solo se envía después de escribir la contraseña correcta, le recomendamos cambiarla.{% endblock %}
+{% extends "accounts/correo_plataforma.html" %}
+{% block asunto %}Verifica tu identidad{% endblock %}
+{% block preheader %}Tu código para iniciar sesión en {% if nombre_negocio %}el panel de {{ nombre_negocio }}{% else %}{{ nombre_empresa }}{% endif %}. Vence en {{ minutos }} minutos.{% endblock %}
+{% block introduccion %}Recibimos una solicitud para iniciar sesión en {% if nombre_negocio %}el panel de <strong style="color:#1f2329;">{{ nombre_negocio }}</strong> en {{ nombre_empresa }}{% else %}tu cuenta de {{ nombre_empresa }}{% endif %}. Para confirmar que eres tú, ingresa el siguiente código en la pantalla de acceso.{% endblock %}
+{% block cierre %}<strong style="color:#3d444d;">¿No intentaste iniciar sesión?</strong> Ignora este mensaje: sin el código nadie puede entrar a tu cuenta. Como este correo solo se envía después de escribir la contraseña correcta, te recomendamos cambiarla cuanto antes.{% endblock %}

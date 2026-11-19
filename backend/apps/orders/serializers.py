@@ -2,7 +2,8 @@ from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.db.models import Count
-from rest_framework import serializers
+from rest_framework import serializers, status
+from rest_framework.exceptions import APIException
 
 from apps.tenancy.fields import ClaveDelNegocio
 
@@ -151,6 +152,24 @@ class DetallePedidoSerializer(serializers.Serializer):
     subtotal = serializers.DecimalField(max_digits=12, decimal_places=2)
     personalizado = serializers.SerializerMethodField()
     estado_revision = serializers.SerializerMethodField()
+    #: CLIENTE (lo pidió en la tienda) o ADMIN (lo agregó el negocio).
+    origen = serializers.CharField()
+    agregado_por_nombre = serializers.SerializerMethodField()
+    #: Lo que pidió el cliente; nulo en las líneas que agregó el negocio.
+    cantidad_original = serializers.DecimalField(max_digits=10, decimal_places=2, allow_null=True)
+    precio_original = serializers.DecimalField(max_digits=12, decimal_places=2, allow_null=True)
+    fue_modificado = serializers.BooleanField()
+    nota = serializers.CharField()
+    categoria_id = serializers.SerializerMethodField()
+
+    def get_agregado_por_nombre(self, obj):
+        usuario = obj.agregado_por
+        return (getattr(usuario, "nombre_usuario", "") or "") if usuario else ""
+
+    def get_categoria_id(self, obj):
+        if obj.presentacion:
+            return obj.presentacion.producto.categoria_id
+        return obj.categoria_manual_id
 
     def get_presentacion_id(self, obj):
         return obj.presentacion_id
@@ -186,11 +205,19 @@ class DetallePedidoSerializer(serializers.Serializer):
         return obj.presentacion is None
 
     def get_estado_revision(self, obj):
-        return None if obj.presentacion else obj.estado_revision
+        # Lo que agrega el negocio no es una sugerencia del cliente: no pasa
+        # por la revisión de productos nuevos.
+        if obj.presentacion or obj.origen == "ADMIN":
+            return None
+        return obj.estado_revision
 
 
 class PedidoDetailSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.SerializerMethodField()
+    cliente_telefono = serializers.SerializerMethodField()
+    cliente_direccion = serializers.SerializerMethodField()
+    cliente_documento = serializers.SerializerMethodField()
+    editado_por_nombre = serializers.SerializerMethodField()
     detalles = serializers.SerializerMethodField()
 
     class Meta:
@@ -199,22 +226,45 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
             "id",
             "cliente",
             "cliente_nombre",
+            "cliente_telefono",
+            "cliente_direccion",
+            "cliente_documento",
             "estado",
             "total_pedido",
             "observaciones",
             "fecha_pedido",
             "fecha_modificacion",
+            "editado_por_nombre",
             "detalles",
             "direccion_entrega",
             "direccion_de_entrega",
+            "telefono_entrega",
+            "telefono_de_contacto",
+            "recibe_nombre",
+            "fecha_programada",
+            "indicaciones_entrega",
+            "notas_internas",
         ]
 
     #: A dónde se lleva de verdad: la de este pedido si el cliente pidió otra,
     #: si no la suya. `direccion_entrega` sola dice si es una dirección puntual.
     direccion_de_entrega = serializers.CharField(read_only=True)
+    telefono_de_contacto = serializers.CharField(read_only=True)
 
     def get_cliente_nombre(self, obj):
         return obj.cliente.nombre_cliente if obj.cliente else ""
+
+    def get_cliente_telefono(self, obj):
+        return obj.cliente.telefono_cliente if obj.cliente else ""
+
+    def get_cliente_direccion(self, obj):
+        return obj.cliente.direccion_cliente if obj.cliente else ""
+
+    def get_cliente_documento(self, obj):
+        return obj.cliente.documento_cliente if obj.cliente else ""
+
+    def get_editado_por_nombre(self, obj):
+        return (getattr(obj.editado_por, "nombre_usuario", "") or "") if obj.editado_por_id else ""
 
     def get_detalles(self, obj):
         detalles = obj.detalles.select_related(
@@ -222,7 +272,8 @@ class PedidoDetailSerializer(serializers.ModelSerializer):
             "presentacion__unidad_venta",
             "categoria_manual",
             "unidad_personalizada",
-        )
+            "agregado_por",
+        ).order_by("id")
         return DetallePedidoSerializer(detalles, many=True).data
 
 
@@ -502,6 +553,10 @@ class CrearPedidoSerializer(serializers.Serializer):
             )
 
         pedido.actualizar_total()
+        # La foto de lo que pidió el cliente, antes de que nadie lo toque.
+        from .auditoria import registrar_recibido  # noqa: PLC0415
+
+        registrar_recibido(pedido)
         # Aparta la mercancía de las líneas de catálogo. Va DENTRO del `atomic`
         # de este método a propósito: si no hay stock, el pedido entero no se
         # guarda. Un pedido confirmado que no se puede entregar es peor que un
@@ -541,6 +596,12 @@ class ProductoPendienteSerializer(serializers.Serializer):
     pedido = serializers.IntegerField(source="pedido_id")
     cliente_nombre = serializers.SerializerMethodField()
     fecha_modificacion = serializers.DateTimeField()
+    #: Contexto para revisar: cuándo pidió, en qué estado está el pedido y
+    #: qué añadió el cliente sobre el producto.
+    pedido_fecha = serializers.DateTimeField(source="pedido.fecha_pedido")
+    pedido_estado = serializers.CharField(source="pedido.estado")
+    nota = serializers.CharField()
+    subtotal = serializers.DecimalField(max_digits=12, decimal_places=2)
 
     def get_unidad_nombre(self, obj):
         return obj.unidad_personalizada.nombre_unidad if obj.unidad_personalizada else ""
@@ -556,156 +617,122 @@ class ProductoPendienteSerializer(serializers.Serializer):
 # ==========================================================================
 # EDICIÓN ADMINISTRATIVA DE PEDIDO
 # ==========================================================================
+class PedidoDesactualizado(APIException):
+    """
+    El pedido cambió desde que el panel lo abrió.
+
+    Es lo que impide dos cosas a la vez: que un doble clic en «Guardar» cree
+    dos veces las líneas nuevas (la segunda petición llega con una versión que
+    ya no es la vigente) y que dos personas editando el mismo pedido se pisen
+    sin enterarse.
+    """
+
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = (
+        "Este pedido se modificó mientras lo tenías abierto. Vuelve a abrirlo "
+        "para ver la versión actual antes de guardar."
+    )
+    default_code = "pedido_desactualizado"
+
+
 class EditarDetalleSerializer(serializers.Serializer):
     detalle_id = serializers.IntegerField(required=False, allow_null=True, default=None)
     presentacion_id = ClaveDelNegocio(
         PresentacionProducto, source="presentacion", required=False, allow_null=True
     )
-    cantidad = serializers.DecimalField(max_digits=10, decimal_places=2)
-    precio_unitario = serializers.DecimalField(max_digits=12, decimal_places=2)
-    nombre_producto = serializers.CharField(required=False, allow_blank=True)
+    cantidad = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal("0.01"),
+        error_messages={"min_value": "La cantidad debe ser mayor a 0."},
+    )
+    precio_unitario = serializers.DecimalField(
+        max_digits=12, decimal_places=2, min_value=Decimal("0"),
+        error_messages={"min_value": "El precio no puede ser negativo."},
+    )
+    nombre_producto = serializers.CharField(required=False, allow_blank=True, max_length=255)
     unidad_id = ClaveDelNegocio(
         UnidadMedida, source="unidad_personalizada", required=False, allow_null=True
     )
     categoria_id = ClaveDelNegocio(
         Categoria, source="categoria_manual", required=False, allow_null=True
     )
+    #: Observación de la línea. Ausente = no se toca.
+    nota = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+
+#: Los datos de entrega que el panel puede cambiar, con su nombre legible.
+CAMPOS_ENTREGA = {
+    "direccion_entrega": "Dirección de entrega",
+    "telefono_entrega": "Teléfono de contacto",
+    "recibe_nombre": "Persona que recibe",
+    "fecha_programada": "Fecha programada",
+    "indicaciones_entrega": "Indicaciones de entrega",
+}
 
 
 class EditarPedidoSerializer(serializers.Serializer):
-    """Edita líneas existentes y elimina las que el admin quitó (mirror de editar_pedido_view)."""
+    """
+    La edición del pedido desde el panel: líneas, entrega y notas internas.
 
-    detalles = EditarDetalleSerializer(many=True)
-    observaciones = serializers.CharField(required=False, allow_blank=True, default="")
+    Todo es opcional —lo que no viene no se toca— salvo que, si vienen las
+    líneas, vienen TODAS: las que falten se quitan del pedido.
+
+    Cada cambio deja un `EventoPedido` con la foto de lo que había, y lo que
+    pidió el cliente (`cantidad_original`, `precio_original` y el evento
+    «recibido») no se reescribe nunca.
+    """
+
+    detalles = EditarDetalleSerializer(many=True, required=False)
+    observaciones = serializers.CharField(required=False, allow_blank=True)
+    #: `fecha_modificacion` del pedido tal como lo leyó el panel.
+    version = serializers.DateTimeField(required=False, allow_null=True)
+
+    direccion_entrega = serializers.CharField(required=False, allow_blank=True)
+    telefono_entrega = serializers.CharField(required=False, allow_blank=True, max_length=25)
+    recibe_nombre = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    fecha_programada = serializers.DateTimeField(required=False, allow_null=True)
+    indicaciones_entrega = serializers.CharField(required=False, allow_blank=True)
+    notas_internas = serializers.CharField(required=False, allow_blank=True)
 
     def validate_detalles(self, value):
         if not value:
             raise serializers.ValidationError(
                 "El pedido debe tener al menos un producto."
             )
+        ids = [item["detalle_id"] for item in value if item.get("detalle_id")]
+        if len(ids) != len(set(ids)):
+            raise serializers.ValidationError("Un mismo producto del pedido llegó dos veces.")
         return value
 
+    def validate_telefono_entrega(self, value):
+        value = value.strip()
+        if value and sum(c.isdigit() for c in value) < 7:
+            raise serializers.ValidationError("Escribe un teléfono válido (al menos 7 dígitos).")
+        return value
+
+    # ------------------------------------------------------------------
     @transaction.atomic
     def update(self, pedido, validated_data):
+        from . import auditoria  # noqa: PLC0415
+
         usuario = self.context["request"].user
-        ids_recibidos = []
-        nuevo_total = Decimal("0")
+        # Bloquea la fila: dos guardados del mismo pedido se ponen en fila y el
+        # segundo ve la versión que dejó el primero.
+        pedido = Pedido.objects.select_for_update().get(pk=pedido.pk)
 
-        for item in validated_data["detalles"]:
-            detalle_id = item.get("detalle_id")
-            cantidad = item["cantidad"]
-            precio_unitario = item["precio_unitario"]
-            nueva_presentacion = item.get("presentacion")
+        version = validated_data.get("version")
+        if version is not None and pedido.fecha_modificacion is not None:
+            if abs((pedido.fecha_modificacion - version).total_seconds()) > 0.001:
+                raise PedidoDesactualizado()
 
-            if cantidad <= 0:
-                raise serializers.ValidationError("La cantidad debe ser mayor a 0.")
-            if precio_unitario < 0:
-                raise serializers.ValidationError("El precio no puede ser negativo.")
+        hubo_cambios = False
+        if "detalles" in validated_data:
+            hubo_cambios |= self._aplicar_lineas(pedido, validated_data["detalles"], usuario, auditoria)
+        hubo_cambios |= self._aplicar_entrega(pedido, validated_data, usuario, auditoria)
 
-            if detalle_id:
-                # ---------- línea existente: editar ----------
-                try:
-                    detalle = pedido.detalles.get(id=detalle_id)
-                except DetallePedido.DoesNotExist:
-                    raise serializers.ValidationError(
-                        "Uno de los productos no pertenece a este pedido."
-                    )
-
-                # Registra en el historial cualquier cambio antes de sobreescribir
-                # los valores, para dejar trazabilidad de quién editó qué y cuándo.
-                cambios = []
-                if detalle.cantidad != cantidad:
-                    cambios.append(("cantidad", detalle.cantidad, cantidad))
-                if detalle.precio_unitario != precio_unitario:
-                    cambios.append(("precio_unitario", detalle.precio_unitario, precio_unitario))
-
-                if detalle.presentacion_id is not None:
-                    # Línea de catálogo: solo puede pasar a otra presentación de
-                    # catálogo, no convertirse en personalizada.
-                    if item.get("nombre_producto"):
-                        raise serializers.ValidationError(
-                            "No se puede convertir un producto de catálogo en "
-                            "personalizado; elimínalo y agrega uno nuevo."
-                        )
-                    if nueva_presentacion and nueva_presentacion.id != detalle.presentacion_id:
-                        _exigir_presentacion_vendible(nueva_presentacion)
-                        cambios.append((
-                            "presentacion",
-                            _etiqueta_presentacion(detalle.presentacion),
-                            _etiqueta_presentacion(nueva_presentacion),
-                        ))
-                        detalle.presentacion = nueva_presentacion
-                else:
-                    # Línea personalizada: no puede convertirse en catálogo.
-                    if nueva_presentacion:
-                        raise serializers.ValidationError(
-                            "No se puede convertir un producto personalizado en "
-                            "catálogo; elimínalo y agrega uno nuevo."
-                        )
-                    nuevo_nombre = (item.get("nombre_producto") or "").strip()
-                    if nuevo_nombre and nuevo_nombre != detalle.nombre_personalizado:
-                        cambios.append(
-                            ("nombre_personalizado", detalle.nombre_personalizado, nuevo_nombre)
-                        )
-                        detalle.nombre_personalizado = nuevo_nombre
-
-                    nueva_unidad = item.get("unidad_personalizada")
-                    if nueva_unidad and nueva_unidad.id != detalle.unidad_personalizada_id:
-                        cambios.append((
-                            "unidad_personalizada",
-                            detalle.unidad_personalizada.nombre_unidad
-                            if detalle.unidad_personalizada
-                            else "—",
-                            nueva_unidad.nombre_unidad,
-                        ))
-                        detalle.unidad_personalizada = nueva_unidad
-
-                detalle.cantidad = cantidad
-                detalle.precio_unitario = precio_unitario
-                if cambios:
-                    detalle.fue_modificado = True
-                    detalle.modificado_por = usuario
-
-                detalle.save()
-
-                for campo, anterior, nuevo in cambios:
-                    HistorialDetallePedido.objects.create(
-                        detalle=detalle,
-                        usuario=usuario,
-                        campo=campo,
-                        valor_anterior=str(anterior),
-                        valor_nuevo=str(nuevo),
-                    )
-
-                ids_recibidos.append(detalle.id)
-                nuevo_total += detalle.subtotal
-            else:
-                # ---------- línea nueva ----------
-                nombre = (item.get("nombre_producto") or "").strip()
-                if bool(nueva_presentacion) == bool(nombre):
-                    raise serializers.ValidationError(
-                        "Cada producto nuevo debe ser de catálogo (con presentación) "
-                        "o personalizado (con nombre), no ambos ni ninguno."
-                    )
-                if nueva_presentacion:
-                    _exigir_presentacion_vendible(nueva_presentacion)
-                nuevo_detalle = DetallePedido(
-                    pedido=pedido,
-                    presentacion=nueva_presentacion,
-                    nombre_personalizado=nombre or None,
-                    unidad_personalizada=None if nueva_presentacion else item.get("unidad_personalizada"),
-                    categoria_manual=None if nueva_presentacion else item.get("categoria_manual"),
-                    cantidad=cantidad,
-                    precio_unitario=precio_unitario,
-                    es_catalogo=bool(nueva_presentacion),
-                )
-                nuevo_detalle.save()
-                ids_recibidos.append(nuevo_detalle.id)
-                nuevo_total += nuevo_detalle.subtotal
-
-        pedido.detalles.exclude(id__in=ids_recibidos).delete()
-        pedido.total_pedido = nuevo_total
-        pedido.observaciones = validated_data.get("observaciones", pedido.observaciones)
+        if hubo_cambios:
+            pedido.editado_por = usuario
+        # Guardar siempre: `fecha_modificacion` es la versión, y avanzarla es
+        # lo que hace que un reenvío de esta misma petición se rechace.
         pedido.save()
         # La edición pudo subir cantidades, bajarlas, añadir líneas o quitarlas.
         # `resincronizar_reserva` trabaja por diferencia contra lo ya apartado,
@@ -714,8 +741,274 @@ class EditarPedidoSerializer(serializers.Serializer):
         reservar_o_400(pedido, usuario=usuario)
         return pedido
 
+    # ------------------------------------------------------------------
+    def _aplicar_lineas(self, pedido, items, usuario, auditoria) -> bool:
+        ids_recibidos = []
+        hubo_cambios = False
+        existentes = {
+            d.id: d
+            for d in pedido.detalles.select_related(
+                "presentacion__producto", "presentacion__unidad_venta", "unidad_personalizada"
+            )
+        }
+
+        for item in items:
+            detalle_id = item.get("detalle_id")
+            if detalle_id:
+                detalle = existentes.get(detalle_id)
+                if detalle is None:
+                    raise serializers.ValidationError(
+                        "Uno de los productos no pertenece a este pedido."
+                    )
+                hubo_cambios |= self._editar_linea(pedido, detalle, item, usuario, auditoria)
+                ids_recibidos.append(detalle.id)
+            else:
+                detalle = self._crear_linea(pedido, item, usuario)
+                foto = auditoria.foto_de_linea(detalle)
+                auditoria.registrar(
+                    pedido,
+                    "PRODUCTO_AGREGADO",
+                    f"Agregó {auditoria.etiqueta_de_linea(foto)}",
+                    usuario=usuario,
+                    linea=foto,
+                )
+                ids_recibidos.append(detalle.id)
+                hubo_cambios = True
+
+        for detalle in existentes.values():
+            if detalle.id in ids_recibidos:
+                continue
+            foto = auditoria.foto_de_linea(detalle)
+            foto["cantidad_original"] = auditoria._texto(detalle.cantidad_original)
+            auditoria.registrar(
+                pedido,
+                "PRODUCTO_ELIMINADO",
+                f"Quitó {auditoria.etiqueta_de_linea(foto)}",
+                usuario=usuario,
+                linea=foto,
+            )
+            detalle.delete()
+            hubo_cambios = True
+
+        pedido.total_pedido = sum(
+            (d.subtotal for d in pedido.detalles.all()), Decimal("0")
+        )
+        return hubo_cambios
+
+    def _editar_linea(self, pedido, detalle, item, usuario, auditoria) -> bool:
+        cantidad = item["cantidad"]
+        precio_unitario = item["precio_unitario"]
+        nueva_presentacion = item.get("presentacion")
+        foto_antes = auditoria.foto_de_linea(detalle)
+        etiqueta = auditoria.etiqueta_de_linea(foto_antes)
+
+        eventos = []  # (tipo, descripcion, datos)
+        legado = []  # (campo, anterior, nuevo) para `fue_modificado`
+
+        if detalle.presentacion_id is not None:
+            # Línea de catálogo: solo puede pasar a otra presentación DEL MISMO
+            # producto, nunca convertirse en personalizada ni en otro producto.
+            if (item.get("nombre_producto") or "").strip() and nueva_presentacion is None:
+                raise serializers.ValidationError(
+                    "No se puede convertir un producto de catálogo en "
+                    "personalizado; elimínalo y agrega uno nuevo."
+                )
+            if nueva_presentacion and nueva_presentacion.id != detalle.presentacion_id:
+                if nueva_presentacion.producto_id != detalle.presentacion.producto_id:
+                    raise serializers.ValidationError(
+                        f"La presentación elegida no corresponde a {detalle.presentacion.producto.nombre_producto}."
+                    )
+                _exigir_presentacion_vendible(nueva_presentacion)
+                anterior = _etiqueta_presentacion(detalle.presentacion)
+                nueva = _etiqueta_presentacion(nueva_presentacion)
+                eventos.append((
+                    "PRESENTACION",
+                    f"Cambió la presentación de {detalle.presentacion.producto.nombre_producto}",
+                    {"campo": "presentacion", "anterior": anterior, "nuevo": nueva},
+                ))
+                legado.append("presentacion")
+                detalle.presentacion = nueva_presentacion
+                detalle.nombre_congelado = detalle.descripcion_actual()
+        else:
+            if nueva_presentacion:
+                raise serializers.ValidationError(
+                    "No se puede convertir un producto personalizado en "
+                    "catálogo; elimínalo y agrega uno nuevo."
+                )
+            nuevo_nombre = (item.get("nombre_producto") or "").strip()
+            if nuevo_nombre and nuevo_nombre != detalle.nombre_personalizado:
+                eventos.append((
+                    "PRODUCTO_EDITADO",
+                    f"Renombró {detalle.nombre_personalizado}",
+                    {"campo": "nombre", "anterior": detalle.nombre_personalizado, "nuevo": nuevo_nombre},
+                ))
+                legado.append("nombre_personalizado")
+                detalle.nombre_personalizado = nuevo_nombre
+                detalle.nombre_congelado = nuevo_nombre
+
+            nueva_unidad = item.get("unidad_personalizada")
+            if nueva_unidad and nueva_unidad.id != detalle.unidad_personalizada_id:
+                eventos.append((
+                    "PRODUCTO_EDITADO",
+                    f"Cambió la unidad de {detalle.nombre_personalizado}",
+                    {
+                        "campo": "unidad",
+                        "anterior": detalle.unidad_personalizada.nombre_unidad
+                        if detalle.unidad_personalizada
+                        else "—",
+                        "nuevo": nueva_unidad.nombre_unidad,
+                    },
+                ))
+                legado.append("unidad_personalizada")
+                detalle.unidad_personalizada = nueva_unidad
+
+        if detalle.cantidad != cantidad:
+            eventos.append((
+                "CANTIDAD",
+                f"Cambió la cantidad de {etiqueta}",
+                {"campo": "cantidad", "anterior": auditoria._texto(detalle.cantidad), "nuevo": auditoria._texto(cantidad)},
+            ))
+            legado.append("cantidad")
+        if detalle.precio_unitario != precio_unitario:
+            eventos.append((
+                "PRECIO",
+                f"Cambió el precio de {etiqueta}",
+                {
+                    "campo": "precio_unitario",
+                    "anterior": auditoria._texto(detalle.precio_unitario),
+                    "nuevo": auditoria._texto(precio_unitario),
+                },
+            ))
+            legado.append("precio_unitario")
+
+        nota = item.get("nota")
+        if nota is not None and nota.strip() != detalle.nota:
+            eventos.append((
+                "PRODUCTO_EDITADO",
+                f"Cambió la observación de {etiqueta}",
+                {"campo": "nota", "anterior": detalle.nota, "nuevo": nota.strip()},
+            ))
+            detalle.nota = nota.strip()
+
+        if not eventos:
+            return False
+
+        detalle.cantidad = cantidad
+        detalle.precio_unitario = precio_unitario
+        if legado:
+            detalle.fue_modificado = True
+            detalle.modificado_por = usuario
+        detalle.save()
+
+        for tipo, descripcion, datos in eventos:
+            auditoria.registrar(
+                pedido,
+                tipo,
+                descripcion,
+                usuario=usuario,
+                producto=etiqueta,
+                origen=detalle.origen,
+                **datos,
+            )
+        return True
+
+    def _crear_linea(self, pedido, item, usuario):
+        nombre = (item.get("nombre_producto") or "").strip()
+        nueva_presentacion = item.get("presentacion")
+        if bool(nueva_presentacion) == bool(nombre):
+            raise serializers.ValidationError(
+                "Cada producto nuevo debe ser de catálogo (con presentación) "
+                "o personalizado (con nombre), no ambos ni ninguno."
+            )
+        if nueva_presentacion:
+            _exigir_presentacion_vendible(nueva_presentacion)
+        detalle = DetallePedido(
+            pedido=pedido,
+            presentacion=nueva_presentacion,
+            nombre_personalizado=nombre or None,
+            unidad_personalizada=None if nueva_presentacion else item.get("unidad_personalizada"),
+            categoria_manual=None if nueva_presentacion else item.get("categoria_manual"),
+            cantidad=item["cantidad"],
+            precio_unitario=item["precio_unitario"],
+            es_catalogo=bool(nueva_presentacion),
+            origen="ADMIN",
+            agregado_por=usuario,
+            nota=(item.get("nota") or "").strip(),
+        )
+        detalle.save()
+        return detalle
+
+    def _aplicar_entrega(self, pedido, validated_data, usuario, auditoria) -> bool:
+        hubo_cambios = False
+        cambios = []
+        for campo, etiqueta in CAMPOS_ENTREGA.items():
+            if campo not in validated_data:
+                continue
+            nuevo = validated_data[campo]
+            if isinstance(nuevo, str):
+                nuevo = nuevo.strip()
+            anterior = getattr(pedido, campo)
+            if campo == "direccion_entrega" and nuevo == (
+                pedido.cliente.direccion_cliente.strip() if pedido.cliente else ""
+            ):
+                # Igual a la del cliente = no es una dirección puntual (mismo
+                # criterio que al crear el pedido).
+                nuevo = ""
+            if anterior == nuevo:
+                continue
+            cambios.append(
+                {
+                    "campo": campo,
+                    "etiqueta": etiqueta,
+                    "anterior": anterior.isoformat() if hasattr(anterior, "isoformat") else (anterior or ""),
+                    "nuevo": nuevo.isoformat() if hasattr(nuevo, "isoformat") else (nuevo or ""),
+                }
+            )
+            setattr(pedido, campo, nuevo)
+        if cambios:
+            nombres = ", ".join(c["etiqueta"].lower() for c in cambios)
+            auditoria.registrar(
+                pedido, "ENTREGA", f"Actualizó {nombres}", usuario=usuario, cambios=cambios
+            )
+            hubo_cambios = True
+
+        if "notas_internas" in validated_data:
+            nuevo = validated_data["notas_internas"].strip()
+            if nuevo != pedido.notas_internas:
+                auditoria.registrar(
+                    pedido,
+                    "NOTAS",
+                    "Actualizó las notas internas",
+                    usuario=usuario,
+                    anterior=pedido.notas_internas,
+                    nuevo=nuevo,
+                )
+                pedido.notas_internas = nuevo
+                hubo_cambios = True
+
+        # Las observaciones son las del CLIENTE. El panel ya no las edita, pero
+        # el endpoint las aceptaba: si alguien las cambia, queda constancia.
+        if "observaciones" in validated_data:
+            nuevo = validated_data["observaciones"]
+            if nuevo != (pedido.observaciones or ""):
+                auditoria.registrar(
+                    pedido,
+                    "NOTAS",
+                    "Modificó las observaciones del cliente",
+                    usuario=usuario,
+                    anterior=pedido.observaciones or "",
+                    nuevo=nuevo,
+                )
+                pedido.observaciones = nuevo
+                hubo_cambios = True
+        return hubo_cambios
+
     def to_representation(self, instance):
-        return {"success": True, "total": instance.total_pedido}
+        return {
+            "success": True,
+            "total": instance.total_pedido,
+            "pedido": PedidoDetailSerializer(instance, context=self.context).data,
+        }
 
 
 # ==========================================================================
