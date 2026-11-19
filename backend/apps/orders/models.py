@@ -105,6 +105,24 @@ class Pedido(ModeloConTenant):
     #: otro sitio. Vacía = la dirección guardada del cliente, que no cambia.
     direccion_entrega = models.TextField(blank=True, default="", db_default="")
 
+    # ---- Logística que anota el negocio --------------------------------
+    #
+    # Lo que escribió el cliente (`observaciones`, `direccion_entrega` y los
+    # datos de su ficha) es lo que pidió y no se reescribe desde el panel por
+    # la puerta de atrás: lo que el negocio añade va en campos propios.
+
+    #: Teléfono solo para esta entrega. Vacío = el del cliente.
+    telefono_entrega = models.CharField(max_length=25, blank=True, default="", db_default="")
+    #: Quién recibe, cuando no es el titular («la portería», «Doña Marta»).
+    recibe_nombre = models.CharField(max_length=150, blank=True, default="", db_default="")
+    #: Cuándo se va a llevar. Nulo = sin programar (la factura asume el día
+    #: siguiente al pedido, como siempre).
+    fecha_programada = models.DateTimeField(null=True, blank=True)
+    #: Indicaciones para quien reparte («timbre dañado, llamar al llegar»).
+    indicaciones_entrega = models.TextField(blank=True, default="", db_default="")
+    #: Notas del equipo. Nunca se le muestran al cliente.
+    notas_internas = models.TextField(blank=True, default="", db_default="")
+
     fecha_modificacion = models.DateTimeField(auto_now=True, null=True, blank=True)
     editado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -131,6 +149,13 @@ class Pedido(ModeloConTenant):
         if self.direccion_entrega:
             return self.direccion_entrega
         return self.cliente.direccion_cliente if self.cliente else ""
+
+    @property
+    def telefono_de_contacto(self) -> str:
+        """A qué número se llama para entregar: el de este pedido o el del cliente."""
+        if self.telefono_entrega:
+            return self.telefono_entrega
+        return self.cliente.telefono_cliente if self.cliente else ""
 
     def actualizar_total(self):
         total = self.detalles.aggregate(total=Sum("subtotal"))["total"] or Decimal("0.00")
@@ -209,6 +234,31 @@ class DetallePedido(ModeloConTenant):
     )
     fue_modificado = models.BooleanField(default=False)
 
+    # ---- Trazabilidad del contenido original ---------------------------
+    ORIGENES = [
+        ("CLIENTE", "Solicitado por el cliente"),
+        ("ADMIN", "Agregado por el negocio"),
+    ]
+    #: Quién puso esta línea en el pedido. Las anteriores a este campo se
+    #: asumen del cliente: es lo único que entraba por la tienda.
+    origen = models.CharField(
+        max_length=10, choices=ORIGENES, default="CLIENTE", db_default="CLIENTE"
+    )
+    agregado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    #: Lo que pidió el cliente, congelado al crear la línea. La edición cambia
+    #: `cantidad` y `precio_unitario`; estos dos no se tocan nunca, para que
+    #: siempre se pueda ver qué se pidió frente a qué se entregó.
+    cantidad_original = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    precio_original = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    #: Observación de la línea («maduros para el viernes», «sin hojas»).
+    nota = models.TextField(blank=True, default="", db_default="")
+
     class Meta:
         db_table = "ui_detallepedido"
         verbose_name = "Detalle de Pedido"
@@ -236,8 +286,14 @@ class DetallePedido(ModeloConTenant):
 
     def save(self, *args, **kwargs):
         self.full_clean()
-        if self.pk is None and self.presentacion:
+        if self.pk is None and self.presentacion and self.origen == "CLIENTE":
+            # Lo que pide el cliente se cobra al precio del catálogo, diga lo
+            # que diga el carrito. Una línea que agrega el negocio, en cambio,
+            # lleva el precio que el negocio decidió al agregarla.
             self.precio_unitario = self.presentacion.precio_unitario
+        if self.pk is None and self.origen == "CLIENTE" and self.cantidad_original is None:
+            self.cantidad_original = self.cantidad
+            self.precio_original = self.precio_unitario
         if not self.nombre_congelado:
             self.nombre_congelado = self.descripcion_actual()
         self.subtotal = self.calcular_subtotal()
@@ -277,6 +333,60 @@ class HistorialDetallePedido(ModeloConTenant):
 
     class Meta:
         db_table = "ui_historialdetallepedido"
+
+
+# ==========================================================================
+# 4b. EVENTOS DEL PEDIDO (línea de tiempo)
+# ==========================================================================
+class EventoPedido(ModeloConTenant):
+    """
+    Lo que le pasó a un pedido, en orden: la auditoría que ve el panel.
+
+    `HistorialDetallePedido` cuelga de la LÍNEA y se borra en cascada con
+    ella, así que quitar un producto borraba también la prueba de que estuvo.
+    Este registro cuelga del PEDIDO y guarda en `datos` una copia de lo que
+    había (nombre, cantidad, precio): sobrevive a la línea y a los cambios del
+    catálogo. Solo se añade; nunca se edita.
+    """
+
+    tenant_heredado_de = "pedido"
+
+    TIPOS = [
+        ("RECIBIDO", "Pedido recibido"),
+        ("PRODUCTO_AGREGADO", "Producto agregado"),
+        ("PRODUCTO_ELIMINADO", "Producto eliminado"),
+        ("CANTIDAD", "Cambio de cantidad"),
+        ("PRECIO", "Cambio de precio"),
+        ("PRESENTACION", "Cambio de presentación"),
+        ("PRODUCTO_EDITADO", "Producto editado"),
+        ("ENTREGA", "Datos de entrega"),
+        ("NOTAS", "Notas internas"),
+        ("ESTADO", "Cambio de estado"),
+        ("FACTURA", "Factura generada"),
+        ("CATALOGO", "Revisión de producto sugerido"),
+    ]
+
+    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name="eventos")
+    tipo = models.CharField(max_length=24, choices=TIPOS)
+    descripcion = models.CharField(max_length=300)
+    datos = models.JSONField(default=dict, blank=True)
+    #: Nulo = lo hizo el cliente desde la tienda, o el sistema.
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ui_eventopedido"
+        ordering = ["-fecha", "-id"]
+        indexes = [models.Index(fields=["pedido", "fecha"], name="ui_evento_pedido_fecha_idx")]
+
+    def __str__(self):
+        return f"Pedido #{self.pedido_id} · {self.get_tipo_display()}"
 
 
 # ==========================================================================

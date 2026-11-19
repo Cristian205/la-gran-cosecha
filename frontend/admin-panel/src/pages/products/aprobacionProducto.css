@@ -1,0 +1,83 @@
+/* ==========================================================================
+   REVISIÓN DE PRODUCTO SUGERIDO — PendingProductApprovalModal.
+   Se apoya en las piezas `gp-*` del modal de pedidos (gestionPedido.css); aquí
+   solo va lo propio de esta pantalla, con prefijo `ap-`.
+   ========================================================================== */
+
+.modal.amplio.ancho.modal-aprobacion { width: min(1120px, 100%); }
+.modal-aprobacion .cuerpo { overflow-y: auto; }
+.modal-aprobacion footer .gp-pie { justify-content: space-between; }
+
+.ap-cuerpo {
+  display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 1rem; align-items: start;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+.ap-contexto { position: sticky; top: 0; display: grid; gap: 1rem; }
+.ap-principal { display: grid; gap: 1rem; min-width: 0; }
+.ap-formulario { display: grid; gap: 1rem; }
+.ap-seccion { display: grid; gap: .85rem; }
+.ap-seccion .gp-superficie-cabecera { margin-bottom: 0; }
+
+.ap-paso {
+  display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 50%;
+  font-size: .72rem; font-weight: 800; color: #fff; background: var(--verde);
+}
+
+.ap-pedido { display: grid; gap: .7rem; background: linear-gradient(160deg, color-mix(in srgb, var(--verde-500) 9%, var(--superficie)), var(--superficie) 65%); }
+.ap-escrito { margin: 0; font-size: 1.2rem; font-weight: 800; letter-spacing: -.01em; color: var(--dark); overflow-wrap: anywhere; }
+.ap-nota { display: flex; gap: .4rem; margin: 0; font-size: .82rem; font-style: italic; color: var(--gris); }
+
+.ap-parecidos { display: grid; margin: 0; padding: 0; list-style: none; }
+.ap-parecidos li { display: flex; align-items: center; gap: .65rem; padding: .5rem 0; }
+.ap-parecidos li + li { border-top: 1px solid var(--borde); }
+
+.ap-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+
+.ap-presentaciones { display: grid; gap: .6rem; }
+.ap-pres {
+  display: grid; gap: .6rem; padding: .75rem .85rem; border: 1px solid var(--borde); border-radius: 12px;
+  background: var(--fondo); transition: border-color .15s, box-shadow .15s;
+}
+.ap-pres.del-pedido { border-color: color-mix(in srgb, var(--verde) 55%, var(--borde)); }
+.ap-pres-cabecera { display: flex; align-items: center; gap: .6rem; }
+.ap-pres-cabecera .btn-icon { margin-left: auto; width: 28px; height: 28px; }
+.ap-pres-num {
+  display: inline-grid; place-items: center; width: 1.3rem; height: 1.3rem; border-radius: 6px;
+  font-size: .7rem; font-weight: 800; color: var(--gris); background: var(--gris-claro);
+}
+.ap-pres-pedido { display: inline-flex; align-items: center; gap: .4rem; font-size: .78rem; font-weight: 650; color: var(--dark); cursor: pointer; }
+.ap-pres-pedido input { accent-color: var(--verde-600); margin: 0; }
+.ap-pres-campos { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) minmax(0, .6fr) minmax(0, 1fr); gap: .6rem; }
+
+.ap-resultados { display: grid; max-height: 280px; overflow-y: auto; margin: 0 -.4rem; }
+.gp-resultado.elegido { background: var(--verde-claro); }
+.ap-check { color: var(--verde-texto); flex: none; }
+
+.ap-efecto { display: grid; gap: .75rem; border-style: dashed; }
+.ap-efecto .gp-superficie-cabecera { margin-bottom: 0; }
+.ap-efecto-filas { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: .8rem; }
+.ap-efecto-antes, .ap-efecto-despues {
+  display: grid; gap: .15rem; padding: .7rem .85rem; border-radius: 12px; font-size: .84rem; color: var(--gris);
+  font-variant-numeric: tabular-nums; min-width: 0;
+}
+.ap-efecto-antes { background: var(--gris-claro); }
+.ap-efecto-despues { background: var(--verde-claro); }
+.ap-efecto-antes strong, .ap-efecto-despues strong { color: var(--dark); font-size: .9rem; overflow-wrap: anywhere; }
+.ap-efecto-despues b { color: var(--dark); }
+.ap-flecha { color: var(--gris); }
+.ap-conservar { display: flex; align-items: flex-start; gap: .55rem; font-size: .84rem; font-weight: 600; color: var(--dark); cursor: pointer; }
+.ap-conservar input { margin-top: .2rem; accent-color: var(--verde-600); }
+.ap-conservar small { display: block; font-weight: 500; font-size: .76rem; color: var(--gris); }
+
+@media (max-width: 900px) {
+  .ap-cuerpo { grid-template-columns: 1fr; }
+  .ap-contexto { position: static; }
+}
+@media (max-width: 720px) {
+  .ap-cuerpo { padding: 1rem; }
+  .ap-presets { grid-template-columns: 1fr; }
+  .ap-pres-campos { grid-template-columns: 1fr 1fr; }
+  .ap-efecto-filas { grid-template-columns: 1fr; }
+  .ap-flecha { transform: rotate(90deg); justify-self: center; }
+  .modal-aprobacion footer .gp-pie > .btn { width: 100%; }
+}

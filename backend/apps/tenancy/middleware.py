@@ -230,10 +230,30 @@ class TenantMiddleware:
         if not origen:
             return None
         hostname = origen.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0].lower()
-        slug = getattr(settings, "TENANCY_ORIGENES_PANEL", {}).get(hostname)
-        if not slug:
+        if not hostname:
             return None
-        return Tenant.objects.filter(slug=slug).first()
+        slug = getattr(settings, "TENANCY_ORIGENES_PANEL", {}).get(hostname)
+        if slug:
+            return Tenant.objects.filter(slug=slug).first()
+
+        # Un dominio verificado del negocio (p. ej. `panel.crafteech.com`,
+        # registrado desde el panel Root) vale igual que la lista fija: sin
+        # esto, cada dominio nuevo del panel exigía tocar una variable de
+        # entorno y, mientras tanto, el panel salía sin logo ni nombre. Es la
+        # misma consulta, y la misma caché, que resuelve un `Host`.
+        clave = f"{CACHE_PREFIJO}{hostname}"
+        id_tenant = cache.get(clave)
+        if id_tenant is None:
+            dominio = (
+                Domain.objects.filter(hostname=hostname, verificado=True)
+                .only("tenant_id")
+                .first()
+            )
+            id_tenant = dominio.tenant_id if dominio else 0
+            cache.set(clave, id_tenant, CACHE_SEGUNDOS)
+        if not id_tenant:
+            return None
+        return Tenant.objects.filter(pk=id_tenant).first()
 
     def _tenant_de_cabecera(self, request):
         if not getattr(settings, "TENANCY_ACEPTA_CABECERA", False):

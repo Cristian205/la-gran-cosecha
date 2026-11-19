@@ -376,6 +376,7 @@ export function ClientsPage() {
     if (puedeVerPedidos && c.total_pedidos > 0) {
       acciones.push({
         clave: "pedidos",
+        tono: "ver",
         etiqueta: "Ver sus pedidos",
         icono: <ShoppingBag size={15} />,
         onSeleccionar: () => navigate(`/pedidos?q=${encodeURIComponent(c.nombre_cliente)}`),
@@ -384,6 +385,7 @@ export function ClientsPage() {
     if (c.telefono_cliente) {
       acciones.push({
         clave: "llamar",
+        tono: "exito",
         etiqueta: "Llamar",
         icono: <Phone size={15} />,
         onSeleccionar: () => {
@@ -684,7 +686,7 @@ export function ClientsPage() {
                             <Tooltip label="Ver ficha">
                               <button
                                 type="button"
-                                className="btn-icon"
+                                className="btn-icon ver"
                                 onClick={() => setViendo(c)}
                                 aria-label={`Ver la ficha de ${c.nombre_cliente}`}
                               >

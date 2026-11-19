@@ -2,6 +2,7 @@ import type {
   Categoria,
   Cliente,
   Estadisticas,
+  EventoPedido,
   HistorialDetallePedido,
   HistorialPrecio,
   Lote,
@@ -326,7 +327,8 @@ export async function obtenerPedido(id: number): Promise<PedidoDetalle> {
 }
 
 export interface EditarPedidoPayload {
-  detalles: {
+  /** Si vienen, vienen TODAS: las que falten se quitan del pedido. */
+  detalles?: {
     detalle_id: number | null;
     presentacion_id?: number;
     nombre_producto?: string;
@@ -334,14 +336,23 @@ export interface EditarPedidoPayload {
     categoria_id?: number;
     cantidad: string;
     precio_unitario: string;
+    nota?: string;
   }[];
   observaciones?: string;
+  /** `fecha_modificacion` tal como se leyó: el servidor responde 409 si cambió. */
+  version?: string | null;
+  direccion_entrega?: string;
+  telefono_entrega?: string;
+  recibe_nombre?: string;
+  fecha_programada?: string | null;
+  indicaciones_entrega?: string;
+  notas_internas?: string;
 }
 
 export async function editarPedido(
   id: number,
   payload: EditarPedidoPayload
-): Promise<{ success: boolean; total: string }> {
+): Promise<{ success: boolean; total: string; pedido: PedidoDetalle }> {
   const { data } = await api.patch(`/orders/${id}/`, payload);
   return data;
 }
@@ -366,6 +377,11 @@ export async function obtenerHistorialPedido(
   return data;
 }
 
+export async function obtenerLineaDeTiempoPedido(id: number): Promise<EventoPedido[]> {
+  const { data } = await api.get<EventoPedido[]>(`/orders/${id}/linea-de-tiempo/`);
+  return data;
+}
+
 // ---------- Productos personalizados pendientes de revisión ----------
 export async function obtenerProductosPendientes(): Promise<ProductoPendiente[]> {
   const { data } = await api.get<Paginated<ProductoPendiente> | ProductoPendiente[]>(
@@ -377,11 +393,27 @@ export async function obtenerProductosPendientes(): Promise<ProductoPendiente[]>
 export async function aprobarProductoPendiente(
   id: number,
   payload: ProductoPayload,
-  presentacionIndex?: number
+  presentacionIndex?: number,
+  /** Respeta el precio que ya tenía la línea en vez del de catálogo. */
+  conservarPrecio = false
 ): Promise<Producto> {
   const { data } = await api.post<Producto>(`/orders-productos-pendientes/${id}/aprobar/`, {
     ...payload,
     ...(presentacionIndex !== undefined ? { presentacion_index: presentacionIndex } : {}),
+    conservar_precio: conservarPrecio,
+  });
+  return data;
+}
+
+/** El producto ya existía: enlaza la línea a esa presentación sin duplicar el catálogo. */
+export async function vincularProductoPendiente(
+  id: number,
+  presentacionId: number,
+  conservarPrecio = false
+): Promise<{ success: boolean; producto_id: number; presentacion_id: number }> {
+  const { data } = await api.post(`/orders-productos-pendientes/${id}/vincular/`, {
+    presentacion_id: presentacionId,
+    conservar_precio: conservarPrecio,
   });
   return data;
 }

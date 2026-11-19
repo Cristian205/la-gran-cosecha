@@ -216,6 +216,7 @@ function TablaPedidos({
     if (puedeEntregar && p.estado !== "ENTREGADO") {
       acciones.push({
         clave: "entregar",
+        tono: "exito",
         etiqueta: "Marcar como entregado",
         icono: <PackageCheck size={15} />,
         deshabilitada: entregandoId === p.id,
@@ -1102,7 +1103,7 @@ export function OrdersPage() {
                             <Tooltip label="Ver pedidos del lote">
                               <button
                                 type="button"
-                                className="btn-icon editar"
+                                className="btn-icon ver"
                                 onClick={() => setLoteAbiertoId(l.id)}
                                 aria-label={`Ver los pedidos del lote #${l.id}`}
                               >
@@ -1128,10 +1129,9 @@ export function OrdersPage() {
           pedidoId={detalleId}
           soloLectura={!tienePermiso(actual, "orders.change_pedido")}
           onCerrar={() => setDetalleId(null)}
-          onGuardado={() => {
-            setDetalleId(null);
-            recargarListados();
-          }}
+          // El modal sigue abierto tras guardar (se puede imprimir o seguir
+          // editando); la tabla de fondo se refresca con el total nuevo.
+          onGuardado={recargarListados}
         />
       )}
 

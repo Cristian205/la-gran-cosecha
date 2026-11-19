@@ -9,7 +9,7 @@ Por eso se escribe con `all_tenants` y un `tenant=` explícito: el negocio ya
 está determinado por el objeto de origen, así que exigir además un contexto
 declarado solo haría fallar la señal en esos casos.
 """
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_init, post_save
 from django.dispatch import receiver
 
 from apps.notifications.models import Notificacion
@@ -46,7 +46,7 @@ def notificar_pedido_nuevo(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=DetallePedido)
 def notificar_producto_personalizado(sender, instance, created, **kwargs):
-    if not created or instance.es_catalogo:
+    if not created or instance.es_catalogo or instance.origen == "ADMIN":
         return
     categoria = (
         instance.categoria_manual.nombre_categoria
@@ -76,3 +76,39 @@ def devolver_reserva_al_borrar(sender, instance, **kwargs):
     de que el origen sea una referencia floja y no una clave foránea en cascada.
     """
     liberar_pedido(instance)
+
+
+# ==========================================================================
+# AUDITORÍA DEL ESTADO
+# ==========================================================================
+def _recordar_estado_auditoria(sender, instance, **kwargs):
+    # Con `estado` diferido (`.only(...)`) leerlo costaría una consulta por
+    # objeto: ese objeto simplemente no audita su cambio de estado.
+    if "estado" in instance.__dict__:
+        instance._estado_auditado = instance.estado
+
+
+post_init.connect(_recordar_estado_auditoria, sender=Pedido, dispatch_uid="orders_estado_auditado")
+
+
+@receiver(post_save, sender=Pedido, dispatch_uid="orders_auditar_estado")
+def auditar_cambio_de_estado(sender, instance, created, **kwargs):
+    """
+    Un cambio de estado hecho con `save()` —el admin de Django, un comando, la
+    mensajería— queda en la línea de tiempo. La entrega masiva usa `update()`,
+    que no pasa por aquí, y registra el suyo con el usuario que la hizo.
+    """
+    anterior = getattr(instance, "_estado_auditado", None)
+    if not created and anterior is not None and anterior != instance.estado:
+        from .auditoria import registrar  # noqa: PLC0415
+
+        etiquetas = dict(Pedido.ESTADOS)
+        registrar(
+            instance,
+            "ESTADO",
+            f"Cambió el estado a {etiquetas.get(instance.estado, instance.estado)}",
+            anterior=anterior,
+            nuevo=instance.estado,
+        )
+    if "estado" in instance.__dict__:
+        instance._estado_auditado = instance.estado

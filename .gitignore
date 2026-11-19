@@ -47,3 +47,6 @@ skills-lock.json
 # Respaldos de la base: contienen datos reales de clientes y pedidos.
 # Nunca deben acabar en el repositorio.
 _backups/
+
+# Respaldos automáticos de Blender
+*.blend1

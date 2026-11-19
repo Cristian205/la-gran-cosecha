@@ -327,7 +327,7 @@ export function PosPage() {
                         </td>
                         <td style={{ width: "2rem" }}>
                           <button
-                            className="btn-icon"
+                            className="btn-icon peligro"
                             onClick={() => quitar(l.id)}
                             disabled={trabajando}
                             aria-label="Quitar"

@@ -18,7 +18,7 @@ CLAVE = "clave-de-prueba-123"
 def _login(api, usuario):
     r = api.post("/api/auth/login/", {"email_usuario": usuario.email_usuario, "password": CLAVE}, format="json")
     assert r.status_code == 200, r.json()
-    codigo = re.search(r"Su código OTP es: (\d{6})", mail.outbox[-1].body).group(1)
+    codigo = re.search(r"Tu código de verificación es: (\d{6})", mail.outbox[-1].body).group(1)
     return r.json()["otp_ticket"], codigo
 
 

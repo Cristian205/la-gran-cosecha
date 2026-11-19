@@ -12,8 +12,11 @@ from apps.catalog.serializers import ProductoSerializer, ProductoWriteSerializer
 from apps.common.permissions import EsStaff, requiere_permiso
 from apps.tenancy.viewsets import ExigeNegocioMixin, TenantScopedMixin
 
+from .auditoria import linea_de_tiempo
+from .auditoria import registrar as registrar_evento
 from .inventario import despachar_pedido
 from .models import Cliente, DetallePedido, HistorialDetallePedido, LotePedidos, Pedido
+from .serializers import reservar_o_400
 from .serializers import (
     ClienteSerializer,
     CrearPedidoSerializer,
@@ -182,6 +185,14 @@ class PedidoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             # no estaban ya entregados, para no repetirlo si se pulsa dos veces.
             for pedido in recien_entregados:
                 pedido_cambio_estado(pedido, "ENTREGADO")
+                registrar_evento(
+                    pedido,
+                    "ESTADO",
+                    "Marcó el pedido como entregado",
+                    usuario=request.user,
+                    anterior=pedido.estado,
+                    nuevo="ENTREGADO",
+                )
 
         lote = LotePedidos.objects.create(
             tipo="ENTREGA",
@@ -204,13 +215,32 @@ class PedidoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         )
         return Response(HistorialDetallePedidoSerializer(historial, many=True).data)
 
+    @action(detail=True, methods=["get"], url_path="linea-de-tiempo")
+    def linea_de_tiempo(self, request, pk=None):
+        """
+        Todo lo que le pasó al pedido —recibido, productos, entrega, estado,
+        facturas— del más reciente al más antiguo. Ver `auditoria.py`.
+
+        Sustituye a `historial/`, que se queda solo con las ediciones de línea
+        registradas antes de que existiera `EventoPedido`.
+        """
+        pedido = self.get_object()
+        return Response(linea_de_tiempo(pedido))
+
 
 class ProductoPendienteViewSet(ExigeNegocioMixin, viewsets.ViewSet):
     """
     Productos personalizados (`DetallePedido.es_catalogo=False`) escritos por
-    clientes en el storefront, a la espera de que el admin los acepte
-    (se convierten en `catalog.Producto`) o los rechace (quedan tal cual en
-    el pedido/factura original, sin tocar el catálogo).
+    clientes en el storefront, a la espera de que el admin los revise:
+
+    * `aprobar`  — se crea un producto nuevo en el catálogo y la línea del
+      pedido queda enlazada a la presentación que pidió el cliente.
+    * `vincular` — el producto YA existía (el cliente lo escribió a mano): la
+      línea se enlaza a esa presentación y el catálogo no se duplica.
+    * `rechazar` — queda tal cual en el pedido/factura, sin tocar el catálogo.
+
+    Cada decisión deja un evento en la línea de tiempo del pedido, y la fila se
+    bloquea al decidir: dos clics seguidos no crean dos productos.
     """
 
     permission_classes = [EsStaff]
@@ -222,14 +252,49 @@ class ProductoPendienteViewSet(ExigeNegocioMixin, viewsets.ViewSet):
 
     def get_queryset(self):
         return (
-            DetallePedido.objects.filter(es_catalogo=False, estado_revision="PENDIENTE")
+            # Solo lo que sugirió un CLIENTE: un producto personalizado que el
+            # negocio agrega a un pedido es una venta puntual, no una propuesta
+            # para el catálogo.
+            DetallePedido.objects.filter(
+                es_catalogo=False, estado_revision="PENDIENTE", origen="CLIENTE"
+            )
             .select_related("unidad_personalizada", "categoria_manual", "pedido__cliente")
             .order_by("-fecha_modificacion")
         )
 
+    def _pendiente_bloqueado(self, pk):
+        """La línea pendiente, con su fila bloqueada hasta el final de la transacción."""
+        return get_object_or_404(self.get_queryset().select_for_update(of=("self",)), pk=pk)
+
     def list(self, request):
         serializer = ProductoPendienteSerializer(self.get_queryset(), many=True)
         return Response(serializer.data)
+
+    @staticmethod
+    def _enlazar(detalle, presentacion, *, conservar_precio, usuario):
+        """
+        Convierte la línea personalizada en una línea de catálogo.
+
+        Por defecto toma el precio del catálogo (lo de siempre). Con
+        `conservar_precio` se respeta el que ya tenía la línea: el negocio pudo
+        haberlo pactado con el cliente antes de revisar el producto.
+        """
+        precio_antes = detalle.precio_unitario
+        nombre_antes = detalle.nombre_personalizado
+        detalle.presentacion = presentacion
+        if not conservar_precio:
+            detalle.precio_unitario = presentacion.precio_unitario
+        detalle.nombre_personalizado = None
+        detalle.unidad_personalizada = None
+        detalle.categoria_manual = None
+        detalle.es_catalogo = True
+        detalle.nombre_congelado = detalle.descripcion_actual()
+        detalle.save()  # full_clean() + recálculo de subtotal, ya en el modelo
+        detalle.pedido.actualizar_total()
+        # Ahora es una línea de catálogo: si el producto lleva existencias, se
+        # aparta. Sin stock, la decisión entera se deshace (400).
+        reservar_o_400(detalle.pedido, usuario=usuario)
+        return nombre_antes, precio_antes
 
     @action(
         detail=True,
@@ -239,7 +304,7 @@ class ProductoPendienteViewSet(ExigeNegocioMixin, viewsets.ViewSet):
     )
     @transaction.atomic
     def aprobar(self, request, pk=None):
-        detalle = get_object_or_404(self.get_queryset(), pk=pk)
+        detalle = self._pendiente_bloqueado(pk)
         serializer = ProductoWriteSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         producto = serializer.save()
@@ -262,27 +327,109 @@ class ProductoPendienteViewSet(ExigeNegocioMixin, viewsets.ViewSet):
 
         detalle.producto_generado = producto
         detalle.estado_revision = "ACEPTADO"
+        nombre = detalle.nombre_personalizado
 
         if presentacion_elegida:
-            detalle.presentacion = presentacion_elegida
-            detalle.precio_unitario = presentacion_elegida.precio_unitario
-            detalle.nombre_personalizado = None
-            detalle.unidad_personalizada = None
-            detalle.categoria_manual = None
-            detalle.es_catalogo = True
-            detalle.save()  # full_clean() + recálculo de subtotal, ya en el modelo
-            detalle.pedido.actualizar_total()
+            _, precio_antes = self._enlazar(
+                detalle,
+                presentacion_elegida,
+                conservar_precio=_verdadero(request.data.get("conservar_precio")),
+                usuario=request.user,
+            )
+            registrar_evento(
+                detalle.pedido,
+                "CATALOGO",
+                f"Aceptó «{nombre}» y lo creó en el catálogo",
+                usuario=request.user,
+                producto=producto.nombre_producto,
+                presentacion=presentacion_elegida.nombre_presentacion,
+                campo="precio_unitario",
+                anterior=str(precio_antes),
+                nuevo=str(detalle.precio_unitario),
+            )
         else:
             detalle.save(update_fields=["producto_generado", "estado_revision"])
+            registrar_evento(
+                detalle.pedido,
+                "CATALOGO",
+                f"Aceptó «{nombre}» y lo creó en el catálogo (la línea sigue como personalizada)",
+                usuario=request.user,
+                producto=producto.nombre_producto,
+            )
 
         return Response(serializer.to_representation(producto), status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=["post"], url_path="vincular")
+    @transaction.atomic
+    def vincular(self, request, pk=None):
+        """
+        El cliente escribió a mano algo que el catálogo ya tiene: se enlaza la
+        línea a esa presentación en vez de crear un producto repetido.
+        """
+        from apps.catalog.models import PresentacionProducto  # noqa: PLC0415
+
+        detalle = self._pendiente_bloqueado(pk)
+        presentacion_id = request.data.get("presentacion_id")
+        if not str(presentacion_id or "").isdigit():
+            return Response(
+                {"presentacion_id": ["Elige la presentación del catálogo."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        presentacion = (
+            PresentacionProducto.objects.select_related("producto", "unidad_venta")
+            .filter(pk=presentacion_id)
+            .first()
+        )
+        if presentacion is None:
+            return Response(
+                {"presentacion_id": ["Esa presentación no existe en este catálogo."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not (presentacion.estado_presentacion and presentacion.producto.estado_producto):
+            return Response(
+                {"presentacion_id": ["Esa presentación está desactivada."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        detalle.estado_revision = "ACEPTADO"
+        nombre, precio_antes = self._enlazar(
+            detalle,
+            presentacion,
+            conservar_precio=_verdadero(request.data.get("conservar_precio")),
+            usuario=request.user,
+        )
+        registrar_evento(
+            detalle.pedido,
+            "CATALOGO",
+            f"Vinculó «{nombre}» a {presentacion.producto.nombre_producto} · {presentacion.nombre_presentacion}",
+            usuario=request.user,
+            producto=presentacion.producto.nombre_producto,
+            presentacion=presentacion.nombre_presentacion,
+            campo="precio_unitario",
+            anterior=str(precio_antes),
+            nuevo=str(detalle.precio_unitario),
+        )
+        return Response(
+            {"success": True, "producto_id": presentacion.producto_id, "presentacion_id": presentacion.id}
+        )
+
     @action(detail=True, methods=["post"], url_path="rechazar")
+    @transaction.atomic
     def rechazar(self, request, pk=None):
-        detalle = get_object_or_404(self.get_queryset(), pk=pk)
+        detalle = self._pendiente_bloqueado(pk)
         detalle.estado_revision = "RECHAZADO"
         detalle.save(update_fields=["estado_revision"])
+        registrar_evento(
+            detalle.pedido,
+            "CATALOGO",
+            f"Rechazó «{detalle.nombre_personalizado}» para el catálogo (queda solo en el pedido)",
+            usuario=request.user,
+        )
         return Response({"success": True})
+
+
+def _verdadero(valor) -> bool:
+    return valor is True or str(valor).lower() in ("1", "true", "si", "sí")
 
 
 class LoteViewSet(TenantScopedMixin, viewsets.ReadOnlyModelViewSet):

@@ -15,6 +15,7 @@ import { PendingProductsPage } from "./pages/PendingProductsPage";
 import { PosPage } from "./pages/pos/PosPage";
 import { ReservationsPage } from "./pages/reservations/ReservationsPage";
 import { DeliveryPage } from "./pages/delivery/DeliveryPage";
+import PlanoPage from "./pages/plano/PlanoPage";
 import { ProductsPage } from "./pages/products/ProductsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -70,6 +71,14 @@ export default function App() {
             element={
               <RequierePermiso permiso="delivery.view_envio">
                 <DeliveryPage />
+              </RequierePermiso>
+            }
+          />
+          <Route
+            path="/plano"
+            element={
+              <RequierePermiso permiso="logistica.view_planocarga">
+                <PlanoPage />
               </RequierePermiso>
             }
           />

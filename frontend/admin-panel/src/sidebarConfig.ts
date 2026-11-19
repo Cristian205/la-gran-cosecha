@@ -10,6 +10,7 @@ import {
   PackagePlus,
   Settings2,
   ShieldCheck,
+  Truck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -60,6 +61,13 @@ export const SECCIONES_DISPONIBLES: SeccionDisponible[] = [
     label: "Domicilios",
     icon: Bike,
     permiso: "delivery.view_envio",
+  },
+  {
+    clave: "plano",
+    to: "/plano",
+    label: "Plano de carga",
+    icon: Truck,
+    permiso: "logistica.view_planocarga",
   },
   {
     clave: "inventario",
@@ -122,7 +130,7 @@ export const LAYOUT_POR_DEFECTO: NodoSidebar[] = [
     tipo: "grupo",
     id: "operacion",
     titulo: "Operación",
-    items: ["dashboard", "pedidos", "clientes", "domicilios", "caja", "reservas"],
+    items: ["dashboard", "pedidos", "clientes", "domicilios", "plano", "caja", "reservas"],
   },
   {
     // "Productos pendientes" vive aquí: aprobarlos es decidir qué entra al

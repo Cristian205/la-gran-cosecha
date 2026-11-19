@@ -355,6 +355,7 @@ export function UsersPage() {
     const acciones: AccionMenu[] = [];
     acciones.push({
       clave: "correo",
+      tono: "editar",
       etiqueta: "Escribir un correo",
       icono: <Mail size={15} />,
       onSeleccionar: () => {
@@ -363,6 +364,7 @@ export function UsersPage() {
     });
     acciones.push({
       clave: "copiar",
+      tono: "copiar",
       etiqueta: "Copiar correo",
       icono: <Copy size={15} />,
       onSeleccionar: () => {
@@ -375,6 +377,7 @@ export function UsersPage() {
     if (puedeEditar(u) && u.id !== actual?.id) {
       acciones.push({
         clave: "estado",
+        tono: "exito",
         etiqueta: u.is_active ? "Desactivar acceso" : "Activar acceso",
         icono: u.is_active ? <PowerOff size={15} /> : <Power size={15} />,
         peligro: u.is_active,

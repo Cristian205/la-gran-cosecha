@@ -1,6 +1,8 @@
-{% extends "accounts/correo_base.html" %}
+{% extends "accounts/correo_plataforma.html" %}
 {% block asunto %}Restablecer contraseña{% endblock %}
-{% block preheader %}Su código para crear una contraseña nueva en {{ nombre_empresa }}. Vence en {{ minutos }} minutos.{% endblock %}
+{% block preheader %}Tu código para crear una contraseña nueva en {% if nombre_negocio %}el panel de {{ nombre_negocio }}{% else %}{{ nombre_empresa }}{% endif %}. Vence en {{ minutos }} minutos.{% endblock %}
 {% block etiqueta %}Restablecer contraseña{% endblock %}
-{% block introduccion %}Recibimos una solicitud para restablecer la contraseña de su cuenta en el panel de {{ nombre_empresa }}. Escriba este código para continuar y elegir una contraseña nueva:{% endblock %}
-{% block cierre %}¿No pidió restablecer su contraseña? Ignore este mensaje: sin el código nadie puede cambiarla y su contraseña actual sigue funcionando.{% endblock %}
+{% block titulo %}Crea una contraseña nueva{% endblock %}
+{% block introduccion %}Recibimos una solicitud para restablecer la contraseña de tu cuenta {% if nombre_negocio %}del panel de {{ nombre_negocio }} en {{ nombre_empresa }}{% else %}de {{ nombre_empresa }}{% endif %}. Ingresa el siguiente código para continuar y elegir una contraseña nueva.{% endblock %}
+{% block etiqueta_codigo %}Tu código de restablecimiento{% endblock %}
+{% block cierre %}<strong style="color:#3d444d;">¿No pediste restablecer tu contraseña?</strong> Ignora este mensaje: sin el código nadie puede cambiarla y tu contraseña actual sigue funcionando.{% endblock %}

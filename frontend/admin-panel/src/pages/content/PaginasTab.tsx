@@ -178,7 +178,7 @@ export function PaginasTab() {
           )}
           {origen && pagina && (
             <a
-              className="btn-icon"
+              className="btn-icon ver"
               href={`${origen}${pagina.ruta}`}
               target="_blank"
               rel="noreferrer"

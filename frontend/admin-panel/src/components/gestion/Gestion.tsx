@@ -101,8 +101,12 @@ export interface AccionMenu {
   icono: ReactNode;
   onSeleccionar: () => void;
   peligro?: boolean;
+  /** Color de la acción (mismo código que los botones de ícono). `peligro` equivale a "peligro". */
+  tono?: TonoAccion;
   deshabilitada?: boolean;
 }
+
+export type TonoAccion = "ver" | "editar" | "exito" | "info" | "copiar" | "peligro";
 
 /**
  * El "⋯" de cada fila. El menú se pinta en `document.body` con posición fija:
@@ -184,7 +188,7 @@ export function MenuFila({ etiqueta, acciones }: { etiqueta: string; acciones: A
                 key={a.clave}
                 type="button"
                 role="menuitem"
-                className={a.peligro ? "peligro" : ""}
+                className={a.peligro ? "peligro" : a.tono ?? ""}
                 disabled={a.deshabilitada}
                 onClick={() => {
                   setAbierto(false);

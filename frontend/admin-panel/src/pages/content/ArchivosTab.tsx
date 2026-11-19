@@ -130,7 +130,7 @@ export function ArchivosTab() {
               <Tooltip label={copiadoId === a.id ? "¡Copiado!" : "Copiar enlace"}>
                 <button
                   type="button"
-                  className="btn-icon"
+                  className="btn-icon copiar"
                   onClick={() => copiarEnlace(a)}
                   aria-label="Copiar enlace"
                 >

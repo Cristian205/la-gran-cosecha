@@ -1,19 +1,21 @@
-{% autoescape off %}{{ nombre_empresa }} · Panel administrativo
-Restablecer contraseña
+{% autoescape off %}{{ nombre_empresa }} · Seguridad de la cuenta
+{% if nombre_negocio %}Panel administrativo de {{ nombre_negocio }}
+{% endif %}
+CREA UNA CONTRASEÑA NUEVA
 
 Hola, {{ nombre_usuario }}:
 
-Recibimos una solicitud para restablecer la contraseña de su cuenta en el panel de {{ nombre_empresa }}. Escriba este código para continuar y elegir una contraseña nueva:
+Recibimos una solicitud para restablecer la contraseña de tu cuenta {% if nombre_negocio %}del panel de {{ nombre_negocio }} en {{ nombre_empresa }}{% else %}de {{ nombre_empresa }}{% endif %}. Ingresa el siguiente código para continuar y elegir una contraseña nueva.
 
-Su código de restablecimiento es: {{ otp_code }}
+Tu código de restablecimiento es: {{ otp_code }}
 
-Vence en {{ minutos }} minutos y solo sirve una vez.
+Vence en {{ minutos }} minutos y solo puede usarse una vez.
 
-No comparta este código. Nadie de {{ nombre_empresa }} se lo pedirá por teléfono, chat ni correo.
+No compartas este código. El equipo de {{ nombre_empresa }} nunca te lo pedirá por teléfono, chat ni correo.
 
-¿No pidió restablecer su contraseña? Ignore este mensaje: sin el código nadie puede cambiarla y su contraseña actual sigue funcionando.
+¿No pediste restablecer tu contraseña? Ignora este mensaje: sin el código nadie puede cambiarla y tu contraseña actual sigue funcionando.
 
 —
-{{ nombre_empresa }}
-Correo automático de seguridad. No responda a este mensaje.
+{{ nombre_empresa }} · https://{{ sitio }}
+Este es un correo automático de seguridad; no respondas a este mensaje.
 {% endautoescape %}

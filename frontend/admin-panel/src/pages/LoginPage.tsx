@@ -270,7 +270,9 @@ export function LoginPage() {
           aria-hidden="true"
           width={1024}
           height={881}
-          fetchPriority="high"
+          // React 18 no reconoce `fetchPriority` (llega en React 19): se pasa
+          // el atributo HTML en minúsculas para no disparar el warning.
+          {...{ fetchpriority: "high" }}
         />
         <span className="acceso__velo" aria-hidden="true" />
 

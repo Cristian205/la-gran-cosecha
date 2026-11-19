@@ -82,7 +82,7 @@ export function LoteDetailModal({ loteId, onCerrar, onVerPedido }: Props) {
                       <Tooltip label="Ver pedido">
                         <button
                           type="button"
-                          className="btn-icon editar"
+                          className="btn-icon ver"
                           onClick={() => onVerPedido(p.id)}
                           aria-label="Ver pedido"
                         >

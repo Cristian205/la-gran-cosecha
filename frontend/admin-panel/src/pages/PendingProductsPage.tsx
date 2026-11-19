@@ -175,12 +175,12 @@ export function PendingProductsPage() {
                       ))}
                       <td>
                         <div className="acciones">
-                          <Tooltip label="Aceptar y guardar en catálogo">
+                          <Tooltip label="Revisar: crear en el catálogo o vincular a uno existente">
                             <button
                               type="button"
-                              className="btn-icon editar"
+                              className="btn-icon exito"
                               onClick={() => setAprobando(p)}
-                              aria-label="Aceptar"
+                              aria-label={`Revisar «${p.nombre_personalizado}»`}
                             >
                               <CheckCircle2 size={16} />
                             </button>

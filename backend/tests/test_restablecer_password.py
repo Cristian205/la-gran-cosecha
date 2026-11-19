@@ -25,7 +25,7 @@ def _solicitar(api, email):
 
 
 def _codigo():
-    return re.search(r"Su código de restablecimiento es: (\d{6})\n", mail.outbox[-1].body).group(1)
+    return re.search(r"Tu código de restablecimiento es: (\d{6})\n", mail.outbox[-1].body).group(1)
 
 
 def _verificar(api, ticket, codigo):
@@ -52,7 +52,7 @@ def test_el_flujo_completo_cambia_la_contrasena(api, usuario_owner):
     assert usuario_owner.check_password(NUEVA)
     assert not usuario_owner.check_password(CLAVE)
     # Llega el aviso de que cambió.
-    assert "Su contraseña cambió" in mail.outbox[-1].subject
+    assert "Tu contraseña cambió" in mail.outbox[-1].subject
 
     # Y con la nueva se entra (el login sigue pidiendo su propio código).
     login = api.post(

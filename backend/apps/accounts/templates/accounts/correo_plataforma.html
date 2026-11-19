@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>{% block asunto %}{% endblock %} · {{ nombre_empresa }}</title>
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<style>table, td, p, h1 { font-family: Arial, Helvetica, sans-serif !important; }</style>
+<![endif]-->
+<style>
+  /* Correo de PLATAFORMA (identidad Crafteech). Todo lo esencial va en línea;
+     este bloque solo afina lo que leen Gmail, Apple Mail y Outlook móvil.
+     Paleta: grafito #15181d · lima #a3d917 · verde intenso #3a7d0c ·
+     texto #1f2329 · grises #59616b / #8a929b. */
+  body { margin: 0 !important; padding: 0 !important; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+  @media only screen and (max-width: 600px) {
+    .marco { padding: 0 !important; }
+    .tarjeta { border-radius: 0 !important; border-left: 0 !important; border-right: 0 !important; }
+    .cabecera, .pie { border-radius: 0 !important; }
+    .pad { padding-left: 24px !important; padding-right: 24px !important; }
+    .cabecera { padding: 22px 24px !important; }
+    .titulo { font-size: 24px !important; line-height: 30px !important; }
+    .codigo { font-size: 32px !important; letter-spacing: 8px !important; }
+    .codigo-caja { padding: 20px 12px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#eef0ec;">
+  <!-- Texto de vista previa: lo que la bandeja muestra junto al asunto. -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#eef0ec;opacity:0;">
+    {% block preheader %}{% endblock %}
+    &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef0ec" style="background-color:#eef0ec;">
+    <tr>
+      <td align="center" class="marco" style="padding:36px 16px;">
+        <!--[if mso]><table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->
+        <table role="presentation" class="tarjeta" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;background-color:#ffffff;border-radius:14px;border:1px solid #dde1da;">
+
+          <!-- Cabecera corporativa: símbolo + nombre sobre grafito -->
+          <tr>
+            <td class="cabecera" bgcolor="#15181d" style="background-color:#15181d;border-radius:14px 14px 0 0;padding:24px 36px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  {% if logo_url %}
+                  <td valign="middle" style="padding-right:14px;">
+                    <img src="{{ logo_url }}" alt="" width="49" height="40" style="display:block;width:49px;height:40px;border:0;outline:none;text-decoration:none;">
+                  </td>
+                  {% endif %}
+                  <td valign="middle" style="font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+                    <p style="margin:0;font-size:22px;line-height:26px;font-weight:bold;letter-spacing:-0.2px;color:#ffffff;">{{ nombre_empresa }}</p>
+                    <p style="margin:2px 0 0;font-size:11px;line-height:16px;font-weight:bold;letter-spacing:1.6px;text-transform:uppercase;color:#a3d917;">Seguridad de la cuenta</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Franja de acento: lima → verde intenso -->
+          <tr>
+            <td style="padding:0;font-size:0;line-height:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="70%" height="3" bgcolor="#a3d917" style="background-color:#a3d917;height:3px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td width="30%" height="3" bgcolor="#3a7d0c" style="background-color:#3a7d0c;height:3px;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Título, saludo y explicación -->
+          <tr>
+            <td class="pad" style="padding:36px 40px 4px;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+              <p style="margin:0 0 8px;font-size:12px;line-height:18px;font-weight:bold;letter-spacing:1.4px;text-transform:uppercase;color:#3a7d0c;">{% block etiqueta %}Inicio de sesión{% endblock %}</p>
+              {% if nombre_negocio %}
+              <!-- De qué negocio es el panel: sin esto, quien trabaja con varios no sabe a cuál va el código -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px;">
+                <tr>
+                  <td bgcolor="#f1f6e6" style="background-color:#f1f6e6;border:1px solid #d6e6b5;border-radius:8px;padding:8px 14px;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+                    <p style="margin:0;font-size:11px;line-height:15px;font-weight:bold;letter-spacing:1.2px;text-transform:uppercase;color:#59616b;">Panel administrativo de</p>
+                    <p style="margin:2px 0 0;font-size:17px;line-height:22px;font-weight:bold;color:#15181d;">{{ nombre_negocio }}</p>
+                  </td>
+                </tr>
+              </table>
+              {% endif %}
+              <h1 class="titulo" style="margin:0 0 20px;font-size:27px;line-height:34px;font-weight:bold;letter-spacing:-0.3px;color:#15181d;">{% block titulo %}Verifica tu identidad{% endblock %}</h1>
+              <p style="margin:0 0 10px;font-size:16px;line-height:24px;font-weight:bold;color:#1f2329;">Hola, {{ nombre_usuario }}:</p>
+              <p style="margin:0;font-size:15px;line-height:24px;color:#4a525c;">{% block introduccion %}{% endblock %}</p>
+            </td>
+          </tr>
+
+          {% block codigo %}{% if otp_code %}
+          <!-- Código: texto real, seleccionable y copiable (no una imagen) -->
+          <tr>
+            <td class="pad" style="padding:26px 40px 4px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+                <tr>
+                  <td class="codigo-caja" align="center" bgcolor="#f5f8ef" style="background-color:#f5f8ef;border:1px solid #d6e6b5;border-top:3px solid #a3d917;border-radius:12px;padding:22px 16px 24px;">
+                    <p style="margin:0 0 10px;font-family:'Segoe UI',Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:bold;letter-spacing:1.6px;text-transform:uppercase;color:#59616b;">{% block etiqueta_codigo %}Tu código de verificación{% endblock %}</p>
+                    <p class="codigo" style="margin:0;font-family:'Courier New',Courier,monospace;font-size:38px;line-height:46px;font-weight:bold;letter-spacing:12px;color:#15181d;mso-line-height-rule:exactly;">{{ otp_code }}</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:14px 0 0;font-family:'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#4a525c;" align="center">
+                Vence en <strong style="color:#15181d;">{{ minutos }} minutos</strong> y solo puede usarse una vez.
+              </p>
+            </td>
+          </tr>
+          {% endif %}{% endblock %}
+
+          <!-- Aviso de seguridad -->
+          <tr>
+            <td class="pad" style="padding:26px 40px 4px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+                <tr>
+                  <td bgcolor="#f4f5f3" style="background-color:#f4f5f3;border-left:3px solid #3a7d0c;border-radius:8px;padding:16px 18px;font-family:'Segoe UI',Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#3d444d;">
+                    {% block aviso %}<strong style="color:#15181d;">No compartas este código.</strong>
+                    El equipo de {{ nombre_empresa }} nunca te lo pedirá por teléfono, chat ni correo.{% endblock %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Si no fue la persona -->
+          <tr>
+            <td class="pad" style="padding:22px 40px 36px;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+              <p style="margin:0;font-size:13px;line-height:21px;color:#59616b;">{% block cierre %}{% endblock %}</p>
+            </td>
+          </tr>
+
+          <!-- Pie corporativo -->
+          <tr>
+            <td class="pie pad" bgcolor="#15181d" style="background-color:#15181d;border-radius:0 0 14px 14px;padding:26px 40px;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+              <p style="margin:0;font-size:15px;line-height:20px;font-weight:bold;color:#ffffff;">{{ nombre_empresa }}</p>
+              <p style="margin:4px 0 0;font-size:13px;line-height:20px;">
+                <a href="https://{{ sitio }}" style="color:#a3d917;text-decoration:none;font-weight:bold;">{{ sitio }}</a>
+              </p>
+              <p style="margin:14px 0 0;font-size:12px;line-height:18px;color:#8a929b;">Este es un correo automático de seguridad; no respondas a este mensaje.</p>
+              <p style="margin:4px 0 0;font-size:12px;line-height:18px;color:#6b737c;">© {{ anio }} {{ nombre_empresa }}. Todos los derechos reservados.</p>
+            </td>
+          </tr>
+        </table>
+        <!--[if mso]></td></tr></table><![endif]-->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
