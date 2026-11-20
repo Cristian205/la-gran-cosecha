@@ -9,9 +9,11 @@ import { alturaPila } from "./acomodo";
 /**
  * El visor 3D del plano de carga. Todo en metros (las medidas llegan en cm).
  *
- * Ejes de la escena: X a lo largo (−X = cabina, +X = puerta), Z a lo ancho,
- * Y arriba. El origen es el centro del piso de carga: el interior del furgón
- * ocupa X ∈ [−L/2, L/2], Z ∈ [−W/2, W/2], Y ∈ [0, H].
+ * Ejes de la escena: X a lo largo (−X = cabina, +X = puerta), Z a lo ancho
+ * (+Z = lateral IZQUIERDO, el del conductor), Y arriba. El origen es el centro
+ * del piso de carga: el interior ocupa X ∈ [−L/2, L/2], Z ∈ [−W/2, W/2].
+ * Cada canastilla se ubica en su PILA del esquema del servidor (centro x, y en
+ * cm y orientación), igual que en el plano 2D y el PDF.
  *
  * El vehículo es un modelo 3D real (public/modelos/*.glb, hecho en Blender:
  * ver modelos3d/) que se AJUSTA a las medidas interiores registradas: la caja
@@ -30,6 +32,7 @@ export interface OpcionesVisor {
 
 interface Props {
   rejilla: Rejilla;
+  bloqueos?: number[];
   furgon: Furgon | null;
   grupos: GrupoCarga[];
   posiciones: Posicion[];
@@ -39,8 +42,10 @@ interface Props {
   opciones: OpcionesVisor;
   editable: boolean;
   onCanastilla: (p: Posicion) => void;
-  onPila: (fila: number, columna: number) => void;
+  onPila: (pila: number) => void;
   onFondo: () => void;
+  /** Color del destino que se está colocando: se marcan todos los huecos libres. */
+  colocando?: string | null;
 }
 
 const M = 1 / 100;
@@ -62,10 +67,15 @@ function medidas(r: Rejilla) {
   const L = r.furgon.largo * M;
   const W = r.furgon.ancho * M;
   const H = r.furgon.alto * M;
-  const sl = (r.girada ? r.canastilla.ancho : r.canastilla.largo) * M;
-  const sw = (r.girada ? r.canastilla.largo : r.canastilla.ancho) * M;
   const sh = r.canastilla.alto * M;
-  return { L, W, H, sl, sw, sh };
+  return { L, W, H, sh };
+}
+
+/** Centro de una pila en la escena, y su huella (largo en X, ancho en Z). */
+function lugar(r: Rejilla, pila: number, L: number, W: number) {
+  const p = r.pilas[pila];
+  const [dx, dz] = p.rot === 0 ? [r.canastilla.largo, r.canastilla.ancho] : [r.canastilla.ancho, r.canastilla.largo];
+  return { x: -L / 2 + p.x * M, z: W / 2 - p.y * M, dx: dx * M, dz: dz * M, rot: p.rot };
 }
 
 // ---------------------------------------------------------------------------
@@ -198,8 +208,8 @@ function cursor(valor: string) {
   };
 }
 
-function Carga(props: Props & { L: number; W: number; sl: number; sw: number; sh: number }) {
-  const { rejilla, grupos, posiciones, seleccion, resaltado, editable, L, W, sl, sw, sh } = props;
+function Carga(props: Props & { L: number; W: number; sh: number }) {
+  const { rejilla, grupos, posiciones, seleccion, resaltado, editable, L, W, sh } = props;
   const geo = useGeometriaCanastilla();
   const materiales = useMemo(() => {
     const m = new Map<string, THREE.MeshStandardMaterial>();
@@ -218,30 +228,27 @@ function Carga(props: Props & { L: number; W: number; sl: number; sw: number; sh
     atenuados.forEach((m) => m.dispose());
   }, [materiales, atenuados]);
 
-  // Medida REAL de la canastilla (no del hueco), y su giro si va atravesada.
+  // Medida REAL de la canastilla, girada según su pila.
   const c = rejilla.canastilla;
   const escala: [number, number, number] = [c.largo * M * 0.985, c.alto * M * 0.985, c.ancho * M * 0.985];
-  const giro: [number, number, number] = [0, rejilla.girada ? Math.PI / 2 : 0, 0];
 
-  const centro = (fila: number, columna: number, nivel: number): [number, number, number] => [
-    -L / 2 + (fila + 0.5) * sl,
-    nivel * sh + sh / 2,
-    -W / 2 + (columna + 0.5) * sw,
-  ];
-  const esSel = (p: Posicion) =>
-    !!seleccion && seleccion.fila === p.fila && seleccion.columna === p.columna && seleccion.nivel === p.nivel;
+  const centro = (pila: number, nivel: number): [number, number, number] => {
+    const l = lugar(rejilla, pila, L, W);
+    return [l.x, nivel * sh + sh / 2, l.z];
+  };
+  const giro = (pila: number): [number, number, number] => [0, rejilla.pilas[pila].rot === 90 ? Math.PI / 2 : 0, 0];
+  const esSel = (p: Posicion) => !!seleccion && seleccion.pila === p.pila && seleccion.nivel === p.nivel;
 
   const destinos = useMemo(() => {
-    if (!seleccion || !editable) return [];
-    const lista: Array<{ fila: number; columna: number; nivel: number }> = [];
-    for (let fila = 0; fila < rejilla.filas; fila++)
-      for (let columna = 0; columna < rejilla.columnas; columna++) {
-        if (fila === seleccion.fila && columna === seleccion.columna) continue;
-        const nivel = alturaPila(posiciones, fila, columna);
-        if (nivel < rejilla.niveles) lista.push({ fila, columna, nivel });
-      }
+    if ((!seleccion && !props.colocando) || !editable) return [];
+    const lista: Array<{ pila: number; nivel: number }> = [];
+    rejilla.pilas.forEach((_, pila) => {
+      if (!props.colocando && seleccion && pila === seleccion.pila) return;
+      const nivel = alturaPila(posiciones, pila);
+      if (nivel < rejilla.niveles) lista.push({ pila, nivel });
+    });
     return lista;
-  }, [seleccion, editable, posiciones, rejilla]);
+  }, [seleccion, editable, posiciones, rejilla, props.colocando]);
 
   return (
     <group>
@@ -249,14 +256,14 @@ function Carga(props: Props & { L: number; W: number; sl: number; sw: number; sh
         const elegida = esSel(p);
         const tenue = (resaltado && p.grupo !== resaltado) || (seleccion && !elegida && seleccion.grupo !== p.grupo);
         const material = elegida ? elegidaMat : tenue ? atenuados.get(p.grupo) : materiales.get(p.grupo);
-        const pos = centro(p.fila, p.columna, p.nivel);
+        const pos = centro(p.pila, p.nivel);
         return geo ? (
           <mesh
-            key={`${p.fila}:${p.columna}:${p.nivel}`}
+            key={`${p.pila}:${p.nivel}`}
             geometry={geo}
             material={material}
             position={pos}
-            rotation={giro}
+            rotation={giro(p.pila)}
             scale={escala}
             onClick={(e) => {
               if (clicSinArrastre(e)) props.onCanastilla(p);
@@ -265,25 +272,26 @@ function Carga(props: Props & { L: number; W: number; sl: number; sw: number; sh
             onPointerOut={editable ? cursor("") : undefined}
           />
         ) : (
-          <mesh key={`${p.fila}:${p.columna}:${p.nivel}`} position={pos} material={material}>
-            <boxGeometry args={[sl * HUECO, sh * HUECO, sw * HUECO]} />
+          <mesh key={`${p.pila}:${p.nivel}`} position={pos} rotation={giro(p.pila)} material={material}>
+            <boxGeometry args={[c.largo * M * HUECO, sh * HUECO, c.ancho * M * HUECO]} />
           </mesh>
         );
       })}
 
       {destinos.map((d) => (
         <mesh
-          key={`d${d.fila}:${d.columna}`}
-          position={centro(d.fila, d.columna, d.nivel)}
+          key={`d${d.pila}`}
+          position={centro(d.pila, d.nivel)}
+          rotation={giro(d.pila)}
           onClick={(e) => {
-            if (clicSinArrastre(e)) props.onPila(d.fila, d.columna);
+            if (clicSinArrastre(e)) props.onPila(d.pila);
           }}
           onPointerOver={cursor("copy")}
           onPointerOut={cursor("")}
         >
-          <boxGeometry args={[sl * HUECO, sh * HUECO, sw * HUECO]} />
-          <meshBasicMaterial color="#a3d917" transparent opacity={0.25} depthWrite={false} />
-          <Edges color="#3a7d0c" />
+          <boxGeometry args={[c.largo * M * HUECO, sh * HUECO, c.ancho * M * HUECO]} />
+          <meshBasicMaterial color={props.colocando ?? "#a3d917"} transparent opacity={props.colocando ? 0.35 : 0.25} depthWrite={false} />
+          <Edges color={props.colocando ?? "#3a7d0c"} />
         </mesh>
       ))}
     </group>
@@ -293,7 +301,8 @@ function Carga(props: Props & { L: number; W: number; sl: number; sw: number; sh
 // ---------------------------------------------------------------------------
 export default function Furgon3D(props: Props) {
   const { rejilla, vista, opciones, furgon } = props;
-  const { L, W, H, sl, sw, sh } = medidas(rejilla);
+  const { L, W, H, sh } = medidas(rejilla);
+  const bloqueadas = new Set(props.bloqueos ?? []);
   const conModelo = furgon?.modelo_3d === "hino500";
   // Altura del piso de carga sobre el suelo (para dibujar el suelo).
   const pisoSobreSuelo = conModelo ? 1.1 : 0.9;
@@ -323,20 +332,26 @@ export default function Furgon3D(props: Props) {
           <meshStandardMaterial color="#d9ddd5" />
         </mesh>
 
-        {/* Rejilla del piso de carga: dónde cae cada hueco */}
-        <group position={[0, 0.003, 0]}>
-          {Array.from({ length: rejilla.filas + 1 }, (_, i) => (
-            <mesh key={`f${i}`} position={[-L / 2 + i * sl, 0, -W / 2 + (rejilla.columnas * sw) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.01, rejilla.columnas * sw]} />
-              <meshBasicMaterial color="#8c7a63" />
+        {/* Huella de cada posición en el piso (y las bloqueadas, marcadas) */}
+        <group position={[0, 0.004, 0]}>
+          {rejilla.pilas.map((_, i) => {
+            const l = lugar(rejilla, i, L, W);
+            return (
+              <mesh key={i} position={[l.x, 0, l.z]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[l.dx * 0.97, l.dz * 0.97]} />
+                <meshBasicMaterial color={bloqueadas.has(i) ? "#f59e0b" : "#8c7a63"} transparent opacity={bloqueadas.has(i) ? 0.55 : 0.28} />
+              </mesh>
+            );
+          })}
+          {rejilla.esquema === "frente_columnas" && (rejilla.pasillo_cm ?? 0) > 0 && (
+            <mesh
+              position={[-L / 2 + ((rejilla.frente_fondo_cm ?? 0) * M + L) / 2, 0.001, 0]}
+              rotation={[-Math.PI / 2, 0, 0]}
+            >
+              <planeGeometry args={[L - (rejilla.frente_fondo_cm ?? 0) * M, (rejilla.pasillo_cm ?? 0) * M]} />
+              <meshBasicMaterial color="#a3d917" transparent opacity={0.22} />
             </mesh>
-          ))}
-          {Array.from({ length: rejilla.columnas + 1 }, (_, j) => (
-            <mesh key={`c${j}`} position={[-L / 2 + (rejilla.filas * sl) / 2, 0, -W / 2 + j * sw]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[rejilla.filas * sl, 0.01]} />
-              <meshBasicMaterial color="#8c7a63" />
-            </mesh>
-          ))}
+          )}
         </group>
 
         <Suspense fallback={null}>
@@ -345,7 +360,7 @@ export default function Furgon3D(props: Props) {
           ) : (
             <CamionGenerico L={L} W={W} H={H} opciones={opciones} />
           )}
-          <Carga {...props} L={L} W={W} sl={sl} sw={sw} sh={sh} />
+          <Carga {...props} L={L} W={W} sh={sh} />
         </Suspense>
 
         <Html position={[L / 2 + 0.35, 0.2, 0]} center className="plano-etiqueta plano-etiqueta--puerta">

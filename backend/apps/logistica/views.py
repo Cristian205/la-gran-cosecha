@@ -19,7 +19,13 @@ from apps.business.aplicar import modulos_activos
 from apps.common.permissions import requiere_permiso
 from apps.tenancy.viewsets import ExigeNegocioMixin, TenantScopedMixin
 
+from django.http import HttpResponse
+
+from apps.content.models import StoreSettings
 from apps.orders.models import Pedido
+
+from .plano_pdf import html_plano
+from .planificacion import ESTADOS_EXCLUIDOS, adaptar_borradores, datos_operativos, filtro_fecha_entrega
 
 from .models import Furgon, PedidoDespacho, PlanoCarga, TipoCanastilla
 from .serializers import (
@@ -69,10 +75,36 @@ class FurgonViewSet(ExigeModuloPlanoCarga, TenantScopedMixin, viewsets.ModelView
             return [requiere_permiso(ADMINISTRAR)()]
         return super().get_permissions()
 
+    def perform_update(self, serializer):
+        # Los despachos en borrador siguen al vehículo: sus medidas nuevas se
+        # ven de inmediato en el 3D, el 2D y el PDF. Los confirmados no cambian.
+        furgon = serializer.save()
+        adaptar_borradores(furgon=furgon)
+
     def perform_destroy(self, instance):
         if instance.planos.exists():
             raise ValidationError("Este furgón tiene planos guardados: desactívalo en vez de eliminarlo.")
+        if instance.rutas.exists() or instance.ajustes_ruta.exists():
+            raise ValidationError("Este furgón está en rutas programadas: quítalo de ellas o desactívalo.")
         instance.delete()
+
+    @action(detail=False, methods=["post"], url_path="vista-previa")
+    def vista_previa(self, request):
+        """
+        El esquema de carga de un vehículo SIN guardarlo, para la vista previa
+        del formulario: mismas reglas que al armar un despacho.
+        Cuerpo: medidas y `esquema_carga` del vehículo + `tipo_canastilla`.
+        """
+        datos = FurgonSerializer(data={"nombre": "vista previa", **request.data})
+        datos.is_valid(raise_exception=True)
+        try:
+            tipo = TipoCanastilla.objects.get(
+                tenant=self.obtener_tenant(), pk=int(request.data.get("tipo_canastilla", ""))
+            )
+        except (TypeError, ValueError, TipoCanastilla.DoesNotExist):
+            raise ValidationError("Elige una canastilla válida.")
+        furgon = Furgon(**{k: v for k, v in datos.validated_data.items()})
+        return Response(calcular_rejilla(furgon, tipo))
 
 
 class TipoCanastillaViewSet(ExigeModuloPlanoCarga, TenantScopedMixin, viewsets.ModelViewSet):
@@ -87,6 +119,10 @@ class TipoCanastillaViewSet(ExigeModuloPlanoCarga, TenantScopedMixin, viewsets.M
         if self.action in ESCRITURA:
             return [requiere_permiso(ADMINISTRAR)()]
         return super().get_permissions()
+
+    def perform_update(self, serializer):
+        tipo = serializer.save()
+        adaptar_borradores(tipo_canastilla=tipo)
 
     def perform_destroy(self, instance):
         if instance.planos.exists():
@@ -133,7 +169,10 @@ class PlanoCargaViewSet(ExigeModuloPlanoCarga, TenantScopedMixin, viewsets.Model
             plano.estado = PlanoCarga.CONFIRMADO
             plano.confirmado_por = request.user
             plano.confirmado_en = timezone.now()
-            plano.save(update_fields=["estado", "confirmado_por", "confirmado_en", "actualizado"])
+            # Se congelan los datos operativos: el histórico no cambia aunque
+            # después se edite la ruta habitual, un cliente o un pedido.
+            plano.datos_operativos = datos_operativos(plano)
+            plano.save(update_fields=["estado", "confirmado_por", "confirmado_en", "datos_operativos", "actualizado"])
         return Response(PlanoCargaSerializer(plano, context=self.get_serializer_context()).data)
 
     @action(detail=True, methods=["post"])
@@ -165,10 +204,33 @@ class PlanoCargaViewSet(ExigeModuloPlanoCarga, TenantScopedMixin, viewsets.Model
             medidas=origen.medidas,
             grupos=origen.grupos,
             posiciones=origen.posiciones,
+            bloqueos=origen.bloqueos,
             notas=origen.notas,
             creado_por=request.user,
         )
         return Response(PlanoCargaSerializer(copia, context=self.get_serializer_context()).data, status=201)
+
+    @action(detail=True, methods=["get"])
+    def pdf(self, request, pk=None):
+        """
+        El plano técnico para imprimir (carta horizontal, blanco y negro).
+        `?formato=html` devuelve el mismo documento en HTML.
+        """
+        plano = self.get_object()
+        config = StoreSettings.get_para(self.obtener_tenant())
+        # Confirmado: la copia congelada. Borrador: los datos de este momento.
+        congelados = plano.datos_operativos if plano.estado == PlanoCarga.CONFIRMADO else None
+        datos = congelados if congelados and "paradas" in congelados else datos_operativos(plano)
+        html = html_plano(plano, (config.nombre_empresa if config else "") or "", datos)
+        if request.query_params.get("formato") == "html":
+            return HttpResponse(html, content_type="text/html; charset=utf-8")
+        from weasyprint import HTML  # noqa: PLC0415 — ver orders/pdf.py: se importa al usarlo
+
+        respuesta = HttpResponse(content_type="application/pdf")
+        nombre = f"guia-carga-{plano.fecha:%Y%m%d}-{plano.pk}.pdf"
+        respuesta["Content-Disposition"] = f'inline; filename="{nombre}"'
+        HTML(string=html).write_pdf(respuesta)
+        return respuesta
 
     @action(detail=False, methods=["get"])
     def planificacion(self, request):
@@ -181,8 +243,8 @@ class PlanoCargaViewSet(ExigeModuloPlanoCarga, TenantScopedMixin, viewsets.Model
             raise ValidationError("Indica la fecha (AAAA-MM-DD).")
         tenant = self.obtener_tenant()
         pedidos = (
-            Pedido.objects.filter(tenant=tenant, fecha_programada__date=fecha)
-            .exclude(estado="ENTREGADO")
+            Pedido.objects.filter(tenant=tenant).filter(filtro_fecha_entrega(fecha))
+            .exclude(estado__in=ESTADOS_EXCLUIDOS)
             .select_related("cliente")
             .order_by("cliente__nombre_cliente", "id")
         )

@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from apps.orders.models import Pedido
 
+from .esquemas import calcular_esquema, validar_config
 from .models import Furgon, PedidoDespacho, PlanoCarga, TipoCanastilla
 
 COLOR_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -13,47 +14,22 @@ MAX_GRUPOS = 200
 
 
 def calcular_rejilla(furgon, tipo) -> dict:
-    """
-    Cuántas canastillas caben a lo largo, a lo ancho y hacia arriba.
-
-    Prueba las dos orientaciones de la canastilla sobre el piso y se queda con
-    la que mete más por nivel (en empate, sin girar). Es la única fuente de la
-    rejilla: el panel la pide al servidor en vez de recalcularla.
-    """
-    normal = (furgon.largo_cm // tipo.largo_cm, furgon.ancho_cm // tipo.ancho_cm)
-    girada = (furgon.largo_cm // tipo.ancho_cm, furgon.ancho_cm // tipo.largo_cm)
-    usar_girada = girada[0] * girada[1] > normal[0] * normal[1]
-    filas, columnas = girada if usar_girada else normal
-
-    niveles = furgon.alto_cm // tipo.alto_cm
-    if tipo.max_apiladas:
-        niveles = min(niveles, tipo.max_apiladas)
-
-    return {
-        "furgon": {"largo": furgon.largo_cm, "ancho": furgon.ancho_cm, "alto": furgon.alto_cm},
-        "canastilla": {"largo": tipo.largo_cm, "ancho": tipo.ancho_cm, "alto": tipo.alto_cm},
-        "girada": usar_girada,
-        "filas": filas,
-        "columnas": columnas,
-        "niveles": niveles,
-        "capacidad": filas * columnas * niveles,
-    }
+    """El esquema de carga del vehículo (nombre histórico: antes era solo rejilla)."""
+    return calcular_esquema(furgon, tipo)
 
 
-def coordenadas(medidas: dict, fila: int, columna: int, nivel: int) -> dict:
+def coordenadas(medidas: dict, pila: int, nivel: int) -> dict:
     """
     Centro de la canastilla en cm, en el sistema del furgón: x a lo largo desde
     la pared frontal (cabina), y a lo ancho desde la pared izquierda, z desde el
     piso. `rotacion` es el giro sobre el eje vertical (0 o 90 grados).
     """
-    c = medidas["canastilla"]
-    largo_hueco = c["ancho"] if medidas["girada"] else c["largo"]
-    ancho_hueco = c["largo"] if medidas["girada"] else c["ancho"]
+    hueco = medidas["pilas"][pila]
     return {
-        "x_cm": round((fila + 0.5) * largo_hueco, 1),
-        "y_cm": round((columna + 0.5) * ancho_hueco, 1),
-        "z_cm": round((nivel + 0.5) * c["alto"], 1),
-        "rotacion": 90 if medidas["girada"] else 0,
+        "x_cm": hueco["x"],
+        "y_cm": hueco["y"],
+        "z_cm": round((nivel + 0.5) * medidas["canastilla"]["alto"], 1),
+        "rotacion": hueco["rot"],
     }
 
 
@@ -91,21 +67,27 @@ def revisar(plano_datos: dict, furgon: Furgon, tipo: TipoCanastilla) -> dict:
     else:
         falta = "la carga útil del vehículo" if not furgon.carga_util_kg else "el peso de la canastilla llena"
         advertencias.append(f"No se puede validar el peso: falta {falta}.")
+    errores += medidas.get("errores") or []
+    advertencias += medidas.get("avisos") or []
     if not furgon.medidas_verificadas:
         advertencias.append("Las medidas interiores del furgón no están marcadas como verificadas.")
 
-    # Orden de entrega: una canastilla que se entrega DESPUÉS no debe quedar
-    # entre la puerta y una que se entrega ANTES (más cerca de la puerta, o
-    # encima de ella en la misma pila).
+    # Orden de entrega: una canastilla que se entrega DESPUÉS no debe estorbar
+    # a una que se entrega ANTES. Siempre estorba si está ENCIMA en la misma
+    # pila. Si a la pila se llega desde la puerta (rejilla), también estorba
+    # la que está más cerca de la puerta; si se llega por el pasillo central,
+    # no: cada pila lateral se alcanza desde el pasillo.
     orden_de = {g["id"]: g["orden"] for g in grupos}
     nombre_de = {g["id"]: g["nombre"] for g in grupos}
+    pilas = medidas.get("pilas") or []
     estorbos = {}
     for b in posiciones:
         for a in posiciones:
             if orden_de.get(b["grupo"], 0) <= orden_de.get(a["grupo"], 0):
                 continue
-            delante = b["fila"] > a["fila"]
-            encima = b["fila"] == a["fila"] and b["columna"] == a["columna"] and b["nivel"] > a["nivel"]
+            pa, pb = pilas[a["pila"]], pilas[b["pila"]]
+            encima = a["pila"] == b["pila"] and b["nivel"] > a["nivel"]
+            delante = pa["acceso"] == "puerta" and pb["x"] > pa["x"]
             if delante or encima:
                 clave = (b["grupo"], a["grupo"])
                 estorbos[clave] = estorbos.get(clave, 0) + 1
@@ -143,8 +125,14 @@ class FurgonSerializer(serializers.ModelSerializer):
             "id", "nombre", "placa", "referencia", "modelo_3d",
             "largo_cm", "ancho_cm", "alto_cm", "volumen_m3",
             "carga_util_kg", "distancia_entre_ejes_mm", "altura_piso_mm",
-            "medidas_verificadas", "activo",
+            "medidas_verificadas", "esquema_carga", "activo",
         ]
+
+    def validate_esquema_carga(self, valor):
+        try:
+            return validar_config(valor)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
 
     def get_volumen_m3(self, obj):
         return round(obj.largo_cm * obj.ancho_cm * obj.alto_cm / 1_000_000, 2)
@@ -170,7 +158,7 @@ class PlanoCargaListaSerializer(serializers.ModelSerializer):
         model = PlanoCarga
         fields = [
             "id", "nombre", "fecha", "estado", "furgon", "furgon_nombre", "modelo_3d",
-            "total_canastillas", "total_pedidos", "total_destinos", "capacidad", "actualizado",
+            "total_canastillas", "total_pedidos", "total_destinos", "capacidad", "ruta_clave", "actualizado",
         ]
 
     def get_total_canastillas(self, obj):
@@ -191,7 +179,8 @@ class PedidoAsignadoSerializer(serializers.Serializer):
 
     pedido = serializers.IntegerField()
     grupo = serializers.CharField(max_length=40)
-    canastillas = serializers.IntegerField(min_value=1, max_value=500)
+    #: 0 = el pedido va consolidado en las canastillas de otro pedido del mismo destino.
+    canastillas = serializers.IntegerField(min_value=0, max_value=500)
 
 
 def pedido_resumen(pedido: Pedido) -> dict:
@@ -213,22 +202,34 @@ class PlanoCargaSerializer(serializers.ModelSerializer):
     confirmado_por_nombre = serializers.CharField(source="confirmado_por.nombre_usuario", read_only=True, default="")
     pedidos = PedidoAsignadoSerializer(many=True, required=False, write_only=True)
     pedidos_detalle = serializers.SerializerMethodField()
+    entregas = serializers.SerializerMethodField()
     revision = serializers.SerializerMethodField()
 
     class Meta:
         model = PlanoCarga
         fields = [
             "id", "nombre", "fecha", "estado", "furgon", "furgon_nombre", "tipo_canastilla",
-            "medidas", "grupos", "posiciones", "notas",
-            "pedidos", "pedidos_detalle", "revision",
+            "medidas", "grupos", "posiciones", "bloqueos", "notas",
+            "pedidos", "pedidos_detalle", "entregas", "revision", "ruta_clave",
             "creado_por_nombre", "confirmado_por_nombre", "confirmado_en", "creado", "actualizado",
         ]
-        read_only_fields = ["medidas", "estado", "confirmado_en", "creado", "actualizado"]
+        read_only_fields = ["medidas", "estado", "ruta_clave", "confirmado_en", "creado", "actualizado"]
 
     # ---------- lectura ----------
     def get_pedidos_detalle(self, obj):
         filas = obj.pedidos.select_related("pedido__cliente").all()
         return [{**pedido_resumen(f.pedido), "grupo": f.grupo, "canastillas": f.canastillas} for f in filas]
+
+    def get_entregas(self, obj):
+        """
+        Por destino, sus pedidos y productos consolidados: lo que el editor 3D
+        muestra para acomodar cada pedido. Confirmado = la copia congelada.
+        """
+        from .planificacion import datos_operativos  # noqa: PLC0415 — import circular
+
+        congelados = obj.datos_operativos if obj.estado == PlanoCarga.CONFIRMADO else None
+        datos = congelados if congelados and "paradas" in congelados else datos_operativos(obj)
+        return datos["paradas"]
 
     def get_revision(self, obj):
         return revisar(
@@ -273,9 +274,19 @@ class PlanoCargaSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(f"«{nombre}»: color inválido.")
             ids.add(gid)
             limpio = {"id": gid, "nombre": nombre, "cantidad": cantidad, "orden": orden, "color": color}
+            numero = g.get("numero")
+            if numero is not None:
+                if not isinstance(numero, int) or isinstance(numero, bool) or not 1 <= numero <= 999:
+                    raise serializers.ValidationError(f"«{nombre}»: el número debe estar entre 1 y 999.")
+                limpio["numero"] = numero
             direccion = str(g.get("direccion", "") or "").strip()[:300]
             if direccion:
                 limpio["direccion"] = direccion
+            cliente = g.get("cliente")
+            if cliente is not None:
+                if not isinstance(cliente, int) or isinstance(cliente, bool) or cliente < 1:
+                    raise serializers.ValidationError(f"«{nombre}»: cliente inválido.")
+                limpio["cliente"] = cliente
             limpios.append(limpio)
         return limpios
 
@@ -294,9 +305,17 @@ class PlanoCargaSerializer(serializers.ModelSerializer):
             medidas = instancia.medidas
         else:
             medidas = calcular_rejilla(furgon, tipo)
+        if medidas.get("errores"):
+            raise serializers.ValidationError({"esquema": medidas["errores"]})
         if medidas["capacidad"] == 0:
             raise serializers.ValidationError("La canastilla no cabe en este furgón: revisa las medidas.")
         attrs["medidas"] = medidas
+        bloqueos = attrs.get("bloqueos", getattr(instancia, "bloqueos", []) or [])
+        if not isinstance(bloqueos, list) or any(
+            not isinstance(b, int) or isinstance(b, bool) or not 0 <= b < len(medidas["pilas"]) for b in bloqueos
+        ):
+            raise serializers.ValidationError({"bloqueos": "Hay pilas bloqueadas que no existen."})
+        attrs["bloqueos"] = sorted(set(bloqueos))
 
         grupos = attrs.get("grupos", getattr(instancia, "grupos", []))
         if "pedidos" in attrs:
@@ -305,8 +324,19 @@ class PlanoCargaSerializer(serializers.ModelSerializer):
             suma = {}
             for p in attrs["pedidos"]:
                 suma[p["grupo"]] = suma.get(p["grupo"], 0) + p["canastillas"]
+            vacio = next((g for g in grupos if suma.get(g["id"], 1) < 1), None)
+            if vacio:
+                raise serializers.ValidationError({"pedidos": f"«{vacio['nombre']}» necesita al menos una canastilla."})
             grupos = [{**g, "cantidad": suma.get(g["id"], g["cantidad"])} for g in grupos]
             attrs["grupos"] = grupos
+        elif instancia and "grupos" in attrs:
+            # Un destino con pedidos no se puede quitar sin reasignar sus pedidos.
+            ids = {g["id"] for g in grupos}
+            huerfano = instancia.pedidos.exclude(grupo__in=ids).first()
+            if huerfano:
+                raise serializers.ValidationError(
+                    {"grupos": f"El pedido #{huerfano.pedido_id} está en un destino que quitaste: reasígnalo desde la planificación."}
+                )
         posiciones = attrs.get("posiciones", getattr(instancia, "posiciones", []))
         attrs["posiciones"] = self._validar_posiciones(posiciones, grupos, medidas)
         return attrs
@@ -343,24 +373,21 @@ class PlanoCargaSerializer(serializers.ModelSerializer):
             if not isinstance(p, dict):
                 raise serializers.ValidationError({"posiciones": "Cada posición debe ser un objeto."})
             grupo = str(p.get("grupo", ""))
-            fila, columna, nivel = p.get("fila"), p.get("columna"), p.get("nivel")
+            pila, nivel = p.get("pila"), p.get("nivel")
             if grupo not in cantidades:
                 raise serializers.ValidationError({"posiciones": "Hay una canastilla de un grupo que no existe."})
-            for valor, tope in ((fila, medidas["filas"]), (columna, medidas["columnas"]), (nivel, medidas["niveles"])):
+            for valor, tope in ((pila, len(medidas["pilas"])), (nivel, medidas["niveles"])):
                 if not isinstance(valor, int) or isinstance(valor, bool) or not 0 <= valor < tope:
                     raise serializers.ValidationError({"posiciones": "Hay una canastilla fuera del furgón."})
-            hueco = (fila, columna, nivel)
+            hueco = (pila, nivel)
             if hueco in ocupado:
                 raise serializers.ValidationError({"posiciones": "Dos canastillas ocupan el mismo lugar."})
             ocupado.add(hueco)
             por_grupo[grupo] = por_grupo.get(grupo, 0) + 1
-            limpias.append(
-                {"grupo": grupo, "fila": fila, "columna": columna, "nivel": nivel,
-                 **coordenadas(medidas, fila, columna, nivel)}
-            )
+            limpias.append({"grupo": grupo, "pila": pila, "nivel": nivel, **coordenadas(medidas, pila, nivel)})
 
-        for fila, columna, nivel in ocupado:
-            if nivel > 0 and (fila, columna, nivel - 1) not in ocupado:
+        for pila, nivel in ocupado:
+            if nivel > 0 and (pila, nivel - 1) not in ocupado:
                 raise serializers.ValidationError({"posiciones": "Hay una canastilla flotando sin otra debajo."})
         for grupo, n in por_grupo.items():
             if n > cantidades[grupo]:

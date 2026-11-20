@@ -1,0 +1,112 @@
+/* =====================================================================
+   Plano de carga (v3): la pantalla sigue el esqueleto de las vistas de
+   gestión (Clientes, Pedidos): barra superior, indicadores y módulos.
+   Aquí solo va lo propio del plano; lo común sale de gestion.css.
+   ===================================================================== */
+
+/* ---------- Barra superior con «volver» ---------- */
+.plano-topbar-titulo { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+.plano-volver { flex: none; width: 38px; height: 38px; }
+.plano-volver:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 2px; }
+.plano-titulo { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.plano-titulo > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plano-titulo .pastilla { flex: none; font-size: 0.72rem; }
+.gestion-topbar .plano-sucio { padding: 0; font-weight: 700; color: var(--ambar-texto); }
+.gestion-topbar .menu-fila-boton { width: 38px; height: 38px; }
+
+/* ---------- Lista de despachos ---------- */
+.plano-celda-despacho { display: inline-flex; align-items: center; gap: 0.65rem; min-width: 0; max-width: 100%; }
+.plano-celda-icono {
+  flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px;
+  background: var(--verde-claro); color: var(--verde-texto);
+}
+.celda-fecha.plano-manana { color: var(--azul-texto); font-weight: 700; }
+.plano-ocupacion { display: inline-flex; align-items: center; gap: 0.55rem; min-width: 120px; }
+.plano-ocupacion-barra { flex: 1; height: 6px; min-width: 64px; border-radius: 99px; background: var(--gris-claro); overflow: hidden; }
+.plano-ocupacion-barra i { display: block; height: 100%; border-radius: inherit; background: var(--verde-500); }
+.plano-ocupacion.alta .plano-ocupacion-barra i { background: var(--amber); }
+.plano-ocupacion.excede .plano-ocupacion-barra i { background: var(--rojo); }
+.plano-ocupacion-num { min-width: 2.6rem; text-align: right; font-size: 0.8rem; font-weight: 700; color: var(--dark); font-variant-numeric: tabular-nums; }
+
+/* ---------- Editor: datos del despacho ---------- */
+.plano-datos { padding: 0.95rem 1.1rem; }
+.plano-datos-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1.3fr); gap: 0.85rem; }
+.plano-campo { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.plano-campo > span { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gris); }
+.plano-campo input,
+.plano-campo select,
+.plano-campo textarea {
+  width: 100%; min-width: 0; min-height: 40px; padding: 0.5rem 0.7rem;
+  border: 1px solid var(--borde); border-radius: 10px; background: var(--superficie);
+  color: var(--dark); font: inherit; font-size: 0.88rem;
+  transition: border-color var(--p-dur) ease, box-shadow var(--p-dur) ease;
+}
+.plano-campo textarea { resize: vertical; min-height: 62px; }
+.plano-campo input:focus,
+.plano-campo select:focus,
+.plano-campo textarea:focus {
+  outline: none; border-color: var(--verde-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--verde-500) 16%, transparent);
+}
+.plano-campo :disabled { background: var(--gris-claro); color: var(--gris); }
+.plano-campo--nombre input { font-weight: 700; }
+
+/* ---------- Editor: visor protagonista + columna lateral ---------- */
+.plano-trabajo { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 1.25rem; align-items: start; }
+.plano-trabajo > .panel { margin: 0; }
+.plano-lateral { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.plano-lateral > .panel { margin: 0; }
+
+.panel.plano-visor { display: block; }
+.plano-visor .gestion-modulo-cab { padding-bottom: 0.85rem; border-bottom: 1px solid var(--p-linea-suave); }
+.plano-visor-opciones { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.plano-chip {
+  min-height: 32px; padding: 0.3rem 0.75rem; border: 1px solid var(--p-linea); border-radius: 99px;
+  background: var(--superficie); color: var(--gris); font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  transition: background var(--p-dur) ease, color var(--p-dur) ease, border-color var(--p-dur) ease;
+}
+.plano-chip:hover { color: var(--dark); }
+.plano-chip.activo { border-color: color-mix(in srgb, var(--verde-500) 55%, transparent); background: var(--verde-claro); color: var(--verde-texto); }
+.plano-chip:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 1px; }
+.plano-visor-cuerpo { display: flex; flex-direction: column; gap: 0.75rem; padding: 0.9rem 1.1rem 1rem; }
+.plano-visor-ayuda { margin: 0; font-size: 0.76rem; color: var(--gris); }
+.plano-aviso-barra {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding: 0.55rem 0.8rem;
+  border-radius: 10px; background: var(--ambar-claro); color: var(--ambar-texto); font-size: 0.84rem;
+}
+.plano-aviso-barra span { flex: 1 1 200px; }
+.plano-btn-peligro { color: var(--rojo-texto); }
+
+/* Módulos de la columna lateral */
+.plano-modulo-cab {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;
+  padding: 0.95rem 1.1rem 0.8rem; border-bottom: 1px solid var(--p-linea-suave);
+}
+.plano-modulo-cab h2 { display: flex; align-items: center; gap: 0.4rem; margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--dark); }
+.plano-modulo-cab p { margin: 0.15rem 0 0; font-size: 0.78rem; color: var(--gris); }
+.panel.plano-destinos { max-height: none; overflow: visible; }
+.plano-destinos .plano-destinos-lista { max-height: 52vh; overflow-y: auto; padding: 0.8rem 1.1rem 1rem; }
+.plano-destinos .gestion-vacio { padding: 1.6rem 1rem; }
+.plano-destinos-lista li { border-left: 4px solid var(--destino, var(--borde)); }
+.plano-revision.con-errores .plano-modulo-cab h2 { color: var(--rojo-texto); }
+.plano-revision:not(.con-errores) .plano-modulo-cab h2 { color: var(--verde-texto); }
+.plano-revision-cuerpo { display: flex; flex-direction: column; gap: 0.85rem; padding: 0.85rem 1.1rem 1rem; }
+
+@media (max-width: 1280px) {
+  .plano-trabajo { grid-template-columns: minmax(0, 1fr); }
+  .plano-lateral { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+@media (max-width: 900px) {
+  .plano-datos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .plano-lateral { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .plano-datos-grid { grid-template-columns: minmax(0, 1fr); }
+  .plano-topbar-titulo { width: 100%; }
+  .gestion-topbar-acciones { flex-wrap: wrap; }
+  .plano-visor-cuerpo { padding: 0.75rem; }
+}
+
+/* La fila abre el despacho (el estilo de Clientes no se carga en esta ruta). */
+.plano .fila-clicable { cursor: pointer; }
+.plano .fila-clicable:hover td { background: color-mix(in srgb, var(--verde) 5%, transparent); }
