@@ -31,12 +31,31 @@ export function TarjetaKpi({
   etiqueta: string;
   /** `null` mientras carga. */
   valor: string | null;
-  activa: boolean;
+  activa?: boolean;
   descripcion: string;
   /** Dato secundario REAL bajo la cifra; se omite si no aporta. */
   pie?: ReactNode;
-  onClick: () => void;
+  /** Sin `onClick` la tarjeta solo informa: no es botón ni filtra nada. */
+  onClick?: () => void;
 }) {
+  if (!onClick) {
+    return (
+      <div className={`kpi-gestion estatica ${tono}`} title={descripcion}>
+        <span className="kpi-gestion-icono" aria-hidden="true">
+          {icono}
+        </span>
+        <span className="kpi-gestion-texto">
+          <span className="kpi-gestion-etiqueta">{etiqueta}</span>
+          {valor === null ? (
+            <span className="kpi-cargando" />
+          ) : (
+            <span className={`kpi-gestion-valor ${valor.length > 10 ? "larga" : ""}`}>{valor}</span>
+          )}
+          {pie && <span className="kpi-gestion-pie">{pie}</span>}
+        </span>
+      </div>
+    );
+  }
   return (
     <button
       type="button"

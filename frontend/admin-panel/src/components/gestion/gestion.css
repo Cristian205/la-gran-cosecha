@@ -171,6 +171,8 @@
   transform: translateY(-1px);
 }
 .kpi-gestion:hover .kpi-gestion-flecha { opacity: 0.8; transform: translateX(0); }
+/* Indicador que solo informa (no filtra): sin reacción al pasar el cursor. */
+.kpi-gestion.estatica:hover { border-color: var(--p-linea); transform: none; }
 .kpi-gestion:focus-visible {
   outline: 2px solid var(--verde-500);
   outline-offset: 2px;

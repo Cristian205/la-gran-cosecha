@@ -23,6 +23,8 @@ Si mañana se edita el furgón, un plano de la semana pasada tiene que seguir
 mostrándose igual: sus posiciones solo tienen sentido con la rejilla con la que
 se armaron. `medidas` es esa foto.
 """
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -68,6 +70,10 @@ class Furgon(ModeloConTenant):
         null=True, blank=True, validators=[MinValueValidator(300), MaxValueValidator(2000)]
     )
     medidas_verificadas = models.BooleanField(default=False)
+    #: Cómo se carga este vehículo (ver `serializers.calcular_esquema`). Vacío
+    #: = rejilla uniforme. Ejemplo de La Gran Cosecha:
+    #: {"tipo": "frente_columnas", "frente": 4, "izquierda": 7, "derecha": 6, "niveles": 5}
+    esquema_carga = models.JSONField(default=dict, blank=True)
     activo = models.BooleanField(default=True)
 
     class Meta:
@@ -132,7 +138,22 @@ class PlanoCarga(ModeloConTenant):
     #: [{"grupo", "fila", "columna", "nivel"}] — fila 0 es el fondo (contra la
     #: cabina); la última fila, la puerta.
     posiciones = models.JSONField(default=list)
+    #: Pilas (índices de `medidas.pilas`) que el acomodo automático no toca.
+    bloqueos = models.JSONField(default=list, blank=True)
     notas = models.TextField(blank=True)
+
+    #: De qué ruta salió: "r<id>" (ruta semanal), "a<id>" (ajuste o ruta extra
+    #: de esa fecha), "f<id>" (vehículo agregado a mano en la planificación).
+    #: Vacío = despacho armado a mano en el editor.
+    ruta_clave = models.CharField(max_length=20, blank=True, default="")
+    ruta = models.ForeignKey(
+        "Ruta", on_delete=models.SET_NULL, null=True, blank=True, related_name="despachos"
+    )
+    #: Copia de los datos operativos con los que se armó (ruta, paradas,
+    #: clientes, productos consolidados y pedidos). Se toma al generar y se
+    #: congela al confirmar: el PDF de un despacho confirmado sale de aquí, así
+    #: que cambiar la ruta habitual o un cliente no reescribe el histórico.
+    datos_operativos = models.JSONField(default=dict, blank=True)
 
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
@@ -166,9 +187,182 @@ class PedidoDespacho(ModeloConTenant):
     pedido = models.OneToOneField("orders.Pedido", on_delete=models.CASCADE, related_name="despacho_asignado")
     #: El destino (grupo) del plano al que pertenece: `grupos[].id`.
     grupo = models.CharField(max_length=40)
-    canastillas = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(500)])
+    #: 0 = va consolidado en las canastillas de otro pedido del mismo destino.
+    canastillas = models.PositiveIntegerField(validators=[MaxValueValidator(500)])
 
     class Meta:
         db_table = "logistica_pedido_despacho"
         verbose_name = "Pedido en despacho"
         verbose_name_plural = "Pedidos en despacho"
+
+
+# ==========================================================================
+# Programación semanal de rutas
+# ==========================================================================
+#
+# Qué vehículo visita a qué clientes, en qué orden, cada día de la semana.
+#
+# * `ProgramacionSemanal` es una PLANTILLA: el negocio puede tener varias
+#   («temporada normal», «diciembre») y una sola está activa.
+# * `Ruta` es un vehículo en un día de esa plantilla; `ParadaRuta`, cada
+#   cliente que visita, con su orden.
+# * `AjusteRuta` cambia una ruta SOLO para una fecha (otro vehículo, otras
+#   paradas, o no sale), o agrega una ruta extra ese día. La plantilla no se
+#   toca: la semana siguiente vuelve la ruta habitual.
+#
+# Los clientes son los de `orders.Cliente`: la ruta no copia clientes, los
+# referencia. Lo que sí se copia es el resultado: el despacho generado guarda
+# en `PlanoCarga.datos_operativos` la ruta, las paradas y los productos con
+# los que se armó.
+
+DIAS_SEMANA = [
+    (0, "Lunes"), (1, "Martes"), (2, "Miércoles"), (3, "Jueves"),
+    (4, "Viernes"), (5, "Sábado"), (6, "Domingo"),
+]
+
+
+class ProgramacionSemanal(ModeloConTenant):
+    nombre = models.CharField(max_length=80)
+    #: La que usa la planificación diaria. Solo una por negocio.
+    activa = models.BooleanField(default=False)
+    notas = models.TextField(blank=True)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "logistica_programacion_semanal"
+        verbose_name = "Programación semanal"
+        verbose_name_plural = "Programaciones semanales"
+        ordering = ["-activa", "nombre"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant"], condition=models.Q(activa=True),
+                name="logistica_una_programacion_activa",
+            )
+        ]
+
+    def __str__(self):
+        return self.nombre
+
+
+class Ruta(ModeloConTenant):
+    """Un vehículo en un día de la semana, con su secuencia de clientes."""
+
+    tenant_heredado_de = "programacion"
+
+    programacion = models.ForeignKey(ProgramacionSemanal, on_delete=models.CASCADE, related_name="rutas")
+    dia_semana = models.PositiveSmallIntegerField(choices=DIAS_SEMANA)
+    nombre = models.CharField(max_length=80)
+    furgon = models.ForeignKey(Furgon, on_delete=models.PROTECT, related_name="rutas")
+    #: Color con que se identifica la ruta en el centro de planificación.
+    color = models.CharField(max_length=7, default="#16a34a")
+    notas = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "logistica_ruta"
+        verbose_name = "Ruta"
+        verbose_name_plural = "Rutas"
+        ordering = ["dia_semana", "nombre"]
+        constraints = [
+            # Un vehículo sale una vez por día en la misma plantilla: dos rutas
+            # con el mismo furgón el mismo día serían dos cargas en un camión.
+            models.UniqueConstraint(
+                fields=["programacion", "dia_semana", "furgon"], name="logistica_ruta_un_vehiculo_por_dia"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.nombre} ({self.get_dia_semana_display()})"
+
+
+class ParadaRuta(ModeloConTenant):
+    tenant_heredado_de = "ruta"
+
+    ruta = models.ForeignKey(Ruta, on_delete=models.CASCADE, related_name="paradas")
+    cliente = models.ForeignKey("orders.Cliente", on_delete=models.CASCADE, related_name="paradas_ruta")
+    #: 1 = primera visita del día.
+    orden = models.PositiveSmallIntegerField()
+    nota = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        db_table = "logistica_parada_ruta"
+        verbose_name = "Parada de ruta"
+        verbose_name_plural = "Paradas de ruta"
+        ordering = ["ruta", "orden"]
+        constraints = [
+            models.UniqueConstraint(fields=["ruta", "cliente"], name="logistica_parada_cliente_unico"),
+        ]
+
+    def __str__(self):
+        return f"{self.orden}. {self.cliente_id}"
+
+
+class AjusteRuta(ModeloConTenant):
+    """
+    La ruta de UNA fecha, distinta de la habitual. Con `ruta` reemplaza (o
+    cancela) esa ruta ese día; sin `ruta`, es una ruta extra solo ese día.
+    `paradas` = [{"cliente": id, "nota": ""}] en orden de visita.
+    """
+
+    fecha = models.DateField()
+    ruta = models.ForeignKey(Ruta, on_delete=models.CASCADE, null=True, blank=True, related_name="ajustes")
+    cancelada = models.BooleanField(default=False)
+    nombre = models.CharField(max_length=80, blank=True)
+    furgon = models.ForeignKey(Furgon, on_delete=models.PROTECT, null=True, blank=True, related_name="ajustes_ruta")
+    color = models.CharField(max_length=7, default="#16a34a")
+    paradas = models.JSONField(default=list, blank=True)
+    motivo = models.CharField(max_length=200, blank=True)
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "logistica_ajuste_ruta"
+        verbose_name = "Ajuste de ruta por fecha"
+        verbose_name_plural = "Ajustes de ruta por fecha"
+        ordering = ["fecha", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "fecha", "ruta"], condition=models.Q(ruta__isnull=False),
+                name="logistica_un_ajuste_por_ruta_y_fecha",
+            )
+        ]
+
+    def __str__(self):
+        return f"Ajuste {self.fecha} · {self.nombre or self.ruta_id}"
+
+
+class ReglaCarga(ModeloConTenant):
+    """
+    Cómo se carga una presentación: la regla de negocio EXPLÍCITA que permite
+    estimar canastillas y peso. Sin regla no se convierte nada: el pedido
+    conserva su unidad de venta y el centro de planificación avisa.
+    """
+
+    tenant_heredado_de = "presentacion"
+
+    presentacion = models.OneToOneField(
+        "catalog.PresentacionProducto", on_delete=models.CASCADE, related_name="regla_carga"
+    )
+    #: Cuántas unidades de ESTA presentación llenan una canastilla (p. ej. 25
+    #: «kilos» de papa, o 1 «bulto»). Vacío = no se sabe.
+    unidades_por_canastilla = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(100000)],
+    )
+    #: Peso en kg de UNA unidad de esta presentación. Vacío = no se sabe.
+    peso_kg_por_unidad = models.DecimalField(
+        max_digits=10, decimal_places=3, null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(5000)],
+    )
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "logistica_regla_carga"
+        verbose_name = "Regla de carga"
+        verbose_name_plural = "Reglas de carga"
+
+    def __str__(self):
+        return f"Regla de {self.presentacion_id}"
