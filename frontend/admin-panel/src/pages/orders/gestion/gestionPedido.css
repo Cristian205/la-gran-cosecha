@@ -244,7 +244,7 @@
 .gp-antes { display: block; margin-top: .15rem; font-size: .72rem; font-weight: 600; color: var(--ambar-texto); white-space: nowrap; }
 .gp-error-celda { display: block; margin-top: .15rem; font-size: .72rem; font-weight: 600; color: var(--rojo-texto); white-space: nowrap; }
 .gp-acciones-fila { display: flex; gap: .3rem; justify-content: flex-end; }
-.gp-acciones-fila .btn-icon { width: 30px; height: 30px; border-radius: 8px; }
+.gp-acciones-fila .btn-icon { width: 30px; height: 30px; border-radius: 50%; }
 .gp-tabla-vacia { padding: 1.5rem !important; text-align: center; color: var(--gris) !important; }
 .gp-tabla tfoot td { padding: .75rem .8rem; border-top: 1px solid var(--borde); background: var(--superficie-2, var(--superficie)); }
 :root[data-tema="oscuro"] .gp-tabla tfoot td { background: var(--gris-claro); }

@@ -139,14 +139,57 @@ export interface Producto {
   num_presentaciones_inactivas?: number;
 }
 
+/**
+ * En qué punto del despacho va el pedido. Es distinto de `estado` (que habla
+ * de la venta) y lo deduce el servidor de dónde está el pedido: sin fecha,
+ * esperando planificación, en un lote, con plano de carga, confirmado, en
+ * ruta o entregado. Lo calcula `apps/logistica/lotes.py`.
+ */
+export type EstadoLogistico =
+  | "RECIBIDO"
+  | "PENDIENTE_PLANIFICACION"
+  | "EN_LOTE"
+  | "PREPARADO"
+  | "CONFIRMADO"
+  | "EN_RUTA"
+  | "ENTREGADO";
+
+export interface LogisticaDePedido {
+  estado: EstadoLogistico;
+  etiqueta: string;
+  lote: number | null;
+  lote_numero: number | null;
+  despacho: number | null;
+}
+
+/**
+ * En qué punto va el pedido como documento, antes de salir a la calle. Lo
+ * deduce el servidor de hechos ya registrados —la factura generada, el
+ * producto sugerido sin aprobar— y no de una columna propia
+ * (`apps/orders/estado_comercial.py`). «Entregado» no está aquí a
+ * propósito: entregar es un hecho del despacho y vive en `logistica`.
+ */
+export type EstadoComercial = "POR_REVISAR" | "RECIBIDO" | "EDITADO" | "CERRADO" | "IMPRESO";
+
+export interface ComercialDePedido {
+  estado: EstadoComercial;
+  etiqueta: string;
+  /** Trae productos escritos a mano que nadie ha aprobado todavía. */
+  por_revisar: boolean;
+}
+
 export interface Pedido {
   id: number;
   cliente: number | null;
   cliente_nombre: string;
+  /** El valor guardado; para la tabla manda `comercial`. */
   estado: string;
+  comercial?: ComercialDePedido | null;
   total_pedido: string;
   fecha_pedido: string;
   num_items: number;
+  /** Solo si el negocio tiene el plano de carga activo. */
+  logistica?: LogisticaDePedido | null;
 }
 
 export interface DetallePedido {

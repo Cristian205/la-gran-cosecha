@@ -18,6 +18,7 @@ CATALOGO_PERMISOS = [
         "modulo": "Pedidos",
         "permisos": [
             {"codename": "orders.view_pedido", "etiqueta": "Ver pedidos y productos pendientes"},
+            {"codename": "orders.add_pedido", "etiqueta": "Registrar pedidos desde el panel"},
             {"codename": "orders.change_pedido", "etiqueta": "Editar y entregar pedidos"},
             {"codename": "orders.delete_pedido", "etiqueta": "Eliminar pedidos"},
         ],

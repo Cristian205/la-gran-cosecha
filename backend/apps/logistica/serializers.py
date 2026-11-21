@@ -362,6 +362,16 @@ class PlanoCargaSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"pedidos": f"El pedido #{ocupado.pedido_id} ya está en el despacho «{ocupado.plano.nombre}»."}
             )
+        # Un pedido reservado en un lote se reparte en ese lote, no a mano.
+        from .planificacion import reservados_en_lote  # noqa: PLC0415 — import circular
+
+        propio = getattr(instancia, "lote_id", None) or self.context.get("lote")
+        ajenos = reservados_en_lote(tenant, vistos, excepto=propio)
+        if ajenos:
+            pedido, numero = next(iter(ajenos.items()))
+            raise serializers.ValidationError(
+                {"pedidos": f"El pedido #{pedido} está reservado en el lote de despacho #{numero}: ármalo desde allí."}
+            )
         return pedidos
 
     def _validar_posiciones(self, posiciones, grupos, medidas):

@@ -306,6 +306,23 @@ class ClienteInputSerializer(serializers.Serializer):
     direccion_entrega = serializers.CharField(required=False, allow_blank=True)
 
 
+class ClienteNuevoDePanelSerializer(serializers.Serializer):
+    """
+    Un cliente dado de alta al apuntar el pedido. El nombre es obligatorio
+    —sin él la lista de pedidos no dice nada— y el resto se puede completar
+    después desde la ficha del cliente.
+    """
+
+    nombre = serializers.CharField(max_length=200)
+    telefono = serializers.CharField(max_length=25, required=False, allow_blank=True)
+    direccion = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_nombre(self, valor):
+        if not valor.strip():
+            raise serializers.ValidationError("Escribe el nombre del cliente.")
+        return valor
+
+
 class ItemCatalogoSerializer(serializers.Serializer):
     presentacion_id = ClaveDelNegocio(PresentacionProducto, source="presentacion")
     cantidad = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
@@ -575,6 +592,104 @@ class CrearPedidoSerializer(serializers.Serializer):
             # Quien pidió con su cédula no escribió su nombre: la tienda lo
             # necesita para el saludo y el mensaje de WhatsApp.
             "cliente_nombre": enmascarar_nombre(instance.cliente.nombre_cliente) if instance.cliente else "",
+        }
+
+
+# ==========================================================================
+# PEDIDO REGISTRADO DESDE EL PANEL
+# ==========================================================================
+class RegistrarPedidoSerializer(serializers.Serializer):
+    """
+    El pedido que el negocio apunta por su cuenta: llegó por teléfono, por
+    WhatsApp o en el mostrador, y lo registra quien atiende.
+
+    Es un serializer aparte de `CrearPedidoSerializer` y no un parámetro suyo
+    porque el contexto es otro, y casi todas las reglas de aquel son reglas DE
+    LA TIENDA: que el negocio acepte pedidos por internet, la cédula del
+    comprador, el acuerdo de precios, la autorización de datos. Nada de eso
+    aplica cuando es el propio negocio el que apunta lo que le dictaron: no hay
+    un comprador delante aceptando nada, y exigirle al que atiende el teléfono
+    que marque casillas en nombre del cliente es cómo se acaba con datos
+    inventados.
+
+    Lo que sí comparte es lo que no se puede relajar: las líneas pasan por
+    `ItemCatalogoSerializer` (presentación activa y cantidad válida), el total
+    lo calcula el servidor y la mercancía se aparta en la misma transacción.
+    """
+
+    #: Un cliente que ya existe. Es lo normal: el que llama suele ser conocido.
+    cliente_id = ClaveDelNegocio(Cliente, source="cliente", required=False, allow_null=True)
+    #: O uno nuevo, con lo mínimo para poder entregarle.
+    cliente_nuevo = ClienteNuevoDePanelSerializer(required=False)
+    items = ItemCatalogoSerializer(many=True)
+    observaciones = serializers.CharField(required=False, allow_blank=True, default="")
+    #: Solo para este pedido; la dirección guardada del cliente no cambia.
+    direccion_entrega = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate(self, attrs):
+        if not attrs.get("items"):
+            raise serializers.ValidationError("El pedido debe incluir al menos un producto.")
+        tiene_existente = attrs.get("cliente") is not None
+        tiene_nuevo = bool(attrs.get("cliente_nuevo"))
+        if tiene_existente == tiene_nuevo:
+            raise serializers.ValidationError(
+                "Indica un cliente de la lista o los datos de uno nuevo, no ambos."
+            )
+        return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        request = self.context.get("request")
+        usuario = request.user if request and request.user.is_authenticated else None
+
+        cliente = validated_data.get("cliente")
+        if cliente is None:
+            datos = validated_data["cliente_nuevo"]
+            cliente = Cliente.objects.create(
+                nombre_cliente=datos["nombre"].strip(),
+                telefono_cliente=(datos.get("telefono") or "").strip(),
+                direccion_cliente=(datos.get("direccion") or "").strip(),
+            )
+
+        # Igual que en la tienda: una dirección idéntica a la del cliente no se
+        # repite en el pedido, o después no se sabe cuál manda.
+        direccion_entrega = (validated_data.get("direccion_entrega") or "").strip()
+        if direccion_entrega == cliente.direccion_cliente.strip():
+            direccion_entrega = ""
+
+        pedido = Pedido.objects.create(
+            cliente=cliente,
+            usuario=usuario,
+            estado="PENDIENTE",
+            observaciones=validated_data.get("observaciones", ""),
+            direccion_entrega=direccion_entrega,
+        )
+        for item in validated_data["items"]:
+            presentacion = item["presentacion"]
+            DetallePedido.objects.create(
+                pedido=pedido,
+                presentacion=presentacion,
+                cantidad=item["cantidad"],
+                precio_unitario=presentacion.precio_unitario,
+                es_catalogo=True,
+            )
+        pedido.actualizar_total()
+
+        from .auditoria import registrar_recibido  # noqa: PLC0415
+
+        registrar_recibido(pedido)
+        # Dentro de la transacción: si no hay mercancía, el pedido no se guarda.
+        # Apuntar un pedido que no se puede entregar no le sirve a nadie.
+        reservar_o_400(pedido, usuario=usuario)
+        return pedido
+
+    def to_representation(self, instance):
+        return {
+            "success": True,
+            "pedido_id": instance.id,
+            "total": instance.total_pedido,
+            "estado": instance.estado,
+            "cliente_nombre": instance.cliente.nombre_cliente if instance.cliente else "",
         }
 
 

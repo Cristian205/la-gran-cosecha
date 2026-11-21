@@ -1,7 +1,7 @@
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, ProtectedError, Q, Sum
 from django.shortcuts import get_object_or_404
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -27,6 +27,7 @@ from .serializers import (
     PedidoDetailSerializer,
     PedidoListSerializer,
     ProductoPendienteSerializer,
+    RegistrarPedidoSerializer,
 )
 
 MINIMO_MAS_VENDIDOS = 8
@@ -95,9 +96,11 @@ class PedidoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == "create":
             return [AllowAny()]
+        if self.action == "registrar":
+            return [requiere_permiso("orders.add_pedido")()]
         if self.action in ("update", "partial_update", "entregar"):
             return [requiere_permiso("orders.change_pedido")()]
-        if self.action == "destroy":
+        if self.action in ("destroy", "eliminar"):
             return [requiere_permiso("orders.delete_pedido")()]
         return [requiere_permiso("orders.view_pedido")()]
 
@@ -124,6 +127,48 @@ class PedidoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         if self.action in ("retrieve", "partial_update", "update"):
             return PedidoDetailSerializer
         return PedidoListSerializer
+
+    def list(self, request, *args, **kwargs):
+        """
+        La lista de siempre, más en qué punto va cada pedido. Son dos cosas
+        distintas y van en dos campos distintos:
+
+        * `comercial` — qué pasó con el PEDIDO: por revisar, recibido,
+          impreso (`estado_comercial.py`).
+        * `logistica` — dónde va la CARGA: pendiente de planificación, en un
+          lote, con plano de carga, confirmada, en ruta, entregada
+          (`apps.logistica.lotes`). Solo si el negocio tiene el plano de
+          carga; sin ese módulo no se añade.
+
+        Las dos se DEDUCEN de hechos ya registrados —la factura generada, el
+        producto sugerido sin aprobar, el lote que reservó el pedido— y se
+        resuelven aquí para la página que se devuelve, en unas pocas
+        consultas y no una por fila.
+        """
+        respuesta = super().list(request, *args, **kwargs)
+        datos = respuesta.data
+        filas = datos.get("results") if isinstance(datos, dict) else datos
+        if not isinstance(filas, list) or not filas:
+            return respuesta
+        tenant = self.obtener_tenant()
+
+        from .estado_comercial import estados_comerciales  # noqa: PLC0415
+
+        comercial = estados_comerciales(tenant, {f["id"]: f["estado"] for f in filas})
+        for fila in filas:
+            fila["comercial"] = comercial.get(fila["id"])
+
+        from apps.business.aplicar import modulos_activos  # noqa: PLC0415
+
+        if "plano-carga" not in modulos_activos(tenant):
+            return respuesta
+
+        from apps.logistica.lotes import estados_logisticos  # noqa: PLC0415 — módulo opcional
+
+        mapa = estados_logisticos(tenant, [f["id"] for f in filas])
+        for fila in filas:
+            fila["logistica"] = mapa.get(fila["id"])
+        return respuesta
 
     def create(self, request, *args, **kwargs):
         serializer = CrearPedidoSerializer(data=request.data, context={"request": request})
@@ -203,6 +248,64 @@ class PedidoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         lote.pedidos.set(pedidos_qs)
 
         return Response({"success": True, "actualizados": cantidad, "lote_id": lote.id})
+
+    @action(detail=False, methods=["post"], url_path="eliminar")
+    def eliminar(self, request):
+        """
+        Borra de una vez los pedidos seleccionados en el panel.
+
+        Se recorre uno a uno y no con `queryset.delete()` por dos razones: el
+        queryset de la vista lleva `annotate()` y Django no borra sobre uno
+        anotado, y cada borrado tiene que disparar su `post_delete`, que es la
+        señal que devuelve al catálogo lo que el pedido tenía apartado.
+
+        Todo en una transacción: si uno no se puede borrar no se borra ninguno,
+        así que el panel nunca informa de una cantidad que no ocurrió. El
+        queryset es el de la vista, ya acotado al negocio de la petición: una
+        lista de ids ajenos no borra nada de otro tenant.
+        """
+        ids = [i for i in request.data.get("ids", []) if str(i).isdigit()]
+        if not ids:
+            return Response(
+                {"message": "No se seleccionaron pedidos"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        pedidos = list(self.get_queryset().filter(id__in=ids))
+        if not pedidos:
+            return Response(
+                {"message": "Ninguno de los pedidos existe"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            with transaction.atomic():
+                for pedido in pedidos:
+                    pedido.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "message": (
+                        "Alguno de los pedidos tiene documentos asociados y no se puede "
+                        "eliminar. No se borró ninguno."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response({"success": True, "eliminados": len(pedidos)})
+
+    @action(detail=False, methods=["post"], url_path="registrar")
+    def registrar(self, request):
+        """
+        Apunta un pedido que llegó por teléfono, WhatsApp o mostrador.
+
+        No es `create`: ese es el de la tienda, es público y aplica las reglas
+        del comprador (que el negocio acepte pedidos online, cédula, acuerdo de
+        precios). Aquí hay alguien del negocio identificado y con permiso, y lo
+        que se apunta es lo que el cliente dictó.
+        """
+        serializer = RegistrarPedidoSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        pedido = serializer.save()
+        return Response(serializer.to_representation(pedido), status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["get"], url_path="historial")
     def historial(self, request, pk=None):
@@ -432,11 +535,28 @@ def _verdadero(valor) -> bool:
     return valor is True or str(valor).lower() in ("1", "true", "si", "sí")
 
 
-class LoteViewSet(TenantScopedMixin, viewsets.ReadOnlyModelViewSet):
-    """Lotes de pedidos generados al imprimir o entregar en masa (solo lectura)."""
+class LoteViewSet(TenantScopedMixin, mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
+    """
+    Lotes de pedidos generados al imprimir o entregar en masa.
 
-    permission_classes = [EsStaff]
+    Se leen y se borran, nada más: un lote no se crea ni se edita a mano, lo
+    escribe el servidor cuando alguien imprime o entrega en bloque. De ahí el
+    `DestroyModelMixin` suelto en vez de un `ModelViewSet`, que abriría un POST
+    y un PATCH que nadie debería usar.
+
+    Borrar un lote borra el REGISTRO de que esos pedidos se procesaron juntos,
+    no los pedidos: `pedidos` es una M2M, así que solo cae la agrupación. Sirve
+    para limpiar la lista de pruebas y duplicados; el precio es que se pierde
+    esa pista de trazabilidad —quién imprimió qué y cuándo—, y por eso exige el
+    mismo permiso que borrar pedidos.
+    """
+
     modelo = LotePedidos
+
+    def get_permissions(self):
+        if self.action in ("destroy", "eliminar"):
+            return [requiere_permiso("orders.delete_pedido")()]
+        return [EsStaff()]
 
     def get_queryset(self):
         return super().get_queryset().select_related("usuario").prefetch_related("pedidos")
@@ -445,6 +565,32 @@ class LoteViewSet(TenantScopedMixin, viewsets.ReadOnlyModelViewSet):
         if self.action == "retrieve":
             return LoteDetailSerializer
         return LoteSerializer
+
+    @action(detail=False, methods=["post"], url_path="eliminar")
+    def eliminar(self, request):
+        """
+        Borra de una vez los lotes seleccionados en el panel.
+
+        Mismo trato que el borrado masivo de pedidos: una transacción, el
+        queryset ya acotado al negocio de la petición, y la cuenta que se
+        devuelve es la que de verdad se borró.
+        """
+        ids = [i for i in request.data.get("ids", []) if str(i).isdigit()]
+        if not ids:
+            return Response(
+                {"message": "No se seleccionaron lotes"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        lotes = list(self.get_queryset().filter(id__in=ids))
+        if not lotes:
+            return Response(
+                {"message": "Ninguno de los lotes existe"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        with transaction.atomic():
+            for lote in lotes:
+                lote.delete()
+        return Response({"success": True, "eliminados": len(lotes)})
 
 
 class ClienteViewSet(TenantScopedMixin, viewsets.ModelViewSet):

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import { eliminarTrustBadge, obtenerTrustBadges } from "../../api/content";
+import { Tooltip } from "../../components/Tooltip";
 import type { TrustBadge } from "../../types";
 import { extraerMensajeError } from "../../utils";
 import { alertaError, confirmarEliminar } from "../../utils/alertas";
@@ -71,14 +73,28 @@ function GrupoTrustBadges({
                       {b.activo ? "Activo" : "Inactivo"}
                     </span>
                   </td>
-                  <td>
+                  <td className="col-acciones">
                     <div className="acciones">
-                      <button className="btn editar sm" onClick={() => onEditar(b)}>
-                        Editar
-                      </button>
-                      <button className="btn peligro sm" onClick={() => onEliminar(b)}>
-                        Eliminar
-                      </button>
+                      <Tooltip label="Editar">
+                        <button
+                          type="button"
+                          className="btn-icon editar"
+                          onClick={() => onEditar(b)}
+                          aria-label={`Editar ${b.etiqueta}`}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      </Tooltip>
+                      <Tooltip label="Eliminar">
+                        <button
+                          type="button"
+                          className="btn-icon peligro"
+                          onClick={() => onEliminar(b)}
+                          aria-label={`Eliminar ${b.etiqueta}`}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </Tooltip>
                     </div>
                   </td>
                 </tr>

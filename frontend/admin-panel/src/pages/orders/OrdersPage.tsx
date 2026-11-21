@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Check,
   CheckCircle2,
@@ -10,6 +10,7 @@ import {
   Layers,
   Loader2,
   PackageCheck,
+  Plus,
   Printer,
   RefreshCw,
   Search,
@@ -17,6 +18,7 @@ import {
   SquarePen,
   Trash2,
   TriangleAlert,
+  Truck,
   Wallet,
   X,
 } from "lucide-react";
@@ -25,7 +27,10 @@ import {
   contarPedidos,
   descargarPdfPedido,
   descargarPdfPedidosLote,
+  eliminarLote,
+  eliminarLotes,
   eliminarPedido,
+  eliminarPedidos,
   entregarPedidos,
   obtenerLotes,
   obtenerPedidos,
@@ -33,8 +38,7 @@ import {
 import type { DireccionOrden } from "../../hooks/useOrdenTabla";
 import type { Lote, Pedido, Usuario } from "../../types";
 import { extraerMensajeError, formatoFecha, formatoPrecio, tienePermiso } from "../../utils";
-import { alertaError, confirmarEliminar } from "../../utils/alertas";
-import { Tooltip } from "../../components/Tooltip";
+import { alertaError, alertaExito, confirmarEliminar } from "../../utils/alertas";
 import { ColumnPickerButton } from "../../components/ColumnPickerButton";
 import { ThOrdenable } from "../../components/ThOrdenable";
 import { useColumnas } from "../../hooks/useColumnas";
@@ -42,16 +46,20 @@ import { useOrdenTabla, type ExtractoresOrden } from "../../hooks/useOrdenTabla"
 import { useAuth } from "../../auth/AuthContext";
 import { OrderDetailModal } from "./OrderDetailModal";
 import { LoteDetailModal } from "./LoteDetailModal";
+import { CrearLoteModal } from "./CrearLoteModal";
+import { RegistrarPedidoModal } from "./RegistrarPedidoModal";
 import {
+  AccionesFila,
   EstadoVacio,
-  MenuFila,
   Pastilla,
   TarjetaKpi,
-  type AccionMenu,
+  type AccionFila,
 } from "../../components/gestion/Gestion";
 import { fechaISO, hoyISO } from "../../utils/fechas";
 import {
+  ETIQUETAS_COMERCIAL,
   ETIQUETAS_ESTADO,
+  EstadoComercialPedido,
   EstadoPedido,
   OPCIONES_PERIODO,
   etiquetaPeriodo,
@@ -106,7 +114,28 @@ const DEFINICIONES_PEDIDOS: Record<
     clase: "num",
     render: (p) => <span className="celda-cifra">{formatoPrecio(p.total_pedido)}</span>,
   },
-  estado: { etiqueta: "Estado", render: (p) => <EstadoPedido estado={p.estado} /> },
+  // «Estado» es lo que pasó con el PEDIDO (por revisar, recibido, impreso);
+  // dónde va la carga es la columna «Despacho». Si el servidor no manda el
+  // estado deducido (una versión anterior), se cae al valor guardado.
+  estado: {
+    etiqueta: "Estado",
+    render: (p) =>
+      p.comercial ? <EstadoComercialPedido comercial={p.comercial} /> : <EstadoPedido estado={p.estado} />,
+  },
+  // Solo tiene valor con el plano de carga activo: sin él el servidor no
+  // manda `logistica` y la celda lo dice en vez de quedarse en blanco.
+  logistica: {
+    etiqueta: "Despacho",
+    render: (p) =>
+      p.logistica ? (
+        <span className={`celda-logistica estado-${p.logistica.estado.toLowerCase()}`} title={p.logistica.etiqueta}>
+          {p.logistica.etiqueta}
+          {p.logistica.lote_numero ? <small> · lote #{p.logistica.lote_numero}</small> : null}
+        </span>
+      ) : (
+        <span className="celda-tenue">—</span>
+      ),
+  },
 };
 const CLAVES_PEDIDOS = Object.keys(DEFINICIONES_PEDIDOS);
 const ETIQUETAS_PEDIDOS = Object.fromEntries(
@@ -114,9 +143,11 @@ const ETIQUETAS_PEDIDOS = Object.fromEntries(
 );
 
 /**
- * El filtro bajo cada columna (botón «Filtros»). El de estado, además, viaja
- * al servidor (como antes el selector de la barra): por eso los indicadores
- * siguen funcionando igual.
+ * El filtro bajo cada columna (botón «Filtros»). Todos filtran en el
+ * navegador sobre lo que ya se bajó. El estado que viaja al servidor es otro
+ * —`estadoServidor`, el valor guardado de `Pedido.estado`— y lo manejan los
+ * indicadores y los enlaces del dashboard, no esta fila de filtros: son dos
+ * cosas distintas desde que la columna muestra el estado DEDUCIDO.
  */
 const FILTROS_PEDIDOS: DefsFiltros<Pedido> = {
   id: { tipo: "texto", valor: (p) => String(p.id), placeholder: "N.º…" },
@@ -126,9 +157,10 @@ const FILTROS_PEDIDOS: DefsFiltros<Pedido> = {
   total: { tipo: "numero", valor: (p) => parseFloat(p.total_pedido) },
   estado: {
     tipo: "opciones",
-    valor: (p) => p.estado,
-    opciones: Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) => ({ valor, etiqueta })),
+    valor: (p) => p.comercial?.estado ?? p.estado,
+    opciones: Object.entries(ETIQUETAS_COMERCIAL).map(([valor, etiqueta]) => ({ valor, etiqueta })),
   },
+  logistica: { tipo: "texto", valor: (p) => p.logistica?.etiqueta ?? "" },
 };
 
 const EXTRACTORES_PEDIDOS: ExtractoresOrden<Pedido> = {
@@ -137,7 +169,8 @@ const EXTRACTORES_PEDIDOS: ExtractoresOrden<Pedido> = {
   fecha: (p) => p.fecha_pedido,
   items: (p) => p.num_items,
   total: (p) => parseFloat(p.total_pedido),
-  estado: (p) => p.estado,
+  estado: (p) => p.comercial?.etiqueta ?? p.estado,
+  logistica: (p) => p.logistica?.etiqueta ?? "",
 };
 
 /** Las tres pestañas: los pedidos del día, los lotes y el historial. */
@@ -211,8 +244,31 @@ function TablaPedidos({
   const puedeEntregar = tienePermiso(actual, "orders.change_pedido");
   const puedeEliminar = tienePermiso(actual, "orders.delete_pedido");
 
-  function accionesDe(p: Pedido): AccionMenu[] {
-    const acciones: AccionMenu[] = [];
+  /**
+   * Todas las acciones de un pedido, de la más usada a la menos. Las tres
+   * primeras se pintan como botones y el resto cae en el "⋯"; esa decisión
+   * la toma {@link AccionesFila}, aquí solo se ordenan.
+   */
+  function accionesDe(p: Pedido): AccionFila[] {
+    const acciones: AccionFila[] = [
+      {
+        clave: "abrir",
+        tono: "editar",
+        etiqueta: "Ver / editar pedido",
+        aria: `Ver o editar el pedido #${p.id}`,
+        icono: <SquarePen size={16} />,
+        onSeleccionar: () => onVerEditar(p.id),
+      },
+      {
+        clave: "imprimir",
+        tono: "info",
+        etiqueta: "Imprimir factura",
+        aria: `Imprimir la factura del pedido #${p.id}`,
+        icono: imprimiendoId === p.id ? <Loader2 size={16} className="girando" /> : <Printer size={16} />,
+        deshabilitada: imprimiendoId === p.id,
+        onSeleccionar: () => onImprimir(p.id),
+      },
+    ];
     if (puedeEntregar && p.estado !== "ENTREGADO") {
       acciones.push({
         clave: "entregar",
@@ -334,32 +390,7 @@ function TablaPedidos({
                     </td>
                   ))}
                   <td className="col-acciones">
-                    <div className="acciones">
-                      <Tooltip label="Ver / editar pedido">
-                        <button
-                          type="button"
-                          className="btn-icon editar"
-                          onClick={() => onVerEditar(p.id)}
-                          aria-label={`Ver o editar el pedido #${p.id}`}
-                        >
-                          <SquarePen size={16} />
-                        </button>
-                      </Tooltip>
-                      <Tooltip label="Imprimir factura">
-                        <button
-                          type="button"
-                          className="btn-icon info"
-                          disabled={imprimiendoId === p.id}
-                          onClick={() => onImprimir(p.id)}
-                          aria-label={`Imprimir la factura del pedido #${p.id}`}
-                        >
-                          {imprimiendoId === p.id ? <Loader2 size={16} className="girando" /> : <Printer size={16} />}
-                        </button>
-                      </Tooltip>
-                      {acciones.length > 0 && (
-                        <MenuFila etiqueta={`Más acciones del pedido #${p.id}`} acciones={acciones} />
-                      )}
-                    </div>
+                    <AccionesFila etiqueta={`Más acciones del pedido #${p.id}`} acciones={acciones} />
                   </td>
                 </tr>
               );
@@ -382,13 +413,10 @@ export function OrdersPage() {
   // todas las fechas: el pedido que se busca rara vez es de hoy.
   const [busqueda, setBusqueda] = useState(qInicial);
   const filtros = useFiltrosColumna(FILTROS_PEDIDOS);
-  // El estado es el filtro de su columna, y también se le pide al servidor.
-  const estado = filtros.valores.estado ?? "";
-  const setEstado = (valor: string) => {
-    filtros.cambiar("estado", valor);
-    // Si un indicador lo fija, la fila de filtros se abre para que se vea.
-    if (valor) filtros.abrir();
-  };
+  // El valor GUARDADO de `Pedido.estado` que se le pide al servidor. No es
+  // el filtro de la columna: ese filtra el estado deducido en el navegador.
+  // Lo fijan los indicadores de arriba y los enlaces del dashboard.
+  const [estado, setEstado] = useState("");
   // Desde el dashboard se llega con `?desde=…&hasta=…&estado=…` para ver el
   // detalle de lo que se estaba mirando (p. ej. las ventas de un período).
   const fechaParam = (clave: string) => {
@@ -433,12 +461,20 @@ export function OrdersPage() {
   // Llegar buscando o con fechas (paleta de comandos, dashboard) abre el Historial.
   const [vista, setVista] = useState<Vista>(qInicial || desdeParam ? "historial" : "hoy");
   const [seleccion, setSeleccion] = useState<Set<number>>(new Set());
+  /** El modal de «Crear lote de despacho» (la preparación del día siguiente). */
+  const [creandoLote, setCreandoLote] = useState(false);
+  const navegar = useNavigate();
   const [detalleId, setDetalleId] = useState<number | null>(null);
   const [loteAbiertoId, setLoteAbiertoId] = useState<number | null>(null);
   const [imprimiendoId, setImprimiendoId] = useState<number | null>(null);
   const [imprimiendoLote, setImprimiendoLote] = useState(false);
   const [entregandoId, setEntregandoId] = useState<number | null>(null);
   const [entregandoLote, setEntregandoLote] = useState(false);
+  const [eliminandoLote, setEliminandoLote] = useState(false);
+  // La vista de lotes tiene su propia selección: son otras filas y otra acción.
+  const [seleccionLotes, setSeleccionLotes] = useState<Set<number>>(new Set());
+  const [eliminandoLotes, setEliminandoLotes] = useState(false);
+  const [registrando, setRegistrando] = useState(false);
 
   // Cada pedido que se ha visto, para saber el estado de los seleccionados
   // aunque un filtro los haya sacado de la lista.
@@ -532,10 +568,13 @@ export function OrdersPage() {
 
   // ---------- Filtros ----------
 
-  const hayFiltros = Boolean(busqueda || filtros.activos || (vista === "historial" && periodo !== "anteriores"));
+  const hayFiltros = Boolean(
+    busqueda || estado || filtros.activos || (vista === "historial" && periodo !== "anteriores")
+  );
 
   function limpiarFiltros() {
     setBusqueda("");
+    setEstado("");
     filtros.limpiar();
     setPeriodo("anteriores");
     setKpiPulsado(null);
@@ -610,9 +649,17 @@ export function OrdersPage() {
   const cantidadBarra = seleccion.size || ultimaCantidad.current;
   const barraVisible = vista !== "lotes" && seleccion.size > 0;
   const barraRef = useRef<HTMLDivElement>(null);
+  const ultimaCantidadLotes = useRef(0);
+  if (seleccionLotes.size > 0) ultimaCantidadLotes.current = seleccionLotes.size;
+  const cantidadBarraLotes = seleccionLotes.size || ultimaCantidadLotes.current;
+  const barraLotesVisible = vista === "lotes" && seleccionLotes.size > 0;
+  const barraLotesRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (barraRef.current) barraRef.current.inert = !barraVisible;
   }, [barraVisible]);
+  useLayoutEffect(() => {
+    if (barraLotesRef.current) barraLotesRef.current.inert = !barraLotesVisible;
+  }, [barraLotesVisible]);
 
   // ---------- Acciones ----------
 
@@ -661,8 +708,82 @@ export function OrdersPage() {
         return s;
       });
       recargarListados();
+      alertaExito(`Pedido #${id} eliminado`);
     } catch (err) {
       alertaError(extraerMensajeError(err, "No se pudo eliminar el pedido."));
+    }
+  }
+
+  /**
+   * Borra el registro de un lote. No toca sus pedidos: lo que desaparece es la
+   * constancia de que se procesaron juntos, y eso se dice en la confirmación
+   * para que nadie crea que está borrando pedidos.
+   */
+  async function eliminarUnLote(id: number, cantidad: number) {
+    const confirmado = await confirmarEliminar(
+      `¿Eliminar el lote #${id}?`,
+      `Se borra el registro del lote. Sus ${cantidad} pedido${cantidad === 1 ? "" : "s"} no se eliminan.`
+    );
+    if (!confirmado) return;
+    try {
+      await eliminarLote(id);
+      setSeleccionLotes((prev) => {
+        const s = new Set(prev);
+        s.delete(id);
+        return s;
+      });
+      cargarLotes();
+      alertaExito(`Lote #${id} eliminado`);
+    } catch (err) {
+      alertaError(extraerMensajeError(err, "No se pudo eliminar el lote."));
+    }
+  }
+
+  /** Lo mismo con los lotes marcados en la lista. */
+  async function eliminarLotesSeleccionados() {
+    const ids = [...seleccionLotes];
+    if (ids.length === 0) return;
+    const confirmado = await confirmarEliminar(
+      ids.length === 1 ? `¿Eliminar el lote #${ids[0]}?` : `¿Eliminar ${ids.length} lotes?`,
+      "Se borra el registro de los lotes. Los pedidos que agrupan no se eliminan."
+    );
+    if (!confirmado) return;
+    setEliminandoLotes(true);
+    try {
+      const { eliminados } = await eliminarLotes(ids);
+      setSeleccionLotes(new Set());
+      cargarLotes();
+      alertaExito(eliminados === 1 ? "Se eliminó 1 lote" : `Se eliminaron ${eliminados} lotes`);
+    } catch (err) {
+      alertaError(extraerMensajeError(err, "No se pudieron eliminar los lotes seleccionados."));
+    } finally {
+      setEliminandoLotes(false);
+    }
+  }
+
+  /**
+   * Borra de una vez los pedidos seleccionados. El servidor lo hace en una
+   * transacción, así que la cuenta que se avisa es la que de verdad se borró:
+   * nunca «se eliminaron 12» cuando se quedaron 3 por el camino.
+   */
+  async function eliminarSeleccionados() {
+    const ids = [...seleccion];
+    if (ids.length === 0) return;
+    const confirmado = await confirmarEliminar(
+      ids.length === 1 ? `¿Eliminar el pedido #${ids[0]}?` : `¿Eliminar ${ids.length} pedidos?`,
+      "Esta acción no se puede deshacer."
+    );
+    if (!confirmado) return;
+    setEliminandoLote(true);
+    try {
+      const { eliminados } = await eliminarPedidos(ids);
+      setSeleccion(new Set());
+      recargarListados();
+      alertaExito(eliminados === 1 ? "Se eliminó 1 pedido" : `Se eliminaron ${eliminados} pedidos`);
+    } catch (err) {
+      alertaError(extraerMensajeError(err, "No se pudieron eliminar los pedidos seleccionados."));
+    } finally {
+      setEliminandoLote(false);
     }
   }
 
@@ -706,8 +827,61 @@ export function OrdersPage() {
   // Paginación (en el navegador, después de filtrar y ordenar).
   const pagPedidos = usePaginacion(listaOrdenada, "pedidos", [vista, busqueda, estado, periodo, rangoDesde, rangoHasta, filtros.valores]);
   const pagLotes = usePaginacion(lotes ?? [], "lotes");
+  const idsLotesVisibles = pagLotes.visibles.map((l) => l.id);
+  const todosLotesMarcados =
+    idsLotesVisibles.length > 0 && idsLotesVisibles.every((id) => seleccionLotes.has(id));
+  const algunLoteMarcado = idsLotesVisibles.some((id) => seleccionLotes.has(id));
+
+  function alternarLote(id: number) {
+    setSeleccionLotes((prev) => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
+      return s;
+    });
+  }
+
+  /** La marca de la cabecera trabaja sobre la página a la vista, no sobre todo. */
+  function alternarTodosLosLotes() {
+    setSeleccionLotes((prev) => {
+      const s = new Set(prev);
+      if (todosLotesMarcados) idsLotesVisibles.forEach((id) => s.delete(id));
+      else idsLotesVisibles.forEach((id) => s.add(id));
+      return s;
+    });
+  }
+
+  function accionesDeLote(l: Lote): AccionFila[] {
+    const acciones: AccionFila[] = [
+      {
+        clave: "ver",
+        tono: "ver",
+        etiqueta: "Ver pedidos del lote",
+        aria: `Ver los pedidos del lote #${l.id}`,
+        icono: <Eye size={16} />,
+        onSeleccionar: () => setLoteAbiertoId(l.id),
+      },
+    ];
+    if (puedeEliminar) {
+      acciones.push({
+        clave: "eliminar",
+        peligro: true,
+        etiqueta: "Eliminar lote",
+        aria: `Eliminar el lote #${l.id}`,
+        icono: <Trash2 size={15} />,
+        onSeleccionar: () => void eliminarUnLote(l.id, l.cantidad_pedidos),
+      });
+    }
+    return acciones;
+  }
+
   const nombrePeriodo = vista === "hoy" ? "Hoy" : etiquetaPeriodo(periodo, rangoDesde, rangoHasta);
   const puedeEntregar = tienePermiso(actual, "orders.change_pedido");
+  // El lote de despacho es del plano de carga: sin ese módulo contratado el
+  // permiso no existe y la acción no se ofrece.
+  const puedeDespachar = tienePermiso(actual, "logistica.add_planocarga");
+  const puedeEliminar = tienePermiso(actual, "orders.delete_pedido");
+  const puedeRegistrar = tienePermiso(actual, "orders.add_pedido");
   const actualizando = cargando;
 
   const vacioPrincipal =
@@ -781,15 +955,31 @@ export function OrdersPage() {
           <h1>Pedidos</h1>
           <p>Gestiona pedidos, entregas y facturación desde un solo lugar</p>
         </div>
-        <button
-          type="button"
-          className="btn secundario sm gestion-actualizar"
-          onClick={recargarListados}
-          disabled={actualizando}
-        >
-          <RefreshCw size={14} className={actualizando ? "girando" : ""} />
-          Actualizar
-        </button>
+        <div className="gestion-topbar-acciones">
+          <button
+            type="button"
+            className="btn secundario sm gestion-actualizar"
+            onClick={recargarListados}
+            disabled={actualizando}
+          >
+            <RefreshCw size={14} className={actualizando ? "girando" : ""} />
+            Actualizar
+          </button>
+          {puedeRegistrar && (
+            <button type="button" className="btn primario sm" onClick={() => setRegistrando(true)}>
+              <Plus size={15} /> Registrar pedido
+            </button>
+          )}
+          {puedeDespachar && (
+            <button
+              type="button"
+              className={`btn sm ${puedeRegistrar ? "secundario" : "primario"}`}
+              onClick={() => setCreandoLote(true)}
+            >
+              <Truck size={15} /> Crear lote de despacho
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="contenido gestion-vista">
@@ -881,6 +1071,9 @@ export function OrdersPage() {
                   <>
                     <strong>{pedidos.length >= TOPE_LISTA ? `${TOPE_LISTA}+` : pedidos.length}</strong>{" "}
                     pedido{pedidos.length === 1 ? "" : "s"} · {nombrePeriodo}
+                    {/* El estado que viaja al servidor no tiene filtro visible: lo
+                        fijan los indicadores, así que se nombra aquí. */}
+                    {estado ? ` · solo ${(ETIQUETAS_ESTADO[estado] ?? estado).toLowerCase()}` : ""}
                   </>
                 )}
               </p>
@@ -977,6 +1170,11 @@ export function OrdersPage() {
                       </button>
                     </div>
                     <div className="gestion-seleccion-acciones">
+                      {puedeDespachar && (
+                        <button type="button" className="btn secundario sm" onClick={() => setCreandoLote(true)}>
+                          <Truck size={14} /> Crear lote de despacho
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn secundario sm"
@@ -1002,6 +1200,17 @@ export function OrdersPage() {
                               : "Entregar"}
                         </button>
                       )}
+                      {puedeEliminar && (
+                        <button
+                          type="button"
+                          className="btn peligro sm"
+                          disabled={eliminandoLote}
+                          onClick={eliminarSeleccionados}
+                        >
+                          {eliminandoLote ? <Loader2 size={14} className="girando" /> : <Trash2 size={14} />}
+                          {eliminandoLote ? "Eliminando…" : "Eliminar"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1025,11 +1234,61 @@ export function OrdersPage() {
             </>
           )}
 
+          {vista === "lotes" && puedeEliminar && (
+            <div
+              ref={barraLotesRef}
+              className={`gestion-seleccion-wrap ${barraLotesVisible ? "visible" : ""}`}
+              aria-hidden={!barraLotesVisible}
+            >
+              <div>
+                <div className="gestion-seleccion" role="region" aria-label="Acciones de la selección">
+                  <div className="gestion-seleccion-info">
+                    <span className="gestion-seleccion-check" aria-hidden="true">
+                      <Check size={13} strokeWidth={3} />
+                    </span>
+                    <span aria-live="polite">
+                      <strong>{cantidadBarraLotes}</strong> lote{cantidadBarraLotes === 1 ? "" : "s"} seleccionado
+                      {cantidadBarraLotes === 1 ? "" : "s"}
+                    </span>
+                    <button type="button" className="gestion-seleccion-quitar" onClick={() => setSeleccionLotes(new Set())}>
+                      Quitar selección
+                    </button>
+                  </div>
+                  <div className="gestion-seleccion-acciones">
+                    <button
+                      type="button"
+                      className="btn peligro sm"
+                      disabled={eliminandoLotes}
+                      onClick={eliminarLotesSeleccionados}
+                    >
+                      {eliminandoLotes ? <Loader2 size={14} className="girando" /> : <Trash2 size={14} />}
+                      {eliminandoLotes ? "Eliminando…" : "Eliminar"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {vista === "lotes" && (
             <div className="tabla-scroll gestion-tabla-scroll">
               <table className={`gestion-tabla ${errorLotes || lotes?.length === 0 ? "sin-filas" : ""}`}>
                 <thead>
                   <tr>
+                    {puedeEliminar && (
+                      <th className="col-check">
+                        <label className="check-area">
+                          <input
+                            type="checkbox"
+                            checked={todosLotesMarcados}
+                            ref={(el) => {
+                              if (el) el.indeterminate = algunLoteMarcado && !todosLotesMarcados;
+                            }}
+                            onChange={alternarTodosLosLotes}
+                            aria-label="Seleccionar todos los lotes de esta página"
+                          />
+                        </label>
+                      </th>
+                    )}
                     <th>Lote</th>
                     <th>Tipo</th>
                     <th className="num">Pedidos</th>
@@ -1045,14 +1304,14 @@ export function OrdersPage() {
                   {lotes === null && !errorLotes ? (
                     Array.from({ length: 3 }).map((_, i) => (
                       <tr key={i} className="fila-esqueleto">
-                        <td colSpan={7}>
+                        <td colSpan={puedeEliminar ? 8 : 7}>
                           <div className="skeleton-line skeleton-shimmer en-celda" style={{ width: `${70 - i * 10}%` }} />
                         </td>
                       </tr>
                     ))
                   ) : errorLotes ? (
                     <tr className="fila-vacia">
-                      <td colSpan={7}>
+                      <td colSpan={puedeEliminar ? 8 : 7}>
                         <EstadoVacio
                           icono={<TriangleAlert size={20} />}
                           titulo="No se pudieron cargar los lotes"
@@ -1067,7 +1326,7 @@ export function OrdersPage() {
                     </tr>
                   ) : lotes && lotes.length === 0 ? (
                     <tr className="fila-vacia">
-                      <td colSpan={7}>
+                      <td colSpan={puedeEliminar ? 8 : 7}>
                         <EstadoVacio
                           icono={<Layers size={20} />}
                           titulo="Aún no hay lotes"
@@ -1077,7 +1336,19 @@ export function OrdersPage() {
                     </tr>
                   ) : (
                     pagLotes.visibles.map((l) => (
-                      <tr key={l.id}>
+                      <tr key={l.id} className={seleccionLotes.has(l.id) ? "seleccionada" : ""}>
+                        {puedeEliminar && (
+                          <td className="col-check">
+                            <label className="check-area">
+                              <input
+                                type="checkbox"
+                                checked={seleccionLotes.has(l.id)}
+                                onChange={() => alternarLote(l.id)}
+                                aria-label={`Seleccionar lote #${l.id}`}
+                              />
+                            </label>
+                          </td>
+                        )}
                         <td>
                           <span className="celda-id">#{l.id}</span>
                         </td>
@@ -1099,18 +1370,7 @@ export function OrdersPage() {
                           </time>
                         </td>
                         <td className="col-acciones">
-                          <div className="acciones">
-                            <Tooltip label="Ver pedidos del lote">
-                              <button
-                                type="button"
-                                className="btn-icon ver"
-                                onClick={() => setLoteAbiertoId(l.id)}
-                                aria-label={`Ver los pedidos del lote #${l.id}`}
-                              >
-                                <Eye size={16} />
-                              </button>
-                            </Tooltip>
-                          </div>
+                          <AccionesFila etiqueta={`Más acciones del lote #${l.id}`} acciones={accionesDeLote(l)} />
                         </td>
                       </tr>
                     ))
@@ -1132,6 +1392,33 @@ export function OrdersPage() {
           // El modal sigue abierto tras guardar (se puede imprimir o seguir
           // editando); la tabla de fondo se refresca con el total nuevo.
           onGuardado={recargarListados}
+        />
+      )}
+
+      {registrando && (
+        <RegistrarPedidoModal
+          onCerrar={() => setRegistrando(false)}
+          onRegistrado={(id, cliente) => {
+            setRegistrando(false);
+            recargarListados();
+            alertaExito(cliente ? `Pedido #${id} registrado para ${cliente}` : `Pedido #${id} registrado`);
+            // Se abre para ajustar precios o cantidades, que es lo siguiente
+            // que se hace con un pedido apuntado al teléfono.
+            setDetalleId(id);
+          }}
+        />
+      )}
+
+      {creandoLote && (
+        <CrearLoteModal
+          seleccion={[...seleccion]}
+          onCerrar={() => setCreandoLote(false)}
+          onCreado={(id) => {
+            setCreandoLote(false);
+            setSeleccion(new Set());
+            // El lote ya está creado y repartido: se sigue en su tablero.
+            navegar(`/plano?pestana=lotes&lote=${id}`);
+          }}
         />
       )}
 

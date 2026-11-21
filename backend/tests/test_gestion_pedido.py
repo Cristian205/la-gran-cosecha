@@ -276,3 +276,60 @@ def test_un_pedido_anterior_a_la_auditoria_muestra_cuando_llego_sin_inventar(api
     assert len(linea_de_tiempo) == 1
     assert linea_de_tiempo[0]["tipo"] == "RECIBIDO"
     assert linea_de_tiempo[0]["datos"] == {"sin_foto": True}
+
+
+# ==========================================================================
+# El estado del pedido en la tabla: deducido, no guardado
+# ==========================================================================
+#
+# `Pedido.estado` declara cinco valores desde el sistema anterior, pero hoy
+# solo se escriben dos (PENDIENTE al crearse, ENTREGADO al entregar). Lo que la
+# columna muestra se deduce de hechos que YA están registrados, para que no
+# haya dos verdades: la factura generada y el producto sugerido sin aprobar.
+# Ver `apps/orders/estado_comercial.py`.
+def _fila(api, pedido_id):
+    r = api.get("/api/orders/", {"page_size": 100})
+    assert r.status_code == 200, r.json()
+    filas = r.json()["results"] if isinstance(r.json(), dict) else r.json()
+    return next(f for f in filas if f["id"] == pedido_id)
+
+
+def test_un_pedido_nuevo_del_catalogo_se_muestra_como_recibido(api_owner, pedido):
+    fila = _fila(api_owner, pedido.id)
+    assert fila["comercial"] == {"estado": "RECIBIDO", "etiqueta": "Recibido", "por_revisar": False}
+
+
+def test_un_pedido_con_producto_sugerido_se_muestra_por_revisar(api_owner, api, presentacion):
+    r = api.post(
+        "/api/orders/",
+        {
+            "cliente": {"nombre": "Don Luis", "direccion": "Calle 9", "autoriza_datos": True},
+            "items": [{"presentacion_id": presentacion.id, "cantidad": "1"}],
+            "personalizados": [{"nombre": "Yuca criolla", "cantidad": "3", "unidad_id": presentacion.unidad_venta_id}],
+        },
+        format="json",
+    )
+    assert r.status_code == 201, r.content
+    fila = _fila(api_owner, r.json()["pedido_id"])
+    assert fila["comercial"]["estado"] == "POR_REVISAR"
+    assert fila["comercial"]["por_revisar"] is True
+
+
+def test_generar_la_factura_deja_el_pedido_como_impreso(api_owner, pedido):
+    assert _fila(api_owner, pedido.id)["comercial"]["estado"] == "RECIBIDO"
+    assert api_owner.get(f"/api/orders/{pedido.id}/pdf/").status_code == 200
+    # No se escribió ninguna columna nueva: el estado guardado sigue igual.
+    pedido.refresh_from_db()
+    assert pedido.estado == "PENDIENTE"
+    assert _fila(api_owner, pedido.id)["comercial"]["etiqueta"] == "Impreso"
+
+
+def test_el_estado_del_pedido_no_repite_la_entrega(api_owner, pedido):
+    """
+    Entregar es un hecho del DESPACHO: va en la columna de despacho y no se
+    repite en la del pedido, que sigue contando lo suyo (recibido, impreso).
+    """
+    assert api_owner.post("/api/orders/entregar/", {"ids": [pedido.id]}, format="json").status_code == 200
+    fila = _fila(api_owner, pedido.id)
+    assert fila["estado"] == "ENTREGADO"
+    assert fila["comercial"]["estado"] == "RECIBIDO"

@@ -42,7 +42,7 @@ from rest_framework.exceptions import ValidationError
 from apps.orders.models import Cliente, DetallePedido, Pedido
 
 from .esquemas import calcular_esquema
-from .models import AjusteRuta, Furgon, PedidoDespacho, PlanoCarga, ProgramacionSemanal
+from .models import AjusteRuta, Furgon, LoteDespacho, PedidoDespacho, PedidoLote, PlanoCarga, ProgramacionSemanal
 from .serializers import PlanoCargaSerializer, coordenadas, revisar
 
 #: Estados que ya no se planifican.
@@ -162,6 +162,27 @@ def rutas_del_dia(tenant, fecha: datetime.date) -> dict:
 # ==========================================================================
 # Pedidos y consolidación
 # ==========================================================================
+def reservados_en_lote(tenant, ids, excepto=None) -> dict:
+    """
+    `{pedido_id: numero_de_lote}` de los pedidos que un lote vivo tiene
+    reservados, sin contar `excepto` (el lote para el que se está armando).
+
+    Es la otra mitad de la garantía de que un pedido no se despacha dos
+    veces: `PedidoDespacho.pedido` es único y evita que esté en dos
+    despachos, pero entre crear el lote y generar sus despachos el pedido
+    todavía no tiene despacho, y sin esto el centro del día podría
+    llevárselo por delante.
+    """
+    if not ids:
+        return {}
+    qs = PedidoLote.objects.filter(
+        tenant=tenant, pedido_id__in=list(ids), activo=True, lote__estado__in=LoteDespacho.VIVOS
+    ).select_related("lote")
+    if excepto is not None:
+        qs = qs.exclude(lote_id=getattr(excepto, "id", excepto))
+    return {f.pedido_id: f.lote.numero for f in qs}
+
+
 def filtro_fecha_entrega(fecha: datetime.date) -> Q:
     return Q(fecha_programada__date=fecha) | Q(
         fecha_programada__isnull=True, fecha_pedido__date=fecha - datetime.timedelta(days=1)
@@ -418,6 +439,10 @@ def proponer(tenant, fecha: datetime.date, tipo) -> dict:
         for p in v["ruta_paradas"]:
             rutas_de_cliente.setdefault(p["cliente_id"], []).append(clave)
 
+    # Los pedidos que un lote tiene reservados se reparten EN ese lote: aquí
+    # solo se dice dónde están, para que nadie los mueva por dos caminos.
+    reservados = reservados_en_lote(tenant, [p.id for p in pedidos if p.id not in asignaciones])
+
     sin_asignar = []
     for p in pedidos:
         datos = pedido_json(p)
@@ -429,6 +454,12 @@ def proponer(tenant, fecha: datetime.date, tipo) -> dict:
             v = vehiculos[clave]
         else:
             datos["despacho"] = None
+            if p.id in reservados:
+                sin_asignar.append({
+                    **datos,
+                    "motivo": f"Está reservado en el lote de despacho #{reservados[p.id]}: se reparte desde ahí.",
+                })
+                continue
             if p.cliente_id is None:
                 sin_asignar.append({**datos, "motivo": "El pedido no tiene cliente."})
                 continue
@@ -640,7 +671,7 @@ def adaptar_borradores(**filtro) -> int:
 # ==========================================================================
 # Datos operativos (lo que se imprime y se congela)
 # ==========================================================================
-def datos_operativos(plano: PlanoCarga) -> dict:
+def datos_operativos(plano: PlanoCarga, recorrido: dict | None = None) -> dict:
     asignaciones = list(plano.pedidos.all())
     ids = [a.pedido_id for a in asignaciones]
     pedidos = {p.id: p for p in con_detalles(Pedido.objects.filter(tenant=plano.tenant, id__in=ids))}
@@ -661,6 +692,7 @@ def datos_operativos(plano: PlanoCarga) -> dict:
             "telefono": primero.telefono_de_contacto if primero else "",
             "recibe": primero.recibe_nombre if primero else "",
             "canastillas": g["cantidad"],
+            "extra": not suyos,
             "pedidos": [
                 {"id": p.id, "estado": p.estado, "observaciones": p.observaciones or "",
                  "indicaciones": p.indicaciones_entrega or ""}
@@ -671,14 +703,47 @@ def datos_operativos(plano: PlanoCarga) -> dict:
             "sin_regla": est["sin_regla"],
         })
     f = plano.furgon
+    # El recorrido viene de quien genera (el lote); al recalcular un
+    # despacho ya guardado se conserva el que tenía.
+    if recorrido is None:
+        recorrido = (plano.datos_operativos or {}).get("recorrido") or {}
     return {
         "ruta": plano.ruta.nombre if plano.ruta_id and plano.ruta else "",
         "ruta_clave": plano.ruta_clave,
+        "lote": plano.lote.numero if plano.lote_id and plano.lote else None,
+        "recorrido": {"inicio": recorrido.get("inicio"), "fin": recorrido.get("fin")},
         "furgon": {"nombre": f.nombre, "placa": f.placa, "referencia": f.referencia},
         "fecha": plano.fecha.isoformat() if hasattr(plano.fecha, "isoformat") else str(plano.fecha),
         "tomado_en": timezone.now().isoformat(),
         "paradas": paradas,
     }
+
+
+def confirmar_despacho(plano: PlanoCarga, usuario) -> dict:
+    """
+    Revisa el despacho y, si no hay errores, lo confirma congelando sus datos
+    operativos. Devuelve la revisión: con `errores` no cambió nada.
+
+    Vive aquí y no en la vista porque confirmar ocurre en dos sitios —un
+    despacho suelto y un lote completo— y dos copias de «qué significa
+    confirmar» acabarían discrepando.
+    """
+    rev = revisar(
+        {"grupos": plano.grupos, "posiciones": plano.posiciones, "medidas": plano.medidas},
+        plano.furgon, plano.tipo_canastilla,
+    )
+    if rev["errores"]:
+        return rev
+    plano.estado = PlanoCarga.CONFIRMADO
+    plano.confirmado_por = usuario if (usuario and usuario.is_authenticated) else None
+    plano.confirmado_en = timezone.now()
+    # Se congelan los datos operativos: el histórico no cambia aunque después
+    # se edite la ruta habitual, un cliente o un pedido.
+    plano.datos_operativos = datos_operativos(plano)
+    plano.save(
+        update_fields=["estado", "confirmado_por", "confirmado_en", "datos_operativos", "actualizado"]
+    )
+    return rev
 
 
 # ==========================================================================
@@ -734,18 +799,29 @@ def _limpiar(plano: PlanoCarga):
     plano.save(update_fields=["grupos", "posiciones", "actualizado"])
 
 
-def generar(tenant, fecha: datetime.date, tipo, vehiculos: list, usuario, contexto: dict, liberar=()) -> list[PlanoCarga]:
+def generar(tenant, fecha: datetime.date, tipo, vehiculos: list, usuario, contexto: dict,
+            liberar=(), lote=None) -> list[PlanoCarga]:
     """
     Crea o actualiza un despacho en borrador por vehículo. `vehiculos`:
     [{"clave", "furgon", "nombre", "paradas": [{"cliente", "pedidos": [ids],
     "canastillas"}]}], con las paradas en orden de entrega. `liberar`: pedidos
     que el administrador retiró de su vehículo y vuelven a quedar sin asignar.
+
+    Una parada SIN pedidos es una entrega extraordinaria: necesita `nombre` y
+    lleva las canastillas que se le fijen (una recogida, una muestra, un
+    pedido que entró por teléfono y todavía no está en el sistema). `lote` ata
+    los despachos al lote de despacho del que salieron, y `recorrido` guarda
+    el punto inicial y final del vehículo en los datos operativos.
     """
     if not isinstance(vehiculos, list) or not vehiculos:
         raise ValidationError("No hay vehículos para generar.")
     if not isinstance(liberar, (list, tuple)) or any(not isinstance(x, int) or isinstance(x, bool) for x in liberar):
         raise ValidationError("«liberar» debe ser una lista de pedidos.")
 
+    # El lote viaja en el contexto del serializador: al crear el despacho
+    # todavía no tiene `lote`, y sin esto su propia reserva lo rechazaría.
+    if lote is not None:
+        contexto = {**contexto, "lote": lote.id}
     del_dia = {p.id: p for p in pedidos_del_dia(tenant, fecha)}
     furgones = {f.id: f for f in Furgon.objects.filter(tenant=tenant)}
     vistos_pedidos, vistas_claves, vistos_furgones = set(), set(), set()
@@ -769,9 +845,14 @@ def generar(tenant, fecha: datetime.date, tipo, vehiculos: list, usuario, contex
             raise ValidationError("Las paradas deben ser una lista.")
         limpias = []
         for par in paradas:
-            pedidos = par.get("pedidos") if isinstance(par, dict) else None
-            if not isinstance(pedidos, list) or not pedidos:
-                raise ValidationError(f"«{nombre}»: cada parada necesita al menos un pedido.")
+            if not isinstance(par, dict):
+                raise ValidationError(f"«{nombre}»: cada parada debe ser un objeto.")
+            pedidos = par.get("pedidos") or []
+            if not isinstance(pedidos, list):
+                raise ValidationError(f"«{nombre}»: los pedidos de una parada deben ser una lista.")
+            extra_nombre = str(par.get("nombre") or "").strip()[:80]
+            if not pedidos and not extra_nombre:
+                raise ValidationError(f"«{nombre}»: cada parada necesita un pedido o un nombre de entrega.")
             canastillas = _entero(par.get("canastillas"), "canastillas", 1, 500)
             cliente = par.get("cliente")
             objs = []
@@ -785,8 +866,23 @@ def generar(tenant, fecha: datetime.date, tipo, vehiculos: list, usuario, contex
                     raise ValidationError(f"El pedido #{pid} es de otro cliente que el de su parada.")
                 vistos_pedidos.add(pid)
                 objs.append(p)
-            limpias.append({"cliente": cliente, "pedidos": objs, "canastillas": canastillas})
-        limpios.append({"clave": clave, "furgon": furgon, "nombre": nombre, "paradas": limpias})
+            limpias.append({
+                "cliente": cliente, "pedidos": objs, "canastillas": canastillas,
+                "nombre": extra_nombre,
+                "direccion": str(par.get("direccion") or "").strip()[:300],
+                "nota": str(par.get("nota") or "").strip()[:200],
+            })
+        limpios.append({
+            "clave": clave, "furgon": furgon, "nombre": nombre, "paradas": limpias,
+            "recorrido": {"inicio": v.get("inicio"), "fin": v.get("fin")},
+        })
+
+    ajenos = reservados_en_lote(tenant, vistos_pedidos, excepto=lote)
+    if ajenos:
+        pedido, numero = next(iter(ajenos.items()))
+        raise ValidationError(
+            f"El pedido #{pedido} está reservado en el lote de despacho #{numero}: quítalo de ese lote o ármalo desde allí."
+        )
 
     liberar = set(liberar) - vistos_pedidos
     confirmados = PedidoDespacho.objects.filter(
@@ -823,14 +919,21 @@ def generar(tenant, fecha: datetime.date, tipo, vehiculos: list, usuario, contex
             plano = objetivo[v["clave"]]
             grupos, asignados = [], []
             for i, par in enumerate(v["paradas"]):
-                primero = par["pedidos"][0]
-                gid = f"c{par['cliente']}" if par["cliente"] is not None else f"p{primero.id}"
-                nombre = (primero.cliente.nombre_cliente if primero.cliente else f"Pedido #{primero.id}")[:80]
+                primero = par["pedidos"][0] if par["pedidos"] else None
+                if primero is not None:
+                    gid = f"c{par['cliente']}" if par["cliente"] is not None else f"p{primero.id}"
+                    nombre = (primero.cliente.nombre_cliente if primero.cliente else f"Pedido #{primero.id}")[:80]
+                    direccion = (primero.direccion_de_entrega or "").strip()[:300]
+                else:
+                    # Entrega extraordinaria: no sale de un pedido, así que la
+                    # identifica su posición en la secuencia del día.
+                    gid = f"x{i + 1}"
+                    nombre = par["nombre"]
+                    direccion = par["direccion"]
                 grupo = {
                     "id": gid, "nombre": nombre, "cantidad": par["canastillas"], "orden": i + 1, "numero": i + 1,
                     "color": COLORES[i % len(COLORES)],
                 }
-                direccion = (primero.direccion_de_entrega or "").strip()[:300]
                 if direccion:
                     grupo["direccion"] = direccion
                 if par["cliente"] is not None:
@@ -883,8 +986,10 @@ def generar(tenant, fecha: datetime.date, tipo, vehiculos: list, usuario, contex
             ruta_id = int(v["clave"][1:]) if v["clave"].startswith("r") and v["clave"][1:].isdigit() else None
             plano.ruta_clave = v["clave"]
             plano.ruta_id = ruta_id
-            plano.datos_operativos = datos_operativos(plano)
-            plano.save(update_fields=["ruta_clave", "ruta", "datos_operativos", "actualizado"])
+            if lote is not None:
+                plano.lote = lote
+            plano.datos_operativos = datos_operativos(plano, recorrido=v.get("recorrido"))
+            plano.save(update_fields=["ruta_clave", "ruta", "lote", "datos_operativos", "actualizado"])
             resultado.append(plano)
 
         usados = {p.id for p in resultado}

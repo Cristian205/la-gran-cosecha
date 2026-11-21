@@ -33,6 +33,7 @@ import {
   Save,
   Search,
   SearchX,
+  PackageSearch,
   Settings2,
   ShieldCheck,
   Trash2,
@@ -43,6 +44,7 @@ import {
   X,
 } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   confirmarPlano,
   consultarDia,
@@ -77,7 +79,15 @@ import { ColumnPickerButton } from "../../components/ColumnPickerButton";
 import { ThOrdenable } from "../../components/ThOrdenable";
 import { useColumnas } from "../../hooks/useColumnas";
 import { useOrdenTabla, type ExtractoresOrden } from "../../hooks/useOrdenTabla";
-import { EstadoVacio, MenuFila, Pastilla, TarjetaKpi, type AccionMenu } from "../../components/gestion/Gestion";
+import {
+  AccionesFila,
+  EstadoVacio,
+  MenuFila,
+  Pastilla,
+  TarjetaKpi,
+  type AccionFila,
+  type AccionMenu,
+} from "../../components/gestion/Gestion";
 import { Paginacion, usePaginacion } from "../../components/gestion/Paginacion";
 import { alertaError, alertaExito, confirmarAccion, confirmarDescartar, confirmarEliminar } from "../../utils/alertas";
 import {
@@ -96,6 +106,7 @@ import {
   ubicarPendientes,
 } from "./acomodo";
 import CentroPlanificacion, { mananaIso } from "./CentroPlanificacion";
+import LotesDespacho from "./LotesDespacho";
 import { ConfigMedidas } from "./ConfigMedidas";
 import ReglasCarga from "./ReglasCarga";
 import RutasSemanales from "./RutasSemanales";
@@ -190,9 +201,16 @@ function borradorNuevo(furgones: Furgon[], canastillas: TipoCanastilla[]): Borra
   };
 }
 
-type Pestana = "centro" | "rutas" | "despachos" | "medidas";
+type Pestana = "centro" | "lotes" | "rutas" | "despachos" | "medidas";
 const PESTANAS: Array<{ clave: Pestana; etiqueta: string; icono: ReactNode; titulo: string; texto: string }> = [
   { clave: "centro", etiqueta: "Centro del día", icono: <LayoutDashboard size={15} />, titulo: "Centro de planificación", texto: "Los pedidos del día repartidos por vehículo según sus rutas: revisa, ajusta y genera los despachos" },
+  {
+    clave: "lotes",
+    etiqueta: "Lotes de despacho",
+    icono: <PackageSearch size={15} />,
+    titulo: "Lotes de despacho",
+    texto: "La preparación de un día: pedidos repartidos entre las turbos, planos de carga y documentos, con su trazabilidad",
+  },
   { clave: "rutas", etiqueta: "Rutas semanales", icono: <Route size={15} />, titulo: "Programación semanal", texto: "Qué vehículo visita a qué clientes, en qué orden, cada día de la semana" },
   { clave: "despachos", etiqueta: "Despachos", icono: <Truck size={15} />, titulo: "Despachos", texto: "Cada vehículo con su plano de carga: qué canastilla va en cada posición y en qué orden se entrega" },
   { clave: "medidas", etiqueta: "Vehículos y reglas", icono: <Settings2 size={15} />, titulo: "Vehículos, canastillas y reglas", texto: "Las medidas reales y las reglas de carga con las que se calcula cuánto cabe" },
@@ -293,7 +311,14 @@ export default function PlanoPage() {
   const puedeArmar = tienePermiso(usuario, ARMAR);
   const puedeAdministrar = tienePermiso(usuario, ADMINISTRAR);
 
-  const [pestana, setPestana] = useState<Pestana>("centro");
+  // La URL abre una pestaña y, con `lote`, un lote concreto: es a donde
+  // lleva «Crear lote de despacho» desde la tabla de pedidos.
+  const [params, setParams] = useSearchParams();
+  const navegar = useNavigate();
+  const [pestana, setPestana] = useState<Pestana>(() =>
+    PESTANAS.some((x) => x.clave === params.get("pestana")) ? (params.get("pestana") as Pestana) : params.get("lote") ? "lotes" : "centro"
+  );
+  const loteDeUrl = Number(params.get("lote")) || null;
   const [fechaCentro, setFechaCentro] = useState(mananaIso);
   const [furgones, setFurgones] = useState<Furgon[]>([]);
   const [canastillas, setCanastillas] = useState<TipoCanastilla[]>([]);
@@ -978,15 +1003,31 @@ export default function PlanoPage() {
     setKpiPulsado(null);
   }
 
-  function accionesDe(p: PlanoResumen): AccionMenu[] {
-    const acciones: AccionMenu[] = [
-      { clave: "pdf", tono: "info", etiqueta: "Descargar PDF", icono: <FileDown size={15} />, onSeleccionar: () => abrirPdf(p.id) },
+  /**
+   * Todas las acciones de un despacho, de la más usada a la menos: las tres
+   * primeras se pintan como botones y el resto cae en el "⋯". Abrir cambia
+   * de cara según el estado: un borrador se edita, un despacho confirmado
+   * solo se consulta.
+   */
+  function accionesDe(p: PlanoResumen): AccionFila[] {
+    const editando = puedeArmar && p.estado === "BORRADOR";
+    const acciones: AccionFila[] = [
+      {
+        clave: "abrir",
+        tono: editando ? "editar" : "ver",
+        etiqueta: editando ? "Abrir y editar" : "Abrir",
+        aria: `${editando ? "Abrir y editar" : "Abrir"} el despacho ${p.nombre}`,
+        icono: editando ? <Pencil size={16} /> : <Eye size={16} />,
+        onSeleccionar: () => abrir(p.id),
+      },
+      { clave: "pdf", tono: "info", etiqueta: "Descargar PDF", aria: `Descargar el PDF de ${p.nombre}`, icono: <FileDown size={15} />, onSeleccionar: () => abrirPdf(p.id) },
     ];
     if (puedeArmar) {
       acciones.push({
         clave: "duplicar",
         tono: "copiar",
         etiqueta: "Duplicar para el día siguiente",
+        aria: `Duplicar ${p.nombre} para el día siguiente`,
         icono: <Copy size={15} />,
         onSeleccionar: () => duplicarDesde(p.id, p.fecha),
       });
@@ -1003,6 +1044,13 @@ export default function PlanoPage() {
   const valido = !!b && !!b.nombre.trim() && b.furgon !== "" && b.tipo !== "" && b.grupos.length > 0 && !!rejilla;
   const sobrePeso = pesoEstimado != null && !!furgonActual?.carga_util_kg && pesoEstimado > furgonActual.carga_util_kg;
 
+  const etiquetaVolver =
+    pestana === "centro"
+      ? "Volver al centro del día"
+      : pestana === "lotes"
+        ? "Volver al lote"
+        : "Volver a los despachos";
+
   const botonActualizar = (
     <Tooltip label="Actualizar" posicion="abajo">
       <button type="button" className="btn-icon gestion-actualizar-icono" onClick={recargar} disabled={actualizando} aria-label="Actualizar despachos">
@@ -1016,7 +1064,10 @@ export default function PlanoPage() {
   const navegacion = (
     <nav className="pl-nav" aria-label="Módulos de logística">
       {PESTANAS.filter((x) => x.clave !== "medidas" || puedeAdministrar || furgones.length).map((x) => (
-        <button key={x.clave} type="button" className={pestana === x.clave ? "activo" : ""} aria-current={pestana === x.clave ? "page" : undefined} onClick={() => setPestana(x.clave)}>
+        <button key={x.clave} type="button" className={pestana === x.clave ? "activo" : ""} aria-current={pestana === x.clave ? "page" : undefined} onClick={() => {
+          setPestana(x.clave);
+          setParams(x.clave === "centro" ? {} : { pestana: x.clave }, { replace: true });
+        }}>
           {x.icono}
           {x.etiqueta}
         </button>
@@ -1041,6 +1092,36 @@ export default function PlanoPage() {
           {navegacion}
           <ConfigMedidas furgones={furgones} canastillas={canastillas} puedeAdministrar={puedeAdministrar} onCambio={cargarCatalogos} />
           <ReglasCarga puedeAdministrar={puedeAdministrar} />
+        </div>
+      </>
+    );
+  }
+
+  if (!b && pestana === "lotes") {
+    return (
+      <>
+        {cabecera()}
+        <div className="contenido gestion-vista plano">
+          {navegacion}
+          {cargando ? (
+            <div className="panel pl-cargando">Cargando…</div>
+          ) : (
+            <LotesDespacho
+              furgones={furgones}
+              puedeArmar={puedeArmar}
+              loteInicial={loteDeUrl}
+              onLoteAbierto={(id) =>
+                setParams(
+                  id ? { pestana: "lotes", lote: String(id) } : { pestana: "lotes" },
+                  { replace: true }
+                )
+              }
+              onAbrirDespacho={(id) => abrir(id, true)}
+              onIrARutas={() => setPestana("rutas")}
+              onIrAPedidos={() => navegar("/pedidos")}
+              onDespachosCambiaron={() => listarPlanos().then(setPlanos).catch(() => undefined)}
+            />
+          )}
         </div>
       </>
     );
@@ -1312,19 +1393,7 @@ export default function PlanoPage() {
                           </td>
                         ))}
                         <td className="col-acciones">
-                          <div className="acciones">
-                            <Tooltip label={puedeArmar && p.estado === "BORRADOR" ? "Abrir y editar" : "Abrir"}>
-                              <button
-                                type="button"
-                                className={`btn-icon ${puedeArmar && p.estado === "BORRADOR" ? "editar" : "ver"}`}
-                                onClick={() => abrir(p.id)}
-                                aria-label={`Abrir el despacho ${p.nombre}`}
-                              >
-                                {puedeArmar && p.estado === "BORRADOR" ? <Pencil size={16} /> : <Eye size={16} />}
-                              </button>
-                            </Tooltip>
-                            <MenuFila etiqueta={`Más acciones de ${p.nombre}`} acciones={accionesDe(p)} />
-                          </div>
+                          <AccionesFila etiqueta={`Más acciones de ${p.nombre}`} acciones={accionesDe(p)} />
                         </td>
                       </tr>
                     ))
@@ -1365,8 +1434,8 @@ export default function PlanoPage() {
     <>
       <div className="topbar gestion-topbar">
         <div className="plano-topbar-titulo">
-          <Tooltip label={pestana === "centro" ? "Volver al centro del día" : "Volver a los despachos"} posicion="abajo">
-            <button type="button" className="btn-icon plano-volver" onClick={volver} aria-label={pestana === "centro" ? "Volver al centro del día" : "Volver a los despachos"}>
+          <Tooltip label={etiquetaVolver} posicion="abajo">
+            <button type="button" className="btn-icon plano-volver" onClick={volver} aria-label={etiquetaVolver}>
               <ArrowLeft size={18} />
             </button>
           </Tooltip>

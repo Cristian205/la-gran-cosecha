@@ -1,5 +1,6 @@
-import { ArrowRight, Inbox } from "lucide-react";
+import { ArrowRight, Eye, Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Tooltip } from "../../components/Tooltip";
 import { fechaISO } from "../../utils/fechas";
 import { CuerpoModulo, EmptyState, StatusBadge, Tarjeta } from "./estados";
 import { formatoPrecio } from "./formato";
@@ -79,9 +80,11 @@ function Tabla({ datos, onVer }: { datos: ActividadReciente; onVer: (id: number)
                   {formatoPrecio(p.total)}
                 </td>
                 <td className="db-accion">
-                  <button type="button" className="db-boton-fila" onClick={() => onVer(p.id)} aria-label={`Ver el pedido ${p.id}`}>
-                    Ver
-                  </button>
+                  <Tooltip label="Ver pedido">
+                    <button type="button" className="btn-icon ver" onClick={() => onVer(p.id)} aria-label={`Ver el pedido ${p.id}`}>
+                      <Eye size={15} />
+                    </button>
+                  </Tooltip>
                 </td>
               </tr>
             );

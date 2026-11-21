@@ -238,6 +238,26 @@ class GenerarPdfPedidoView(ExigeNegocioMixin, APIView):
         return response
 
 
+def html_facturas(pedidos) -> str:
+    """
+    Las facturas de varios pedidos en un solo documento, con el formato de
+    siempre. Lo usa la impresión por lote de la tabla de pedidos y también la
+    documentación de un lote de despacho (`apps.logistica`): la factura que
+    viaja con el pedido es la misma en los dos sitios.
+    """
+    # Todos los pedidos son del mismo negocio (las vistas ya están acotadas),
+    # así que basta el del primero para la marca del emisor.
+    tenant = pedidos[0].tenant
+    return render_to_string(
+        "orders/pdf/factura_lote.html",
+        {
+            "pedidos_data": [_obtener_datos_factura(p) for p in pedidos],
+            "logo_data": _obtener_logo_base64(tenant),
+            **_datos_emisor(tenant),
+        },
+    )
+
+
 class GenerarPdfPedidosLoteView(ExigeNegocioMixin, APIView):
     """GET /api/orders/pdf-lote/?ids=1,2,3 — una factura por pedido, un solo PDF."""
 
@@ -267,16 +287,7 @@ class GenerarPdfPedidosLoteView(ExigeNegocioMixin, APIView):
             )
             lote.pedidos.set(pedidos_ordenados)
 
-        # Todos los pedidos del lote son del mismo negocio (la vista ya está
-        # acotada), así que basta el del primero para la marca del emisor.
-        tenant = pedidos_ordenados[0].tenant
-        context = {
-            "pedidos_data": [_obtener_datos_factura(p) for p in pedidos_ordenados],
-            "logo_data": _obtener_logo_base64(tenant),
-            **_datos_emisor(tenant),
-        }
-
-        html_string = render_to_string("orders/pdf/factura_lote.html", context)
+        html_string = html_facturas(pedidos_ordenados)
 
         response = HttpResponse(content_type="application/pdf")
         ids_str = "-".join(str(p.id) for p in pedidos_ordenados)

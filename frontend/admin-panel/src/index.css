@@ -920,6 +920,20 @@ td .input:focus, td select:focus {
 }
 .btn-icon:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
+/* Acciones de fila: SIEMPRE redondas.
+   En todas las tablas del panel —pedidos, clientes, usuarios, inventario,
+   catálogo, contenido, automatizaciones…— los botones de acción de cada
+   fila son círculos. Es la FORMA la que los separa de los botones de barra,
+   que siguen siendo rectangulares: la columna de acciones se reconoce de un
+   vistazo sin leer nada.
+   Cubre las celdas de tabla (`td`) y también las filas-lista que se ven como
+   tabla (categorías, presentaciones comerciales…), que agrupan sus acciones
+   dentro de un `.acciones`. */
+td .btn-icon,
+.acciones .btn-icon {
+  border-radius: 50%;
+}
+
 /* ---------- Barra de filtros del catálogo ---------- */
 .filtros-bar {
   display: flex; align-items: center; gap: .7rem; flex-wrap: wrap;

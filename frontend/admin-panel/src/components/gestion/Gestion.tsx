@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ChevronRight, MoreHorizontal } from "lucide-react";
+import { Tooltip } from "../Tooltip";
 import "./gestion.css";
 
 /**
@@ -126,6 +127,59 @@ export interface AccionMenu {
 }
 
 export type TonoAccion = "ver" | "editar" | "exito" | "info" | "copiar" | "peligro";
+
+/** Cuántas acciones de una fila se pintan como botón antes de pasar al "⋯". */
+export const ACCIONES_VISIBLES = 3;
+
+export interface AccionFila extends AccionMenu {
+  /** Qué lee un lector de pantalla si la acción se pinta como botón redondo.
+   *  La `etiqueta` dice QUÉ hace ("Editar"); esto dice SOBRE QUÉ
+   *  ("Editar Kilo de papa"). Sin ella se usa la etiqueta tal cual. */
+  aria?: string;
+}
+
+/**
+ * La columna de acciones de una fila, con una sola regla: como mucho
+ * {@link ACCIONES_VISIBLES} botones redondos y, si hay más, un "⋯" al final
+ * que abre el resto. Nunca cuatro botones sueltos: el cuarto hueco es siempre
+ * el menú, así que la columna mide lo mismo en todas las tablas y la acción
+ * rara no le quita sitio a la de todos los días.
+ *
+ * El ORDEN de `acciones` es el que manda: las primeras son las principales.
+ */
+export function AccionesFila({
+  etiqueta,
+  acciones,
+  className,
+}: {
+  etiqueta: string;
+  acciones: AccionFila[];
+  /** Clase extra del grupo, para las filas que lo colocan con su rejilla. */
+  className?: string;
+}) {
+  const cabenTodas = acciones.length <= ACCIONES_VISIBLES;
+  const visibles = cabenTodas ? acciones : acciones.slice(0, ACCIONES_VISIBLES);
+  const resto = cabenTodas ? [] : acciones.slice(ACCIONES_VISIBLES);
+  if (acciones.length === 0) return null;
+  return (
+    <div className={`acciones ${className ?? ""}`.trim()}>
+      {visibles.map((a) => (
+        <Tooltip key={a.clave} label={a.etiqueta}>
+          <button
+            type="button"
+            className={`btn-icon ${a.peligro ? "peligro" : a.tono ?? ""}`}
+            disabled={a.deshabilitada}
+            onClick={a.onSeleccionar}
+            aria-label={a.aria ?? a.etiqueta}
+          >
+            {a.icono}
+          </button>
+        </Tooltip>
+      ))}
+      {resto.length > 0 && <MenuFila etiqueta={etiqueta} acciones={resto} />}
+    </div>
+  );
+}
 
 /**
  * El "⋯" de cada fila. El menú se pinta en `document.body` con posición fija:

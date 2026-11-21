@@ -368,3 +368,116 @@
 .plano-puntos-datos strong { font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plano-puntos-datos small { font-size: 0.74rem; color: var(--gris); }
 .plano-puntos-datos .plano-puntos-ubic { color: var(--dark); font-weight: 650; }
+
+/* =====================================================================
+   Lotes de despacho
+   La preparación de un día: lista de lotes, tablero del lote abierto y los
+   modales de recorrido, entregas extraordinarias, bitácora y confirmación.
+   Reutiliza el tablero del centro del día (.pl-tablero y .pl-vehiculo): lo
+   que se añade aquí es solo lo propio del lote.
+   ===================================================================== */
+
+/* ---------- Lista ---------- */
+.lote-toolbar { width: 100%; }
+.lote-toolbar .pl-check-inline { margin: 0; }
+
+/* ---------- Barra del lote abierto ---------- */
+.lote-barra {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem 1.25rem;
+  flex-wrap: wrap; padding: 0.85rem 1.1rem;
+}
+.lote-identidad { display: flex; align-items: center; gap: 0.7rem; min-width: 0; }
+.lote-identidad h2 {
+  display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.1rem; font-size: 1.1rem;
+}
+.lote-alias { font-size: 0.86rem; font-weight: 650; color: var(--gris); }
+.lote-barra-acciones { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+.lote-aviso-cerrado { background: var(--verde-claro); color: var(--verde-texto); }
+
+/* ---------- Lo que hizo el reparto automático ---------- */
+.lote-notas { padding: 0.6rem 1rem; font-size: 0.84rem; }
+.lote-notas summary {
+  display: flex; align-items: center; gap: 0.45rem; font-weight: 700; cursor: pointer; color: var(--dark);
+}
+.lote-notas summary::marker { color: var(--gris); }
+.lote-notas ul { margin: 0.5rem 0 0; padding-left: 1.1rem; color: var(--gris); display: grid; gap: 0.25rem; }
+
+/* ---------- Vehículo: recorrido y paradas propias del lote ---------- */
+.lote-recorrido {
+  display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0 0 0.5rem; font-size: 0.78rem; color: var(--gris);
+}
+.lote-recorrido span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.lote-recorrido strong { color: var(--dark); font-weight: 700; }
+
+/* Una parada que no sale de un pedido: se distingue sin depender del color. */
+.pl-parada-v.lote-parada-extra { border-style: dashed; }
+.pl-parada-v.lote-parada-extra .pl-parada-num { background: var(--gris) !important; }
+
+.lote-parada-pie { display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.lote-quitar { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--rojo); }
+
+/* ---------- Bitácora ---------- */
+.lote-bitacora { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+.lote-evento {
+  padding: 0.55rem 0.7rem; border-radius: 11px; border: 1px solid var(--p-linea); background: var(--superficie);
+  border-left: 3px solid var(--borde);
+}
+.lote-evento.tipo-ajuste { border-left-color: var(--amber); }
+.lote-evento.tipo-confirmado, .lote-evento.tipo-generado { border-left-color: var(--verde-500); }
+.lote-evento.tipo-anulado { border-left-color: var(--rojo); }
+.lote-evento-cab { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.2rem; }
+.lote-evento p { margin: 0; font-size: 0.85rem; }
+
+/* ---------- Resumen de confirmación ---------- */
+.lote-resumen-cifras {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.6rem; margin-bottom: 1rem;
+}
+.lote-cifra {
+  padding: 0.6rem 0.75rem; border-radius: 12px; border: 1px solid var(--p-linea); background: var(--gris-claro);
+  display: flex; flex-direction: column; gap: 0.1rem;
+}
+.lote-cifra b { font-size: 1.35rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.lote-cifra span { font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gris); font-weight: 700; }
+.lote-cifra small { font-size: 0.75rem; color: var(--gris); }
+
+.lote-validaciones { padding: 0.7rem 0.9rem; border-radius: 12px; margin-bottom: 0.8rem; font-size: 0.86rem; }
+.lote-validaciones h3 { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.35rem; font-size: 0.9rem; }
+.lote-validaciones ul { margin: 0; padding-left: 1.15rem; display: grid; gap: 0.2rem; }
+.lote-validaciones.error { background: var(--rojo-claro); color: var(--rojo-texto); }
+.lote-validaciones.aviso { background: var(--ambar-claro); color: var(--ambar-texto); }
+
+.lote-subtitulo { margin: 1.1rem 0 0.5rem; font-size: 0.95rem; }
+.lote-documentos { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* ---------- Crear lote (modal desde la tabla de pedidos) ---------- */
+.lote-crear { display: flex; flex-direction: column; gap: 0.9rem; }
+.lote-crear-fechas { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.2rem; }
+.lote-fecha {
+  flex: 0 0 auto; display: flex; flex-direction: column; gap: 0.1rem; align-items: flex-start;
+  padding: 0.55rem 0.8rem; border-radius: 12px; border: 1px solid var(--borde); background: var(--superficie);
+  font: inherit; color: var(--gris); cursor: pointer; text-align: left;
+  transition: border-color var(--p-dur) ease, background var(--p-dur) ease;
+}
+.lote-fecha:hover { background: var(--p-hover); }
+.lote-fecha strong { color: var(--dark); font-size: 0.88rem; text-transform: capitalize; }
+.lote-fecha small { font-size: 0.74rem; }
+.lote-fecha.activa { border-color: var(--verde-500); background: var(--verde-claro); }
+.lote-fecha.activa strong, .lote-fecha.activa small { color: var(--verde-texto); }
+.lote-fecha:focus-visible { outline: 2px solid var(--verde-500); outline-offset: 1px; }
+
+.lote-crear-cifras {
+  display: flex; align-items: center; gap: 0.3rem 1rem; flex-wrap: wrap; padding: 0.55rem 0.75rem;
+  border-radius: 11px; background: var(--gris-claro); font-size: 0.82rem; color: var(--gris);
+}
+.lote-crear-cifras span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.lote-crear-cifras strong { color: var(--dark); font-variant-numeric: tabular-nums; }
+.lote-crear-tabla { max-height: 46vh; overflow: auto; border: 1px solid var(--p-linea); border-radius: var(--p-radio); }
+
+.pl-campo-ancho { grid-column: 1 / -1; }
+
+@media (max-width: 900px) {
+  .lote-barra { flex-direction: column; align-items: stretch; }
+  .lote-barra-acciones { justify-content: flex-start; }
+  .lote-crear-tabla { max-height: none; }
+}
