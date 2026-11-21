@@ -30,7 +30,7 @@ import { ThOrdenable } from "../components/ThOrdenable";
 import { useColumnas } from "../hooks/useColumnas";
 import { useOrdenTabla, type ExtractoresOrden } from "../hooks/useOrdenTabla";
 import { useAuth } from "../auth/AuthContext";
-import { EstadoVacio, MenuFila, Pastilla, TarjetaKpi, type AccionMenu } from "../components/gestion/Gestion";
+import { AccionesFila, EstadoVacio, Pastilla, TarjetaKpi, type AccionFila } from "../components/gestion/Gestion";
 import { fechaISO } from "../utils/fechas";
 import { BotonFiltros, FilaFiltros, useFiltrosColumna, type DefsFiltros } from "../components/gestion/FiltrosColumna";
 import { ClientFormModal } from "./clients/ClientFormModal";
@@ -371,15 +371,37 @@ export function ClientsPage() {
     }
   }
 
-  function accionesDe(c: Cliente): AccionMenu[] {
-    const acciones: AccionMenu[] = [];
-    if (puedeVerPedidos && c.total_pedidos > 0) {
-      acciones.push({
-        clave: "pedidos",
+  /**
+   * Todas las acciones de un cliente, de la más usada a la menos: las tres
+   * primeras se pintan como botones y el resto cae en el "⋯".
+   *
+   * Llamar va por delante de «ver sus pedidos» a propósito: es lo que se hace
+   * con el cliente delante (confirmar un pedido, avisar de la entrega), y en
+   * el móvil del repartidor es un toque. Ver sus pedidos es navegación: te
+   * saca de esta pantalla.
+   */
+  function accionesDe(c: Cliente): AccionFila[] {
+    const acciones: AccionFila[] = [
+      {
+        clave: "ficha",
         tono: "ver",
-        etiqueta: "Ver sus pedidos",
-        icono: <ShoppingBag size={15} />,
-        onSeleccionar: () => navigate(`/pedidos?q=${encodeURIComponent(c.nombre_cliente)}`),
+        etiqueta: "Ver ficha",
+        aria: `Ver la ficha de ${c.nombre_cliente}`,
+        icono: <Eye size={16} />,
+        onSeleccionar: () => setViendo(c),
+      },
+    ];
+    if (puedeEditar) {
+      acciones.push({
+        clave: "editar",
+        tono: "editar",
+        etiqueta: "Editar cliente",
+        aria: `Editar a ${c.nombre_cliente}`,
+        icono: <Pencil size={16} />,
+        onSeleccionar: () => {
+          setEditando(c);
+          setModalAbierto(true);
+        },
       });
     }
     if (c.telefono_cliente) {
@@ -387,10 +409,21 @@ export function ClientsPage() {
         clave: "llamar",
         tono: "exito",
         etiqueta: "Llamar",
+        aria: `Llamar a ${c.nombre_cliente}`,
         icono: <Phone size={15} />,
         onSeleccionar: () => {
           window.location.href = `tel:${c.telefono_cliente.replace(/[^\d+]/g, "")}`;
         },
+      });
+    }
+    if (puedeVerPedidos && c.total_pedidos > 0) {
+      acciones.push({
+        clave: "pedidos",
+        tono: "ver",
+        etiqueta: "Ver sus pedidos",
+        aria: `Ver los pedidos de ${c.nombre_cliente}`,
+        icono: <ShoppingBag size={15} />,
+        onSeleccionar: () => navigate(`/pedidos?q=${encodeURIComponent(c.nombre_cliente)}`),
       });
     }
     if (puedeEliminar) {
@@ -682,36 +715,7 @@ export function ClientsPage() {
                           </td>
                         ))}
                         <td className="col-acciones">
-                          <div className="acciones">
-                            <Tooltip label="Ver ficha">
-                              <button
-                                type="button"
-                                className="btn-icon ver"
-                                onClick={() => setViendo(c)}
-                                aria-label={`Ver la ficha de ${c.nombre_cliente}`}
-                              >
-                                <Eye size={16} />
-                              </button>
-                            </Tooltip>
-                            {puedeEditar && (
-                              <Tooltip label="Editar cliente">
-                                <button
-                                  type="button"
-                                  className="btn-icon editar"
-                                  onClick={() => {
-                                    setEditando(c);
-                                    setModalAbierto(true);
-                                  }}
-                                  aria-label={`Editar a ${c.nombre_cliente}`}
-                                >
-                                  <Pencil size={16} />
-                                </button>
-                              </Tooltip>
-                            )}
-                            {acciones.length > 0 && (
-                              <MenuFila etiqueta={`Más acciones de ${c.nombre_cliente}`} acciones={acciones} />
-                            )}
-                          </div>
+                          <AccionesFila etiqueta={`Más acciones de ${c.nombre_cliente}`} acciones={acciones} />
                         </td>
                       </tr>
                     );

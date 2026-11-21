@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarClock, Plus, Settings2 } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarClock,
+  Check,
+  CheckCheck,
+  Clock,
+  Play,
+  Plus,
+  Settings2,
+  UserX,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import {
   cambiarEstado,
   crearRecurso,
@@ -13,10 +25,29 @@ import {
   type Recurso,
   type Reserva,
 } from "../../api/reservas";
+import { AccionesFila, type AccionFila, type TonoAccion } from "../../components/gestion/Gestion";
 import { Modal } from "../../components/Modal";
 import { extraerMensajeError, tienePermiso } from "../../utils";
 import { useAuth } from "../../auth/AuthContext";
 import { alertaError, alertaExito } from "../../utils/alertas";
+
+/**
+ * Con qué ícono se pinta cada transición de estado. El NOMBRE lo sigue
+ * diciendo el servidor (`etiqueta`): va al tooltip y al `aria-label`, así que
+ * aquí solo se decide la forma. Un estado que el servidor estrene mañana sale
+ * con la flecha genérica en vez de romper la fila.
+ */
+const ICONO_TRANSICION: Partial<Record<EstadoReserva, { icono: LucideIcon; tono: TonoAccion }>> = {
+  PENDIENTE: { icono: Clock, tono: "info" },
+  CONFIRMADA: { icono: Check, tono: "exito" },
+  EN_CURSO: { icono: Play, tono: "exito" },
+  CUMPLIDA: { icono: CheckCheck, tono: "exito" },
+  CANCELADA: { icono: X, tono: "peligro" },
+  // No es lo mismo que cancelar: quien avisa libera el hueco, quien no
+  // aparece deja la mesa vacía toda la noche.
+  NO_ASISTIO: { icono: UserX, tono: "peligro" },
+};
+const TRANSICION_GENERICA: { icono: LucideIcon; tono: TonoAccion } = { icono: ArrowRight, tono: "editar" };
 
 /**
  * La agenda.
@@ -86,6 +117,27 @@ export function ReservationsPage() {
     } catch (err) {
       alertaError(extraerMensajeError(err, "No se pudo cambiar el estado."));
     }
+  }
+
+  /**
+   * Las transiciones de una reserva, en el orden que manda el servidor: desde
+   * «pendiente» son cuatro (confirmar, sentar, cancelar, no asistió) y ese
+   * orden ya es el de uso, así que las tres primeras salen como botones y la
+   * última cae en el "⋯". Elegir aquí cuál es la principal sería reimplementar
+   * media tabla de transiciones en el panel.
+   */
+  function transicionesDe(r: Reserva): AccionFila[] {
+    return r.siguientes.map((s) => {
+      const { icono: Icono, tono } = ICONO_TRANSICION[s.valor] ?? TRANSICION_GENERICA;
+      return {
+        clave: s.valor,
+        tono,
+        etiqueta: s.etiqueta,
+        aria: `${s.etiqueta}: reserva de ${r.nombre_contacto}`,
+        icono: <Icono size={15} />,
+        onSeleccionar: () => void avanzar(r, s.valor),
+      };
+    });
   }
 
   return (
@@ -174,18 +226,13 @@ export function ReservationsPage() {
                     </td>
                     <td>{r.personas}</td>
                     <td>{r.estado_display}</td>
-                    <td>
-                      {puedeReservar &&
-                        r.siguientes.map((s) => (
-                          <button
-                            key={s.valor}
-                            className="btn secundario"
-                            style={{ marginRight: ".35rem" }}
-                            onClick={() => void avanzar(r, s.valor)}
-                          >
-                            {s.etiqueta}
-                          </button>
-                        ))}
+                    <td className="col-acciones">
+                      {puedeReservar && (
+                        <AccionesFila
+                          etiqueta={`Más acciones de la reserva de ${r.nombre_contacto}`}
+                          acciones={transicionesDe(r)}
+                        />
+                      )}
                     </td>
                   </tr>
                 ))}

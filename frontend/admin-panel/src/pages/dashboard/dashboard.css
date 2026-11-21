@@ -533,8 +533,6 @@ button.db-cats-fila:focus-visible { outline: 2px solid var(--verde-400); outline
 .db-pedido-cliente, .db-pedido-fecha { white-space: normal; }
 .db-pedido-items { display: block; font-size: 0.72rem; color: var(--db-suave); }
 .db-accion { width: 1%; text-align: right; }
-.db-boton-fila { min-height: 30px; padding: 0 0.7rem; border: 1px solid var(--db-borde); border-radius: 8px; background: transparent; color: var(--dark); font-size: 0.78rem; font-weight: 600; }
-.db-boton-fila:hover { border-color: var(--verde-400); color: var(--db-verde); }
 
 /* ==========================================================================
    RESPONSIVE

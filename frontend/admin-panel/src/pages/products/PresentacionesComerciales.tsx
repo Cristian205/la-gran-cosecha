@@ -24,7 +24,7 @@ import {
   reordenarPresentaciones,
   subirImagenPresentacion,
 } from "../../api/resources";
-import { Tooltip } from "../../components/Tooltip";
+import { AccionesFila, type AccionFila } from "../../components/gestion/Gestion";
 import type { UnidadMedida } from "../../types";
 import { formatoPrecio } from "../../utils";
 import { alertaError, alertaExito, confirmarAccion } from "../../utils/alertas";
@@ -282,6 +282,66 @@ export function PresentacionesComerciales({
     onCambiar(ultimo.current.filter((p) => p.clave !== b.clave));
   }
 
+  /**
+   * Las acciones de una presentación, en orden de importancia: las tres
+   * primeras se pintan como botones redondos y lo que sobre cae en el "⋯".
+   * Editar, duplicar y activar son el trabajo de todos los días; consultar el
+   * historial o descartar un borrador recién añadido, no.
+   */
+  function accionesDe(b: BorradorPresentacion, ocupada: boolean): AccionFila[] {
+    const lista: AccionFila[] = [];
+    if (puedeEditar) {
+      lista.push({
+        clave: "editar",
+        tono: "editar",
+        etiqueta: "Editar",
+        aria: `Editar ${b.nombre_presentacion}`,
+        icono: <Pencil size={15} />,
+        deshabilitada: ocupada,
+        onSeleccionar: () => setEdicion({ modo: "editar", borrador: b }),
+      });
+      lista.push({
+        clave: "duplicar",
+        tono: "copiar",
+        etiqueta: "Duplicar",
+        aria: `Duplicar ${b.nombre_presentacion}`,
+        icono: <Copy size={15} />,
+        deshabilitada: ocupada,
+        onSeleccionar: () => setEdicion({ modo: "duplicar", borrador: duplicado(b) }),
+      });
+      lista.push({
+        clave: "estado",
+        tono: b.estado_presentacion ? "peligro" : "exito",
+        etiqueta: b.estado_presentacion ? "Desactivar" : "Activar",
+        aria: `${b.estado_presentacion ? "Desactivar" : "Activar"} ${b.nombre_presentacion}`,
+        icono: b.estado_presentacion ? <PowerOff size={15} /> : <Power size={15} />,
+        deshabilitada: ocupada,
+        onSeleccionar: () => void alternarEstado(b),
+      });
+    }
+    if (persistido && b.id) {
+      lista.push({
+        clave: "historial",
+        tono: "info",
+        etiqueta: "Historial de precios",
+        aria: `Historial de precios de ${b.nombre_presentacion}`,
+        icono: <History size={15} />,
+        onSeleccionar: () => setHistorialDe(b),
+      });
+    }
+    if (!persistido && puedeEditar) {
+      lista.push({
+        clave: "quitar",
+        peligro: true,
+        etiqueta: "Quitar",
+        aria: `Quitar ${b.nombre_presentacion}`,
+        icono: <Trash2 size={15} />,
+        onSeleccionar: () => quitarBorrador(b),
+      });
+    }
+    return lista;
+  }
+
   return (
     <section className="pc" aria-labelledby="pc-titulo">
       <div className="pc-cabecera">
@@ -430,69 +490,11 @@ export function PresentacionesComerciales({
                 <span className={`badge ${p.estado_presentacion ? "activo" : "inactivo"} pc-estado`}>
                   {p.estado_presentacion ? "Activa" : "Inactiva"}
                 </span>
-                {(puedeEditar || (persistido && p.id)) && (
-                  <div className="acciones pc-acciones">
-                    {persistido && p.id && (
-                      <Tooltip label="Historial de precios">
-                        <button
-                          type="button"
-                          className="btn-icon info"
-                          onClick={() => setHistorialDe(p)}
-                          aria-label={`Historial de precios de ${p.nombre_presentacion}`}
-                        >
-                          <History size={15} />
-                        </button>
-                      </Tooltip>
-                    )}
-                    {puedeEditar && (<>
-                    <Tooltip label="Editar">
-                      <button
-                        type="button"
-                        className="btn-icon editar"
-                        onClick={() => setEdicion({ modo: "editar", borrador: p })}
-                        disabled={ocupada}
-                        aria-label={`Editar ${p.nombre_presentacion}`}
-                      >
-                        <Pencil size={15} />
-                      </button>
-                    </Tooltip>
-                    <Tooltip label="Duplicar">
-                      <button
-                        type="button"
-                        className="btn-icon copiar"
-                        onClick={() => setEdicion({ modo: "duplicar", borrador: duplicado(p) })}
-                        disabled={ocupada}
-                        aria-label={`Duplicar ${p.nombre_presentacion}`}
-                      >
-                        <Copy size={15} />
-                      </button>
-                    </Tooltip>
-                    <Tooltip label={p.estado_presentacion ? "Desactivar" : "Activar"}>
-                      <button
-                        type="button"
-                        className={`btn-icon ${p.estado_presentacion ? "peligro" : "exito"}`}
-                        onClick={() => alternarEstado(p)}
-                        disabled={ocupada}
-                        aria-label={`${p.estado_presentacion ? "Desactivar" : "Activar"} ${p.nombre_presentacion}`}
-                      >
-                        {p.estado_presentacion ? <PowerOff size={15} /> : <Power size={15} />}
-                      </button>
-                    </Tooltip>
-                    </>)}
-                    {!persistido && puedeEditar && (
-                      <Tooltip label="Quitar">
-                        <button
-                          type="button"
-                          className="btn-icon peligro"
-                          onClick={() => quitarBorrador(p)}
-                          aria-label={`Quitar ${p.nombre_presentacion}`}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </Tooltip>
-                    )}
-                  </div>
-                )}
+                <AccionesFila
+                  className="pc-acciones"
+                  etiqueta={`Más acciones de ${p.nombre_presentacion}`}
+                  acciones={accionesDe(p, ocupada)}
+                />
               </li>
             );
           })}

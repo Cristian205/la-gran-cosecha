@@ -149,6 +149,11 @@ class PlanoCarga(ModeloConTenant):
     ruta = models.ForeignKey(
         "Ruta", on_delete=models.SET_NULL, null=True, blank=True, related_name="despachos"
     )
+    #: El lote del que salió, cuando se armó desde un lote de despacho. Vacío
+    #: = despacho suelto (editor manual o centro del día).
+    lote = models.ForeignKey(
+        "LoteDespacho", on_delete=models.SET_NULL, null=True, blank=True, related_name="planos"
+    )
     #: Copia de los datos operativos con los que se armó (ruta, paradas,
     #: clientes, productos consolidados y pedidos). Se toma al generar y se
     #: congela al confirmar: el PDF de un despacho confirmado sale de aquí, así
@@ -366,3 +371,188 @@ class ReglaCarga(ModeloConTenant):
 
     def __str__(self):
         return f"Regla de {self.presentacion_id}"
+
+
+# ==========================================================================
+# Lotes de despacho
+# ==========================================================================
+#
+# Un LOTE es la preparación del despacho de un día: los pedidos que el
+# administrador eligió desde la vista de pedidos, repartidos entre las turbos
+# que salen esa fecha, con sus paradas en orden y sus documentos.
+#
+# Por qué un lote y no solo despachos
+#
+# El centro del día (`planificacion.proponer`) calcula una propuesta cada vez
+# que se abre: no guarda nada y no deja rastro. El lote es lo contrario — una
+# pieza persistente con estado, autor y bitácora — porque el despacho del día
+# siguiente se prepara la tarde anterior, a veces entre dos personas, y hay
+# que poder responder «quién movió este pedido de turbo y cuándo».
+#
+# Qué guarda y qué no
+#
+# `distribucion` es el REPARTO en curso: qué parada va en qué vehículo, en qué
+# orden, con qué canastillas y qué paradas extraordinarias se agregaron. No
+# copia los pedidos ni los productos: esos se leen de `orders` cada vez que se
+# abre el lote, así que corregir un pedido se ve de inmediato. Lo que sí se
+# congela, al confirmar, es `resumen` y los `datos_operativos` de cada
+# despacho: el histórico y los documentos impresos no cambian después.
+#
+# Estados
+#
+#   PREPARACION  el reparto se está revisando; todavía no hay planos de carga.
+#   PREPARADO    ya hay un despacho (`PlanoCarga` en borrador) por vehículo,
+#                con su acomodo 3D; se puede seguir corrigiendo.
+#   CONFIRMADO   los despachos quedaron confirmados y los datos congelados.
+#   EN_RUTA      los vehículos salieron.
+#   ENTREGADO    se cerró el día.
+#   ANULADO      se descartó; sus pedidos vuelven a quedar sin planificar.
+
+
+class LoteDespacho(ModeloConTenant):
+    """Un día de despacho preparado: pedidos, vehículos, paradas y documentos."""
+
+    PREPARACION = "PREPARACION"
+    PREPARADO = "PREPARADO"
+    CONFIRMADO = "CONFIRMADO"
+    EN_RUTA = "EN_RUTA"
+    ENTREGADO = "ENTREGADO"
+    ANULADO = "ANULADO"
+    ESTADOS = [
+        (PREPARACION, "En preparación"),
+        (PREPARADO, "Despachos preparados"),
+        (CONFIRMADO, "Confirmado"),
+        (EN_RUTA, "En ruta"),
+        (ENTREGADO, "Entregado"),
+        (ANULADO, "Anulado"),
+    ]
+    #: Estados en los que el lote sigue siendo el dueño de sus pedidos.
+    VIVOS = (PREPARACION, PREPARADO, CONFIRMADO, EN_RUTA, ENTREGADO)
+    #: Estados en los que todavía se puede cambiar el reparto.
+    ABIERTOS = (PREPARACION, PREPARADO)
+
+    #: Consecutivo visible por negocio («Lote #14»).
+    numero = models.PositiveIntegerField()
+    nombre = models.CharField(max_length=120, blank=True)
+    #: El día de ENTREGA de los pedidos del lote.
+    fecha = models.DateField()
+    estado = models.CharField(max_length=12, choices=ESTADOS, default=PREPARACION)
+    tipo_canastilla = models.ForeignKey(TipoCanastilla, on_delete=models.PROTECT, related_name="lotes")
+
+    #: El reparto en curso (ver la nota de arriba):
+    #: {"vehiculos": [{"clave", "furgon", "nombre", "color", "inicio", "fin",
+    #:   "paradas": [{"cliente", "pedidos": [id], "canastillas", "manual",
+    #:                "extra", "nombre", "direccion", "nota"}]}],
+    #:  "sin_asignar": [id], "notas_motor": [str]}
+    distribucion = models.JSONField(default=dict, blank=True)
+    #: El resumen con el que se confirmó (pedidos, vehículos, validaciones).
+    resumen = models.JSONField(default=dict, blank=True)
+    notas = models.TextField(blank=True)
+
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    confirmado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    confirmado_en = models.DateTimeField(null=True, blank=True)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "logistica_lote_despacho"
+        verbose_name = "Lote de despacho"
+        verbose_name_plural = "Lotes de despacho"
+        ordering = ["-fecha", "-numero"]
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "numero"], name="logistica_lote_numero_unico"),
+        ]
+
+    @property
+    def abierto(self) -> bool:
+        return self.estado in self.ABIERTOS
+
+    def __str__(self):
+        return f"Lote #{self.numero} ({self.fecha})"
+
+
+class PedidoLote(ModeloConTenant):
+    """
+    Un pedido dentro de un lote.
+
+    `activo` es lo que impide que un pedido quede en dos despachos a la vez:
+    mientras el lote vive, nadie más puede tomar ese pedido; al anular el lote
+    las filas quedan inactivas y el pedido vuelve a estar disponible sin
+    perder el rastro de que estuvo allí.
+    """
+
+    tenant_heredado_de = "lote"
+
+    lote = models.ForeignKey(LoteDespacho, on_delete=models.CASCADE, related_name="pedidos")
+    pedido = models.ForeignKey("orders.Pedido", on_delete=models.CASCADE, related_name="lotes_despacho")
+    activo = models.BooleanField(default=True)
+    agregado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "logistica_pedido_lote"
+        verbose_name = "Pedido en lote"
+        verbose_name_plural = "Pedidos en lote"
+        ordering = ["lote", "pedido"]
+        constraints = [
+            models.UniqueConstraint(fields=["lote", "pedido"], name="logistica_pedido_lote_unico"),
+            models.UniqueConstraint(
+                fields=["pedido"], condition=models.Q(activo=True),
+                name="logistica_pedido_en_un_solo_lote",
+            ),
+        ]
+
+    def __str__(self):
+        return f"#{self.pedido_id} en lote {self.lote_id}"
+
+
+class EventoLote(ModeloConTenant):
+    """
+    La bitácora del lote: cada decisión que alguien tomó a mano.
+
+    El reparto automático se puede volver a calcular; las correcciones
+    manuales no, y son justo las que hay que poder explicar al día siguiente.
+    """
+
+    tenant_heredado_de = "lote"
+
+    CREADO = "CREADO"
+    DISTRIBUIDO = "DISTRIBUIDO"
+    AJUSTE = "AJUSTE"
+    GENERADO = "GENERADO"
+    CONFIRMADO = "CONFIRMADO"
+    ESTADO = "ESTADO"
+    ANULADO = "ANULADO"
+    DOCUMENTO = "DOCUMENTO"
+    TIPOS = [
+        (CREADO, "Lote creado"),
+        (DISTRIBUIDO, "Reparto automático"),
+        (AJUSTE, "Ajuste manual"),
+        (GENERADO, "Despachos generados"),
+        (CONFIRMADO, "Lote confirmado"),
+        (ESTADO, "Cambio de estado"),
+        (ANULADO, "Lote anulado"),
+        (DOCUMENTO, "Documento generado"),
+    ]
+
+    lote = models.ForeignKey(LoteDespacho, on_delete=models.CASCADE, related_name="eventos")
+    tipo = models.CharField(max_length=14, choices=TIPOS)
+    detalle = models.CharField(max_length=300)
+    datos = models.JSONField(default=dict, blank=True)
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    cuando = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "logistica_evento_lote"
+        verbose_name = "Evento del lote"
+        verbose_name_plural = "Eventos del lote"
+        ordering = ["-cuando", "-id"]
+
+    def __str__(self):
+        return f"{self.tipo} · {self.detalle}"

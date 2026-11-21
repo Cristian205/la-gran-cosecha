@@ -9,7 +9,6 @@ estar contratado Y encendido, y se comprueba una vez por petición en
 import datetime
 
 from django.db import transaction
-from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -25,7 +24,13 @@ from apps.content.models import StoreSettings
 from apps.orders.models import Pedido
 
 from .plano_pdf import html_plano
-from .planificacion import ESTADOS_EXCLUIDOS, adaptar_borradores, datos_operativos, filtro_fecha_entrega
+from .planificacion import (
+    ESTADOS_EXCLUIDOS,
+    adaptar_borradores,
+    confirmar_despacho,
+    datos_operativos,
+    filtro_fecha_entrega,
+)
 
 from .models import Furgon, PedidoDespacho, PlanoCarga, TipoCanastilla
 from .serializers import (
@@ -35,7 +40,6 @@ from .serializers import (
     TipoCanastillaSerializer,
     calcular_rejilla,
     pedido_resumen,
-    revisar,
 )
 
 
@@ -160,19 +164,9 @@ class PlanoCargaViewSet(ExigeModuloPlanoCarga, TenantScopedMixin, viewsets.Model
             plano = self.get_queryset().select_for_update().get(pk=self.get_object().pk)
             if plano.estado == PlanoCarga.CONFIRMADO:
                 raise ValidationError("El despacho ya está confirmado.")
-            rev = revisar(
-                {"grupos": plano.grupos, "posiciones": plano.posiciones, "medidas": plano.medidas},
-                plano.furgon, plano.tipo_canastilla,
-            )
+            rev = confirmar_despacho(plano, request.user)
             if rev["errores"]:
                 return Response({"detail": "El despacho tiene errores.", "revision": rev}, status=400)
-            plano.estado = PlanoCarga.CONFIRMADO
-            plano.confirmado_por = request.user
-            plano.confirmado_en = timezone.now()
-            # Se congelan los datos operativos: el histórico no cambia aunque
-            # después se edite la ruta habitual, un cliente o un pedido.
-            plano.datos_operativos = datos_operativos(plano)
-            plano.save(update_fields=["estado", "confirmado_por", "confirmado_en", "datos_operativos", "actualizado"])
         return Response(PlanoCargaSerializer(plano, context=self.get_serializer_context()).data)
 
     @action(detail=True, methods=["post"])

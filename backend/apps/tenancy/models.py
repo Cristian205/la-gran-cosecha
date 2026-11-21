@@ -139,9 +139,15 @@ class Membership(models.Model):
         ("STAFF", "Personal"),
     ]
 
-    # Roles que no necesitan permisos explícitos: el dueño de la cuenta no se
+    # Roles que no necesitan permisos explícitos: quien dirige el negocio no se
     # restringe a sí mismo. Conserva la semántica de `es_owner()` actual.
-    ROLES_CON_ACCESO_TOTAL = ("OWNER", "ADMIN")
+    #
+    # `MANAGER` está aquí porque en el panel ese rol se llama «Gerente» y se
+    # presenta como lo que es —quien manda en el negocio—, con acceso total y
+    # sin permisos que repartir. Tenerlo fuera dejaba un rol que la pantalla
+    # anunciaba como total y el servidor trataba como limitado, y el síntoma
+    # era un gerente al que le faltaban botones sin que nadie supiera por qué.
+    ROLES_CON_ACCESO_TOTAL = ("OWNER", "ADMIN", "MANAGER")
 
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships"

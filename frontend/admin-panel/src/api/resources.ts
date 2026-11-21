@@ -364,8 +364,39 @@ export async function entregarPedidos(
   return data;
 }
 
+export interface RegistrarPedidoPayload {
+  /** Un cliente de la lista… */
+  cliente_id?: number;
+  /** …o uno nuevo. Uno de los dos, nunca ambos. */
+  cliente_nuevo?: { nombre: string; telefono?: string; direccion?: string };
+  items: { presentacion_id: number; cantidad: string }[];
+  observaciones?: string;
+  direccion_entrega?: string;
+}
+
+/**
+ * Apunta un pedido que llegó por teléfono, WhatsApp o mostrador. No es el
+ * `POST /orders/` de la tienda: ese es público y pide lo del comprador
+ * (cédula, acuerdo de precios). El precio lo pone el catálogo; si hay que
+ * ajustarlo, se edita el pedido después.
+ */
+export async function registrarPedido(
+  payload: RegistrarPedidoPayload
+): Promise<{ success: boolean; pedido_id: number; total: string; cliente_nombre: string }> {
+  const { data } = await api.post("/orders/registrar/", payload);
+  return data;
+}
+
 export async function eliminarPedido(id: number): Promise<void> {
   await api.delete(`/orders/${id}/`);
+}
+
+/** Borra en bloque los pedidos seleccionados. O todos, o ninguno. */
+export async function eliminarPedidos(
+  ids: number[]
+): Promise<{ success: boolean; eliminados: number }> {
+  const { data } = await api.post("/orders/eliminar/", { ids });
+  return data;
 }
 
 export async function obtenerHistorialPedido(
@@ -436,6 +467,22 @@ export async function contarLotes(): Promise<number> {
     params: { page_size: 1 },
   });
   return Array.isArray(data) ? data.length : data.count;
+}
+
+/**
+ * Borra el REGISTRO de un lote, no sus pedidos: la agrupación es una M2M.
+ * Sirve para limpiar pruebas y duplicados de la lista.
+ */
+export async function eliminarLote(id: number): Promise<void> {
+  await api.delete(`/orders-lotes/${id}/`);
+}
+
+/** Lo mismo en bloque. O todos, o ninguno. */
+export async function eliminarLotes(
+  ids: number[]
+): Promise<{ success: boolean; eliminados: number }> {
+  const { data } = await api.post("/orders-lotes/eliminar/", { ids });
+  return data;
 }
 
 export async function obtenerLote(id: number): Promise<LoteDetalle> {

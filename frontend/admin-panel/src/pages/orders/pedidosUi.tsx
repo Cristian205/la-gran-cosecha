@@ -1,4 +1,5 @@
 import { Pastilla, type Tono } from "../../components/gestion/Gestion";
+import type { ComercialDePedido, EstadoComercial } from "../../types";
 import { diaCorto, fechaLocalISO, sumarDias } from "../../utils/fechas";
 
 // ---------- Estados ----------
@@ -22,6 +23,37 @@ const TONO_ESTADO: Record<string, Tono> = {
 
 export function EstadoPedido({ estado }: { estado: string }) {
   return <Pastilla tono={TONO_ESTADO[estado] ?? "neutro"}>{ETIQUETAS_ESTADO[estado] ?? estado}</Pastilla>;
+}
+
+/**
+ * El estado del pedido como documento (columna «Estado» de la tabla).
+ *
+ * Es distinto del estado del despacho (columna «Despacho»): aquí va lo que
+ * pasó con el pedido y su factura; allí, dónde va la carga. Por eso
+ * «Entregado» no aparece en esta lista.
+ */
+export const ETIQUETAS_COMERCIAL: Record<EstadoComercial, string> = {
+  POR_REVISAR: "Por revisar",
+  RECIBIDO: "Recibido",
+  EDITADO: "Editado",
+  CERRADO: "Cerrado",
+  IMPRESO: "Impreso",
+};
+
+const TONO_COMERCIAL: Record<EstadoComercial, Tono> = {
+  POR_REVISAR: "ambar",
+  RECIBIDO: "azul",
+  EDITADO: "azul",
+  CERRADO: "neutro",
+  IMPRESO: "violeta",
+};
+
+export function EstadoComercialPedido({ comercial }: { comercial: ComercialDePedido }) {
+  return (
+    <Pastilla tono={TONO_COMERCIAL[comercial.estado] ?? "neutro"}>
+      {comercial.etiqueta || ETIQUETAS_COMERCIAL[comercial.estado] || comercial.estado}
+    </Pastilla>
+  );
 }
 
 // ---------- Periodos ----------

@@ -29,7 +29,7 @@ import { ColumnPickerButton } from "../components/ColumnPickerButton";
 import { ThOrdenable } from "../components/ThOrdenable";
 import { useColumnas } from "../hooks/useColumnas";
 import { useOrdenTabla, type ExtractoresOrden } from "../hooks/useOrdenTabla";
-import { EstadoVacio, MenuFila, Pastilla, TarjetaKpi, type AccionMenu, type Tono } from "../components/gestion/Gestion";
+import { AccionesFila, EstadoVacio, Pastilla, TarjetaKpi, type AccionFila, type Tono } from "../components/gestion/Gestion";
 import { fechaISO } from "../utils/fechas";
 import { BotonFiltros, FilaFiltros, useFiltrosColumna, type DefsFiltros } from "../components/gestion/FiltrosColumna";
 import { UserEditorModal } from "./users/UserEditorModal";
@@ -351,21 +351,45 @@ export function UsersPage() {
     }
   }
 
-  function accionesDe(u: Usuario): AccionMenu[] {
-    const acciones: AccionMenu[] = [];
-    acciones.push({
-      clave: "correo",
-      tono: "editar",
-      etiqueta: "Escribir un correo",
-      icono: <Mail size={15} />,
-      onSeleccionar: () => {
-        window.location.href = `mailto:${u.email_usuario}`;
-      },
-    });
+  /**
+   * Todas las acciones de un usuario, de la más usada a la menos: las tres
+   * primeras se pintan como botones y el resto cae en el "⋯".
+   *
+   * Dar y quitar el acceso va segundo porque es lo que hay que poder hacer
+   * rápido cuando alguien entra o sale de la empresa. Eliminar se queda en el
+   * menú: no se borra a nadie de un clic distraído.
+   */
+  function accionesDe(u: Usuario): AccionFila[] {
+    const acciones: AccionFila[] = [];
+    if (puedeEditar(u)) {
+      acciones.push({
+        clave: "editar",
+        tono: "editar",
+        etiqueta: puedeGestionarPermisos(u) ? "Editar usuario y permisos" : "Editar usuario",
+        aria: `Editar a ${u.nombre_usuario}`,
+        icono: <Pencil size={16} />,
+        onSeleccionar: () => {
+          setEditando(u);
+          setModalAbierto(true);
+        },
+      });
+    }
+    if (puedeEditar(u) && u.id !== actual?.id) {
+      acciones.push({
+        clave: "estado",
+        tono: "exito",
+        etiqueta: u.is_active ? "Desactivar acceso" : "Activar acceso",
+        aria: `${u.is_active ? "Desactivar" : "Activar"} el acceso de ${u.nombre_usuario}`,
+        icono: u.is_active ? <PowerOff size={15} /> : <Power size={15} />,
+        peligro: u.is_active,
+        onSeleccionar: () => alternarActivo(u),
+      });
+    }
     acciones.push({
       clave: "copiar",
       tono: "copiar",
       etiqueta: "Copiar correo",
+      aria: `Copiar el correo de ${u.nombre_usuario}`,
       icono: <Copy size={15} />,
       onSeleccionar: () => {
         navigator.clipboard
@@ -374,16 +398,16 @@ export function UsersPage() {
           .catch(() => alertaError("No se pudo copiar el correo."));
       },
     });
-    if (puedeEditar(u) && u.id !== actual?.id) {
-      acciones.push({
-        clave: "estado",
-        tono: "exito",
-        etiqueta: u.is_active ? "Desactivar acceso" : "Activar acceso",
-        icono: u.is_active ? <PowerOff size={15} /> : <Power size={15} />,
-        peligro: u.is_active,
-        onSeleccionar: () => alternarActivo(u),
-      });
-    }
+    acciones.push({
+      clave: "correo",
+      tono: "editar",
+      etiqueta: "Escribir un correo",
+      aria: `Escribir un correo a ${u.nombre_usuario}`,
+      icono: <Mail size={15} />,
+      onSeleccionar: () => {
+        window.location.href = `mailto:${u.email_usuario}`;
+      },
+    });
     if (puedeEliminar(u)) {
       acciones.push({ clave: "eliminar", etiqueta: "Eliminar usuario", icono: <Trash2 size={15} />, peligro: true, onSeleccionar: () => eliminar(u) });
     }
@@ -648,26 +672,7 @@ export function UsersPage() {
                           </td>
                         ))}
                         <td className="col-acciones">
-                          <div className="acciones">
-                            {puedeEditar(u) && (
-                              <Tooltip label={puedeGestionarPermisos(u) ? "Editar usuario y permisos" : "Editar usuario"}>
-                                <button
-                                  type="button"
-                                  className="btn-icon editar"
-                                  onClick={() => {
-                                    setEditando(u);
-                                    setModalAbierto(true);
-                                  }}
-                                  aria-label={`Editar a ${u.nombre_usuario}`}
-                                >
-                                  <Pencil size={16} />
-                                </button>
-                              </Tooltip>
-                            )}
-                            {acciones.length > 0 && (
-                              <MenuFila etiqueta={`Más acciones de ${u.nombre_usuario}`} acciones={acciones} />
-                            )}
-                          </div>
+                          <AccionesFila etiqueta={`Más acciones de ${u.nombre_usuario}`} acciones={acciones} />
                         </td>
                       </tr>
                     );

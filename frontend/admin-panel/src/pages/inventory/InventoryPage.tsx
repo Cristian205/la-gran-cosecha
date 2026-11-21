@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AccionesFila, type AccionFila } from "../../components/gestion/Gestion";
 import { Paginacion, usePaginacion } from "../../components/gestion/Paginacion";
 import {
   ArrowLeftRight,
@@ -17,7 +18,6 @@ import {
   type Ubicacion,
 } from "../../api/inventario";
 import { useAuth } from "../../auth/AuthContext";
-import { Tooltip } from "../../components/Tooltip";
 import { extraerMensajeError, tienePermiso } from "../../utils";
 import { alertaError } from "../../utils/alertas";
 import { KardexModal } from "./KardexModal";
@@ -107,6 +107,52 @@ export function InventoryPage() {
   }, [existencias]);
 
   const hayFiltros = busqueda.trim() !== "" || filtro !== "todos" || ubicacionActiva !== "";
+
+  // Las tres de todos los días van como botón; el traslado, que solo existe
+  // si el negocio tiene más de una bodega, al menú: así la columna mide lo
+  // mismo tenga una ubicación o diez.
+  const variasUbicaciones = ubicaciones.filter((u) => u.activa).length > 1;
+
+  function accionesDe(e: Existencia): AccionFila[] {
+    const lista: AccionFila[] = [];
+    if (puedeMover) {
+      lista.push({
+        clave: "entrada",
+        tono: "exito",
+        etiqueta: "Registrar entrada",
+        aria: `Registrar una entrada de ${e.producto_nombre}`,
+        icono: <PackagePlus size={15} />,
+        onSeleccionar: () => setOperando({ op: "entrada", fila: e }),
+      });
+      lista.push({
+        clave: "ajuste",
+        tono: "editar",
+        etiqueta: "Ajustar por conteo",
+        aria: `Ajustar por conteo ${e.producto_nombre}`,
+        icono: <ClipboardCheck size={15} />,
+        onSeleccionar: () => setOperando({ op: "ajuste", fila: e }),
+      });
+    }
+    lista.push({
+      clave: "historial",
+      tono: "info",
+      etiqueta: "Ver historial",
+      aria: `Ver el historial de ${e.producto_nombre}`,
+      icono: <History size={15} />,
+      onSeleccionar: () => setViendoKardex(e),
+    });
+    if (puedeMover && variasUbicaciones) {
+      lista.push({
+        clave: "traslado",
+        tono: "copiar",
+        etiqueta: "Trasladar a otra ubicación",
+        aria: `Trasladar ${e.producto_nombre} a otra ubicación`,
+        icono: <ArrowLeftRight size={15} />,
+        onSeleccionar: () => setOperando({ op: "traslado", fila: e }),
+      });
+    }
+    return lista;
+  }
 
   function limpiar() {
     setBusqueda("");
@@ -267,44 +313,11 @@ export function InventoryPage() {
                         >
                           {e.disponible}
                         </td>
-                        <td>
-                          <div style={{ display: "flex", gap: ".25rem" }}>
-                            {puedeMover && (
-                              <>
-                                <Tooltip label="Registrar entrada">
-                                  <button
-                                    className="btn-icon exito"
-                                    onClick={() => setOperando({ op: "entrada", fila: e })}
-                                  >
-                                    <PackagePlus size={15} />
-                                  </button>
-                                </Tooltip>
-                                <Tooltip label="Ajustar por conteo">
-                                  <button
-                                    className="btn-icon editar"
-                                    onClick={() => setOperando({ op: "ajuste", fila: e })}
-                                  >
-                                    <ClipboardCheck size={15} />
-                                  </button>
-                                </Tooltip>
-                                {ubicaciones.filter((u) => u.activa).length > 1 && (
-                                  <Tooltip label="Trasladar a otra ubicación">
-                                    <button
-                                      className="btn-icon copiar"
-                                      onClick={() => setOperando({ op: "traslado", fila: e })}
-                                    >
-                                      <ArrowLeftRight size={15} />
-                                    </button>
-                                  </Tooltip>
-                                )}
-                              </>
-                            )}
-                            <Tooltip label="Ver historial">
-                              <button className="btn-icon info" onClick={() => setViendoKardex(e)}>
-                                <History size={15} />
-                              </button>
-                            </Tooltip>
-                          </div>
+                        <td className="col-acciones">
+                          <AccionesFila
+                            etiqueta={`Más acciones de ${e.producto_nombre}`}
+                            acciones={accionesDe(e)}
+                          />
                         </td>
                       </tr>
                     );
