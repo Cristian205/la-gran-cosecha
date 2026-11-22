@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ActiveFilters, FilterDrawer, SortControl, UnidadControl } from "@/componentes/tienda/Filtros";
+import { ActiveFilters, CategoryDrawer, FilterDrawer, SortControl, UnidadControl } from "@/componentes/tienda/Filtros";
 import { SearchBar } from "@/componentes/tienda/SearchBar";
 import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
 import { claseDeVariante } from "./Seccion";
@@ -109,6 +109,7 @@ export function CatalogToolbar({ variante, titulo = "", mostrar_buscador = false
           </p>
         </div>
         <div className="tbar-acciones">
+          <CategoryDrawer />
           <FilterDrawer />
           <UnidadControl />
           <SortControl />

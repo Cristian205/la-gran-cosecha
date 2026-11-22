@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Minus, Plus, ShoppingBasket, Trash2 } from "lucide-react";
+import { Check, Minus, Plus, Scale, ShoppingBasket, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useEnvoltorio } from "@/componentes/CapaCliente";
 import { SelectorUnidad } from "@/componentes/tienda/SelectorPresentacion";
@@ -95,14 +95,24 @@ function UnidadDeCantidad({ seleccion, productoNombre }: { seleccion: SeleccionP
   const { cantidad, grupo, presentacion } = seleccion;
   if (!grupo || !presentacion) return null;
 
+  // La balanza: el mismo icono que el campo "Uni. Venta" del teléfono.
+  const icono = <Scale size={11} strokeWidth={2.5} />;
   if (grupo.opciones.length < 2) {
-    return <span className="qadd-etiqueta">{pluralUnidad(presentacion.unidad_venta_nombre, cantidad)}</span>;
+    return (
+      <span className="qadd-etiqueta">
+        <span className="selp-icono" aria-hidden="true">
+          {icono}
+        </span>
+        <span className="selp-valor">{pluralUnidad(presentacion.unidad_venta_nombre, cantidad)}</span>
+      </span>
+    );
   }
   return (
     <SelectorUnidad
       seleccion={seleccion}
       productoNombre={productoNombre}
       className="qadd-etiqueta qadd-etiqueta--sel"
+      icono={icono}
       pluralSegun={cantidad}
     />
   );

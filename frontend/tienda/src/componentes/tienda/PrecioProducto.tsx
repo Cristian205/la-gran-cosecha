@@ -9,6 +9,10 @@ interface Props {
    *  todavía no se eligió ninguna (la sección de favoritos). */
   desde?: boolean;
   tamano?: "normal" | "grande";
+  /** Lleva también la forma larga, "Precio aproximado / Libra", para donde
+   *  hay sitio (la tarjeta en escritorio). Cuál de las dos se ve lo decide
+   *  el CSS; sin esto, solo existe "aprox.". */
+  metaLarga?: boolean;
 }
 
 /**
@@ -23,7 +27,7 @@ interface Props {
  * El `key` sobre la cifra reinicia su animación de entrada cuando cambia la
  * unidad: el cliente VE que el precio respondió a su elección.
  */
-export function PrecioProducto({ valor, unidad, desde = false, tamano = "normal" }: Props) {
+export function PrecioProducto({ valor, unidad, desde = false, tamano = "normal", metaLarga = false }: Props) {
   const texto = formatoPrecio(valor);
   return (
     <p className={`precio precio--${tamano}`}>
@@ -32,7 +36,15 @@ export function PrecioProducto({ valor, unidad, desde = false, tamano = "normal"
         {texto}
       </span>
       <span className="precio-meta" title={TEXTO_PRECIOS_ESTIMADOS}>
-        aprox.{unidad ? ` / ${unidad}` : ""}
+        {metaLarga ? (
+          <>
+            <span className="precio-meta-larga">Precio aproximado</span>
+            <span className="precio-meta-corta">aprox.</span>
+          </>
+        ) : (
+          "aprox."
+        )}
+        {unidad ? ` / ${unidad}` : ""}
       </span>
     </p>
   );

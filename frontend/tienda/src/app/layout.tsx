@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { notFound } from "next/navigation";
 import { ArmazonPrevia } from "@/componentes/ArmazonPrevia";
 import { CapaCliente } from "@/componentes/CapaCliente";
 import { armazonDeLaTienda } from "@/lib/pagina";
@@ -77,9 +76,23 @@ export default async function RootLayout({
   const config = await configuracionDeLaTienda();
   const armazon = await armazonDeLaTienda();
 
-  // Sin negocio en esta dirección no hay tienda que renderizar. Falla cerrado,
-  // igual que el backend: es preferible un 404 honesto a una tienda a medias.
-  if (!config) notFound();
+  // Sin negocio en esta dirección no hay tienda que renderizar, pero el 404 NO
+  // se puede pedir desde aquí: un layout raíz no puede abortar —Next lo
+  // rechaza con «notFound() is not allowed to use in root layout»— y el
+  // intento se ve como un error de render en vez de como la página de «esta
+  // tienda no existe».
+  //
+  // Así que este armazón se queda en lo mínimo imprescindible y deja que la
+  // página decida: `page.tsx` llama a `notFound()`, el estado 404 sale de
+  // verdad y `not-found.tsx` se pinta aquí dentro. Tampoco se puede seguir
+  // adelante sin `config`: el tema, la fuente y el armazón salen de ella.
+  if (!config) {
+    return (
+      <html lang="es">
+        <body>{children}</body>
+      </html>
+    );
+  }
 
   const { host } = await negocioDeLaPeticion();
   const jsonLd = datosEstructuradosDelNegocio(config, host);

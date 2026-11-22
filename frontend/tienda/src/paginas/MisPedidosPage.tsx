@@ -6,7 +6,7 @@ import { ArrowRight, History, IdCard, Loader2, PackageX, RotateCcw } from "lucid
 import { historialCliente } from "@/lib/datos";
 import type { HistorialCliente, ItemCarrito, PedidoHistorial } from "@/lib/tipos";
 import { useEnvoltorio, useSiteConfig } from "@/componentes/CapaCliente";
-import { mensajeDeConsulta } from "@/componentes/tienda/IdentificacionCedula";
+import { mensajeDeConsulta } from "@/componentes/checkout/PasoIdentificacion";
 import { useCart } from "@/estado/carrito";
 import { soloDigitos, useClienteTienda } from "@/estado/clienteTienda";
 import { ajustarARegla, formatoCantidad, formatoPrecio, reglaCantidad } from "@/lib/utiles";

@@ -1,8 +1,7 @@
-# El backend está en el plan gratuito de Render, que lo duerme tras 15 minutos
-# sin tráfico. Mientras despierta, Render responde él mismo (502/503) y sin
-# las cabeceras CORS de Django: el panel lo ve como «blocked by CORS policy»
-# y la tienda tarda o falla en la primera visita. Un ping cada 10 minutos lo
-# mantiene despierto (un servicio 24/7 cabe en las 750 h gratis del mes).
+# Ping periódico al backend en Railway (antes estaba en Render, ya suspendido).
+# Sirve como monitor: si /healthz deja de responder, el run falla y GitHub
+# avisa por correo. Si el servicio tiene activado «App Sleeping» en Railway,
+# además lo mantiene despierto.
 name: Mantener el backend despierto
 
 on:
@@ -16,4 +15,4 @@ jobs:
     timeout-minutes: 3
     steps:
       - name: Ping a /healthz
-        run: curl -fsS --max-time 90 --retry 2 --retry-delay 10 https://crynex-backend.onrender.com/healthz
+        run: curl -fsS --max-time 90 --retry 2 --retry-delay 10 https://api.crafteech.com/healthz

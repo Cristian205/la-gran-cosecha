@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpDown, Check, ChevronDown, SlidersHorizontal, X } from "lucide-react";
+import { ArrowUpDown, Check, ChevronDown, LayoutGrid, SlidersHorizontal, X } from "lucide-react";
 import { useId, useState } from "react";
 import { BottomSheet } from "@/componentes/BottomSheet";
 import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
@@ -207,8 +207,10 @@ export function FilterDrawer() {
         onClick={() => setAbierta(true)}
         aria-haspopup="dialog"
       >
-        <SlidersHorizontal size={16} aria-hidden="true" />
-        Filtrar
+        <span className="tbar-btn-icono" aria-hidden="true">
+          <SlidersHorizontal size={16} />
+        </span>
+        <span className="tbar-btn-texto">Filtrar</span>
         {activos > 0 && (
           <span className="tbar-btn-cuenta">
             {activos} <span className="sr-only">activos</span>
@@ -245,6 +247,72 @@ export function FilterDrawer() {
   );
 }
 
+/**
+ * Teléfono: [Categorías] abre una hoja con todas las categorías. Arriba ya
+ * están las píldoras deslizables, pero con la barra fija y la rejilla a media
+ * página quedan lejos: este botón las trae a un pulgar sin volver arriba.
+ * Elegir llama al mismo `cambiarCategoria` que las píldoras.
+ */
+export function CategoryDrawer() {
+  const catalogo = useCatalogoContexto();
+  const [abierta, setAbierta] = useState(false);
+  if (!catalogo || catalogo.categorias.length === 0) return null;
+
+  const activa = catalogo.categorias.find((c) => c.id === catalogo.categoriaActiva);
+  const opciones: { id: number | null; nombre: string }[] = [
+    { id: null, nombre: "Todas las categorías" },
+    ...catalogo.categorias.map((c) => ({ id: c.id, nombre: c.nombre_categoria })),
+  ];
+
+  return (
+    <>
+      <button
+        type="button"
+        className="tbar-btn tbar-btn--categorias"
+        onClick={() => setAbierta(true)}
+        aria-haspopup="dialog"
+        aria-label={`Categorías. Actual: ${activa ? activa.nombre_categoria : "todas"}`}
+      >
+        <span className="tbar-btn-icono" aria-hidden="true">
+          <LayoutGrid size={16} />
+        </span>
+        <span className="tbar-btn-texto">Categorías</span>
+        {activa && (
+          <span className="tbar-btn-cuenta" aria-hidden="true">
+            1
+          </span>
+        )}
+      </button>
+
+      {abierta && (
+        <BottomSheet titulo="Categorías" onCerrar={() => setAbierta(false)}>
+          <ul className="hoja-opciones">
+            {opciones.map((o) => {
+              const elegida = o.id === catalogo.categoriaActiva;
+              return (
+                <li key={o.id ?? "todas"}>
+                  <button
+                    type="button"
+                    className={`hoja-opcion ${elegida ? "activo" : ""}`}
+                    aria-pressed={elegida}
+                    onClick={() => {
+                      catalogo.cambiarCategoria(o.id);
+                      setAbierta(false);
+                    }}
+                  >
+                    <span>{o.nombre}</span>
+                    {elegida && <Check size={18} />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </BottomSheet>
+      )}
+    </>
+  );
+}
+
 /** Ordenar: un desplegable en escritorio, una hoja con opciones en móvil. */
 export function SortControl() {
   const catalogo = useCatalogoContexto();
@@ -271,8 +339,10 @@ export function SortControl() {
         aria-haspopup="dialog"
         aria-label={`Ordenar productos. Actual: ${actual.etiqueta}`}
       >
-        <ArrowUpDown size={16} aria-hidden="true" />
-        <span>{actual.valor === "recomendados" ? "Ordenar" : actual.corta}</span>
+        <span className="tbar-btn-icono" aria-hidden="true">
+          <ArrowUpDown size={16} />
+        </span>
+        <span className="tbar-btn-texto">{actual.valor === "recomendados" ? "Ordenar" : actual.corta}</span>
       </button>
 
       {hoja && (

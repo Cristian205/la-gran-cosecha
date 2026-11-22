@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { MotionConfig } from "motion/react";
 import { BarraPedidoEscritorio } from "./BarraPedidoEscritorio";
 import { CartDrawer } from "./CartDrawer";
@@ -72,6 +73,9 @@ export function CapaCliente({
 }) {
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  // En el checkout el pedido YA es la página, con su total fijo abajo: la
+  // barra "Ver pedido" llevaría al mismo sitio y en el móvil tapaba ese total.
+  const enCheckout = usePathname() === "/tienda/pedido";
 
   // El carrito y el ultimo pedido se guardan con `skipHydration` (ver
   // `estado/carrito.ts` y `estado/ultimoPedido.ts`): la primera pintura del
@@ -100,8 +104,12 @@ export function CapaCliente({
         >
           {children}
           <WhatsAppButton />
-          <MobileCartBar onAbrir={() => setCarritoAbierto(true)} />
-          <BarraPedidoEscritorio onAbrir={() => setCarritoAbierto(true)} />
+          {!enCheckout && (
+            <>
+              <MobileCartBar onAbrir={() => setCarritoAbierto(true)} />
+              <BarraPedidoEscritorio onAbrir={() => setCarritoAbierto(true)} />
+            </>
+          )}
           <AvisoAgregado />
           <InstalarApp />
           <ProductQuickView />

@@ -2284,6 +2284,415 @@ h1, h2, h3 {
   padding: 0.9rem 1.1rem; border-radius: 12px; margin-bottom: 1rem; font-size: 0.9rem;
 }
 
+/* ==========================================================================
+   Checkout guiado (CheckoutPage + componentes/checkout/)
+   Identificación → Tus datos → Tu pedido → Confirmar. Una tarjeta, los pasos
+   arriba y un pie fijo abajo con el total y la navegación: el total queda a
+   la vista aunque el pedido tenga cien líneas.
+   ========================================================================== */
+.chk-pagina { padding: 2rem 1.5rem 3rem; }
+/* `scroll-margin-top`: al cambiar de paso la tarjeta sube hasta aquí, por
+   debajo de la cabecera fija y no detrás de ella. */
+.checkout.chk {
+  max-width: 780px;
+  padding: 1.6rem 1.8rem 0;
+  scroll-margin-top: calc(var(--navbar-alto, 62px) + 1rem);
+}
+.chk-exito-titulo:focus { outline: none; }
+/* La confirmación, centrada: `.checkout h1` es flex (para su icono) y los
+   párrafos de la tienda se justifican; aquí ninguna de las dos cosas. */
+.checkout.exito h1 { justify-content: center; font-size: clamp(1.5rem, 3vw, 1.9rem); color: var(--marca-800); }
+.checkout.exito p { max-width: 30rem; margin-inline: auto; text-align: center; -webkit-hyphens: manual; hyphens: manual; }
+
+/* --- Los pasos --- */
+.chk-pasos {
+  list-style: none;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0.4rem;
+  margin: 0 0 1.4rem;
+  padding: 0;
+  counter-reset: paso;
+}
+.chk-paso { position: relative; min-width: 0; }
+/* La línea que une un paso con el siguiente. */
+.chk-paso:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 1rem;
+  left: calc(50% + 1.3rem);
+  right: calc(-50% + 1.3rem);
+  height: 2px;
+  border-radius: 2px;
+  background: var(--borde);
+}
+.chk-paso[data-estado="hecho"]:not(:last-child)::after { background: var(--marca-400); }
+.chk-paso-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--gris-600);
+  cursor: pointer;
+}
+.chk-paso-btn:disabled { cursor: default; }
+.chk-paso-num {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 2px solid var(--borde);
+  background: var(--superficie);
+  font-size: 0.85rem;
+  font-weight: 800;
+  transition: background-color var(--t-rapido, 0.16s) ease, border-color var(--t-rapido, 0.16s) ease;
+}
+.chk-paso-nombre { font-size: 0.78rem; font-weight: 700; text-align: center; line-height: 1.2; }
+.chk-paso[data-estado="actual"] .chk-paso-num {
+  border-color: var(--marca-700);
+  background: var(--marca-700);
+  color: white;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--marca-400) 25%, transparent);
+}
+.chk-paso[data-estado="actual"] .chk-paso-nombre { color: var(--marca-800); }
+.chk-paso[data-estado="hecho"] .chk-paso-num { border-color: var(--marca-500); background: var(--marca-100); color: var(--marca-700); }
+.chk-paso[data-estado="hecho"] .chk-paso-nombre,
+.chk-paso[data-estado="visitado"] .chk-paso-nombre { color: var(--marca-700); }
+.chk-paso-btn:not(:disabled):hover .chk-paso-num { border-color: var(--marca-500); }
+.chk-paso-btn:focus-visible { outline: none; }
+.chk-paso-btn:focus-visible .chk-paso-num { box-shadow: var(--t-foco); }
+
+/* --- Cada paso --- */
+.chk-seccion { margin-bottom: 1.2rem; }
+.chk-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.3rem;
+  font-size: 1.2rem;
+  color: var(--tinta);
+}
+.chk-titulo svg { flex: none; color: var(--marca-700); }
+.chk-titulo:focus { outline: none; }
+.chk-texto { margin: 0 0 1rem; font-size: 0.9rem; line-height: 1.5; color: var(--gris-600); text-align: left; }
+.chk-nota,
+.chk-estado {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.7rem 0 0;
+  font-size: 0.8rem;
+  color: var(--gris-600);
+  text-align: left;
+}
+.chk-nota svg { flex: none; color: var(--marca-600); }
+.chk-estado { font-weight: 600; color: var(--marca-700); }
+.chk-ayuda { margin: 0.35rem 0 0; font-size: 0.78rem; line-height: 1.4; color: var(--gris-600); text-align: left; }
+
+/* --- Paso 2: la ficha del cliente conocido --- */
+.chk-ficha {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem 1rem;
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radio-sm);
+  background: color-mix(in srgb, var(--marca-100) 45%, var(--superficie));
+  border: 1px solid color-mix(in srgb, var(--marca-400) 25%, var(--borde));
+}
+.chk-ficha dt {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gris-600);
+}
+.chk-ficha dt svg { color: var(--marca-700); }
+.chk-ficha dd { margin: 0.15rem 0 0; font-weight: 700; color: var(--tinta); overflow-wrap: anywhere; }
+.chk-tachado { font-weight: 500; color: var(--gris-400); }
+.chk-ficha-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 1rem; }
+.chk-ficha-acciones .btn { display: inline-flex; align-items: center; gap: 0.4rem; }
+.chk-actualizar {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem 0.2rem;
+  border-radius: var(--radio-sm);
+  border: 1px dashed color-mix(in srgb, var(--marca-400) 45%, var(--borde));
+}
+.chk-actualizar .chk-ficha-acciones { margin: 0 0 0.9rem; }
+.chk-otra-persona { margin: 1rem 0 0; font-size: 0.84rem; color: var(--gris-600); text-align: left; }
+.chk-cedula-registro { margin: 0 0 1rem; }
+
+/* --- Paso 3: revisión del pedido --- */
+.chk-pedido-cab { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; }
+.chk-agregar { display: inline-flex; align-items: center; gap: 0.25rem; }
+.chk-contadores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.1rem 0 0.9rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--marca-800);
+}
+.chk-contadores span[aria-hidden] { color: var(--gris-400); }
+.chk-herramientas { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem; }
+.chk-buscar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  height: 2.6rem;
+  padding: 0 0.5rem 0 0.8rem;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--gris-600);
+}
+.chk-buscar:focus-within { border-color: var(--marca-500); box-shadow: var(--t-foco); }
+.chk-buscar input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 0.92rem; color: var(--tinta); }
+.chk-buscar input::-webkit-search-cancel-button { display: none; }
+.chk-buscar-limpiar { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border: 0; border-radius: 50%; background: var(--t-fondo-suave); color: var(--gris-600); }
+.chk-plegar {
+  flex: none;
+  height: 2.6rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--superficie);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--marca-700);
+}
+.chk-plegar:hover { border-color: var(--marca-400); }
+.chk-deshacer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin: 0 0 0.8rem;
+  padding: 0.6rem 0.6rem 0.6rem 0.9rem;
+  border-radius: 12px;
+  background: var(--tinta);
+  color: white;
+  font-size: 0.86rem;
+  animation: sbar-in var(--t-rapido, 0.16s) var(--t-ease);
+}
+.chk-deshacer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+  padding: 0.35rem 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+}
+.chk-deshacer button:hover { background: rgba(255, 255, 255, 0.24); }
+
+.chk-grupos { display: flex; flex-direction: column; gap: 0.6rem; }
+.chk-grupo {
+  border: 1px solid color-mix(in srgb, var(--borde) 85%, transparent);
+  border-radius: 16px;
+  background: var(--superficie);
+  overflow: hidden;
+}
+.chk-grupo[data-abierto="true"] { border-color: color-mix(in srgb, var(--marca-400) 30%, var(--borde)); }
+.chk-grupo-cab {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 0;
+  background: color-mix(in srgb, var(--marca-100) 35%, var(--superficie));
+  font: inherit;
+  text-align: left;
+  color: var(--tinta);
+  cursor: pointer;
+}
+.chk-grupo-cab:disabled { cursor: default; }
+.chk-grupo-cab:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--marca-500); }
+.chk-grupo-nombre { flex: 1; min-width: 0; font-weight: 800; font-size: 0.95rem; }
+.chk-grupo-cuenta {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--marca-100);
+  color: var(--marca-700);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+.chk-grupo-subtotal { font-weight: 800; font-size: 0.92rem; font-variant-numeric: tabular-nums; color: var(--marca-800); }
+.chk-grupo-chevron { flex: none; color: var(--marca-700); transition: transform 0.2s var(--t-ease); }
+.chk-grupo[data-abierto="true"] .chk-grupo-chevron { transform: rotate(180deg); }
+.chk-grupo-cuerpo { padding: 0.2rem 1rem 0.8rem; }
+.chk-lineas { list-style: none; margin: 0; padding: 0; }
+.chk-linea {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 6.5rem auto;
+  align-items: center;
+  gap: 0.4rem 0.8rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--borde) 70%, transparent);
+}
+.chk-linea:last-child { border-bottom: 0; }
+.chk-linea--personalizada { grid-template-columns: minmax(0, 1fr) 6.5rem auto; }
+.chk-linea-info { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
+.chk-linea-nombre { font-weight: 700; font-size: 0.92rem; color: var(--tinta); overflow-wrap: anywhere; }
+.chk-linea-detalle { font-size: 0.8rem; color: var(--gris-600); }
+.chk-linea-unitario { color: var(--gris-400); font-variant-numeric: tabular-nums; }
+.chk-linea-subtotal { justify-self: end; font-weight: 800; font-size: 0.95rem; font-variant-numeric: tabular-nums; color: var(--tinta); }
+.chk-linea-subtotal--pendiente { font-weight: 600; font-size: 0.8rem; color: var(--gris-600); }
+.chk-linea-quitar { justify-self: end; }
+.chk-ver-mas {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  border: 1px dashed color-mix(in srgb, var(--marca-400) 45%, var(--borde));
+  border-radius: 12px;
+  background: none;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--marca-700);
+}
+.chk-ver-mas:hover { background: var(--t-fondo-suave); }
+.chk-vacio .btn { margin-top: 0.4rem; }
+
+/* --- Paso 4: confirmación --- */
+.chk-bloque {
+  margin-bottom: 0.9rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radio-sm);
+  border: 1px solid color-mix(in srgb, var(--borde) 85%, transparent);
+  background: var(--superficie);
+}
+.chk-bloque-cab { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.45rem; }
+.chk-bloque-cab h3 { display: flex; align-items: center; gap: 0.35rem; margin: 0; font-size: 0.95rem; color: var(--tinta); }
+.chk-bloque-cab h3 svg { color: var(--marca-700); }
+.chk-datos { list-style: none; display: grid; gap: 0.3rem; margin: 0; padding: 0; font-size: 0.9rem; color: var(--gris-900); }
+.chk-datos li,
+.chk-direccion { display: flex; align-items: flex-start; gap: 0.45rem; }
+.chk-datos svg,
+.chk-direccion svg,
+.chk-solicitud svg { flex: none; margin-top: 0.15rem; color: var(--marca-700); }
+.chk-direccion { margin: 0; font-size: 0.9rem; font-weight: 600; text-align: left; }
+.chk-direccion small { display: block; font-weight: 500; color: var(--marca-700); }
+.chk-solicitud {
+  display: flex;
+  gap: 0.45rem;
+  margin: 0.6rem 0 0;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  background: #fffbeb;
+  font-size: 0.82rem;
+  color: #92400e;
+  text-align: left;
+}
+.chk-resumen-lineas { list-style: none; display: grid; gap: 0.4rem; margin: 0; padding: 0; font-size: 0.86rem; }
+.chk-resumen-lineas li { display: flex; justify-content: space-between; gap: 0.8rem; }
+.chk-resumen-lineas li span:last-child { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* --- El pie fijo: atrás · total · siguiente --- */
+.chk-pie {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1rem -1.8rem 0;
+  padding: 0.85rem 1.8rem;
+  border-top: 1px solid color-mix(in srgb, var(--borde) 85%, transparent);
+  border-radius: 0 0 var(--radio-lg) var(--radio-lg);
+  background: rgba(var(--superficie-rgb), 0.94);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.chk-atras {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+  padding: 0.5rem 0.2rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--marca-700);
+}
+.chk-atras:hover { color: var(--marca-800); }
+.chk-pie-total { flex: 1; display: flex; flex-direction: column; align-items: flex-end; min-width: 0; line-height: 1.15; }
+.chk-pie-total span { font-size: 0.74rem; font-weight: 600; color: var(--gris-600); white-space: nowrap; }
+.chk-pie-total b { font-size: 1.25rem; font-weight: 800; color: var(--marca-800); font-variant-numeric: tabular-nums; }
+.chk-siguiente { display: inline-flex; align-items: center; gap: 0.4rem; flex: none; }
+.chk-siguiente-corto { display: none; }
+.checkout.chk .checkout-seguridad { margin: 0; padding: 0 0 0.9rem; }
+
+@media (max-width: 767px) {
+  .chk-pagina { padding: 1rem 0.75rem 1.5rem; }
+  .checkout.chk { padding: 1.1rem 1rem 0; border-radius: 22px; }
+  .chk-pasos { gap: 0.2rem; margin-bottom: 1.1rem; }
+  .chk-paso-num { width: 1.75rem; height: 1.75rem; font-size: 0.78rem; }
+  .chk-paso:not(:last-child)::after { top: 0.875rem; left: calc(50% + 1.1rem); right: calc(-50% + 1.1rem); }
+  .chk-paso-nombre { font-size: 0.66rem; }
+  .chk-titulo { font-size: 1.05rem; }
+  .chk-ficha { grid-template-columns: minmax(0, 1fr); }
+  .chk-ficha-acciones .btn { flex: 1 1 100%; justify-content: center; }
+  .chk-herramientas { flex-wrap: wrap; }
+  .chk-grupo-cab { padding: 0.75rem 0.8rem; gap: 0.45rem; }
+  .chk-grupo-cuerpo { padding: 0.1rem 0.8rem 0.7rem; }
+  /* Una línea en dos filas: arriba qué es y quitar; abajo cantidad y subtotal. */
+  .chk-linea { grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; }
+  .chk-linea-info { grid-column: 1; grid-row: 1; }
+  .chk-linea-quitar { grid-column: 2; grid-row: 1; align-self: start; }
+  .chk-linea .qty { grid-column: 1; grid-row: 2; justify-self: start; }
+  .chk-linea-subtotal { grid-column: 2; grid-row: 2; }
+  .chk-linea--personalizada { grid-template-columns: minmax(0, 1fr) auto; }
+  .chk-linea--personalizada .chk-linea-subtotal { grid-column: 1; grid-row: 2; justify-self: start; }
+  /* El pie, encima de la barra de navegación inferior del móvil. */
+  .chk-pie {
+    bottom: var(--reserva-inferior, 0px);
+    margin: 1rem -1rem 0;
+    padding: 0.7rem 1rem;
+    gap: 0.5rem;
+    border-radius: 0 0 22px 22px;
+  }
+  .chk-atras span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .chk-pie-total { align-items: flex-start; }
+  .chk-pie-total span { font-size: 0.68rem; }
+  .chk-pie-refs { display: none; }
+  .chk-pie-total b { font-size: 1.1rem; }
+  .chk-siguiente { padding-inline: 1rem; font-size: 0.86rem; }
+  /* El texto largo sigue en el botón para el lector de pantalla; a la vista,
+     el corto ("Continuar", "Enviar pedido"), que cabe junto al total. */
+  .chk-siguiente-largo { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .chk-siguiente-corto { display: inline; }
+}
+@media (max-width: 400px) {
+  .chk-paso-nombre { font-size: 0.6rem; }
+}
+
 /* ---------- Botón flotante de WhatsApp ---------- */
 .whatsapp-flotante {
   position: fixed;
@@ -6696,6 +7105,8 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
 }
 @keyframes precio-in { from { opacity: 0.25; transform: translateY(3px); } }
 .precio-meta { margin-top: 0.18rem; font-size: 0.75rem; font-weight: 600; color: var(--gris-600); }
+/* "Precio aproximado" solo donde se pide (`metaLarga`) y el tamaño lo deja. */
+.precio-meta-larga { display: none; }
 .precio--grande .precio-valor { font-size: clamp(1.75rem, 3vw, 2.25rem); }
 .precio--grande .precio-meta { font-size: 0.86rem; }
 
@@ -7155,7 +7566,9 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
 .tbar-btn { padding: 0 0.95rem; }
 .tbar-btn svg { color: var(--marca-600); }
 .tbar-btn--filtrar,
-.tbar-btn--ordenar { display: none; }
+.tbar-btn--ordenar,
+.tbar-btn--categorias { display: none; }
+.tbar-btn-icono { display: inline-flex; }
 .tbar-btn-cuenta {
   display: grid;
   place-items: center;
@@ -8727,7 +9140,7 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
 
   /* ---- Tarjetas del catálogo: más compactas y parejas ---- */
   .vista-tienda .pgrid { gap: 0.55rem; }
-  .vista-tienda .pgrid .pcard-media { aspect-ratio: 4 / 3; margin: 0.3rem 0.3rem 0; }
+  .vista-tienda .pgrid .pcard:not(.pcard--compacta) .pcard-media { aspect-ratio: 4 / 3; margin: 0; }
   /* La categoría ya está en las píldoras de arriba: en cada tarjeta es ruido. */
   .vista-tienda .pgrid .pcard-cat { display: none; }
   .vista-tienda .pgrid .pcard-cuerpo { gap: 0.3rem; padding: 0.55rem 0.6rem 0.65rem; }
@@ -8855,19 +9268,85 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
   .vista-tienda .tbar-btn { width: 1.9rem; }
 }
 
+/* Teléfono: Categorías · Filtrar · Ordenar como botones redondos pequeños
+   con su rótulo debajo, en una segunda línea:
+
+        (▦)        (⚟)       (⇅)
+     Categorías  Filtrar   Ordenar
+
+   Especificidad `.tbar .tbar-acciones .tbar-btn` a propósito: le gana a las
+   reglas `.vista-tienda .tbar-btn` de arriba (alto fijo, ancho de icono,
+   `font-size: 0` en los más estrechos) sin tener que deshacerlas una a una.
+   El título y el conteo pasan a dos líneas para aprovechar el alto. */
+@media (max-width: 767px) {
+  .tbar .tbar-fila { align-items: center; }
+  .tbar .tbar-fila .tbar-titulo { flex-direction: column; align-items: flex-start; gap: 0.05rem; }
+  .tbar .tbar-acciones { gap: 0.1rem; }
+  .tbar .tbar-acciones .tbar-btn--categorias { display: inline-flex; }
+  .tbar .tbar-acciones .tbar-btn {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0.1rem;
+    width: auto;
+    min-width: 2.9rem;
+    height: auto;
+    padding: 0 0.1rem;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 0.6rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--gris-600);
+  }
+  .tbar .tbar-acciones .tbar-btn-icono {
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--marca-100) 70%, var(--superficie));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-300) 40%, transparent);
+    color: var(--marca-700);
+    transition: background-color var(--t-rapido) ease, transform 0.1s ease;
+  }
+  .tbar .tbar-acciones .tbar-btn svg { width: 14px; height: 14px; color: inherit; }
+  .tbar .tbar-acciones .tbar-btn-texto {
+    max-width: 4.2rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tbar .tbar-acciones .tbar-btn:hover { border-color: transparent; }
+  .tbar .tbar-acciones .tbar-btn:hover .tbar-btn-icono { background: var(--marca-100); }
+  .tbar .tbar-acciones .tbar-btn:active .tbar-btn-icono { transform: scale(0.92); }
+  .tbar .tbar-acciones .tbar-btn:focus-visible { box-shadow: none; }
+  .tbar .tbar-acciones .tbar-btn:focus-visible .tbar-btn-icono { box-shadow: var(--t-foco); }
+  /* El contador ("1") sobre la esquina del círculo, no en la fila. */
+  .tbar .tbar-acciones .tbar-btn-cuenta {
+    position: absolute;
+    top: -0.15rem;
+    right: auto;
+    left: calc(50% + 0.35rem);
+    min-width: 1rem;
+    height: 1rem;
+    padding: 0 0.22rem;
+    font-size: 0.58rem;
+    box-shadow: 0 0 0 2px var(--superficie);
+  }
+}
+
 /* ==========================================================================
    Tarjeta de producto — misma estructura en PC y en móvil
-   La foto manda (4:3) con la categoría en un badge sobre ella; el nombre
-   lleva la variedad pegada ("Mango [Tommy ▾]"); la unidad de venta va con
-   la cantidad, y la compra son dos filas parejas:
-     [− 5 +]  Kilogramos ▾
-     $12.000 aprox. / Kilogramo     [Agregar]
-   Aquí van las reglas comunes con medidas de escritorio; el bloque
-   `max-width: 767px` de abajo solo achica medidas para el teléfono.
+   La foto con la categoría en un badge sobre ella, el nombre, los campos
+   rotulados [Variedad:] y [Uni. Venta:] (`pcard-campos`), y la compra.
+   Aquí van las reglas comunes; las medidas de cada tamaño viven en sus
+   bloques: «Tarjeta del catálogo en escritorio» (min-width: 768px) y
+   «Tarjeta del catálogo en teléfono» (max-width: 767px), al final.
    ========================================================================== */
 .pcard-badge,
-.pcard-variedad,
-.pcard-variedad-sel,
+.pcard-campos,
+.pcard-sellos,
 .qadd-etiqueta { display: none; }
 
 .pcard:not(.pcard--compacta) .pcard-media {
@@ -8929,19 +9408,6 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.pcard:not(.pcard--compacta) .pcard-variedad { display: inline; font-weight: 500; color: var(--gris-600); }
-/* La fila de selectores sobra: la variedad va con el nombre y la unidad de
-   venta con la cantidad ("[− 5 +] Kilogramos ▾"). */
-.pcard:not(.pcard--compacta) .pcard-cuerpo > .selpres { display: none; }
-/* Varias variedades: el select propio (SelectPersonalizado) va en el renglón
-   del nombre: "Uva [Isabella Pulpa ▾]". */
-.pcard:not(.pcard--compacta) .pcard-variedad-sel {
-  display: inline-flex;
-  flex: 0 1 auto;
-  align-self: center;
-  min-width: 3rem;
-  margin-left: 0.35em;
-}
 
 /* ---------- SelectPersonalizado (variedad) ----------
    El botón: cápsula compacta verde muy tenue, borde verde suave, chevron.
@@ -8972,6 +9438,7 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
 .selp[aria-expanded="true"] { border-color: var(--marca-500); background: color-mix(in srgb, var(--marca-100) 80%, var(--superficie)); }
 .selp-valor { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .selp-prefijo { flex: none; font-weight: 500; color: var(--gris-600); }
+.selp-icono { flex: none; display: inline-flex; align-items: center; justify-content: center; }
 .selp-chevron { flex: none; color: var(--marca-600); transition: transform 0.2s var(--t-ease); }
 .selp[aria-expanded="true"] .selp-chevron { transform: rotate(180deg); }
 /* En la fila de selectores (tarjetas compactas): la altura de sus vecinos. */
@@ -9059,9 +9526,9 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
   .selp-check { animation: none; transition: none; }
 }
 
-/* Compra en dos filas: cantidad + unidad, y precio + agregar. `.qadd` se
-   deshace (display: contents) para que sus piezas caigan en la rejilla de
-   la tarjeta sin tocar el componente. */
+/* La compra: `.qadd` se deshace (display: contents) para que sus piezas
+   —cantidad y botón— caigan en la rejilla de la tarjeta junto al precio sin
+   tocar el componente. Cada tamaño las acomoda en sus filas. */
 .pcard:not(.pcard--compacta) .pcard-compra {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -9080,33 +9547,6 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
 }
 .pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.8rem; height: 1.8rem; }
 .pcard:not(.pcard--compacta) .pcard-compra .qty-valor { flex: none; width: 2.5rem; }
-.pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta {
-  grid-row: 1;
-  grid-column: 2 / 4;
-  display: block;
-  min-width: 0;
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--marca-800);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* Varias unidades: el select propio (SelectPersonalizado, la misma cápsula
-   verde de la variedad) junto al − +, a la altura del control. */
-.pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp {
-  display: inline-flex;
-  justify-self: start;
-  max-width: 100%;
-  height: 2.15rem;
-  padding: 0 0.55rem 0 0.75rem;
-  border-radius: 11px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1;
-}
-.pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp .selp-chevron { width: 14px; height: 14px; }
 .pcard:not(.pcard--compacta) .pcard-compra .precio { grid-row: 2; grid-column: 1 / 3; min-width: 0; }
 .pcard:not(.pcard--compacta) .pcard-compra .precio-meta {
   white-space: nowrap;
@@ -9140,9 +9580,11 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
 
 /* Teléfono: las mismas piezas, en medidas de bolsillo. */
 @media (max-width: 767px) {
+  /* La foto a todo el ancho, redondeada solo arriba (radio de la tarjeta
+     menos su borde de 1 px). */
   .pcard:not(.pcard--compacta) .pcard-media {
-    margin: 0.3rem 0.3rem 0;
-    border-radius: calc(var(--t-radio-card) - 5px);
+    margin: 0;
+    border-radius: 21px 21px 0 0;
   }
   .pcard:not(.pcard--compacta) .pcard-badge {
     top: 0.4rem;
@@ -9164,30 +9606,14 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
   }
   .pcard:not(.pcard--compacta) .pcard-nombre { font-size: clamp(0.78rem, 3.5vw, 0.88rem); }
   .pcard:not(.pcard--compacta) .pcard-compra { column-gap: 0.4rem; row-gap: 0.45rem; padding-top: 0.15rem; }
-  /* Un campo por línea, a todo el ancho, para que nada quede cortado:
-       1. unidad de venta ("Kilogramos ▾")
-       2. cantidad (− 1 +)
-       3. precio + botón de agregar */
-  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta {
-    grid-row: 1;
-    grid-column: 1 / 4;
-    font-size: 0.8rem;
-    white-space: normal;
-  }
-  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp {
-    justify-self: stretch;
-    justify-content: space-between;
-    width: 100%;
-    height: 2rem;
-    padding: 0 0.5rem 0 0.7rem;
-    border-radius: 9px;
-    font-size: 0.8rem;
-  }
-  .pcard:not(.pcard--compacta) .pcard-compra .qty { grid-row: 2; grid-column: 1 / 4; justify-self: stretch; justify-content: space-between; height: 2rem; padding: 0 0.15rem; }
-  .pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.65rem; height: 1.65rem; }
+  /* Dos filas: 1. cantidad + unidad, 2. precio + botón de agregar. La fila
+     de cantidad + unidad la termina de acomodar el bloque «Tarjeta del
+     catálogo en teléfono», más abajo. */
+  .pcard:not(.pcard--compacta) .pcard-compra .qty { grid-row: 1; grid-column: 1 / 4; justify-self: stretch; justify-content: space-between; height: 2.1rem; padding: 0 0.15rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.75rem; height: 1.75rem; }
   .pcard:not(.pcard--compacta) .pcard-compra .qty-valor { flex: 1; width: auto; font-size: 0.86rem; }
-  .pcard:not(.pcard--compacta) .pcard-compra .precio { grid-row: 3; grid-column: 1 / 3; }
-  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn { grid-row: 3; }
+  .pcard:not(.pcard--compacta) .pcard-compra .precio { grid-row: 2; grid-column: 1 / 3; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn { grid-row: 2; }
   .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--agotado { grid-row: 2; }
   .pcard:not(.pcard--compacta) .pcard-compra .precio-valor { font-size: 1.08rem; }
   .pcard:not(.pcard--compacta) .pcard-compra .precio-meta { font-size: 0.66rem; }
@@ -10473,66 +10899,242 @@ blockquote {
 }
 
 /* ==========================================================================
-   Tarjeta del catálogo en teléfono: cada dato en su línea y completo.
-   En escritorio el nombre y la variedad comparten renglón (con puntos
-   suspensivos); en un teléfono eso dejaba "Habichu…", "Pepino Cohombro C…" y
-   variedades como "Segun…". Aquí el nombre se parte en las líneas que
-   necesite y la variedad y la unidad van en su propia línea, con su rótulo:
+   Tarjeta del catálogo en teléfono (SOLO móvil; escritorio no cambia).
+   En escritorio el nombre y la variedad comparten renglón; en un teléfono a
+   dos columnas eso dejaba "Habichu…" y "Segun…". Aquí cada dato va en su
+   línea y con su rótulo, en una tarjeta blanca de 22 px con sombra suave:
 
-       Pepino Cohombro
-       [ Variedad: Chino          ⌄ ]
-       [ Unidad: Libra            ⌄ ]
-       [ −        1        + ]
-       $ 2.000                  (🧺)
+       ┌───────────────────┐
+       │  FOTO 4:3         │
+       │ [Más vendido]     │   sello flotante, solo con dato real
+       ├───────────────────┤
+       │ Maracuyá          │   nombre (2 líneas máx.)
+       │ [VARIEDAD: X  ⌄]  │   fija y sin flecha si es UNA
+       │ (−)1(+) Libras ⌄  │   cantidad + unidad, en plural
+       │ $ 3.000      (🧺) │
+       └───────────────────┘
+
+   Colores por token (`--marca-*`): cada negocio trae los suyos. Verde oscuro
+   para la acción, verde pastel para los selectores.
    ========================================================================== */
 @media (max-width: 767px) {
-  .pcard:not(.pcard--compacta) .pcard-nombre {
+  .pgrid,
+  .catalogo-layout--con-panel .pgrid { gap: 0.7rem; }
+
+  .pcard:not(.pcard--compacta) {
+    border-radius: 22px;
+    border-color: color-mix(in srgb, var(--borde) 55%, transparent);
+    background: var(--superficie);
+    box-shadow:
+      0 1px 2px rgba(var(--sombra-tinte), calc(0.05 * var(--sombra-fuerza))),
+      0 14px 28px -20px rgba(var(--sombra-tinte), calc(0.55 * var(--sombra-fuerza)));
+  }
+  .pcard:not(.pcard--compacta).pcard--en-pedido {
+    border-color: var(--marca-500);
+    box-shadow:
+      inset 0 0 0 1px var(--marca-500),
+      0 14px 28px -20px rgba(var(--sombra-tinte), calc(0.55 * var(--sombra-fuerza)));
+  }
+  .pcard:not(.pcard--compacta) .pcard-cuerpo { gap: 0.3rem; padding: 0.5rem 0.55rem 0.55rem; }
+
+  /* --- Sellos comerciales flotantes: abajo a la izquierda de la foto, para
+     no chocar con la categoría (arriba izq.) ni con "Agotado" (arriba der.).
+     Mismos colores que las campañas del banner de favoritos. --- */
+  .pcard:not(.pcard--compacta) .pcard-sellos {
+    position: absolute;
+    left: 0.45rem;
+    bottom: 0.45rem;
+    z-index: 1;
+    display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
-    row-gap: 0.4rem;
-    font-size: clamp(0.92rem, 4.2vw, 1.02rem);
-    line-height: 1.22;
+    gap: 0.25rem;
+    max-width: calc(100% - 0.9rem);
+    pointer-events: none;
+  }
+  .pcard-sello {
+    --sello-fondo: color-mix(in srgb, var(--marca-100) 85%, var(--superficie));
+    --sello-tinta: var(--marca-800);
+    display: inline-flex;
+    align-items: center;
+    height: 1.3rem;
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--sello-fondo) 94%, transparent);
+    color: var(--sello-tinta);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    box-shadow: 0 3px 10px -3px rgba(var(--sombra-tinte), 0.3);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+  .pcard-sello[data-sello="mas-vendido"] { --sello-fondo: #f6ecd2; --sello-tinta: #9a6b12; }
+  .pcard-sello[data-sello="temporada"] { --sello-fondo: #e4efe2; --sello-tinta: #2f6b3a; }
+  .pcard-sello[data-sello="nuevo"] { --sello-fondo: #f6e5da; --sello-tinta: #a2522c; }
+
+  /* --- B. El nombre manda: hasta dos líneas, sin reservar la segunda (un
+     nombre corto no deja un hueco). La compra sigue alineada abajo entre
+     tarjetas vecinas por su `margin-top: auto`. Lo que en escritorio va
+     pegado al nombre (la variedad) pasa al bloque de abajo. --- */
+  .pcard:not(.pcard--compacta) .pcard-nombre {
+    display: block;
+    font-size: clamp(0.84rem, 3.7vw, 0.95rem);
+    line-height: 1.2;
     white-space: normal;
   }
   .pcard:not(.pcard--compacta) .pcard-nombre > a {
-    flex: 1 1 100%;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     overflow: hidden;
-    text-overflow: clip;
     overflow-wrap: anywhere;
   }
 
-  /* Variedad: ancho completo, con su rótulo. */
-  .pcard:not(.pcard--compacta) .pcard-variedad-sel {
-    flex: 1 1 100%;
-    align-self: stretch;
-    justify-content: space-between;
+  .pcard:not(.pcard--compacta) .pcard-campos { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+
+  /* --- C/D. Selectores: cápsula verde pastel con su rótulo a la izquierda,
+     el valor elegido a la derecha y la flecha. Un dato fijo (una sola
+     unidad) lleva la misma forma, sin flecha y en tono neutro: se lee igual
+     y no promete un menú que no existe. --- */
+  .pcard-campo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     width: 100%;
     min-width: 0;
-    height: 2rem;
-    margin-left: 0;
-    padding: 0 0.5rem 0 0.7rem;
-    border-radius: 9px;
-    font-size: 0.8rem;
+    /* Alto mínimo y no fijo: una variedad larga ("Isabella Pulpa Selecta")
+       salta de línea dentro de la cápsula en vez de cortarse. */
+    height: auto;
+    min-height: 1.85rem;
+    padding: 0.22rem 0.3rem 0.22rem 0.3rem;
+    border: 1px solid color-mix(in srgb, var(--marca-300) 40%, transparent);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--marca-100) 70%, var(--superficie));
+    color: var(--marca-900);
+    font-size: 0.74rem;
     font-weight: 700;
+    line-height: 1.15;
+    text-align: left;
+    white-space: normal;
   }
-  .pcard:not(.pcard--compacta) .pcard-variedad-sel .selp-valor { flex: 1; text-align: left; }
-  .pcard:not(.pcard--compacta) .pcard-variedad-sel .selp-valor::before {
-    content: "Variedad: ";
-    font-weight: 500;
-    color: var(--gris-600);
+  .pcard-campo .selp-prefijo {
+    flex: none;
+    font-size: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--marca-800) 65%, var(--gris-600));
+  }
+  /* El icono del rótulo: un círculo blanco pequeño con el trazo de marca,
+     pegado a la palabra (el `margin-right` negativo le quita parte del
+     `gap` de la cápsula). */
+  .pcard-campo .selp-icono {
+    width: 1rem;
+    height: 1rem;
+    margin-right: -0.1rem;
+    border-radius: 50%;
+    background: var(--superficie);
+    box-shadow: 0 1px 2px rgba(var(--sombra-tinte), 0.12);
+    color: var(--marca-700);
+  }
+  .pcard-campo--fijo .selp-icono { color: var(--gris-600); }
+  /* El valor arranca justo después del rótulo y a la izquierda: alineado a
+     la derecha, al partirse en dos líneas dejaba un hueco vacío en medio. */
+  .pcard-campo .selp-valor {
+    flex: 1;
+    min-width: 0;
+    overflow: visible;
+    text-align: left;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .pcard-campo .selp-chevron { flex: none; width: 12px; height: 12px; margin-left: -0.05rem; color: var(--marca-700); }
+  .pcard-campo--fijo {
+    border-color: color-mix(in srgb, var(--borde) 75%, transparent);
+    background: var(--t-fondo-suave);
+    color: var(--tinta);
   }
 
-  /* Unidad: el mismo rótulo, tanto si es un select como si es texto fijo. */
-  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta.selp .selp-valor { flex: 1; text-align: left; }
-  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-valor::before,
-  .pcard:not(.pcard--compacta) .pcard-compra span.qadd-etiqueta::before {
-    content: "Unidad: ";
-    font-weight: 500;
-    color: var(--gris-600);
+  /* --- Compra compacta: la cantidad y el botón bajan de alto (el botón
+     heredaba los 2,75 rem de escritorio) y las filas se juntan. --- */
+  .pcard:not(.pcard--compacta) .pcard-compra { row-gap: 0.3rem; padding-top: 0.1rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty { height: 1.85rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.55rem; height: 1.55rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn { width: 2.3rem; height: 2.3rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn svg { width: 17px; height: 17px; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--agotado { width: 100%; height: 2rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .precio-meta { margin-top: 0.08rem; }
+
+  /* --- Cantidad + unidad en UNA fila, como en escritorio: "(−) 5 (+)
+     Kilogramos ⌄" se lee de corrido. Sin el icono de la balanza: a dos
+     columnas cada píxel es del nombre de la unidad. --- */
+  .pcard:not(.pcard--compacta) .pcard-compra { column-gap: 0.25rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty {
+    grid-column: 1;
+    justify-self: start;
+    padding: 0 0.12rem;
   }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.45rem; height: 1.45rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty button svg { width: 13px; height: 13px; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty-valor { flex: none; width: 1.95rem; font-size: 0.8rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta {
+    grid-row: 1;
+    grid-column: 2 / 4;
+    justify-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.15rem;
+    min-width: 0;
+    height: auto;
+    min-height: 1.85rem;
+    padding: 0.15rem 0.35rem 0.15rem 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--marca-300) 40%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--marca-100) 70%, var(--superficie));
+    color: var(--marca-900);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra span.qadd-etiqueta {
+    border-color: color-mix(in srgb, var(--borde) 75%, transparent);
+    background: var(--t-fondo-suave);
+    color: var(--tinta);
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-icono { display: none; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-valor { flex: 1; min-width: 0; overflow: visible; text-overflow: clip; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-chevron { flex: none; width: 11px; height: 11px; color: var(--marca-700); }
+
+  /* Según el ancho de la TARJETA (no de la pantalla), medido con las
+     unidades más largas del catálogo ("1 1/2" + "Canastillas"):
+       ≥ 172 px (teléfonos de 390 en adelante): cabe tal cual.
+       < 172 px (375, 360): misma fila, apretando cada pieza 1-2 px.
+       < 158 px: la unidad baja justo debajo de la cantidad; nunca se corta. */
+  @container (max-width: 171px) {
+    .pcard:not(.pcard--compacta) .pcard-compra { column-gap: 0.2rem; }
+    .pcard:not(.pcard--compacta) .pcard-compra .qty { padding: 0 0.1rem; }
+    .pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.35rem; height: 1.35rem; }
+    .pcard:not(.pcard--compacta) .pcard-compra .qty button svg { width: 12px; height: 12px; }
+    .pcard:not(.pcard--compacta) .pcard-compra .qty-valor { width: 1.75rem; font-size: 0.7rem; letter-spacing: -0.03em; }
+    .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta { gap: 0.1rem; padding: 0.15rem 0.25rem 0.15rem 0.4rem; font-size: 0.62rem; }
+    .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-chevron { width: 10px; height: 10px; }
+  }
+  @container (max-width: 157px) {
+    .pcard:not(.pcard--compacta) .pcard-compra .qty { grid-column: 1 / 4; justify-self: stretch; }
+    .pcard:not(.pcard--compacta) .pcard-compra .qty-valor { flex: 1; width: auto; }
+    .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta { grid-row: 2; grid-column: 1 / 4; }
+    .pcard:not(.pcard--compacta) .pcard-compra .precio { grid-row: 3; }
+    .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn { grid-row: 3; }
+  }
+
+  /* --- La acción principal en verde oscuro. --- */
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--listo:not(:disabled) { background: var(--marca-700); }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--listo:hover:not(:disabled) { background: var(--marca-800); }
 }
 
 /* ==========================================================================
@@ -10557,6 +11159,299 @@ blockquote {
     margin-bottom: calc(-1 * var(--reserva-inferior));
     padding-bottom: calc(1.5rem + var(--reserva-inferior));
   }
+}
+
+/* ==========================================================================
+   Tarjeta del catálogo en escritorio y tablet (min-width: 768px).
+   El teléfono tiene su propio bloque más arriba y aquí no se le toca nada:
+   todo vive bajo este `min-width`.
+
+       ┌─────────────────────────────┐
+       │ [FRUTAS]                    │
+       │          FOTO 16:10         │   entera si es foto de estudio
+       │ [Más vendido]               │   sellos, solo con dato real
+       ├─────────────────────────────┤
+       │ Tomate de árbol             │   nombre, hasta 2 líneas
+       │ (🍃) VARIEDAD: Común      ⌄ │   campo propio (fijo si es una)
+       │ (−) 5 (+)  (⚖) Libras     ⌄ │   cantidad + unidad, 34 px
+       │ $2.300                      │   precio 26 px, verde oscuro
+       │ Precio aproximado / Libra   │
+       │ [ 🧺  Agregar al pedido    ] │   42 px, verde oscuro
+       └─────────────────────────────┘
+
+   Alineación entre tarjetas vecinas: la compra (cantidad, precio, botón) va
+   pegada al fondo (`margin-top: auto`), así cantidad, precio y botón quedan
+   a la misma altura en toda la fila.
+   Un producto sin variedad no reserva el hueco de ese campo.
+   ========================================================================== */
+@media (min-width: 768px) {
+  /* --- Rejilla: 4 columnas en pantalla amplia (el token de siempre), 3 en
+     portátiles, 2 en tablet; separación de 16 px. --- */
+  .pgrid { gap: calc(1rem * var(--densidad-escala)); }
+
+  /* --- La tarjeta: blanca, sombra discreta que crece al pasar. --- */
+  .pcard:not(.pcard--compacta) {
+    border-color: color-mix(in srgb, var(--borde) 65%, transparent);
+    background: var(--superficie);
+    box-shadow:
+      0 1px 2px rgba(var(--sombra-tinte), calc(0.04 * var(--sombra-fuerza))),
+      0 12px 28px -22px rgba(var(--sombra-tinte), calc(0.5 * var(--sombra-fuerza)));
+  }
+  .pcard:not(.pcard--compacta):hover {
+    border-color: color-mix(in srgb, var(--marca-400) 35%, var(--borde));
+    box-shadow:
+      0 1px 2px rgba(var(--sombra-tinte), calc(0.05 * var(--sombra-fuerza))),
+      0 18px 36px -20px rgba(var(--sombra-tinte), calc(0.45 * var(--sombra-fuerza)));
+  }
+  .pcard:not(.pcard--compacta).pcard--en-pedido {
+    border-color: var(--marca-500);
+    box-shadow:
+      inset 0 0 0 1px var(--marca-500),
+      0 12px 28px -22px rgba(var(--sombra-tinte), calc(0.5 * var(--sombra-fuerza)));
+  }
+  .pcard:not(.pcard--compacta) .pcard-cuerpo { gap: 0.45rem; padding: 0.7rem 0.85rem 0.85rem; }
+
+  /* --- A. La foto: 16:10, a todo el ancho, redondeada solo arriba (radio de
+     la tarjeta menos su borde de 1 px). Dos tercios del catálogo son fotos
+     cuadradas o verticales: un 16:9 les cortaba casi la mitad del alto. El
+     alto extra se paga con el cuerpo más compacto: la tarjeta no crece. --- */
+  .pcard:not(.pcard--compacta) .pcard-media {
+    aspect-ratio: 16 / 10;
+    margin: 0;
+    border-radius: calc(var(--t-radio-card) - 1px) calc(var(--t-radio-card) - 1px) 0 0;
+  }
+  /* Foto de estudio (producto recortado sobre blanco, ver `ImagenProducto`):
+     entera, sin recorte, sobre blanco para que no se note su marco. Una foto
+     a sangre sigue llenando el marco (`cover`): achicarla dejaría franjas. */
+  .pcard:not(.pcard--compacta) .pimg--recorte { background: #fff; }
+  .pcard:not(.pcard--compacta) .pimg--recorte img:not(.pimg-icono) {
+    object-fit: contain;
+    padding: 0.4rem 0.6rem;
+  }
+
+  /* --- Sellos comerciales: abajo a la izquierda de la foto (arriba están la
+     categoría y "Agotado"). Colores de las campañas del banner. --- */
+  .pcard:not(.pcard--compacta) .pcard-sellos {
+    position: absolute;
+    left: 0.6rem;
+    bottom: 0.6rem;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    max-width: calc(100% - 1.2rem);
+    pointer-events: none;
+  }
+  .pcard-sello {
+    --sello-fondo: color-mix(in srgb, var(--marca-100) 85%, var(--superficie));
+    --sello-tinta: var(--marca-800);
+    display: inline-flex;
+    align-items: center;
+    height: 1.5rem;
+    padding: 0 0.65rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--sello-fondo) 94%, transparent);
+    color: var(--sello-tinta);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    box-shadow: 0 3px 10px -3px rgba(var(--sombra-tinte), 0.3);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+  .pcard-sello[data-sello="mas-vendido"] { --sello-fondo: #f6ecd2; --sello-tinta: #9a6b12; }
+  .pcard-sello[data-sello="temporada"] { --sello-fondo: #e4efe2; --sello-tinta: #2f6b3a; }
+  .pcard-sello[data-sello="nuevo"] { --sello-fondo: #f6e5da; --sello-tinta: #a2522c; }
+  .pcard-sello[data-sello="oferta"] { --sello-fondo: #fde8e6; --sello-tinta: #b42318; }
+
+  /* --- B. El nombre: destacado, hasta dos líneas, sin reservar la segunda
+     (un "Mango" dejaba una línea vacía encima de los campos). La compra va
+     pegada al fondo, así que cantidad, precio y botón siguen alineados en la
+     fila. La variedad ya no va pegada: tiene su campo. --- */
+  .pcard:not(.pcard--compacta) .pcard-nombre {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: normal;
+  }
+  .pcard:not(.pcard--compacta) .pcard-nombre > a {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  /* --- C/D. Variedad y Uni. Venta: cápsulas verde pastel de ~38 px, icono
+     en su círculo, rótulo, valor y flecha. El valor salta de línea si es
+     largo, nunca se corta. Un dato fijo lleva la misma forma, en tono
+     neutro y sin flecha. --- */
+  .pcard:not(.pcard--compacta) .pcard-campos { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+  .pcard-campo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 2.375rem;
+    padding: 0.25rem 0.6rem 0.25rem 0.4rem;
+    border: 1px solid color-mix(in srgb, var(--marca-300) 45%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--marca-100) 65%, var(--superficie));
+    color: var(--marca-900);
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: left;
+    white-space: normal;
+  }
+  .pcard-campo .selp-icono {
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 50%;
+    background: var(--superficie);
+    box-shadow: 0 1px 2px rgba(var(--sombra-tinte), 0.12);
+    color: var(--marca-700);
+  }
+  .pcard-campo .selp-icono svg { width: 13px; height: 13px; }
+  .pcard-campo .selp-prefijo {
+    flex: none;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--marca-800) 65%, var(--gris-600));
+  }
+  .pcard-campo .selp-valor {
+    flex: 1;
+    min-width: 0;
+    overflow: visible;
+    text-align: left;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .pcard-campo .selp-chevron { flex: none; width: 15px; height: 15px; color: var(--marca-700); }
+  .pcard-campo--fijo {
+    border-color: color-mix(in srgb, var(--borde) 80%, transparent);
+    background: var(--t-fondo-suave);
+    color: var(--tinta);
+  }
+  .pcard-campo--fijo .selp-icono { color: var(--gris-600); }
+
+  /* --- F/G/H. La compra en tres filas:
+       1. cantidad + unidad, de corrido:  (−) 5 (+)  (⚖) Kilogramos ⌄
+       2. precio
+       3. Agregar al pedido
+     La unidad va junto a la cantidad y en plural según ella: "5" a secas no
+     dice cuánto es; "5 Kilogramos" sí. Mismas columnas de la rejilla común
+     (`1 / 4`) para no crear columnas implícitas; "Agotado" conserva sus dos
+     filas (precio arriba, botón). --- */
+  .pcard:not(.pcard--compacta) .pcard-compra { row-gap: 0.5rem; padding-top: 0.1rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty {
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: start;
+    justify-content: space-between;
+    height: 2.125rem;
+    padding: 0 0.2rem;
+    background: color-mix(in srgb, var(--borde) 45%, var(--superficie));
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty button { width: 1.75rem; height: 1.75rem; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qty-valor { flex: none; width: 2.6rem; font-size: 0.95rem; }
+
+  /* La unidad junto a la cantidad: la cápsula verde pastel de los campos,
+     a la altura del − +. Un nombre largo salta de línea, no se corta. */
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta {
+    grid-row: 1;
+    grid-column: 2 / 4;
+    justify-self: stretch;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    height: auto;
+    min-height: 2.125rem;
+    padding: 0.2rem 0.55rem 0.2rem 0.3rem;
+    border: 1px solid color-mix(in srgb, var(--marca-300) 45%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--marca-100) 65%, var(--superficie));
+    color: var(--marca-900);
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: left;
+    white-space: normal;
+  }
+  /* Una sola unidad: dato, no menú — tono neutro y sin flecha. */
+  .pcard:not(.pcard--compacta) .pcard-compra span.qadd-etiqueta {
+    border-color: color-mix(in srgb, var(--borde) 80%, transparent);
+    background: var(--t-fondo-suave);
+    color: var(--tinta);
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-icono {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--superficie);
+    box-shadow: 0 1px 2px rgba(var(--sombra-tinte), 0.12);
+    color: var(--marca-700);
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra span.qadd-etiqueta .selp-icono { color: var(--gris-600); }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-icono svg { width: 13px; height: 13px; }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-valor {
+    flex: 1;
+    min-width: 0;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-etiqueta .selp-chevron { flex: none; width: 15px; height: 15px; color: var(--marca-700); }
+
+  .pcard:not(.pcard--compacta) .pcard-compra .precio { grid-row: 2; grid-column: 1 / 4; }
+  .pcard:not(.pcard--compacta) .pcard-compra .precio-valor {
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--marca-800);
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .precio-meta { margin-top: 0.1rem; font-size: 0.78rem; }
+  .pcard:not(.pcard--compacta) .precio-meta-larga { display: inline; }
+  .pcard:not(.pcard--compacta) .precio-meta-corta { display: none; }
+
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn {
+    grid-row: 3;
+    grid-column: 1 / 4;
+    width: 100%;
+    height: 2.625rem;
+    padding: 0 1rem;
+    font-size: 0.92rem;
+    transition: background-color var(--t-rapido) ease, transform 0.1s ease, box-shadow var(--t-medio) ease;
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--listo:not(:disabled) {
+    background: var(--marca-700);
+    box-shadow: 0 8px 18px -12px color-mix(in srgb, var(--marca-700) 80%, transparent);
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--listo:hover:not(:disabled) {
+    background: var(--marca-800);
+    box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--marca-800) 85%, transparent);
+  }
+  .pcard:not(.pcard--compacta) .pcard-compra .qadd-btn--agotado { grid-row: 2; }
+}
+/* Portátiles: tres columnas cuando el ancho ya no da para cuatro con aire. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .pgrid,
+  .catalogo-layout--con-panel .pgrid { grid-template-columns: repeat(var(--columnas-catalogo-tablet, 3), minmax(0, 1fr)); }
+}
+/* Tablet: dos columnas; cada tarjeta conserva su botón con texto. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .pgrid,
+  .catalogo-layout--con-panel .pgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ---------- Aviso «Instala la app» (ver InstalarApp.tsx) ----------

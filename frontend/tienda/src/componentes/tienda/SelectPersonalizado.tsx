@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { BottomSheet } from "@/componentes/BottomSheet";
@@ -36,6 +37,8 @@ interface Props {
   className?: string;
   /** Una palabra fija antes del valor, en gris ("Por" → "Por Libra ▾"). */
   prefijo?: string;
+  /** Un icono decorativo antes del prefijo (la hoja de "Variedad"). */
+  icono?: ReactNode;
 }
 
 const MOVIL = "(max-width: 767px)";
@@ -80,6 +83,7 @@ export function SelectPersonalizado({
   umbralHoja = 7,
   className = "",
   prefijo,
+  icono,
 }: Props) {
   const [modo, setModo] = useState<Modo | null>(null);
   const [cerrando, setCerrando] = useState(false);
@@ -306,6 +310,11 @@ export function SelectPersonalizado({
         onClick={() => (modo && !cerrando ? cerrar(true) : abrir())}
         onKeyDown={teclasBoton}
       >
+        {icono && (
+          <span className="selp-icono" aria-hidden="true">
+            {icono}
+          </span>
+        )}
         {prefijo && (
           <span className="selp-prefijo" aria-hidden="true">
             {prefijo}
