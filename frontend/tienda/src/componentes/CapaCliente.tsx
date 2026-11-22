@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { MotionConfig } from "motion/react";
 import { BarraPedidoEscritorio } from "./BarraPedidoEscritorio";
 import { CartDrawer } from "./CartDrawer";
+import { InstalarApp } from "./InstalarApp";
 import { MobileCartBar } from "./MobileCartBar";
 import { WhatsAppButton } from "./WhatsAppButton";
 import { AvisoAgregado } from "./tienda/AvisoAgregado";
@@ -102,6 +103,7 @@ export function CapaCliente({
           <MobileCartBar onAbrir={() => setCarritoAbierto(true)} />
           <BarraPedidoEscritorio onAbrir={() => setCarritoAbierto(true)} />
           <AvisoAgregado />
+          <InstalarApp />
           <ProductQuickView />
           {carritoAbierto && <CartDrawer onCerrar={() => setCarritoAbierto(false)} />}
         </ContextoEnvoltorio.Provider>

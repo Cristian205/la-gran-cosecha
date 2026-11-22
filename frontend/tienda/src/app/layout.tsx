@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { ArmazonPrevia } from "@/componentes/ArmazonPrevia";
 import { CapaCliente } from "@/componentes/CapaCliente";
@@ -6,6 +6,7 @@ import { armazonDeLaTienda } from "@/lib/pagina";
 import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
 import { datosEstructuradosDelNegocio } from "@/lib/jsonld";
 import {
+  colorDeMarca,
   estiloDeTarjeta,
   fuenteDeGoogle,
   hojaDeTitulos,
@@ -47,14 +48,25 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: nombre,
       ...(config.logo_url ? { images: [config.logo_url] } : {}),
     },
-    // El favicon es el logo del negocio, el mismo de la cabecera: con una
-    // tienda por negocio, un ícono fijo en el código pondría la misma marca
-    // en la pestaña de todas. `apple` es el que usa iOS al anclarla al inicio.
-    ...(config.logo_url
-      ? { icons: { icon: config.logo_url, shortcut: config.logo_url, apple: config.logo_url } }
-      : {}),
+    // El ícono de la pestaña, el de la app instalada y el de iOS son el logo
+    // del negocio, generado en `/icono-app`: cuadrado y en PNG, porque el logo
+    // tal cual puede venir en WebP o apaisado. Con una tienda por negocio, un
+    // ícono fijo en el código pondría la misma marca en la pestaña de todas.
+    icons: {
+      icon: [{ url: "/icono-app/192", type: "image/png", sizes: "192x192" }],
+      shortcut: "/icono-app/192",
+      apple: "/icono-app/180",
+    },
+    // Abierta desde el ícono del iPhone, a pantalla completa como una app.
+    appleWebApp: { capable: true, title: nombre, statusBarStyle: "default" },
     alternates: { canonical: "/" },
   };
+}
+
+/** El color de la barra del sistema (Android) y de la ventana de la app: el de la marca. */
+export async function generateViewport(): Promise<Viewport> {
+  const config = await configuracionDeLaTienda();
+  return config ? { themeColor: colorDeMarca(config) } : {};
 }
 
 export default async function RootLayout({
