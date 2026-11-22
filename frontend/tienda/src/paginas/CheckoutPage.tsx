@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, Loader2, Lock, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, ClipboardList, Loader2, Lock, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { crearPedido, type DatosCliente } from "@/lib/datos";
-import type { ClienteConsultado } from "@/lib/tipos";
-import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
+import type { ClienteConsultado, RespuestaPedido } from "@/lib/tipos";
 import { useSiteConfig } from "@/componentes/CapaCliente";
 import { useCarritoHidratado } from "@/componentes/CartDrawer";
 import { PasosCheckout, type Paso } from "@/componentes/checkout/PasosCheckout";
@@ -19,10 +17,11 @@ import {
 } from "@/componentes/checkout/PasoDatos";
 import { PasoRevision, textoReferencias } from "@/componentes/checkout/PasoRevision";
 import { PasoConfirmacion, type ResumenCliente } from "@/componentes/checkout/PasoConfirmacion";
+import { PedidoRegistrado } from "@/componentes/checkout/PedidoRegistrado";
 import { useCart } from "@/estado/carrito";
 import { useClienteTienda } from "@/estado/clienteTienda";
 import { useUltimoPedido } from "@/estado/ultimoPedido";
-import { formatoPrecio, whatsappHref } from "@/lib/utiles";
+import { formatoPrecio } from "@/lib/utiles";
 
 const NOTA_ACUERDO_PRECIOS =
   "El cliente confirma que los precios son estimados y acepta que se ajusten " +
@@ -59,7 +58,6 @@ function mensajeDelServidor(error: unknown): string | null {
 export function CheckoutPage() {
   const { items, personalizados, vaciar, totalPrecio } = useCart();
   const hidratado = useCarritoHidratado();
-  const router = useRouter();
   const { config } = useSiteConfig();
   const porCedula = config.identificacion_clientes === "cedula";
   const recordarCliente = useClienteTienda((s) => s.recordar);
@@ -91,7 +89,7 @@ export function CheckoutPage() {
   const [aceptaWhatsapp, setAceptaWhatsapp] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pedidoOk, setPedidoOk] = useState<{ id: number; total: number; nombre: string } | null>(null);
+  const [pedidoOk, setPedidoOk] = useState<{ respuesta: RespuestaPedido; nombre: string } | null>(null);
 
   // Cliente conocido: ya dio sus datos y aceptó el acuerdo en su primer pedido.
   const conocido = porCedula && consulta !== null && consulta.existe && !consulta.requiere_datos;
@@ -240,7 +238,7 @@ export function CheckoutPage() {
       useUltimoPedido.getState().guardar(items);
       if (porCedula) recordarCliente(cedula, resp.cliente_nombre ?? null);
       vaciar();
-      setPedidoOk({ id: resp.pedido_id, total: resp.total, nombre: resp.cliente_nombre || datos.nombre.trim() });
+      setPedidoOk({ respuesta: resp, nombre: resp.cliente_nombre || datos.nombre.trim() });
     } catch (e) {
       setError(mensajeDelServidor(e) ?? "No pudimos registrar tu pedido. Revisa tu conexión e intenta nuevamente.");
       tarjeta.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -250,46 +248,13 @@ export function CheckoutPage() {
   }
 
   if (pedidoOk !== null) {
-    const mensajeWhatsapp = (config.whatsapp_mensaje_pedido || "")
-      .replace("{nombre}", pedidoOk.nombre)
-      .replace("{pedido_id}", String(pedidoOk.id))
-      .replace("{total}", formatoPrecio(pedidoOk.total));
-
     return (
-      <div className="contenedor" style={{ padding: "3rem 1.5rem" }}>
-        <div className="checkout glass exito">
-          <div className="check">
-            <CheckCircle2 size={44} />
-          </div>
-          <h1 ref={tituloExito} tabIndex={-1} className="chk-exito-titulo">
-            ¡Pedido recibido!
-          </h1>
-          <p>
-            Tu pedido <strong>#{pedidoOk.id}</strong> fue registrado con éxito.
-            Pronto nos pondremos en contacto contigo.
-          </p>
-          <div className="checkout-exito-acciones">
-            {config.whatsapp_numero && mensajeWhatsapp && (
-              <a
-                className="btn btn-whatsapp"
-                href={whatsappHref(config.whatsapp_numero, mensajeWhatsapp)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <WhatsAppIcon size={18} /> Confirmar por WhatsApp
-              </a>
-            )}
-            <button className="btn btn-verde" onClick={() => router.push("/tienda")}>
-              Volver a la tienda
-            </button>
-            {porCedula && (
-              <Link className="btn btn-outline" href="/tienda/mis-pedidos">
-                Ver mis pedidos
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
+      <PedidoRegistrado
+        ref={tituloExito}
+        pedido={pedidoOk.respuesta}
+        nombre={pedidoOk.nombre}
+        cedula={porCedula ? cedula : null}
+      />
     );
   }
 

@@ -16,6 +16,7 @@ import re
 from rest_framework import serializers
 
 from .models import Cliente, Pedido
+from .seguimiento import seguimiento_de_pedidos
 
 LARGO_MINIMO_DOCUMENTO = 5
 LARGO_MAXIMO_DOCUMENTO = 15
@@ -123,6 +124,8 @@ def historial_publico(cliente, request=None) -> list:
             "detalles__unidad_personalizada",
         )[:PEDIDOS_EN_HISTORIAL]
     )
+    pedidos = list(pedidos)
+    seguimiento = seguimiento_de_pedidos(cliente.tenant, {p.id: p.estado for p in pedidos})
     resultado = []
     for pedido in pedidos:
         lineas, personalizados = [], []
@@ -164,6 +167,9 @@ def historial_publico(cliente, request=None) -> list:
                 "id": pedido.id,
                 "fecha": pedido.fecha_pedido.isoformat(),
                 "estado": pedido.get_estado_display(),
+                # El paso real para el cliente (ver `seguimiento.py`); `estado`
+                # es la columna cruda y casi siempre dice «Pendiente».
+                "seguimiento": seguimiento[pedido.id],
                 "total": str(pedido.total_pedido),
                 "lineas": lineas,
                 "personalizados": personalizados,
