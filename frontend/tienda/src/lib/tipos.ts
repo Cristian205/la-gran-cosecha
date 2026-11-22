@@ -102,13 +102,30 @@ export interface ItemPersonalizado {
   categoriaNombre: string;
 }
 
+/**
+ * En qué paso va un pedido para el cliente (ver `orders/seguimiento.py`):
+ * 0 Recibido · 1 En revisión · 2 Confirmado · 3 En preparación ·
+ * 4 Despachado · 5 Entregado. Lo deduce Django de hechos registrados.
+ */
+export interface SeguimientoPedido {
+  paso: number;
+  clave: string;
+  etiqueta: string;
+}
+
 export interface RespuestaPedido {
   success: boolean;
   pedido_id: number;
-  total: number;
+  total: number | string;
   estado: string;
   /** Enmascarado ("Juan P."): quien pidió con cédula no escribió su nombre. */
   cliente_nombre?: string;
+  /** Lo que QUEDÓ GUARDADO en Django (opcionales: un backend anterior no los manda). */
+  fecha?: string;
+  referencias?: number;
+  /** Decimal en texto: puede haber cantidades fraccionarias (kg). */
+  unidades?: string;
+  seguimiento?: SeguimientoPedido;
 }
 
 /** Lo que la tienda puede saber de una cédula: lo justo para reconocerse. */
@@ -147,6 +164,8 @@ export interface PedidoHistorial {
   id: number;
   fecha: string;
   estado: string;
+  /** El paso real; `estado` es la columna cruda y casi siempre dice «Pendiente». */
+  seguimiento?: SeguimientoPedido;
   total: string;
   lineas: LineaHistorial[];
   personalizados: { nombre: string; cantidad: string; unidad: string }[];

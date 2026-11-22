@@ -582,8 +582,14 @@ class CrearPedidoSerializer(serializers.Serializer):
         return pedido
 
     def to_representation(self, instance):
-        from .clientes_tienda import enmascarar_nombre  # noqa: PLC0415
+        from django.db.models import Sum  # noqa: PLC0415
 
+        from .clientes_tienda import enmascarar_nombre  # noqa: PLC0415
+        from .seguimiento import seguimiento_de_pedidos  # noqa: PLC0415
+
+        # Lo que quedó GUARDADO, no lo que mandó el carrito: la pantalla de
+        # «pedido registrado» de la tienda muestra esto y nada inventado.
+        conteo = instance.detalles.aggregate(referencias=Count("id"), unidades=Sum("cantidad"))
         return {
             "success": True,
             "pedido_id": instance.id,
@@ -592,6 +598,10 @@ class CrearPedidoSerializer(serializers.Serializer):
             # Quien pidió con su cédula no escribió su nombre: la tienda lo
             # necesita para el saludo y el mensaje de WhatsApp.
             "cliente_nombre": enmascarar_nombre(instance.cliente.nombre_cliente) if instance.cliente else "",
+            "fecha": instance.fecha_pedido.isoformat(),
+            "referencias": conteo["referencias"] or 0,
+            "unidades": str(conteo["unidades"] or 0),
+            "seguimiento": seguimiento_de_pedidos(instance.tenant, {instance.id: instance.estado})[instance.id],
         }
 
 
