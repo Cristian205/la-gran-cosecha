@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { CapaEditor } from "@/bloques/CapaEditor";
 import { Lienzo } from "@/bloques/Lienzo";
 import { composicionDe, datosDeLosBloques } from "@/lib/pagina";
@@ -40,6 +41,14 @@ export default async function Inicio({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const parametros = await searchParams;
+
+  // El 404 por «esta dirección no es de ninguna tienda» se pide AQUí y no en el
+  // layout raíz, que no puede abortar. Así el estado 404 sale de verdad y se
+  // pinta `not-found.tsx`. Dentro del editor no: ahí la capa se monta vacía y
+  // espera lo que mande el panel.
+  const config = await configuracionDeLaTienda();
+  if (!config && parametros.editor !== "1") notFound();
+
   const pagina = await composicionDe("/");
   const datos = await datosDeLosBloques(pagina);
   const bloques = pagina?.bloques ?? [];

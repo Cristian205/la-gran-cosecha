@@ -2,34 +2,37 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ClipboardList, Lock } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, Loader2, Lock, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { crearPedido, type DatosCliente } from "@/lib/datos";
 import type { ClienteConsultado } from "@/lib/tipos";
-import { AvisoPrecios } from "@/componentes/AvisoPrecios";
 import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
 import { useSiteConfig } from "@/componentes/CapaCliente";
-import { IdentificacionCedula } from "@/componentes/tienda/IdentificacionCedula";
+import { useCarritoHidratado } from "@/componentes/CartDrawer";
+import { PasosCheckout, type Paso } from "@/componentes/checkout/PasosCheckout";
+import { PasoIdentificacion, cedulaOculta } from "@/componentes/checkout/PasoIdentificacion";
+import {
+  CODIGOS_PAIS,
+  PasoDatos,
+  type Actualizacion,
+  type DatosNuevos,
+} from "@/componentes/checkout/PasoDatos";
+import { PasoRevision, textoReferencias } from "@/componentes/checkout/PasoRevision";
+import { PasoConfirmacion, type ResumenCliente } from "@/componentes/checkout/PasoConfirmacion";
 import { useCart } from "@/estado/carrito";
 import { useClienteTienda } from "@/estado/clienteTienda";
 import { useUltimoPedido } from "@/estado/ultimoPedido";
-import { formatoCantidad, formatoPrecio, whatsappHref } from "@/lib/utiles";
-
-/** Códigos de país del selector de teléfono. Colombia primero y por
- *  defecto: es donde opera el negocio; el resto cubre proveedores o
- *  sucursales fuera del país sin obligarlos a escribir el código a mano. */
-const CODIGOS_PAIS = [
-  { valor: "+57", etiqueta: "🇨🇴 +57" },
-  { valor: "+1", etiqueta: "🇺🇸 +1" },
-  { valor: "+52", etiqueta: "🇲🇽 +52" },
-  { valor: "+51", etiqueta: "🇵🇪 +51" },
-  { valor: "+593", etiqueta: "🇪🇨 +593" },
-  { valor: "+58", etiqueta: "🇻🇪 +58" },
-];
+import { formatoPrecio, whatsappHref } from "@/lib/utiles";
 
 const NOTA_ACUERDO_PRECIOS =
   "El cliente confirma que los precios son estimados y acepta que se ajusten " +
   "según la cotización del día de la cosecha al procesarse en el sistema.";
+
+const PASOS_CEDULA: Paso[] = ["identificacion", "datos", "pedido", "confirmar"];
+const PASOS_NOMBRE: Paso[] = ["datos", "pedido", "confirmar"];
+
+const DATOS_VACIOS: DatosNuevos = { nombre: "", codigoPais: CODIGOS_PAIS[0].valor, telefono: "", direccion: "" };
+const SIN_ACTUALIZACION: Actualizacion = { direccionEntrega: "", solicitud: "" };
 
 /** El primer mensaje que el servidor dio para los datos del cliente, si dio uno. */
 function mensajeDelServidor(error: unknown): string | null {
@@ -41,17 +44,45 @@ function mensajeDelServidor(error: unknown): string | null {
   return null;
 }
 
+/**
+ * El checkout guiado: identificación → tus datos → tu pedido → confirmar.
+ *
+ * Este componente solo orquesta: qué paso se ve, a cuáles se puede volver,
+ * qué hace falta para avanzar y el envío final. Cada paso vive en
+ * `componentes/checkout/`. La lógica de negocio del envío es la de siempre
+ * (los mismos campos a `crearPedido`): el servidor sigue siendo quien decide
+ * qué datos y consentimientos exige, y vuelve a validar todo.
+ *
+ * Tiendas que identifican por nombre en vez de por cédula: tres pasos (sin
+ * identificación), con el mismo formulario de datos.
+ */
 export function CheckoutPage() {
-  const { items, personalizados, vaciar, totalPrecio, totalLineas } = useCart();
+  const { items, personalizados, vaciar, totalPrecio } = useCart();
+  const hidratado = useCarritoHidratado();
   const router = useRouter();
   const { config } = useSiteConfig();
   const porCedula = config.identificacion_clientes === "cedula";
   const recordarCliente = useClienteTienda((s) => s.recordar);
+  const olvidarCliente = useClienteTienda((s) => s.olvidar);
 
-  const [nombre, setNombre] = useState("");
-  const [codigoPais, setCodigoPais] = useState(CODIGOS_PAIS[0].valor);
-  const [telefono, setTelefono] = useState("");
-  const [direccion, setDireccion] = useState("");
+  const pasos = porCedula ? PASOS_CEDULA : PASOS_NOMBRE;
+  const [pasoElegido, setPaso] = useState<Paso>(pasos[0]);
+  const paso = pasos.includes(pasoElegido) ? pasoElegido : pasos[0];
+  const indice = pasos.indexOf(paso);
+  const [alcanzado, setAlcanzado] = useState(0);
+  const tarjeta = useRef<HTMLDivElement>(null);
+  const tituloExito = useRef<HTMLHeadingElement>(null);
+  const primerPaso = useRef(true);
+
+  // Identificación y datos.
+  const [cedula, setCedula] = useState("");
+  const [consulta, setConsulta] = useState<ClienteConsultado | null>(null);
+  const [datos, setDatos] = useState<DatosNuevos>(DATOS_VACIOS);
+  const [errores, setErrores] = useState<Partial<Record<keyof DatosNuevos, string>>>({});
+  const [datosConfirmados, setDatosConfirmados] = useState(false);
+  const [actualizacion, setActualizacion] = useState<Actualizacion>(SIN_ACTUALIZACION);
+
+  // Confirmación.
   const [observaciones, setObservaciones] = useState("");
   const [acepta, setAcepta] = useState(false);
   const [autorizaDatos, setAutorizaDatos] = useState(false);
@@ -62,68 +93,106 @@ export function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [pedidoOk, setPedidoOk] = useState<{ id: number; total: number; nombre: string } | null>(null);
 
-  // Solo en modo cédula.
-  const [cedula, setCedula] = useState("");
-  const [consulta, setConsulta] = useState<ClienteConsultado | null>(null);
-  const [otraDireccion, setOtraDireccion] = useState(false);
-  const [direccionEntrega, setDireccionEntrega] = useState("");
-
   // Cliente conocido: ya dio sus datos y aceptó el acuerdo en su primer pedido.
   const conocido = porCedula && consulta !== null && consulta.existe && !consulta.requiere_datos;
-  // Los campos de contacto y el acuerdo: siempre por nombre; por cédula, solo
-  // la primera vez y después de que la cédula se haya consultado.
-  const pideDatos = porCedula ? consulta !== null && !conocido : true;
-  // La autorización de datos se pide siempre por nombre (el nombre no
-  // identifica a nadie) y, por cédula, mientras ese cliente no la haya dado.
-  // WhatsApp, igual: solo a quien nunca se le preguntó.
-  const pideAutorizacion = porCedula
-    ? consulta !== null && (pideDatos || consulta.requiere_autorizacion === true)
-    : true;
-  const preguntaWhatsapp = porCedula
-    ? consulta !== null && (pideDatos || consulta.pregunta_whatsapp === true)
-    : true;
-  const listoParaEnviar =
-    !enviando &&
-    (porCedula ? consulta !== null : true) &&
-    (!pideDatos || acepta) &&
-    (!pideAutorizacion || autorizaDatos);
+  // Datos de contacto y acuerdo de precios: siempre por nombre; por cédula,
+  // solo mientras el cliente no los haya dado.
+  const pideDatos = !conocido;
+  const pideAutorizacion = porCedula ? pideDatos || consulta?.requiere_autorizacion === true : true;
+  const preguntaWhatsapp = porCedula ? pideDatos || consulta?.pregunta_whatsapp === true : true;
+  const referencias = items.length + personalizados.length;
 
-  async function enviar(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    if (porCedula && consulta === null) {
-      setError("Escribe tu cédula y pulsa Continuar.");
+  // Al cambiar de paso: arriba de la tarjeta y el foco en el título del paso,
+  // para que el lector de pantalla anuncie dónde se está (no en la primera
+  // pintura: ahí nadie cambió de paso).
+  useEffect(() => {
+    if (primerPaso.current) {
+      primerPaso.current = false;
       return;
     }
-    if (pideDatos) {
-      if (!nombre.trim()) {
-        setError("Por favor escribe tu nombre o el de tu negocio.");
+    tarjeta.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    tarjeta.current?.querySelector<HTMLElement>(".chk-titulo")?.focus({ preventScroll: true });
+  }, [paso]);
+
+  // Pedido enviado: la confirmación es corta y la página venía bajada (la
+  // confirmación del paso 4 es larga), así que se quedaba mirando el pie. Se
+  // sube de golpe —sin animación: es un cambio de pantalla, no un recorrido—
+  // y el foco va al "¡Pedido recibido!".
+  useEffect(() => {
+    if (!pedidoOk) return;
+    window.scrollTo({ top: 0, behavior: "instant" });
+    tituloExito.current?.focus({ preventScroll: true });
+  }, [pedidoOk]);
+
+  function ir(destino: Paso) {
+    const i = pasos.indexOf(destino);
+    if (i === -1) return;
+    setError(null);
+    setPaso(destino);
+    setAlcanzado((a) => Math.max(a, i));
+  }
+
+  function identificado(respuesta: ClienteConsultado) {
+    setConsulta(respuesta);
+    setDatosConfirmados(false);
+    setActualizacion(SIN_ACTUALIZACION);
+    setErrores({});
+    ir("datos");
+  }
+
+  function cambiarCedula() {
+    olvidarCliente();
+    setConsulta(null);
+    setCedula("");
+    setDatosConfirmados(false);
+    setActualizacion(SIN_ACTUALIZACION);
+    setAlcanzado(0);
+    setError(null);
+    setPaso("identificacion");
+  }
+
+  function validarRegistro(): boolean {
+    const faltan: Partial<Record<keyof DatosNuevos, string>> = {};
+    if (!datos.nombre.trim()) faltan.nombre = "Escribe tu nombre o el de tu negocio.";
+    if (soloDigitosTel(datos.telefono).length < 7) faltan.telefono = "Escribe un teléfono de contacto válido.";
+    if (!datos.direccion.trim()) faltan.direccion = "Escribe la dirección de entrega.";
+    setErrores(faltan);
+    const primero = Object.keys(faltan)[0];
+    if (primero) document.getElementById(`chk-${primero}`)?.focus();
+    return !primero;
+  }
+
+  function avanzar() {
+    if (paso === "datos") {
+      if (conocido) {
+        if (datosConfirmados) ir("pedido");
         return;
       }
-      if (!telefono.trim()) {
-        setError("Por favor escribe un teléfono de contacto.");
-        return;
-      }
-      if (!direccion.trim()) {
-        setError("Por favor escribe la dirección de entrega.");
-        return;
-      }
-      if (!acepta) {
-        setError("Confirma que entiendes que los precios pueden ajustarse antes de continuar.");
-        return;
-      }
+      if (validarRegistro()) ir("pedido");
+      return;
+    }
+    if (paso === "pedido") {
+      if (referencias > 0) ir("confirmar");
+      return;
+    }
+    if (paso === "confirmar") void enviar();
+  }
+
+  const listoParaEnviar =
+    !enviando && referencias > 0 && (!pideDatos || acepta) && (!pideAutorizacion || autorizaDatos);
+
+  async function enviar() {
+    setError(null);
+    if (referencias === 0) {
+      setError("Tu pedido está vacío.");
+      return;
+    }
+    if (pideDatos && !acepta) {
+      setError("Confirma que entiendes que los precios pueden ajustarse antes de enviar.");
+      return;
     }
     if (pideAutorizacion && !autorizaDatos) {
       setError("Para enviar el pedido necesitamos tu autorización para tratar tus datos personales.");
-      return;
-    }
-    if (conocido && otraDireccion && !direccionEntrega.trim()) {
-      setError("Escribe la dirección de entrega para este pedido.");
-      return;
-    }
-    if (items.length === 0 && personalizados.length === 0) {
-      setError("Tu carrito está vacío.");
       return;
     }
 
@@ -133,25 +202,37 @@ export function CheckoutPage() {
     };
     const datosContacto: DatosCliente = {
       ...(pideDatos
-        ? { nombre: nombre.trim(), telefono: `${codigoPais} ${telefono.trim()}`, direccion: direccion.trim() }
+        ? {
+            nombre: datos.nombre.trim(),
+            telefono: `${datos.codigoPais} ${datos.telefono.trim()}`,
+            direccion: datos.direccion.trim(),
+          }
         : {}),
       ...consentimientos,
     };
+    const direccionEntrega = conocido ? actualizacion.direccionEntrega.trim() : "";
     const cliente: DatosCliente = porCedula
       ? {
           ...datosContacto,
           cedula,
           acepta_precios: pideDatos ? acepta : undefined,
-          direccion_entrega: conocido && otraDireccion ? direccionEntrega.trim() : undefined,
+          direccion_entrega: direccionEntrega || undefined,
         }
       : datosContacto;
 
-    // Por nombre, el acuerdo sobre el precio del día queda escrito en cada
-    // pedido. Por cédula se guarda una vez en el cliente, con su fecha: no
-    // hace falta repetirlo en las observaciones.
-    const observacionesFinales = porCedula
-      ? observaciones.trim()
-      : [observaciones.trim(), NOTA_ACUERDO_PRECIOS].filter(Boolean).join("\n\n");
+    // La solicitud de cambio de datos viaja al negocio en las observaciones:
+    // el servidor no deja que la tienda reescriba la ficha de un cliente
+    // conocido (ver `PasoDatos`). Por nombre, el acuerdo sobre el precio del
+    // día queda escrito en cada pedido; por cédula se guarda una vez en el
+    // cliente, con su fecha.
+    const solicitud = conocido ? actualizacion.solicitud.trim() : "";
+    const observacionesFinales = [
+      observaciones.trim(),
+      solicitud ? `Solicitud de actualización de datos del cliente (verificar con él antes de cambiarlos): ${solicitud}` : "",
+      porCedula ? "" : NOTA_ACUERDO_PRECIOS,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     setEnviando(true);
     try {
@@ -159,9 +240,10 @@ export function CheckoutPage() {
       useUltimoPedido.getState().guardar(items);
       if (porCedula) recordarCliente(cedula, resp.cliente_nombre ?? null);
       vaciar();
-      setPedidoOk({ id: resp.pedido_id, total: resp.total, nombre: resp.cliente_nombre || nombre.trim() });
+      setPedidoOk({ id: resp.pedido_id, total: resp.total, nombre: resp.cliente_nombre || datos.nombre.trim() });
     } catch (e) {
-      setError(mensajeDelServidor(e) ?? "No pudimos registrar tu pedido. Intenta nuevamente.");
+      setError(mensajeDelServidor(e) ?? "No pudimos registrar tu pedido. Revisa tu conexión e intenta nuevamente.");
+      tarjeta.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } finally {
       setEnviando(false);
     }
@@ -179,7 +261,9 @@ export function CheckoutPage() {
           <div className="check">
             <CheckCircle2 size={44} />
           </div>
-          <h1>¡Pedido recibido!</h1>
+          <h1 ref={tituloExito} tabIndex={-1} className="chk-exito-titulo">
+            ¡Pedido recibido!
+          </h1>
           <p>
             Tu pedido <strong>#{pedidoOk.id}</strong> fue registrado con éxito.
             Pronto nos pondremos en contacto contigo.
@@ -209,207 +293,169 @@ export function CheckoutPage() {
     );
   }
 
-  const cantidadLineas = totalLineas();
+  // Sin nada que pedir (y ya leído el carrito guardado): directo a la tienda.
+  // Si se vacía A MITAD del checkout, el paso "Tu pedido" lo dice en su sitio.
+  if (hidratado && referencias === 0 && alcanzado === 0) {
+    return (
+      <div className="contenedor" style={{ padding: "3rem 1.5rem" }}>
+        <div className="checkout glass">
+          <h1>
+            <ClipboardList size={24} /> Tu pedido
+          </h1>
+          <div className="vacio">
+            Tu carrito está vacío. <Link href="/tienda">Ir a la tienda</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const resumenCliente: ResumenCliente = conocido
+    ? {
+        nombre: consulta?.nombre ?? "",
+        documento: cedulaOculta(cedula),
+        telefono: consulta?.telefono ?? "",
+        direccion: consulta?.direccion ?? "",
+        direccionEntrega: actualizacion.direccionEntrega.trim() || undefined,
+        solicitud: actualizacion.solicitud.trim() || undefined,
+      }
+    : {
+        nombre: datos.nombre.trim(),
+        documento: porCedula ? cedulaOculta(cedula) : undefined,
+        telefono: datos.telefono.trim() ? `${datos.codigoPais} ${datos.telefono.trim()}` : "",
+        direccion: datos.direccion.trim(),
+      };
+
+  // El botón principal del pie: qué hace y si se puede pulsar en este paso.
+  // `corto`: el mismo botón en el teléfono, donde comparte el pie con el total.
+  const principal =
+    paso === "identificacion"
+      ? null // el paso tiene su propio "Continuar", junto a la cédula
+      : paso === "datos"
+        ? conocido && !datosConfirmados
+          ? null // se avanza con "Sí, estos son mis datos" o "Actualizar"
+          : { texto: "Continuar a tu pedido", corto: "Continuar", listo: true }
+        : paso === "pedido"
+          ? { texto: "Continuar a confirmar", corto: "Continuar", listo: referencias > 0 }
+          : enviando
+            ? { texto: "Enviando…", corto: "Enviando…", listo: false }
+            : { texto: "Enviar orden de compra", corto: "Enviar pedido", listo: listoParaEnviar };
 
   return (
-    <div className="contenedor" style={{ padding: "3rem 1.5rem" }}>
-      <div className="checkout glass">
-        {items.length === 0 && personalizados.length === 0 ? (
-          <>
-            <h1>
-              <ClipboardList size={24} /> Resumen del pedido
-            </h1>
-            <div className="vacio">
-              Tu carrito está vacío. <Link href="/tienda">Ir a la tienda</Link>
-            </div>
-          </>
+    <div className="contenedor chk-pagina">
+      <div className="checkout glass chk" ref={tarjeta}>
+        <PasosCheckout pasos={pasos} actual={paso} alcanzado={alcanzado} onIr={ir} />
+
+        {error && (
+          <div className="error-box" role="alert">
+            {error}
+          </div>
+        )}
+
+        {!hidratado ? (
+          <p className="chk-estado" role="status">
+            <Loader2 size={16} className="girando" aria-hidden="true" /> Cargando tu pedido…
+          </p>
         ) : (
-          <form onSubmit={enviar}>
-            <div className="checkout-encabezado">
-              <h1>
-                <ClipboardList size={24} /> Resumen del pedido
-                <span className="checkout-contador">{cantidadLineas}</span>
-              </h1>
-              <Link href="/tienda" className="checkout-editar">
-                Editar productos
-              </Link>
-            </div>
-
-            {error && <div className="error-box">{error}</div>}
-
-            <div className="resumen">
-              <div className="resumen-lista">
-                {items.map((i) => (
-                  <div className="resumen-item" key={i.presentacionId}>
-                    <div className="resumen-item-info">
-                      <span className="resumen-item-nombre">{i.productoNombre}</span>
-                      <span className="resumen-item-variante">
-                        {formatoCantidad(i.cantidad, i.permiteFraccion)} × {i.presentacionNombre}
-                      </span>
-                    </div>
-                    <span className="resumen-item-subtotal">
-                      {formatoPrecio(i.precioUnitario * i.cantidad)}
-                    </span>
-                  </div>
-                ))}
-                {personalizados.map((p) => (
-                  <div className="resumen-item" key={p.id}>
-                    <div className="resumen-item-info">
-                      <span className="resumen-item-nombre">{p.nombre}</span>
-                      <span className="resumen-item-variante">
-                        {formatoCantidad(p.cantidad, true)} {p.unidadNombre || "unid."} · fuera de catálogo
-                      </span>
-                    </div>
-                    <span className="resumen-item-subtotal">Por confirmar</span>
-                  </div>
-                ))}
-              </div>
-              <div className="resumen-total">
-                <span>Total estimado</span>
-                <span>{formatoPrecio(totalPrecio())}</span>
-              </div>
-              <AvisoPrecios compacto />
-            </div>
-
-            {porCedula && (
-              <IdentificacionCedula
+          <>
+            {paso === "identificacion" && (
+              <PasoIdentificacion cedula={cedula} onCedula={setCedula} onIdentificado={identificado} />
+            )}
+            {paso === "datos" && (
+              <PasoDatos
+                porCedula={porCedula}
                 cedula={cedula}
-                onCedula={setCedula}
                 consulta={consulta}
-                onConsulta={setConsulta}
-                otraDireccion={otraDireccion}
-                onOtraDireccion={setOtraDireccion}
-                direccionEntrega={direccionEntrega}
-                onDireccionEntrega={setDireccionEntrega}
+                conocido={conocido}
+                datos={datos}
+                onDatos={(d) => {
+                  setDatos(d);
+                  if (Object.keys(errores).length) setErrores({});
+                }}
+                errores={errores}
+                actualizacion={actualizacion}
+                onActualizacion={setActualizacion}
+                onConfirmar={() => {
+                  setDatosConfirmados(true);
+                  ir("pedido");
+                }}
+                onCambiarCedula={cambiarCedula}
               />
             )}
-
-            {pideDatos && (
-            <>
-            <div className="campo">
-              <label>Nombre o negocio *</label>
-              <input
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="Ej: Tienda Don José"
-                required
+            {paso === "pedido" && <PasoRevision />}
+            {paso === "confirmar" && (
+              <PasoConfirmacion
+                cliente={resumenCliente}
+                observaciones={observaciones}
+                onObservaciones={setObservaciones}
+                pideAcuerdo={pideDatos}
+                pideAutorizacion={pideAutorizacion}
+                preguntaWhatsapp={preguntaWhatsapp}
+                acepta={acepta}
+                onAcepta={setAcepta}
+                autorizaDatos={autorizaDatos}
+                onAutorizaDatos={setAutorizaDatos}
+                aceptaWhatsapp={aceptaWhatsapp}
+                onAceptaWhatsapp={setAceptaWhatsapp}
+                unaSolaVez={porCedula}
+                onEditar={ir}
+                pasoDatos="datos"
               />
-            </div>
-            <div className="campo">
-              <label>Teléfono *</label>
-              <div className="campo-telefono">
-                <select
-                  value={codigoPais}
-                  onChange={(e) => setCodigoPais(e.target.value)}
-                  aria-label="Código de país"
-                >
-                  {CODIGOS_PAIS.map((c) => (
-                    <option key={c.valor} value={c.valor}>
-                      {c.etiqueta}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                  placeholder="300 123 4567"
-                  inputMode="tel"
-                  required
-                />
-              </div>
-            </div>
-            <div className="campo">
-              <label>Dirección de entrega *</label>
-              <input
-                value={direccion}
-                onChange={(e) => setDireccion(e.target.value)}
-                placeholder="Calle, número, barrio y una referencia para encontrarte"
-                required
-              />
-            </div>
-            </>
             )}
+          </>
+        )}
 
-            {(!porCedula || consulta !== null) && (
-            <div className="campo">
-              <label>Observaciones</label>
-              <textarea
-                rows={3}
-                value={observaciones}
-                onChange={(e) => setObservaciones(e.target.value)}
-                placeholder="¿Algo que debamos saber sobre tu pedido?"
-              />
-            </div>
-            )}
-
-            {pideDatos && (
-            <label className="checkout-acuerdo">
-              <input
-                type="checkbox"
-                checked={acepta}
-                onChange={(e) => setAcepta(e.target.checked)}
-                required
-              />
-              <span>
-                Confirmo que comprendo que los precios son estimados y estoy de acuerdo
-                con que se ajusten según la cotización del día de la cosecha al
-                procesarse en el sistema.
-                {porCedula && " Solo te lo preguntamos esta vez."}
-              </span>
-            </label>
-            )}
-
-            {preguntaWhatsapp && (
-            <label className="checkout-acuerdo checkout-acuerdo--opcional">
-              <input
-                type="checkbox"
-                checked={aceptaWhatsapp}
-                onChange={(e) => setAceptaWhatsapp(e.target.checked)}
-              />
-              <span>
-                Quiero recibir por WhatsApp la confirmación y el estado de mi pedido. Puedes
-                dejar de recibirlos cuando quieras respondiendo «BAJA».
-              </span>
-            </label>
-            )}
-
-            {pideAutorizacion && (
-            <label className="checkout-acuerdo">
-              <input
-                type="checkbox"
-                checked={autorizaDatos}
-                onChange={(e) => setAutorizaDatos(e.target.checked)}
-                required
-              />
-              <span>
-                Autorizo el tratamiento de mis datos personales para gestionar mi pedido,
-                según la{" "}
-                <Link href="/politica-tratamiento-datos" target="_blank" rel="noopener">
-                  Política de Tratamiento de Datos
-                </Link>{" "}
-                y los{" "}
-                <Link href="/terminos-y-condiciones" target="_blank" rel="noopener">
-                  Términos y Condiciones
-                </Link>
-                .
-              </span>
-            </label>
-            )}
-
-            <p className="checkout-seguridad">
-              <Lock size={13} /> Orden encriptada y directa para procesamiento interno
-            </p>
-
-            <button
-              className="btn btn-verde btn-block"
-              type="submit"
-              disabled={!listoParaEnviar}
-            >
-              {enviando ? "Enviando…" : "Enviar orden de compra"}
+        {/* El pie: el total siempre a la vista (también con 100 líneas en la
+            revisión) y la navegación entre pasos. Fijo abajo mientras se
+            recorre la tarjeta. */}
+        <div className="chk-pie">
+          {indice > 0 ? (
+            <button type="button" className="chk-atras" onClick={() => ir(pasos[indice - 1])}>
+              <ArrowLeft size={16} aria-hidden="true" /> <span>Atrás</span>
             </button>
-          </form>
+          ) : (
+            <Link href="/tienda" className="chk-atras">
+              <ArrowLeft size={16} aria-hidden="true" /> <span>Tienda</span>
+            </Link>
+          )}
+          <div className="chk-pie-total" aria-live="polite">
+            <span>
+              Total estimado<span className="chk-pie-refs"> · {textoReferencias(referencias)}</span>
+            </span>
+            <b>{formatoPrecio(totalPrecio())}</b>
+          </div>
+          {principal && (
+            <button
+              type="button"
+              className="btn btn-verde chk-siguiente"
+              onClick={avanzar}
+              disabled={!principal.listo || enviando}
+            >
+              {paso === "confirmar" ? (
+                enviando ? (
+                  <Loader2 size={17} className="girando" aria-hidden="true" />
+                ) : (
+                  <Send size={16} aria-hidden="true" />
+                )
+              ) : null}
+              <span className="chk-siguiente-largo">{principal.texto}</span>
+              <span className="chk-siguiente-corto" aria-hidden="true">
+                {principal.corto}
+              </span>
+              {paso !== "confirmar" && <ArrowRight size={16} aria-hidden="true" />}
+            </button>
+          )}
+        </div>
+        {paso === "confirmar" && (
+          <p className="checkout-seguridad">
+            <Lock size={13} /> Orden encriptada y directa para procesamiento interno
+          </p>
         )}
       </div>
     </div>
   );
+}
+
+function soloDigitosTel(texto: string): string {
+  return texto.replace(/\D/g, "");
 }

@@ -84,7 +84,7 @@ const RADIOS_BOTON: Record<string, string> = {
   cuadrado: "6px",
 };
 
-function esHexValido(hex: string | null | undefined): hex is string {
+export function esHexValido(hex: string | null | undefined): hex is string {
   return !!hex && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex);
 }
 
@@ -403,4 +403,19 @@ export function estiloDeTarjeta(config: SiteConfig | null): string {
   return elegido && (ESTILOS_DE_TARJETA as readonly string[]).includes(elegido)
     ? elegido
     : "estandar";
+}
+
+/**
+ * El color de marca resuelto a un solo hex, para lo que no entiende variables
+ * CSS: el manifiesto de la app, su ícono y la barra del sistema del teléfono.
+ *
+ * Mismo orden que la hoja: un `--marca-500` fijado a mano en los tokens gana;
+ * si no, `color_primario`; y si el negocio no eligió nada, el verde por
+ * defecto de `global.css`, que es con el que de verdad se pinta su tienda.
+ */
+export function colorDeMarca(config: SiteConfig | null | undefined): string {
+  const token = config?.variables_tema?.["--marca-500"]?.trim();
+  if (esHexValido(token)) return token;
+  if (esHexValido(config?.color_primario)) return config.color_primario;
+  return "#16a34a";
 }

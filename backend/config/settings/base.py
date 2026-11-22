@@ -117,7 +117,14 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": env.db("DATABASE_URL")
 }
-DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=0)
+# Conexiones persistentes por defecto: la base vive en Supabase y abrir una
+# conexión nueva (TCP + TLS + autenticación contra el pooler) costaba varios
+# viajes de red en CADA petición — en la tienda, cada tanda del catálogo. Con
+# 60 s cada worker de Gunicorn reutiliza la suya, y `CONN_HEALTH_CHECKS`
+# descarta la que el pooler haya cerrado entretanto en vez de fallar la
+# petición. El modo transacción (6543) lo vuelve a apagar más abajo.
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=60)
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 # El pooler de Supabase en transaction mode (puerto 6543) reparte la MISMA
 # conexión de servidor entre peticiones distintas, así que no puede sostener ni

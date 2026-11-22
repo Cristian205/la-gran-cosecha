@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { SeleccionProducto } from "@/hooks/useSeleccionProducto";
 import { pluralUnidad } from "@/lib/cantidadHumana";
 import { formatoPrecio } from "@/lib/utiles";
@@ -28,16 +29,23 @@ export function SelectorVariedad({
   seleccion,
   productoNombre,
   className = "",
+  prefijo,
+  icono,
 }: {
   seleccion: SeleccionProducto;
   productoNombre: string;
   className?: string;
+  /** Rótulo visible antes del valor ("Variedad"), como el de la unidad. */
+  prefijo?: string;
+  icono?: ReactNode;
 }) {
   const { grupos, grupo, elegirVariante } = seleccion;
   if (!grupo) return null;
   return (
     <SelectPersonalizado
       className={className}
+      prefijo={prefijo}
+      icono={icono}
       opciones={grupos.map((g) => ({ valor: g.nombre, etiqueta: g.nombre }))}
       valor={grupo.nombre}
       onCambiar={elegirVariante}
@@ -61,12 +69,14 @@ export function SelectorUnidad({
   productoNombre,
   className = "",
   prefijo,
+  icono,
   pluralSegun,
 }: {
   seleccion: SeleccionProducto;
   productoNombre: string;
   className?: string;
   prefijo?: string;
+  icono?: ReactNode;
   pluralSegun?: number;
 }) {
   const { grupo, presentacion, elegirUnidad } = seleccion;
@@ -76,6 +86,7 @@ export function SelectorUnidad({
     <SelectPersonalizado
       className={className}
       prefijo={prefijo}
+      icono={icono}
       opciones={grupo.opciones.map((p) => ({
         valor: String(p.id),
         etiqueta: nombre(p.unidad_venta_nombre),

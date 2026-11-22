@@ -179,11 +179,15 @@ export function CartDrawer({ onCerrar }: { onCerrar: () => void }) {
 }
 
 /** `useCart` se rehidrata después del primer render (`skipHydration`): hasta
- *  entonces "vacío" no es verdad, solo "todavía no sé". */
-function useCarritoHidratado(): boolean {
-  const [hidratado, setHidratado] = useState(() => useCart.persist.hasHydrated());
+ *  entonces "vacío" no es verdad, solo "todavía no sé". Lo usa también el
+ *  checkout, para no mostrar "tu carrito está vacío" antes de leerlo. */
+export function useCarritoHidratado(): boolean {
+  // En el servidor no hay `localStorage` y zustand no monta la API `persist`:
+  // allí `useCart.persist` es `undefined` (el checkout se pinta en el
+  // servidor; el carrito lateral, no). Sin carrito que leer: "todavía no sé".
+  const [hidratado, setHidratado] = useState(() => useCart.persist?.hasHydrated() ?? false);
   useEffect(() => {
-    if (hidratado) return;
+    if (hidratado || !useCart.persist) return;
     const soltar = useCart.persist.onFinishHydration(() => setHidratado(true));
     if (useCart.persist.hasHydrated()) setHidratado(true);
     return soltar;
@@ -337,9 +341,10 @@ function BotonQuitar({ nombre, onQuitar }: { nombre: string; onQuitar: () => voi
 /**
  * La cápsula − cantidad + del carrito. El número se puede escribir, igual que
  * en la tienda (`Cantidad` de QuickAdd): al enfocarlo muestra el decimal y al
- * salir vuelve a la fracción legible.
+ * salir vuelve a la fracción legible. La usa también la revisión del pedido
+ * del checkout: una sola forma de editar una línea en toda la tienda.
  */
-function CantidadLinea({
+export function CantidadLinea({
   nombre,
   cantidad,
   paso,

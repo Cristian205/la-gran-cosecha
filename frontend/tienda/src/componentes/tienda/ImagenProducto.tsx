@@ -36,12 +36,19 @@ export function ImagenProducto({ producto, tamanoIcono = 72, prioridad = false, 
   const [fallo, setFallo] = useState(false);
   // Si el optimizador no puede con una foto, se vuelve a la original una vez.
   const [original, setOriginal] = useState(false);
+  // Foto de estudio: el producto recortado sobre fondo blanco o transparente.
+  const [recorte, setRecorte] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  function alCargar(img: HTMLImageElement) {
+    setCargada(true);
+    setRecorte(esRecorteSobreClaro(img));
+  }
 
   // Si la imagen terminó de bajar ANTES de hidratar, `onLoad` ya no se
   // dispara y el esqueleto se quedaría encima para siempre.
   useEffect(() => {
-    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) setCargada(true);
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) alCargar(imgRef.current);
   }, []);
 
   const Icono = iconoCategoria(producto.categoria_nombre);
@@ -52,7 +59,9 @@ export function ImagenProducto({ producto, tamanoIcono = 72, prioridad = false, 
 
   return (
     <div
-      className={`pimg ${conFoto ? (cargada ? "is-cargada" : "is-cargando") : "pimg--sin-foto"} ${className}`}
+      className={`pimg ${conFoto ? (cargada ? "is-cargada" : "is-cargando") : "pimg--sin-foto"} ${
+        conFoto && recorte ? "pimg--recorte" : ""
+      } ${className}`}
       style={estilo}
     >
       {conFoto ? (
@@ -68,7 +77,7 @@ export function ImagenProducto({ producto, tamanoIcono = 72, prioridad = false, 
           loading={prioridad ? "eager" : "lazy"}
           fetchPriority={prioridad ? "high" : "auto"}
           decoding="async"
-          onLoad={() => setCargada(true)}
+          onLoad={(e) => alCargar(e.currentTarget)}
           onError={() => (!original && esOptimizable(producto.imagen_url) ? setOriginal(true) : setFallo(true))}
         />
       ) : (
@@ -76,4 +85,36 @@ export function ImagenProducto({ producto, tamanoIcono = 72, prioridad = false, 
       )}
     </div>
   );
+}
+
+const LADO = 12;
+/**
+ * ¿Es una foto de estudio —el producto recortado sobre blanco o sobre
+ * transparencia—? Se mira la foto reducida a 12×12: si las cuatro esquinas
+ * son casi blancas o transparentes, el producto está "suelto" en el centro y
+ * se puede mostrar ENTERO (`contain`) sin que se note el marco. Una foto a
+ * sangre (la caja de mangos) tiene esquinas de color y sigue en `cover`.
+ *
+ * Solo marca la clase `pimg--recorte`; qué hacer con ella lo decide el CSS
+ * de cada sitio (hoy, la tarjeta en escritorio). Si la foto viene de otro
+ * origen sin CORS el lienzo no se puede leer: se queda como estaba.
+ */
+function esRecorteSobreClaro(img: HTMLImageElement): boolean {
+  try {
+    const lienzo = document.createElement("canvas");
+    lienzo.width = LADO;
+    lienzo.height = LADO;
+    const ctx = lienzo.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return false;
+    ctx.drawImage(img, 0, 0, LADO, LADO);
+    const { data } = ctx.getImageData(0, 0, LADO, LADO);
+    const claro = (x: number, y: number) => {
+      const i = (y * LADO + x) * 4;
+      return data[i + 3] < 24 || (data[i] > 232 && data[i + 1] > 232 && data[i + 2] > 232);
+    };
+    const fin = LADO - 1;
+    return claro(0, 0) && claro(fin, 0) && claro(0, fin) && claro(fin, fin);
+  } catch {
+    return false;
+  }
 }

@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import type { Metadata, Viewport } from "next";
 import { ArmazonPrevia } from "@/componentes/ArmazonPrevia";
 import { CapaCliente } from "@/componentes/CapaCliente";
 import { armazonDeLaTienda } from "@/lib/pagina";
 import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
 import { datosEstructuradosDelNegocio } from "@/lib/jsonld";
 import {
+  colorDeMarca,
   estiloDeTarjeta,
   fuenteDeGoogle,
   hojaDeTitulos,
@@ -47,14 +47,25 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: nombre,
       ...(config.logo_url ? { images: [config.logo_url] } : {}),
     },
-    // El favicon es el logo del negocio, el mismo de la cabecera: con una
-    // tienda por negocio, un ícono fijo en el código pondría la misma marca
-    // en la pestaña de todas. `apple` es el que usa iOS al anclarla al inicio.
-    ...(config.logo_url
-      ? { icons: { icon: config.logo_url, shortcut: config.logo_url, apple: config.logo_url } }
-      : {}),
+    // El ícono de la pestaña, el de la app instalada y el de iOS son el logo
+    // del negocio, generado en `/icono-app`: cuadrado y en PNG, porque el logo
+    // tal cual puede venir en WebP o apaisado. Con una tienda por negocio, un
+    // ícono fijo en el código pondría la misma marca en la pestaña de todas.
+    icons: {
+      icon: [{ url: "/icono-app/192", type: "image/png", sizes: "192x192" }],
+      shortcut: "/icono-app/192",
+      apple: "/icono-app/180",
+    },
+    // Abierta desde el ícono del iPhone, a pantalla completa como una app.
+    appleWebApp: { capable: true, title: nombre, statusBarStyle: "default" },
     alternates: { canonical: "/" },
   };
+}
+
+/** El color de la barra del sistema (Android) y de la ventana de la app: el de la marca. */
+export async function generateViewport(): Promise<Viewport> {
+  const config = await configuracionDeLaTienda();
+  return config ? { themeColor: colorDeMarca(config) } : {};
 }
 
 export default async function RootLayout({
@@ -65,9 +76,23 @@ export default async function RootLayout({
   const config = await configuracionDeLaTienda();
   const armazon = await armazonDeLaTienda();
 
-  // Sin negocio en esta dirección no hay tienda que renderizar. Falla cerrado,
-  // igual que el backend: es preferible un 404 honesto a una tienda a medias.
-  if (!config) notFound();
+  // Sin negocio en esta dirección no hay tienda que renderizar, pero el 404 NO
+  // se puede pedir desde aquí: un layout raíz no puede abortar —Next lo
+  // rechaza con «notFound() is not allowed to use in root layout»— y el
+  // intento se ve como un error de render en vez de como la página de «esta
+  // tienda no existe».
+  //
+  // Así que este armazón se queda en lo mínimo imprescindible y deja que la
+  // página decida: `page.tsx` llama a `notFound()`, el estado 404 sale de
+  // verdad y `not-found.tsx` se pinta aquí dentro. Tampoco se puede seguir
+  // adelante sin `config`: el tema, la fuente y el armazón salen de ella.
+  if (!config) {
+    return (
+      <html lang="es">
+        <body>{children}</body>
+      </html>
+    );
+  }
 
   const { host } = await negocioDeLaPeticion();
   const jsonLd = datosEstructuradosDelNegocio(config, host);

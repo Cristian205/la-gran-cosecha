@@ -191,7 +191,11 @@ function CatalogoInteractivo({
   mostrarFiltros: boolean;
 }) {
   const catalogo = useCatalogoContexto()!; // ya se comprobó en el padre
-  const centinela = useRef<HTMLDivElement>(null);
+  // El centinela va en estado (callback ref) y no en un `useRef`: si React
+  // vuelve a montar esta zona, crea un nodo nuevo y el observador tiene que
+  // seguirlo. Con `useRef` el efecto se quedaba observando el nodo viejo,
+  // ya fuera de la página, y la carga de más productos no se disparaba nunca.
+  const [centinela, setCentinela] = useState<HTMLDivElement | null>(null);
   const { hayMas, cargandoMas, error, cargarMas } = catalogo;
 
   // Un filtro nuevo es un catálogo nuevo: se empieza a leer por arriba (ver
@@ -213,8 +217,7 @@ function CatalogoInteractivo({
   // casi nunca vea el esqueleto ni tenga que pulsar nada. Al terminar,
   // `CierreCatalogo` marca el final y el pie queda a la vista.
   useEffect(() => {
-    const el = centinela.current;
-    if (!el || !hayMas || cargandoMas || error) return;
+    if (!centinela || !hayMas || cargandoMas || error) return;
     if (typeof IntersectionObserver === "undefined") return;
     const obs = new IntersectionObserver(
       ([e]) => {
@@ -222,9 +225,9 @@ function CatalogoInteractivo({
       },
       { rootMargin: "800px 0px" }
     );
-    obs.observe(el);
+    obs.observe(centinela);
     return () => obs.disconnect();
-  }, [hayMas, cargandoMas, error, cargarMas]);
+  }, [centinela, hayMas, cargandoMas, error, cargarMas]);
 
   // Sin panel lateral: repetía las categorías de las tarjetas de arriba. Los
   // filtros que no son categoría («Se vende por») y el orden viven en la
@@ -288,7 +291,7 @@ function CatalogoInteractivo({
           {cargandoMas && <EsqueletosCatalogo cantidad={4} />}
         </div>
 
-        <div ref={centinela} className="pgrid-centinela" aria-hidden="true" />
+        <div ref={setCentinela} className="pgrid-centinela" aria-hidden="true" />
 
         {/* Solo si una tanda falló: sin esto la carga se quedaría quieta
             sin decir por qué. */}

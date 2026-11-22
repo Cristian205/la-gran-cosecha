@@ -75,10 +75,18 @@ async function reenviar(peticion: NextRequest, partes: string[]) {
   });
 
   const cuerpo = await respuesta.text();
-  return new NextResponse(cuerpo, {
-    status: respuesta.status,
-    headers: { "Content-Type": respuesta.headers.get("content-type") ?? "application/json" },
-  });
+  const salida: Record<string, string> = {
+    "Content-Type": respuesta.headers.get("content-type") ?? "application/json",
+  };
+  // Las lecturas de la lista blanca son públicas e iguales para todos los
+  // visitantes del mismo negocio (el negocio sale del dominio, que forma parte
+  // de la clave de caché junto con la query). La CDN las guarda 60 s —lo mismo
+  // que `REVALIDAR_SEGUNDOS` para las páginas—: las tandas del catálogo ya no
+  // tienen que viajar hasta Django en cada scroll. Los errores no se guardan.
+  if (peticion.method === "GET" && respuesta.ok) {
+    salida["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=60";
+  }
+  return new NextResponse(cuerpo, { status: respuesta.status, headers: salida });
 }
 
 export async function GET(

@@ -32,12 +32,23 @@ import type { LegalGuardado } from "@/lib/legal/tipos";
 
 const BASE = "/api";
 
+/**
+ * La ruta del puente SIN la barra final ("/catalog/products/" →
+ * "/catalog/products"). Next redirige con un 308 toda URL que termina en "/",
+ * así que pedirla con barra costaba un viaje de red de más (0,3–0,5 s medidos)
+ * en cada petición —en cada tanda del catálogo—. El puente
+ * (`app/api/[...ruta]/route.ts`) le vuelve a poner la barra que Django espera.
+ */
+function rutaDelPuente(ruta: string): string {
+  return BASE + ruta.replace(/\/(?=\?|$)/, "");
+}
+
 async function pedir<T>(
   ruta: string,
   params?: Record<string, unknown>,
   signal?: AbortSignal
 ): Promise<T> {
-  const url = new URL(BASE + ruta, window.location.origin);
+  const url = new URL(rutaDelPuente(ruta), window.location.origin);
   for (const [k, v] of Object.entries(params ?? {})) {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
   }
@@ -47,7 +58,7 @@ async function pedir<T>(
 }
 
 async function enviar<T>(ruta: string, cuerpo: unknown): Promise<T> {
-  const r = await fetch(BASE + ruta, {
+  const r = await fetch(rutaDelPuente(ruta), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(cuerpo),

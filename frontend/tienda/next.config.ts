@@ -55,6 +55,15 @@ const config: NextConfig = {
     return [
       { source: "/img/:path*", headers: [{ key: "Cache-Control", value: cache }] },
       { source: "/icons3d/:path*", headers: [{ key: "Cache-Control", value: cache }] },
+      // El service worker nunca se cachea: si no, un cambio en él tardaría
+      // semanas en llegar a los teléfonos que ya instalaron la app.
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+        ],
+      },
     ];
   },
 };
