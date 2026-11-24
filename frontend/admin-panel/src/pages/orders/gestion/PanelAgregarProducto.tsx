@@ -244,6 +244,7 @@ function ModoCatalogo({
               ref={buscador}
               type="search"
               placeholder="Buscar producto por nombre…"
+              data-sin-cambios
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               onKeyDown={(e) => {

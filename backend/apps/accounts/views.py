@@ -24,6 +24,7 @@ from apps.common.permissions import EsAdministrador, es_owner, es_owner_de, requ
 from apps.tenancy.models import Membership
 from apps.tenancy.viewsets import ExigeNegocioMixin
 
+from .dispositivo import emitir_testigo, testigo_valido
 from .emails import enviar_aviso_password_cambiada, enviar_codigo_otp, enviar_codigo_restablecer
 from .permisos import CATALOGO_PERMISOS
 from .serializers import (
@@ -101,11 +102,65 @@ def _negocio_por_defecto(user, negocios=None):
     return negocios[0] if negocios else None
 
 
+def _completar_ingreso(request, user, confiar_dispositivo=False, **extra):
+    """
+    Lo que pasa cuando la identidad ya está probada —por el código del correo
+    o por un dispositivo de confianza de hoy—: limpia el código pendiente,
+    comprueba que la cuenta tenga un negocio y emite los tokens.
+
+    Con `confiar_dispositivo`, además devuelve el testigo que deja entrar en
+    este navegador sin código hasta medianoche (ver `dispositivo.py`).
+    """
+    user.ultimo_login_exitoso = timezone.now()
+    user.intentos_fallidos = 0
+    user.token_expiracion = None
+    user.token_verificacion = None
+    user.save(
+        update_fields=[
+            "ultimo_login_exitoso",
+            "intentos_fallidos",
+            "token_expiracion",
+            "token_verificacion",
+        ]
+    )
+
+    negocios = _negocios_de(user)
+    if not negocios and not user.is_superuser:
+        # Una cuenta sin pertenencia no puede administrar nada: desde la
+        # fase 3 el acceso lo concede el negocio, no `is_staff`.
+        return Response(
+            {
+                "success": False,
+                "message": "Tu cuenta no está dada de alta en ningún negocio.",
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    activo = _negocio_por_defecto(user, negocios)
+    request.tenant = activo  # para que el serializer calcule rol y permisos
+
+    respuesta = {
+        "success": True,
+        **extra,
+        **_tokens_para_usuario(user, activo),
+        "user": UsuarioSerializer(
+            user, context={"request": request, "incluir_negocios": True}
+        ).data,
+    }
+    if confiar_dispositivo:
+        respuesta["dispositivo"] = emitir_testigo(user)
+    return Response(respuesta)
+
+
 class LoginView(APIView):
     """
     Paso 1 del login OTP administrativo.
     Valida credenciales, genera y envía el código OTP, y devuelve un
     `otp_ticket` firmado (stateless) que el frontend reenvía en el paso 2.
+
+    Si el navegador trae un testigo de «dispositivo de confianza» válido para
+    hoy (`dispositivo`), no hay paso 2: responde directamente con los tokens y
+    `sin_codigo: true`. Ver `dispositivo.py`.
     """
 
     permission_classes = [AllowAny]
@@ -134,6 +189,11 @@ class LoginView(APIView):
                 },
                 status=status.HTTP_403_FORBIDDEN,
             )
+
+        # Dispositivo de confianza de hoy: ya verificó el código del correo en
+        # este navegador, así que con la contraseña basta hasta medianoche.
+        if testigo_valido(serializer.validated_data.get("dispositivo"), user):
+            return _completar_ingreso(request, user, sin_codigo=True)
 
         # Generar y almacenar el hash del OTP
         otp_code = str(random.randint(100000, 999999))
@@ -282,42 +342,8 @@ class VerifyOtpView(APIView):
             )
 
         # Éxito: limpiar OTP y emitir tokens
-        user.ultimo_login_exitoso = timezone.now()
-        user.intentos_fallidos = 0
-        user.token_expiracion = None
-        user.token_verificacion = None
-        user.save(
-            update_fields=[
-                "ultimo_login_exitoso",
-                "intentos_fallidos",
-                "token_expiracion",
-                "token_verificacion",
-            ]
-        )
-
-        negocios = _negocios_de(user)
-        if not negocios and not user.is_superuser:
-            # Una cuenta sin pertenencia no puede administrar nada: desde la
-            # fase 3 el acceso lo concede el negocio, no `is_staff`.
-            return Response(
-                {
-                    "success": False,
-                    "message": "Tu cuenta no está dada de alta en ningún negocio.",
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        activo = _negocio_por_defecto(user, negocios)
-        request.tenant = activo  # para que el serializer calcule rol y permisos
-
-        return Response(
-            {
-                "success": True,
-                **_tokens_para_usuario(user, activo),
-                "user": UsuarioSerializer(
-                    user, context={"request": request, "incluir_negocios": True}
-                ).data,
-            }
+        return _completar_ingreso(
+            request, user, confiar_dispositivo=serializer.validated_data["confiar_dispositivo"]
         )
 
 

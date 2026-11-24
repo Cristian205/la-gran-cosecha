@@ -368,11 +368,23 @@ export interface RegistrarPedidoPayload {
   /** Un cliente de la lista… */
   cliente_id?: number;
   /** …o uno nuevo. Uno de los dos, nunca ambos. */
-  cliente_nuevo?: { nombre: string; telefono?: string; direccion?: string };
+  /** `nombre` es la persona de contacto; `negocio`, el negocio por el que pide. */
+  cliente_nuevo?: { nombre: string; negocio?: string; telefono?: string; direccion?: string };
   items: { presentacion_id: number; cantidad: string }[];
+  /** Productos que no están en el catálogo, escritos a mano por quien atiende. */
+  personalizados?: {
+    nombre: string;
+    cantidad: string;
+    precio_unitario?: string;
+    unidad_id?: number | null;
+  }[];
   observaciones?: string;
   direccion_entrega?: string;
+  /** Por dónde llegó el pedido. */
+  canal?: CanalPedido | "";
 }
+
+export type CanalPedido = "TELEFONO" | "WHATSAPP" | "MOSTRADOR";
 
 /**
  * Apunta un pedido que llegó por teléfono, WhatsApp o mostrador. No es el

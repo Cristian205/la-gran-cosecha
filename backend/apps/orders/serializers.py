@@ -46,6 +46,7 @@ class ClienteSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "nombre_cliente",
+            "negocio_cliente",
             "telefono_cliente",
             "direccion_cliente",
             "documento_cliente",
@@ -290,6 +291,8 @@ class ClienteInputSerializer(serializers.Serializer):
     # Opcional porque un cliente con cédula y datos guardados no vuelve a
     # escribir su nombre; `CrearPedidoSerializer.validate` decide cuándo falta.
     nombre = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    #: Nombre del negocio por el que pide. `validate` lo exige con el nombre.
+    negocio = serializers.CharField(max_length=200, required=False, allow_blank=True)
     telefono = serializers.CharField(max_length=25, required=False, allow_blank=True)
     direccion = serializers.CharField(required=False, allow_blank=True)
     cedula = serializers.CharField(max_length=30, required=False, allow_blank=True)
@@ -313,13 +316,16 @@ class ClienteNuevoDePanelSerializer(serializers.Serializer):
     después desde la ficha del cliente.
     """
 
+    #: La persona de contacto: quien pide en nombre del negocio.
     nombre = serializers.CharField(max_length=200)
+    #: El negocio (tienda, restaurante…) por el que pide. Opcional.
+    negocio = serializers.CharField(max_length=200, required=False, allow_blank=True)
     telefono = serializers.CharField(max_length=25, required=False, allow_blank=True)
     direccion = serializers.CharField(required=False, allow_blank=True)
 
     def validate_nombre(self, valor):
         if not valor.strip():
-            raise serializers.ValidationError("Escribe el nombre del cliente.")
+            raise serializers.ValidationError("Escribe el nombre de la persona de contacto.")
         return valor
 
 
@@ -419,7 +425,8 @@ class CrearPedidoSerializer(serializers.Serializer):
                 faltan = {
                     campo: mensaje
                     for campo, mensaje in (
-                        ("nombre", "Escribe tu nombre o el de tu negocio."),
+                        ("nombre", "Escribe tu nombre."),
+                        ("negocio", "Escribe el nombre de tu negocio."),
                         ("telefono", "Escribe un teléfono de contacto."),
                         ("direccion", "Escribe la dirección de entrega."),
                     )
@@ -436,6 +443,10 @@ class CrearPedidoSerializer(serializers.Serializer):
             ya_autorizo = existente is not None and existente.autorizo_datos_en is not None
         elif not (datos.get("nombre") or "").strip():
             raise serializers.ValidationError({"cliente": {"nombre": "Escribe tu nombre."}})
+        elif not (datos.get("negocio") or "").strip():
+            raise serializers.ValidationError(
+                {"cliente": {"negocio": "Escribe el nombre de tu negocio."}}
+            )
         else:
             # Por nombre no hay forma segura de saber si ESTA persona ya
             # autorizó: el nombre no la identifica. Se pide en cada pedido.
@@ -461,6 +472,9 @@ class CrearPedidoSerializer(serializers.Serializer):
         if datos.get("direccion") and not cliente.direccion_cliente:
             cliente.direccion_cliente = datos["direccion"]
             actualizar.append("direccion_cliente")
+        if (datos.get("negocio") or "").strip() and not cliente.negocio_cliente:
+            cliente.negocio_cliente = datos["negocio"].strip()
+            actualizar.append("negocio_cliente")
         if actualizar:
             cliente.save(update_fields=actualizar)
         return cliente
@@ -479,6 +493,7 @@ class CrearPedidoSerializer(serializers.Serializer):
 
         cliente = existente or Cliente(documento_cliente=datos["cedula"])
         cliente.nombre_cliente = datos["nombre"].strip()
+        cliente.negocio_cliente = (datos.get("negocio") or "").strip()
         cliente.telefono_cliente = datos["telefono"].strip()
         cliente.direccion_cliente = datos["direccion"].strip()
         cliente.acepto_precios_en = timezone.now()
@@ -631,13 +646,18 @@ class RegistrarPedidoSerializer(serializers.Serializer):
     cliente_id = ClaveDelNegocio(Cliente, source="cliente", required=False, allow_null=True)
     #: O uno nuevo, con lo mínimo para poder entregarle.
     cliente_nuevo = ClienteNuevoDePanelSerializer(required=False)
-    items = ItemCatalogoSerializer(many=True)
+    items = ItemCatalogoSerializer(many=True, required=False, default=list)
+    #: Productos que no están en el catálogo, con el mismo validador que usa la
+    #: tienda. Los pone el negocio, así que quedan como líneas suyas (`ADMIN`).
+    personalizados = ItemPersonalizadoSerializer(many=True, required=False, default=list)
     observaciones = serializers.CharField(required=False, allow_blank=True, default="")
     #: Solo para este pedido; la dirección guardada del cliente no cambia.
     direccion_entrega = serializers.CharField(required=False, allow_blank=True, default="")
+    #: Por dónde llegó: teléfono, WhatsApp o mostrador.
+    canal = serializers.ChoiceField(choices=Pedido.CANALES, required=False, allow_blank=True, default="")
 
     def validate(self, attrs):
-        if not attrs.get("items"):
+        if not attrs.get("items") and not attrs.get("personalizados"):
             raise serializers.ValidationError("El pedido debe incluir al menos un producto.")
         tiene_existente = attrs.get("cliente") is not None
         tiene_nuevo = bool(attrs.get("cliente_nuevo"))
@@ -657,6 +677,7 @@ class RegistrarPedidoSerializer(serializers.Serializer):
             datos = validated_data["cliente_nuevo"]
             cliente = Cliente.objects.create(
                 nombre_cliente=datos["nombre"].strip(),
+                negocio_cliente=(datos.get("negocio") or "").strip(),
                 telefono_cliente=(datos.get("telefono") or "").strip(),
                 direccion_cliente=(datos.get("direccion") or "").strip(),
             )
@@ -673,6 +694,7 @@ class RegistrarPedidoSerializer(serializers.Serializer):
             estado="PENDIENTE",
             observaciones=validated_data.get("observaciones", ""),
             direccion_entrega=direccion_entrega,
+            canal=validated_data.get("canal", ""),
         )
         for item in validated_data["items"]:
             presentacion = item["presentacion"]
@@ -682,6 +704,20 @@ class RegistrarPedidoSerializer(serializers.Serializer):
                 cantidad=item["cantidad"],
                 precio_unitario=presentacion.precio_unitario,
                 es_catalogo=True,
+            )
+        # Las mismas columnas que la tienda para un producto escrito a mano,
+        # pero marcadas como del negocio: las apuntó quien atiende, no el cliente.
+        for item in validated_data["personalizados"]:
+            DetallePedido.objects.create(
+                pedido=pedido,
+                nombre_personalizado=item["nombre"].strip(),
+                cantidad=item["cantidad"],
+                precio_unitario=item.get("precio_unitario") or Decimal("0"),
+                unidad_personalizada=item.get("unidad"),
+                categoria_manual=item.get("categoria"),
+                es_catalogo=False,
+                origen="ADMIN",
+                agregado_por=usuario,
             )
         pedido.actualizar_total()
 

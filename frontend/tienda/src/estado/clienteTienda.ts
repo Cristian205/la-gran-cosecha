@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { almacenamientoFuncional } from "@/lib/legal/cookies";
 
 interface ClienteTiendaState {
   /** La cédula con la que este navegador pidió la última vez (solo dígitos). */
@@ -27,6 +28,8 @@ export const useClienteTienda = create<ClienteTiendaState>()(
     }),
     {
       name: "kryonx-cliente",
+      // Categoría funcional: solo se guarda si la persona la aceptó.
+      storage: createJSONStorage(() => almacenamientoFuncional),
       // Mismo motivo que `estado/carrito.ts`: el servidor pinta sin cliente y
       // `CapaCliente` rehidrata después de montar.
       skipHydration: true,

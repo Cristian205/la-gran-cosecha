@@ -353,6 +353,8 @@ export interface LoteDetalle extends Lote {
 export interface Cliente {
   id: number;
   nombre_cliente: string;
+  /** El negocio (tienda, restaurante…) por el que pide `nombre_cliente`. */
+  negocio_cliente?: string;
   telefono_cliente: string;
   direccion_cliente: string;
   /** Cédula con la que se identifica en la tienda (solo dígitos; vacía si no tiene). */

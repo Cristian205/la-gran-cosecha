@@ -174,6 +174,9 @@ class LoginSerializer(serializers.Serializer):
 
     email_usuario = serializers.EmailField()
     password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    #: El testigo de «dispositivo de confianza» de hoy, si el navegador tiene
+    #: uno (ver `accounts/dispositivo.py`). Con él no se pide el código.
+    dispositivo = serializers.CharField(required=False, allow_blank=True, max_length=500)
 
 
 class SolicitarResetSerializer(serializers.Serializer):
@@ -201,6 +204,8 @@ class VerifyOtpSerializer(serializers.Serializer):
 
     otp_ticket = serializers.CharField()
     otp_token = serializers.CharField(max_length=6)
+    #: Recordar este navegador hasta medianoche: no volver a pedir el código hoy.
+    confiar_dispositivo = serializers.BooleanField(required=False, default=False)
 
 
 class CrearUsuarioSerializer(DatosPersonalesMixin):

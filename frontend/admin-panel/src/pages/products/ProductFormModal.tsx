@@ -362,6 +362,8 @@ export function ProductFormModal({
         />
       }
       onCerrar={cerrar}
+      // `cerrar` ya pregunta antes de descartar: el modal no repite la pregunta.
+      preguntaAlCerrar
       footer={pie}
     >
       <form

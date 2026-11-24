@@ -13,6 +13,9 @@ from apps.tenancy.models import ModeloConTenant
 # ==========================================================================
 class Cliente(ModeloConTenant):
     nombre_cliente = models.CharField(max_length=200)
+    #: Nombre del negocio (tienda, restaurante...) por el que pide la persona.
+    #: Opcional: `nombre_cliente` es siempre el de quien pide.
+    negocio_cliente = models.CharField(max_length=200, blank=True, default="", db_default="")
     telefono_cliente = models.CharField(max_length=25, blank=True)
     direccion_cliente = models.TextField(blank=True)
 
@@ -104,6 +107,16 @@ class Pedido(ModeloConTenant):
     #: Dirección solo para ESTE pedido, cuando el cliente pidió entregarlo en
     #: otro sitio. Vacía = la dirección guardada del cliente, que no cambia.
     direccion_entrega = models.TextField(blank=True, default="", db_default="")
+
+    #: Por dónde llegó el pedido que el negocio apunta desde el panel
+    #: («Registrar pedido»). Vacío en los de la tienda y en los anteriores a
+    #: este campo: de esos no se sabe y no se inventa.
+    CANALES = [
+        ("TELEFONO", "Teléfono"),
+        ("WHATSAPP", "WhatsApp"),
+        ("MOSTRADOR", "Mostrador"),
+    ]
+    canal = models.CharField(max_length=12, choices=CANALES, blank=True, default="", db_default="")
 
     # ---- Logística que anota el negocio --------------------------------
     #

@@ -29,7 +29,7 @@ CEDULA = "1020345678"
 
 
 def _pedido(presentacion, cantidad=2, **cliente):
-    cliente = {"nombre": "Tienda Don José", "autoriza_datos": True, **cliente}
+    cliente = {"nombre": "Tienda Don José", "negocio": "Negocio de prueba", "autoriza_datos": True, **cliente}
     return {"cliente": cliente, "items": [{"presentacion_id": presentacion.id, "cantidad": cantidad}]}
 
 
@@ -55,7 +55,7 @@ def test_un_pedido_recien_registrado_solo_esta_recibido(api, presentacion):
 
 def test_un_producto_escrito_a_mano_lo_deja_en_revision(api, categoria, unidad):
     cuerpo = {
-        "cliente": {"nombre": "Doña Marta", "autoriza_datos": True},
+        "cliente": {"nombre": "Doña Marta", "negocio": "Negocio de prueba", "autoriza_datos": True},
         "personalizados": [
             {"nombre": "papa criolla", "cantidad": "4", "unidad_id": unidad.id, "categoria_id": categoria.id}
         ],

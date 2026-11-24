@@ -31,6 +31,7 @@ export function MediaPickerModal({ onCerrar, onSeleccionar }: Props) {
         <Search size={16} />
         <input
           placeholder="Buscar por nombre…"
+          data-sin-cambios
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           autoFocus

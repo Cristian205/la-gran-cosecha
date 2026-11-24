@@ -298,6 +298,8 @@ export async function obtenerOfertas(): Promise<OfertaProducto[]> {
 
 export interface DatosCliente {
   nombre?: string;
+  /** Nombre del negocio por el que pide. */
+  negocio?: string;
   telefono?: string;
   direccion?: string;
   /** Solo en tiendas que identifican por cédula. */

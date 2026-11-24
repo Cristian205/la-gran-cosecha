@@ -40,7 +40,7 @@ def whatsapp(negocio):
 
 
 def _pedido(presentacion, **cliente):
-    return {"cliente": cliente, "items": [{"presentacion_id": presentacion.id, "cantidad": 1}]}
+    return {"cliente": {"negocio": "Negocio de prueba", **cliente}, "items": [{"presentacion_id": presentacion.id, "cantidad": 1}]}
 
 
 def _primer_pedido(presentacion, **extra):

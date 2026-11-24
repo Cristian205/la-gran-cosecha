@@ -39,7 +39,7 @@ def _alta(producto, unidad, **extra):
 
 def _pedido(presentacion, cantidad):
     return {
-        "cliente": {"nombre": "Cliente", "telefono": "3001112233", "autoriza_datos": True},
+        "cliente": {"nombre": "Cliente", "negocio": "Negocio de prueba", "telefono": "3001112233", "autoriza_datos": True},
         "items": [{"presentacion_id": presentacion.id, "cantidad": cantidad}],
     }
 

@@ -1,13 +1,21 @@
 "use client";
 
+import { Leaf, Store } from "lucide-react";
 import { motion } from "motion/react";
 import { useRef, type CSSProperties } from "react";
 import { useSiteConfig } from "@/componentes/CapaCliente";
 import { whatsappHref } from "@/lib/utiles";
+import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
 import { Boton, TipografiaEditorial, useParallax } from "./comunes";
 
 /**
  * El cierre: la última imagen del recorrido y una sola invitación a entrar.
+ *
+ * Composición asimétrica y compacta (≈540–600 px en escritorio): el mensaje
+ * a la izquierda, sobre un degradado que solo oscurece esa zona, y la foto
+ * protagonista a la derecha, a la vista. Debajo de los botones, dos atributos
+ * comerciales cortos.
+ *
  * El botón principal lleva a la tienda; el secundario abre WhatsApp con el
  * número real del negocio (`SiteConfig.whatsapp_numero`) y desaparece si no
  * hay uno configurado.
@@ -24,6 +32,9 @@ interface Props {
   cta_href?: string;
   whatsapp_texto?: string;
   whatsapp_mensaje?: string;
+  /** Los dos atributos bajo los botones. Vacío no se dibuja. */
+  atributo_1?: string;
+  atributo_2?: string;
 }
 
 export function FinalCTA({
@@ -38,6 +49,8 @@ export function FinalCTA({
   cta_href = "/tienda",
   whatsapp_texto = "",
   whatsapp_mensaje = "Hola, quiero hacer un pedido.",
+  atributo_1 = "Productos seleccionados",
+  atributo_2 = "Abastecimiento para negocios",
 }: Props) {
   const ref = useRef<HTMLElement>(null);
   const movimiento = useParallax(ref, { desde: 1.06, hasta: 1.18, desplazamiento: 6 });
@@ -73,11 +86,27 @@ export function FinalCTA({
         <div className="fin-acciones">
           <Boton href={cta_href || "/tienda"}>{cta_texto}</Boton>
           {whatsapp_texto && wa && (
-            <Boton href={wa} variante="fantasma" flecha={false}>
+            <Boton href={wa} variante="fantasma" flecha={false} icono={<WhatsAppIcon size={18} />}>
               {whatsapp_texto}
             </Boton>
           )}
         </div>
+        {(atributo_1 || atributo_2) && (
+          <ul className="fin-atributos">
+            {atributo_1 && (
+              <li>
+                <span className="fin-atributo-icono" aria-hidden="true"><Leaf size={15} strokeWidth={2} /></span>
+                {atributo_1}
+              </li>
+            )}
+            {atributo_2 && (
+              <li>
+                <span className="fin-atributo-icono" aria-hidden="true"><Store size={15} strokeWidth={2} /></span>
+                {atributo_2}
+              </li>
+            )}
+          </ul>
+        )}
       </motion.div>
     </section>
   );

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
+import { BotonPreferenciasCookies } from "@/componentes/AvisoCookies";
 import { CATEGORIAS, ELEMENTOS, TERCEROS } from "@/lib/legal/cookies";
 import type { ComponenteLegal, DatosLegales } from "@/lib/legal/tipos";
 import { telHref, whatsappHref } from "@/lib/utiles";
@@ -186,6 +187,9 @@ function Cookies() {
           </div>
         ))}
       </div>
+      <p className="legal-cookies-preferencias">
+        Puedes cambiar tu elección cuando quieras: <BotonPreferenciasCookies />
+      </p>
 
       <div className="legal-tabla-envoltorio" role="region" aria-label="Inventario de cookies" tabIndex={0}>
         <table className="legal-tabla">

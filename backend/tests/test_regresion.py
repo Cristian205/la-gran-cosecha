@@ -101,7 +101,7 @@ def test_el_orden_es_consecutivo(categoria):
 # ==========================================================================
 def _pedido_valido(presentacion, nombre="Tienda nueva"):
     return {
-        "cliente": {"nombre": nombre, "telefono": "3009998877", "autoriza_datos": True},
+        "cliente": {"nombre": nombre, "negocio": "Negocio de prueba", "telefono": "3009998877", "autoriza_datos": True},
         "items": [{"presentacion_id": presentacion.id, "cantidad": "3"}],
         "observaciones": "Entregar por la mañana",
     }
@@ -143,7 +143,7 @@ def test_un_producto_personalizado_queda_pendiente_de_revision(api, categoria, u
     respuesta = api.post(
         "/api/orders/",
         {
-            "cliente": {"nombre": "Tienda curiosa", "autoriza_datos": True},
+            "cliente": {"nombre": "Tienda curiosa", "negocio": "Negocio de prueba", "autoriza_datos": True},
             "personalizados": [
                 {
                     "nombre": "Algo que no está en catálogo",

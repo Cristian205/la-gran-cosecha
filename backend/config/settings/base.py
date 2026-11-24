@@ -466,6 +466,8 @@ WHATSAPP_ENVIO_EN_HILO = env.bool("WHATSAPP_ENVIO_EN_HILO", default=True)
 OTP_EXPIRY_MINUTES = env.int("OTP_EXPIRY_MINUTES", default=10)
 # Firma del ticket pre-auth entre paso 1 (password) y paso 2 (OTP)
 OTP_TICKET_SALT = "accounts.otp.ticket"
+# Firma del «dispositivo de confianza hasta medianoche» (accounts/dispositivo.py)
+OTP_DISPOSITIVO_SALT = "accounts.otp.dispositivo"
 #: Códigos de acceso incorrectos seguidos antes de anular el código y
 #: bloquear la cuenta, y cuánto dura ese bloqueo.
 OTP_MAX_INTENTOS = env.int("OTP_MAX_INTENTOS", default=5)

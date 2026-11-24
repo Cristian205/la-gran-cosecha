@@ -131,6 +131,8 @@ export function OrderDetailModal({ pedidoId, soloLectura = false, onCerrar, onGu
       titulo={`Pedido #${String(pedidoId).padStart(4, "0")}`}
       subtitulo={<MetaPedido pedido={g.pedido} />}
       onCerrar={cerrar}
+      // `cerrar` ya pregunta antes de descartar: el modal no repite la pregunta.
+      preguntaAlCerrar
       subcabecera={
         <PestanasPedido
           idBase={idBase}

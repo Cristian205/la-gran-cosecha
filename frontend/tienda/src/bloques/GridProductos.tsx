@@ -1,10 +1,11 @@
 "use client";
 
 import { Loader2, RotateCw } from "lucide-react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { obtenerProductos } from "@/lib/datos";
 import type { Producto } from "@/lib/tipos";
 import { ProductCard } from "@/componentes/ProductCard";
+import { familiaCategoria } from "@/lib/utiles";
 import { EncabezadoCategoria } from "@/componentes/tienda/IdentidadCategoria";
 import { Seccion, claseDeVariante } from "./Seccion";
 import { useCatalogoContexto, volverAlInicioDelCatalogo } from "@/contextos/CatalogoContexto";
@@ -14,6 +15,30 @@ import {
   ErrorCatalogo,
   EsqueletosCatalogo,
 } from "@/componentes/tienda/EstadosCatalogo";
+
+interface GrupoCategoria {
+  categoria: number;
+  nombre: string;
+  /** Posición del primer producto del grupo en la lista completa. */
+  desde: number;
+  productos: Producto[];
+}
+
+/**
+ * Los productos en tramos seguidos de la misma categoría, en el orden en que
+ * llegan. No se reordena nada: «Recomendados» ya los trae agrupados, y si una
+ * categoría reaparece más abajo (otra tanda), abre un tramo nuevo en vez de
+ * subir sus productos a un grupo que el cliente ya dejó atrás.
+ */
+function agruparPorCategoria(productos: Producto[]): GrupoCategoria[] {
+  const grupos: GrupoCategoria[] = [];
+  productos.forEach((p, i) => {
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.categoria === p.categoria) ultimo.productos.push(p);
+    else grupos.push({ categoria: p.categoria, nombre: p.categoria_nombre, desde: i, productos: [p] });
+  });
+  return grupos;
+}
 
 /**
  * Una rejilla de productos, sin criterio propio.
@@ -261,35 +286,60 @@ function CatalogoInteractivo({
     // categoría) se conserva: ahí es lo que dice de dónde es cada producto.
     const badgeEnTarjeta = !separar && catalogo.categoriaActiva === null;
 
+    const tarjeta = (p: Producto, i: number) => (
+      // La unidad en la clave: cambiar el filtro vuelve a elegir la
+      // presentación inicial de cada tarjeta.
+      <ProductCard
+        key={`${p.id}-${catalogo.unidadActiva ?? ""}`}
+        producto={p}
+        variante={tarjetaVariante}
+        indice={i}
+        unidadPreferida={catalogo.unidadActiva}
+        mostrarCategoria={badgeEnTarjeta}
+      />
+    );
+
     contenido = (
       <>
-        <div className={claseGrid} aria-busy={cargandoMas}>
-          {catalogo.productos.map((p, i) => {
-            const nuevaCategoria = separar && (i === 0 || catalogo.productos[i - 1].categoria !== p.categoria);
-            const cat = categoriaPorId.get(p.categoria);
-            return (
-              // La unidad en la clave: cambiar el filtro vuelve a elegir la
-              // presentación inicial de cada tarjeta.
-              <Fragment key={`${p.id}-${catalogo.unidadActiva ?? ""}`}>
-                {nuevaCategoria && (
+        {separar ? (
+          // Cada categoría es un bloque con su propio fondo —el tono suave de
+          // su familia— para que, al bajar por «Todos», el cambio de categoría
+          // se note sin leer el encabezado. Las que no son de ninguna familia
+          // alternan dos neutros: dos seguidas no se funden en una.
+          <div className="pgrid-grupos" aria-busy={cargandoMas}>
+            {agruparPorCategoria(catalogo.productos).map((grupo, g) => {
+              const cat = categoriaPorId.get(grupo.categoria);
+              const familia = familiaCategoria(grupo.nombre) ?? "otra";
+              return (
+                <section
+                  key={`${grupo.categoria}-${grupo.desde}`}
+                  className="pgrid-grupo"
+                  data-familia={familia}
+                  data-alterno={familia === "otra" && g % 2 === 1 ? "" : undefined}
+                >
                   <EncabezadoCategoria
-                    nombre={p.categoria_nombre}
+                    nombre={grupo.nombre}
                     subtitulo={cat?.subtitulo}
                     cantidad={cat?.num_productos ?? null}
                   />
-                )}
-                <ProductCard
-                  producto={p}
-                  variante={tarjetaVariante}
-                  indice={i}
-                  unidadPreferida={catalogo.unidadActiva}
-                  mostrarCategoria={badgeEnTarjeta}
-                />
-              </Fragment>
-            );
-          })}
-          {cargandoMas && <EsqueletosCatalogo cantidad={4} />}
-        </div>
+                  <div className={claseGrid}>
+                    {grupo.productos.map((p, i) => tarjeta(p, grupo.desde + i))}
+                  </div>
+                </section>
+              );
+            })}
+            {cargandoMas && (
+              <div className={claseGrid}>
+                <EsqueletosCatalogo cantidad={4} />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className={claseGrid} aria-busy={cargandoMas}>
+            {catalogo.productos.map(tarjeta)}
+            {cargandoMas && <EsqueletosCatalogo cantidad={4} />}
+          </div>
+        )}
 
         <div ref={setCentinela} className="pgrid-centinela" aria-hidden="true" />
 
