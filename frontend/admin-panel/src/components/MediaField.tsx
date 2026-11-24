@@ -82,6 +82,10 @@ export function MediaField({
     return () => URL.revokeObjectURL(url);
   }, [valor]);
 
+  // El archivo elegido, para que el `Modal` note el cambio si se intenta
+  // cerrar sin guardar (ver «Cambios sin guardar» en Modal.tsx).
+  const huellaValor = valor ? `${valor.name}:${valor.size}` : "";
+
   function elegirArchivo(file: File | null) {
     onCambiar(file);
     setAviso(null);
@@ -146,7 +150,7 @@ export function MediaField({
     const puedeQuitar = Boolean(valor) || Boolean(urlActual && onQuitarActual && !quitada);
 
     return (
-      <div className="media-zona-tarjeta">
+      <div className="media-zona-tarjeta" data-campo-valor={huellaValor}>
         <div
           className={`media-zona ${arrastrando ? "arrastrando" : ""} ${preview ? "con-imagen" : ""}`}
           onDragOver={(e) => {
@@ -222,7 +226,7 @@ export function MediaField({
 
   // -------------------------------------------------------------- «fila»
   return (
-    <div className="media-field">
+    <div className="media-field" data-campo-valor={huellaValor}>
       <div className="media-field-preview">
         {preview ? <img src={preview} alt="" /> : <ImagePlus size={26} strokeWidth={1.5} />}
       </div>

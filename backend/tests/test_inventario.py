@@ -249,7 +249,7 @@ def test_la_api_rechaza_un_pedido_sin_stock(
     respuesta = api.post(
         "/api/orders/",
         {
-            "cliente": {"nombre": "Quien sea", "telefono": "3000000000", "autoriza_datos": True},
+            "cliente": {"nombre": "Quien sea", "negocio": "Negocio de prueba", "telefono": "3000000000", "autoriza_datos": True},
             "items": [{"presentacion_id": presentacion_con_stock.id, "cantidad": "500"}],
         },
         format="json",

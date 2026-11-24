@@ -11,6 +11,8 @@
  * que sí, es la forma más fácil de incumplir la que se tiene.
  */
 
+import type { StateStorage } from "zustand/middleware";
+
 export type CategoriaCookie = "necesarias" | "funcionales" | "analiticas" | "publicitarias";
 
 export interface DefinicionCategoria {
@@ -171,4 +173,51 @@ export function guardarConsentimiento(categorias: Consentimiento["categorias"]):
 export function categoriaPermitida(categoria: CategoriaCookie): boolean {
   if (categoria === "necesarias") return true;
   return Boolean(leerConsentimiento()?.categorias[categoria]);
+}
+
+/** Lo dispara cualquier «Configurar cookies» para reabrir el aviso. */
+export const EVENTO_ABRIR_PREFERENCIAS = "kryonx:preferencias-cookies";
+
+export function abrirPreferenciasCookies(): void {
+  window.dispatchEvent(new Event(EVENTO_ABRIR_PREFERENCIAS));
+}
+
+/**
+ * Almacenamiento para los estados `persist` de categoría funcional: solo lee y
+ * escribe en el navegador si la persona aceptó las funcionales. Sin permiso,
+ * el dato vive en memoria durante la visita y no queda nada guardado.
+ */
+export const almacenamientoFuncional: StateStorage = {
+  getItem: (clave) => {
+    if (!categoriaPermitida("funcionales")) return null;
+    try {
+      return localStorage.getItem(clave);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (clave, valor) => {
+    if (!categoriaPermitida("funcionales")) return;
+    try {
+      localStorage.setItem(clave, valor);
+    } catch {
+      // Almacenamiento bloqueado: se queda en memoria.
+    }
+  },
+  removeItem: (clave) => {
+    try {
+      localStorage.removeItem(clave);
+    } catch {
+      // Nada que borrar.
+    }
+  },
+};
+
+/** Borra del navegador lo que ya se hubiera guardado de una categoría rechazada. */
+export function borrarCategoria(categoria: CategoriaCookie): void {
+  for (const e of ELEMENTOS) {
+    if (e.categoria === categoria && e.tipo === "Almacenamiento local") {
+      almacenamientoFuncional.removeItem(e.nombre);
+    }
+  }
 }

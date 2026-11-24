@@ -210,6 +210,9 @@ function ComboboxBase<T extends string | number>(
         id={id}
         type="button"
         role="combobox"
+        // El valor elegido, para que el `Modal` note el cambio si se intenta
+        // cerrar sin guardar (ver «Cambios sin guardar» en Modal.tsx).
+        data-campo-valor={String(valor)}
         className={`combo ${invalido ? "campo-invalido" : ""} ${abierto ? "abierto" : ""} ${icono ? "con-icono" : ""}`}
         aria-haspopup="listbox"
         aria-expanded={abierto}
@@ -258,6 +261,7 @@ function ComboboxBase<T extends string | number>(
                   ref={busqueda}
                   value={filtro}
                   placeholder="Buscar…"
+                  data-sin-cambios
                   aria-label="Buscar opción"
                   aria-controls={listaId}
                   aria-activedescendant={activoId}

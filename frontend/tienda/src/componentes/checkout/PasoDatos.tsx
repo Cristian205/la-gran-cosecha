@@ -19,6 +19,8 @@ export const CODIGOS_PAIS = [
 
 export interface DatosNuevos {
   nombre: string;
+  /** Nombre del negocio por el que pide. */
+  negocio: string;
   codigoPais: string;
   telefono: string;
   direccion: string;
@@ -255,12 +257,12 @@ function Registro({ porCedula, cedula, consulta, datos, onDatos, errores, onCamb
       )}
 
       <div className="campo">
-        <label htmlFor="chk-nombre">Nombre o negocio *</label>
+        <label htmlFor="chk-nombre">Tu nombre *</label>
         <input
           id="chk-nombre"
           value={datos.nombre}
           onChange={cambiar("nombre")}
-          placeholder="Ej: Tienda Don José"
+          placeholder="Ej: José Pérez"
           autoComplete="name"
           aria-invalid={Boolean(errores.nombre)}
           aria-describedby={errores.nombre ? "chk-nombre-error" : undefined}
@@ -268,6 +270,23 @@ function Registro({ porCedula, cedula, consulta, datos, onDatos, errores, onCamb
         {errores.nombre && (
           <p className="ident-error" id="chk-nombre-error">
             {errores.nombre}
+          </p>
+        )}
+      </div>
+      <div className="campo">
+        <label htmlFor="chk-negocio">Nombre del negocio *</label>
+        <input
+          id="chk-negocio"
+          value={datos.negocio}
+          onChange={cambiar("negocio")}
+          placeholder="Ej: Tienda Don José"
+          autoComplete="organization"
+          aria-invalid={Boolean(errores.negocio)}
+          aria-describedby={errores.negocio ? "chk-negocio-error" : undefined}
+        />
+        {errores.negocio && (
+          <p className="ident-error" id="chk-negocio-error">
+            {errores.negocio}
           </p>
         )}
       </div>

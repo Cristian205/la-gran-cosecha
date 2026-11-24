@@ -30,7 +30,7 @@ const NOTA_ACUERDO_PRECIOS =
 const PASOS_CEDULA: Paso[] = ["identificacion", "datos", "pedido", "confirmar"];
 const PASOS_NOMBRE: Paso[] = ["datos", "pedido", "confirmar"];
 
-const DATOS_VACIOS: DatosNuevos = { nombre: "", codigoPais: CODIGOS_PAIS[0].valor, telefono: "", direccion: "" };
+const DATOS_VACIOS: DatosNuevos = { nombre: "", negocio: "", codigoPais: CODIGOS_PAIS[0].valor, telefono: "", direccion: "" };
 const SIN_ACTUALIZACION: Actualizacion = { direccionEntrega: "", solicitud: "" };
 
 /** El primer mensaje que el servidor dio para los datos del cliente, si dio uno. */
@@ -151,7 +151,8 @@ export function CheckoutPage() {
 
   function validarRegistro(): boolean {
     const faltan: Partial<Record<keyof DatosNuevos, string>> = {};
-    if (!datos.nombre.trim()) faltan.nombre = "Escribe tu nombre o el de tu negocio.";
+    if (!datos.nombre.trim()) faltan.nombre = "Escribe tu nombre.";
+    if (!datos.negocio.trim()) faltan.negocio = "Escribe el nombre de tu negocio.";
     if (soloDigitosTel(datos.telefono).length < 7) faltan.telefono = "Escribe un teléfono de contacto válido.";
     if (!datos.direccion.trim()) faltan.direccion = "Escribe la dirección de entrega.";
     setErrores(faltan);
@@ -202,6 +203,7 @@ export function CheckoutPage() {
       ...(pideDatos
         ? {
             nombre: datos.nombre.trim(),
+            negocio: datos.negocio.trim(),
             telefono: `${datos.codigoPais} ${datos.telefono.trim()}`,
             direccion: datos.direccion.trim(),
           }

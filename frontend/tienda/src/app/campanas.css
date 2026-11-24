@@ -67,7 +67,9 @@
   isolation: isolate;
   display: flex;
   flex-direction: column;
-  min-height: calc(100svh - var(--navbar-alto, 70px));
+  /* El alto de la escena más el de la onda que la cierra, si la hay (ver
+     «Costura inferior» abajo): la onda no le quita sitio al contenido. */
+  min-height: calc(100svh - var(--navbar-alto, 70px) + var(--hc-onda-inf, 0px));
   color: #fff;
   background: var(--tinta);
   overflow: hidden;
@@ -144,7 +146,7 @@
 .hc-scroll {
   position: absolute;
   left: 50%;
-  bottom: 1.5rem;
+  bottom: calc(1.5rem + var(--hc-onda-inf, 0px));
   width: 1.5px;
   height: 3.2rem;
   overflow: hidden;
@@ -174,8 +176,8 @@
 
 /* --- Ajustes del editor. Cada variante por defecto es el aspecto de siempre:
        completa · izquierda · arriba · editorial · texto claro. --- */
-.hc--alto-alta { min-height: calc(78svh - var(--navbar-alto, 70px)); }
-.hc--alto-media { min-height: max(26rem, calc(58svh - var(--navbar-alto, 70px))); }
+.hc--alto-alta { min-height: calc(78svh - var(--navbar-alto, 70px) + var(--hc-onda-inf, 0px)); }
+.hc--alto-media { min-height: calc(max(26rem, calc(58svh - var(--navbar-alto, 70px))) + var(--hc-onda-inf, 0px)); }
 .hc--posicion-centro { justify-content: center; }
 .hc--posicion-abajo { justify-content: flex-end; }
 .hc--posicion-centro .hc-contenido,
@@ -198,7 +200,25 @@
 .hc--texto-oscuro .hc-scroll { background: rgba(0, 0, 0, 0.2); }
 .hc--texto-oscuro .hc-scroll i { background: var(--tinta); }
 @media (max-width: 780px) {
-  .hc--alto-media { min-height: max(24rem, 62svh); }
+  .hc--alto-media { min-height: calc(max(24rem, 62svh) + var(--hc-onda-inf, 0px)); }
+}
+
+/* --- Escritorio: más compacto (no ocupa toda la pantalla). --- */
+@media (min-width: 1025px) {
+  .hc { min-height: calc(clamp(32rem, calc(72svh - var(--navbar-alto, 70px)), 42rem) + var(--hc-onda-inf, 0px)); }
+  .hc--alto-alta { min-height: calc(clamp(30rem, calc(64svh - var(--navbar-alto, 70px)), 37rem) + var(--hc-onda-inf, 0px)); }
+  .hc-contenido { padding-block: clamp(2rem, 5vh, 3.4rem) 4rem; }
+}
+
+/* --- Costura inferior con el separador «onda». ----------------------------
+   El separador reserva el alto de la onda con un borde transparente, pero la
+   foto solo cubre el interior: se veía una franja oscura. Ese alto pasa a ser
+   relleno (la foto llega hasta la curva) y se suma al alto mínimo. */
+.hc:has(+ .separador--onda),
+.hc:has(+ .contenedor > .separador--onda:first-child) {
+  --hc-onda-inf: var(--onda-alto);
+  border-bottom: 0;
+  padding-bottom: var(--onda-alto);
 }
 
 /* --- Piezas opcionales: icono del antetítulo, segunda línea, iconos de los
@@ -892,7 +912,10 @@
 .bs {
   position: relative;
   isolation: isolate;
-  height: clamp(34rem, calc(100svh - var(--navbar-alto, 70px)), 56rem);
+  --bs-alto: clamp(34rem, calc(100svh - var(--navbar-alto, 70px)), 56rem);
+  /* El alto de la escena más el de las ondas que la abren y la cierran (ver
+     «Costuras» abajo): la onda no le quita sitio al contenido. */
+  height: calc(var(--bs-alto) + var(--bs-onda-sup, 0px) + var(--bs-onda-inf, 0px));
   overflow: hidden;
   color: #fff;
   background: var(--tinta);
@@ -1023,7 +1046,7 @@
 
 /* Tablet: titular y encuadre un poco más contenidos. */
 @media (max-width: 1024px) {
-  .bs { height: clamp(32rem, 78svh, 46rem); }
+  .bs { --bs-alto: clamp(32rem, 78svh, 46rem); }
   .bs-capitulo h2 { font-size: clamp(2.2rem, 6vw, 3.4rem); }
   .bs-velo {
     background:
@@ -1035,7 +1058,7 @@
 /* Móvil: foto vertical propia, texto abajo, indicadores compactos y táctiles
    (con hueco a la derecha para el botón flotante de WhatsApp). */
 @media (max-width: 780px) {
-  .bs { height: clamp(32rem, 86svh, 42rem); }
+  .bs { --bs-alto: clamp(32rem, 86svh, 42rem); }
   .bs-foto img { object-position: var(--enfoque-movil, var(--enfoque, 50% 50%)); }
   .bs-velo { background: linear-gradient(0deg, rgba(4, 24, 14, 0.95) 0%, rgba(4, 24, 14, 0.6) 48%, rgba(4, 24, 14, 0.15) 100%); }
   .bs-capitulos { align-content: end; padding-bottom: 1.2rem; }
@@ -1048,6 +1071,31 @@
   .bs-progreso-numero { display: block; }
   .bs-progreso-texto { display: none; }
   .bs-flecha:not(.bs-flecha--pausa) { display: none; }
+}
+
+/* --- Escritorio: más compacta (no ocupa toda la pantalla). --- */
+@media (min-width: 1025px) {
+  .bs { --bs-alto: clamp(30rem, 64svh, 38rem); }
+  .bs-numero { font-size: clamp(3.4rem, 5.6vw, 5.4rem); }
+  .bs-capitulo h2 { font-size: clamp(2.2rem, 3.8vw, 3.6rem); }
+}
+
+/* --- Costuras con los separadores «onda». ---------------------------------
+   El separador reserva el alto de la onda con bordes transparentes, pero las
+   fotos solo cubren el interior: se veían franjas oscuras arriba y abajo.
+   Ese alto pasa a ser relleno (las fotos llegan hasta la curva) y se suma al
+   alto de la sección. */
+.separador--onda + .bs,
+.contenedor:has(> .separador--onda:last-child) + .bs {
+  --bs-onda-sup: var(--onda-alto);
+  border-top: 0;
+  padding-top: var(--onda-alto);
+}
+.bs:has(+ .separador--onda),
+.bs:has(+ .contenedor > .separador--onda:first-child) {
+  --bs-onda-inf: var(--onda-alto);
+  border-bottom: 0;
+  padding-bottom: var(--onda-alto);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1384,67 +1432,421 @@
   .bn-foto:hover img { transform: none; }
 }
 
+/* --- Escritorio: más compacta. --------------------------------------------
+   Menos aire arriba y abajo, collage, logo y titular más contenidos, y las
+   hojas del marco algo menores para que no dominen una sección más baja. */
+@media (min-width: 1101px) {
+  .bn--collage { padding-block: clamp(2.2rem, 3.6vw, 3.25rem); }
+  .bn--collage.bn--marco { padding-bottom: clamp(2.8rem, 4.4vw, 4rem); }
+  .bn-collage { height: clamp(22rem, 28vw, 27rem); }
+  .bn-logo { height: clamp(3.6rem, 4.6vw, 4.6rem); margin-bottom: 1rem; }
+  .bn--collage .bn-texto h2 { font-size: clamp(2.2rem, 3.5vw, 3.4rem); }
+  .bn--collage .bn-parrafo { margin-top: 1rem; }
+  .bn--collage .bn-acciones { margin-top: 1.4rem; }
+  .bn-marco { --marco-k: 0.68; --marco-k-inf: 0.5; }
+}
+
+/* --- El alto que el separador «onda» reserva, dentro de la sección. -------
+   El separador sube/baja la sección y la recorta con su curva usando bordes
+   transparentes, pero `overflow: hidden` corta en el borde interior: el fondo
+   cambiaba de tono en esa franja y las hojas del marco se cortaban en recto.
+   Aquí ese alto pasa a ser relleno, así fondo y hojas llegan hasta la curva.
+   Los rellenos de cada ancho van en variables para poder sumarles la onda. */
+.bn--collage { --bn-pt: clamp(2.6rem, 6vw, 5rem); --bn-pb: clamp(2.6rem, 6vw, 5rem); }
+.bn--collage.bn--marco { --bn-pb: clamp(4.5rem, 9vw, 8rem); }
+@media (max-width: 780px) {
+  .bn--collage { --bn-pt: 2.2rem; --bn-pb: 2.6rem; }
+  .bn--collage.bn--marco { --bn-pb: clamp(4.5rem, 9vw, 8rem); }
+}
+@media (min-width: 1101px) {
+  .bn--collage { --bn-pt: clamp(2.2rem, 3.6vw, 3.25rem); --bn-pb: clamp(2.2rem, 3.6vw, 3.25rem); }
+  .bn--collage.bn--marco { --bn-pb: clamp(2.8rem, 4.4vw, 4rem); }
+}
+.separador--onda + .bn--collage,
+.contenedor:has(> .separador--onda:last-child) + .bn--collage {
+  border-top: 0;
+  padding-top: calc(var(--onda-alto) + var(--bn-pt));
+}
+.bn--collage:has(+ .separador--onda),
+.bn--collage:has(+ .contenedor > .separador--onda:first-child) {
+  border-bottom: 0;
+  padding-bottom: calc(var(--onda-alto) + var(--bn-pb));
+}
+
+/* --- Costuras con los separadores «onda» de arriba y de abajo. -------------
+   El mismo vector que el cierre y el pie (también lo usa «Cómo trabajamos»,
+   más arriba): la curva del separador pasa a ser
+   un hilo dorado que se desvanece en los extremos. Los ramitos se quedan. */
+.hc + .separador--onda .onda-organica-curva path:not([class]),
+.hc + .contenedor > .separador--onda:first-child .onda-organica-curva path:not([class]),
+.separador--onda:has(+ .bs) .onda-organica-curva path:not([class]),
+.contenedor:has(> .separador--onda:last-child):has(+ .bs) .onda-organica-curva path:not([class]),
+.bs + .separador--onda .onda-organica-curva path:not([class]),
+.bs + .contenedor > .separador--onda:first-child .onda-organica-curva path:not([class]),
+.separador--onda:has(+ .bn) .onda-organica-curva path:not([class]),
+.contenedor:has(> .separador--onda:last-child):has(+ .bn) .onda-organica-curva path:not([class]),
+.bn + .separador--onda .onda-organica-curva path:not([class]),
+.bn + .contenedor > .separador--onda:first-child .onda-organica-curva path:not([class]) {
+  stroke: #f0b93a;
+  stroke-opacity: 0.85;
+  stroke-width: 2;
+}
+.hc + .separador--onda .onda-organica-curva,
+.hc + .contenedor > .separador--onda:first-child .onda-organica-curva,
+.separador--onda:has(+ .bs) .onda-organica-curva,
+.contenedor:has(> .separador--onda:last-child):has(+ .bs) .onda-organica-curva,
+.bs + .separador--onda .onda-organica-curva,
+.bs + .contenedor > .separador--onda:first-child .onda-organica-curva,
+.separador--onda:has(+ .bn) .onda-organica-curva,
+.contenedor:has(> .separador--onda:last-child):has(+ .bn) .onda-organica-curva,
+.bn + .separador--onda .onda-organica-curva,
+.bn + .contenedor > .separador--onda:first-child .onda-organica-curva {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+}
+
 /* ==========================================================================
    TESTIMONIOS — TestimonialStory
    ========================================================================== */
-.ts { padding-block: clamp(4rem, 9vw, 7rem); overflow: hidden; color: var(--tinta); background: var(--crema); }
-.ts-cabecera { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1.4rem; }
-.ts-cabecera .cmp-kicker { color: var(--marca-600); }
-.ts-cabecera h2 { margin: 0.7rem 0 0; font-size: clamp(2rem, 4.6vw, 3.6rem); letter-spacing: -0.04em; line-height: 1; }
-.ts-mandos { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em; color: var(--gris-600); }
-.ts-mandos span { margin-right: 0.6rem; }
-.ts-mandos button { display: grid; place-items: center; width: 3rem; height: 3rem; border: 1.5px solid rgba(11, 31, 23, 0.2); border-radius: 50%; color: var(--tinta); background: transparent; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
-.ts-mandos button:hover { color: #fff; background: var(--tinta); border-color: var(--tinta); }
+/* Compacta y editorial. Las tarjetas miden según el ancho del contenido
+   (`--ts-w`, el mismo de `.cmp-inner`): dos y un trozo de la tercera en
+   escritorio, dos en tablet, una completa en el teléfono. Nada de anchos
+   fijos: la pista nunca desborda la página (scroll propio, con ajuste). */
+.ts {
+  --ts-w: min(100vw - 2.4rem, 1240px);
+  --ts-hueco: 1.25rem;
+  padding-block: clamp(3rem, 6vw, 4.75rem);
+  overflow: hidden;
+  color: var(--tinta);
+  background: var(--crema);
+}
+
+/* -- Encabezado: títulos a la izquierda, controles abajo a la derecha -- */
+.ts-cabecera { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1.25rem 2rem; }
+.ts-titulos { min-width: 0; }
+.ts-cabecera .cmp-kicker { color: var(--marca-600); text-align: left; }
+.ts-cabecera h2 {
+  max-width: 18ch;
+  margin: 0.6rem 0 0;
+  font-size: clamp(1.9rem, 3.8vw, 3.2rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.ts-mandos { display: flex; align-items: center; gap: 1rem; }
+.ts-contador { font-size: 0.82rem; font-weight: 600; letter-spacing: 0.08em; color: var(--gris-600); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ts-contador b { font-weight: 800; color: var(--tinta); }
+/* Línea de progreso: cuánto del recorrido va visto. */
+.ts-progreso { position: relative; display: block; width: 6.5rem; height: 2px; overflow: hidden; border-radius: 2px; background: rgba(11, 31, 23, 0.14); }
+.ts-progreso i {
+  position: absolute;
+  inset: 0;
+  background: var(--marca-700, var(--tinta));
+  transform: scaleX(var(--ts-avance, 0));
+  transform-origin: left;
+  transition: transform 0.45s var(--ease-cine, ease);
+}
+.ts-flechas { display: flex; gap: 0.5rem; }
+.ts-mandos button {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid rgba(11, 31, 23, 0.16);
+  border-radius: 50%;
+  color: var(--tinta);
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s;
+}
+.ts-mandos button:hover:not(:disabled) { color: #fff; background: var(--marca-800, var(--tinta)); border-color: var(--marca-800, var(--tinta)); }
+.ts-mandos button:disabled { opacity: 0.35; cursor: default; }
 .ts-mandos button:focus-visible { outline: 2px solid var(--marca-600); outline-offset: 3px; }
+
+/* -- Pista -- */
 .ts-pista {
   display: flex;
-  gap: 1.5rem;
-  margin-top: 2.4rem;
-  padding: 0.4rem max(1.2rem, calc((100vw - 1240px) / 2)) 1.4rem;
+  align-items: stretch;
+  gap: var(--ts-hueco);
+  margin-top: clamp(1.6rem, 3vw, 2.2rem);
+  padding: 0.3rem max(1.2rem, calc((100vw - 1240px) / 2)) 1.2rem;
   scroll-padding-inline: max(1.2rem, calc((100vw - 1240px) / 2));
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
 .ts-pista::-webkit-scrollbar { display: none; }
-.ts-pista:focus-visible { outline: 2px solid var(--marca-600); outline-offset: -4px; }
+.ts-pista:focus-visible { outline: 2px solid var(--marca-600); outline-offset: -4px; border-radius: 1rem; }
+
+/* -- Tarjeta -- */
 .ts-panel {
   position: relative;
   display: flex;
-  flex: 0 0 min(86vw, 38rem);
+  flex: 0 0 calc((var(--ts-w) - 2 * var(--ts-hueco)) / 2.35);
   flex-direction: column;
-  gap: 1.2rem;
-  min-height: 22rem;
+  gap: 0.9rem;
+  min-width: 0;
   margin: 0;
-  padding: clamp(1.6rem, 3vw, 2.6rem);
-  border-radius: 1.6rem;
+  padding: clamp(1.35rem, 2vw, 1.85rem);
+  border: 1px solid rgba(11, 31, 23, 0.05);
+  border-radius: 1.1rem;
   background: #fff;
-  box-shadow: 0 1px 0 rgba(11, 31, 23, 0.05), 0 26px 50px -32px rgba(6, 46, 26, 0.4);
+  box-shadow: 0 1px 2px rgba(11, 31, 23, 0.04), 0 14px 32px -22px rgba(6, 46, 26, 0.22);
   scroll-snap-align: start;
+  transition: box-shadow 0.3s ease, transform 0.3s var(--ease-cine, ease);
 }
-.ts-panel::before { content: "“"; display: block; height: 3.2rem; font-family: var(--fuente-editorial); font-size: 7rem; line-height: 0.9; color: var(--acento-500); }
+.ts-panel:hover { transform: translateY(-2px); box-shadow: 0 1px 2px rgba(11, 31, 23, 0.05), 0 18px 36px -22px rgba(6, 46, 26, 0.28); }
+/* Comillas amarillas, discretas. */
+.ts-panel::before {
+  content: "“";
+  display: block;
+  height: 1.5rem;
+  font-family: var(--fuente-editorial);
+  font-size: 3.4rem;
+  line-height: 1;
+  color: var(--acento-500);
+}
 .ts-panel blockquote { flex: 1; margin: 0; }
-.ts-panel blockquote p { margin: 0; font-family: var(--fuente-editorial); font-size: clamp(1.25rem, 2.3vw, 1.65rem); font-style: italic; line-height: 1.38; letter-spacing: -0.01em; }
-.ts-panel figcaption { display: flex; flex-direction: column; gap: 0.2rem; padding-top: 1.2rem; border-top: 1px solid rgba(11, 31, 23, 0.1); }
-.ts-panel figcaption strong { font-size: 1rem; }
-.ts-panel figcaption span { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--marca-600); }
+/* A la izquierda (no justificado: sin huecos irregulares entre palabras). */
+.ts-panel blockquote p {
+  margin: 0;
+  font-family: var(--fuente-editorial);
+  font-size: clamp(1.06rem, 1.35vw, 1.22rem);
+  font-style: italic;
+  line-height: 1.55;
+  letter-spacing: -0.005em;
+  text-align: left;
+  -webkit-hyphens: manual;
+  hyphens: manual;
+  color: var(--tinta);
+}
+
+/* -- Firma: avatar con iniciales, nombre y negocio -- */
+.ts-panel figcaption {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(11, 31, 23, 0.08);
+}
+.ts-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: 50%;
+  object-fit: cover;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--marca-800, var(--tinta));
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+.ts-firma { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.ts-firma strong { font-size: 0.98rem; font-weight: 700; line-height: 1.25; color: var(--tinta); }
+.ts-firma span { font-size: 0.84rem; font-weight: 600; line-height: 1.3; color: var(--marca-600); }
+
+/* Tablet: dos tarjetas (más un borde de la siguiente si sobra sitio). */
+@media (max-width: 1024px) {
+  .ts-panel { flex-basis: calc((var(--ts-w) - var(--ts-hueco)) / 2.12); }
+}
+/* Pantalla mediana: una y un tercio, para que no queden tarjetas estrechas. */
+@media (max-width: 760px) {
+  .ts-panel { flex-basis: calc(var(--ts-w) / 1.3); }
+}
+/* Teléfono: una tarjeta completa por vez. El hueco es mayor que el margen
+   lateral, así que la siguiente no asoma cortada; se llega deslizando. */
+@media (max-width: 600px) {
+  .ts { --ts-hueco: 1.6rem; padding-block: 2.6rem 3rem; }
+  .ts-cabecera { gap: 1rem; }
+  .ts-cabecera h2 { font-size: clamp(1.65rem, 7.4vw, 2.1rem); }
+  .ts-mandos { width: 100%; }
+  .ts-progreso { flex: 1; width: auto; }
+  .ts-mandos button { width: 2.6rem; height: 2.6rem; }
+  .ts-pista { margin-top: 1.3rem; }
+  .ts-panel { flex-basis: var(--ts-w); padding: 1.3rem 1.25rem 1.2rem; }
+  .ts-panel blockquote p { font-size: 1.04rem; line-height: 1.5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ts-pista { scroll-behavior: auto; }
+  .ts-progreso i,
+  .ts-panel { transition: none; }
+  .ts-panel:hover { transform: none; }
+}
 
 /* ==========================================================================
    CIERRE — FinalCTA
    ========================================================================== */
-.fin { position: relative; isolation: isolate; display: grid; place-items: center; min-height: min(82svh, 48rem); overflow: hidden; text-align: center; color: #fff; background: var(--tinta); }
+/* Composición asimétrica y compacta: el mensaje a la izquierda y la foto
+   protagonista a la derecha. El velo oscurece SOLO la franja del texto (y
+   una viñeta baja muy suave); los productos quedan con su luz. */
+.fin {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  min-height: clamp(520px, 64svh, 600px);
+  overflow: hidden;
+  text-align: left;
+  color: #fff;
+  background: var(--tinta);
+}
 .fin-media { position: absolute; inset: -7% 0; z-index: -2; will-change: transform; }
-.fin-media img { width: 100%; height: 100%; object-fit: cover; object-position: var(--enfoque, 50% 50%); }
-.fin-velo { position: absolute; inset: 0; z-index: -1; background: radial-gradient(70% 70% at 50% 50%, rgba(4, 24, 14, 0.45), rgba(4, 24, 14, 0.85)); }
-.fin-cuerpo { padding-block: clamp(3.5rem, 9vw, 7rem); }
-.fin-cuerpo .cmp-kicker { color: var(--acento-400); }
-.fin h2 { margin: 0.9rem 0 0; font-size: clamp(3rem, 9vw, 8rem); font-weight: 800; line-height: 0.88; letter-spacing: -0.05em; text-transform: uppercase; text-wrap: balance; }
-.fin h2 em { display: block; margin-top: 0.04em; font-family: var(--fuente-editorial); font-style: italic; font-weight: 400; letter-spacing: -0.03em; text-transform: none; color: var(--acento-400); }
-.fin-parrafo { max-width: 32ch; margin: 1.3rem auto 0; font-size: 1.15rem; line-height: 1.5; color: rgba(255, 255, 255, 0.85); }
-.fin-acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.9rem; margin-top: 2rem; }
+.fin-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--enfoque, 100% 60%);
+  filter: saturate(1.1) contrast(1.06) brightness(1.03);
+}
+.fin-velo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg,
+      rgba(4, 24, 14, 0.94) 0%,
+      rgba(4, 24, 14, 0.86) 24%,
+      rgba(4, 24, 14, 0.5) 42%,
+      rgba(4, 24, 14, 0.08) 60%,
+      transparent 72%),
+    linear-gradient(0deg, rgba(4, 24, 14, 0.45), transparent 28%),
+    radial-gradient(40% 60% at 8% 30%, color-mix(in srgb, var(--marca-500) 16%, transparent), transparent 70%);
+}
+.fin-cuerpo { padding-block: clamp(2.75rem, 6vw, 4rem) clamp(3.5rem, 7vw, 5rem); }
+.fin-cuerpo > * { max-width: 560px; }
+.fin-cuerpo .cmp-kicker { display: inline-flex; align-items: center; gap: 0.7rem; color: var(--acento-400); }
+.fin-cuerpo .cmp-kicker::before { content: ""; width: 28px; height: 2px; border-radius: 2px; background: currentColor; }
+.fin h2 {
+  margin: 1rem 0 0;
+  font-size: clamp(2.6rem, 5.2vw, 4.7rem);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.fin h2 em {
+  display: block;
+  font-family: var(--fuente-editorial);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--acento-400);
+}
+.fin-parrafo {
+  max-width: 40ch;
+  margin: 1.1rem 0 0;
+  font-size: 1.08rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+  text-align: left;
+}
+.fin-acciones { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.8rem; }
+.fin-acciones .cmp-btn--fantasma { background: rgba(255, 255, 255, 0.06); }
+.fin-acciones .cmp-btn--fantasma:hover { background: rgba(255, 255, 255, 0.14); }
+.fin-acciones .cmp-btn--fantasma .cmp-btn-icono { color: var(--whatsapp, #25d366); }
+
+/* Remate inferior: una curva vectorial (del color de la página) cierra el
+   bloque, con un hilo dorado que la sigue. Hace juego con la loma con la que
+   empieza el pie justo debajo: las dos curvas se responden. */
+.fin::before,
+.fin::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: clamp(28px, 4vw, 60px);
+  z-index: 1;
+  pointer-events: none;
+}
+.fin::after {
+  background: var(--fondo);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60V22C220 50 520 60 820 40S1250 4 1440 24v36Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60V22C220 50 520 60 820 40S1250 4 1440 24v36Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+.fin::before {
+  bottom: 2px;
+  z-index: 2;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop offset='.35' stop-color='%23f0b93a' stop-opacity='0'/%3E%3Cstop offset='.75' stop-color='%23f0b93a' stop-opacity='.85'/%3E%3Cstop offset='1' stop-color='%23f0b93a' stop-opacity='.2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 22C220 50 520 60 820 40S1250 4 1440 24' fill='none' stroke='url(%23g)' stroke-width='2' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+
+/* Remate superior, cuando el bloque va tras un separador «onda». El
+   separador sube el bloque y lo recorta con su curva usando un borde
+   transparente, pero `overflow: hidden` corta en el borde interior y la foto
+   no llegaba ahí: se veía una franja oscura. Aquí ese alto pasa a ser
+   relleno (la foto sube hasta la curva) y sobre la curva va el mismo hilo
+   dorado del remate inferior. Los ramitos del separador se quedan; solo su
+   línea fina se apaga en esta costura para no duplicar el trazo. */
+.separador--onda + .fin,
+.contenedor:has(> .separador--onda:last-child) + .fin {
+  border-top: 0;
+  padding-top: var(--onda-alto);
+}
+.separador--onda:has(+ .fin) .onda-organica-curva,
+.contenedor:has(> .separador--onda:last-child):has(+ .fin) .onda-organica-curva { visibility: hidden; }
+.separador--onda + .fin .fin-velo::before,
+.contenedor:has(> .separador--onda:last-child) + .fin .fin-velo::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--onda-alto);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%23f0b93a' stop-opacity='.2'/%3E%3Cstop offset='.3' stop-color='%23f0b93a' stop-opacity='.85'/%3E%3Cstop offset='.7' stop-color='%23f0b93a' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 38C150 22 330 12 520 26C700 39 840 54 1030 40C1190 28 1320 18 1440 28' fill='none' stroke='url(%23g)' stroke-width='2' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+/* Con la curva volteada, el hilo se voltea igual. */
+.separador--onda-espejo + .fin .fin-velo::before,
+.contenedor:has(> .separador--onda-espejo:last-child) + .fin .fin-velo::before { transform: scaleX(-1); }
+
+/* Atributos comerciales: discretos, una línea, separados por un filete. */
+.fin-atributos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.6rem;
+  margin: 1.6rem 0 0;
+  padding: 1.1rem 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  list-style: none;
+}
+.fin-atributos li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+.fin-atributo-icono {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--marca-400) 20%, transparent);
+  color: var(--marca-300);
+}
+
+/* Móvil: la foto arriba a la vista y el mensaje abajo; el velo pasa a ser
+   vertical para no tapar los productos. */
 @media (max-width: 780px) {
+  .fin { min-height: auto; align-items: flex-end; }
+  .fin-media { inset: 0 0 auto; height: 280px; }
+  .fin-media img { object-position: var(--enfoque, 100% 60%); }
+  .fin-velo {
+    background:
+      linear-gradient(180deg, transparent 0, transparent 150px, rgba(4, 24, 14, 0.75) 230px, rgba(4, 24, 14, 0.97) 280px, rgba(4, 24, 14, 0.97) 100%);
+  }
+  .fin-cuerpo { padding-block: 230px 3.25rem; }
+  .fin h2 { font-size: clamp(2.3rem, 10.5vw, 3rem); }
+  .fin-parrafo { font-size: 1rem; }
   .fin-acciones .cmp-btn { flex: 1 1 100%; justify-content: center; }
+  .fin-atributos { flex-direction: column; gap: 0.55rem; }
 }
 
 /* ---------- Foco visible en enlaces sobre fondo oscuro ---------- */
@@ -1514,6 +1916,9 @@ body:has(.fin) .footer-cta { display: none; }
 .hc--titulo-editorial .hc-kicker {
   font-weight: 800;
   letter-spacing: 0.2em;
+}
+@media (min-width: 1025px) {
+  .hc--titulo-editorial h1 { font-size: clamp(2.3rem, 4.3vw, 4rem); }
 }
 @media (max-width: 780px) {
   .hc--titulo-editorial h1 { max-width: 100%; font-size: clamp(2.05rem, 9.4vw, 2.7rem); }

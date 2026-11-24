@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { almacenamientoFuncional } from "@/lib/legal/cookies";
 import type { ItemCarrito } from "@/lib/tipos";
 
 interface UltimoPedidoState {
@@ -18,6 +19,8 @@ export const useUltimoPedido = create<UltimoPedidoState>()(
     }),
     {
       name: "kryonx-ultimo-pedido",
+      // Categoría funcional: solo se guarda si la persona la aceptó.
+      storage: createJSONStorage(() => almacenamientoFuncional),
       // Mismo motivo que en `estado/carrito.ts`: el servidor siempre pinta
       // `items: []`, y `RepetirPedido` devuelve `null` en ese caso. Sin
       // `skipHydration`, un cliente con un pedido guardado pintaba la tarjeta

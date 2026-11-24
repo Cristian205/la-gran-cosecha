@@ -8,6 +8,7 @@ import { CartDrawer } from "./CartDrawer";
 import { InstalarApp } from "./InstalarApp";
 import { MobileCartBar } from "./MobileCartBar";
 import { WhatsAppButton } from "./WhatsAppButton";
+import { AvisoCookies } from "./AvisoCookies";
 import { AvisoAgregado } from "./tienda/AvisoAgregado";
 import { ProductQuickView } from "./tienda/ProductQuickView";
 import { useCart } from "@/estado/carrito";
@@ -112,6 +113,7 @@ export function CapaCliente({
           )}
           <AvisoAgregado />
           <InstalarApp />
+          <AvisoCookies />
           <ProductQuickView />
           {carritoAbierto && <CartDrawer onCerrar={() => setCarritoAbierto(false)} />}
         </ContextoEnvoltorio.Provider>

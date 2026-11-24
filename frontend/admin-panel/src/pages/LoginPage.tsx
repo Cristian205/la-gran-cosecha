@@ -40,6 +40,9 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [verClave, setVerClave] = useState(false);
   const [recordar, setRecordar] = useState(true);
+  // «No pedir el código otra vez hoy en este equipo». Marcada de entrada:
+  // es lo que se pidió; en un equipo compartido se desmarca.
+  const [confiarDispositivo, setConfiarDispositivo] = useState(true);
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [ticket, setTicket] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -173,7 +176,12 @@ export function LoginPage() {
     }
     setCargando(true);
     try {
-      const resp = await loginPaso1(email, password);
+      const resp = await loginPaso1(email, password, recordar);
+      // Este equipo ya confirmó el código hoy: entra sin pedirlo otra vez.
+      if ("access" in resp) {
+        entrar(resp.user);
+        return;
+      }
       setTicket(resp.otp_ticket);
       setPaso(2);
       setOtpDigits(Array(OTP_LENGTH).fill(""));
@@ -186,18 +194,23 @@ export function LoginPage() {
     }
   }
 
+  /** Sesión abierta (con o sin código): al panel, o a cambiar la contraseña. */
+  function entrar(user: Usuario) {
+    setUsuario(user);
+    if (user.debe_cambiar_password) {
+      setUsuarioPendiente(user);
+      setPaso(3);
+    } else {
+      navigate("/");
+    }
+  }
+
   async function confirmarOtp(codigo: string) {
     setError(null);
     setCargando(true);
     try {
-      const resp = await verificarOtp(ticket, codigo, recordar);
-      setUsuario(resp.user);
-      if (resp.user.debe_cambiar_password) {
-        setUsuarioPendiente(resp.user);
-        setPaso(3);
-      } else {
-        navigate("/");
-      }
+      const resp = await verificarOtp(ticket, codigo, recordar, confiarDispositivo ? { email } : undefined);
+      entrar(resp.user);
     } catch (err) {
       setError(extraerMensajeError(err, "Código incorrecto o expirado."));
     } finally {
@@ -512,6 +525,17 @@ export function LoginPage() {
                   ))}
                 </div>
               </fieldset>
+
+              {!recuperar && (
+                <label className="acceso__recordar acceso__confiar">
+                  <input
+                    type="checkbox"
+                    checked={confiarDispositivo}
+                    onChange={(e) => setConfiarDispositivo(e.target.checked)}
+                  />
+                  <span>No volver a pedir el código hoy en este equipo</span>
+                </label>
+              )}
 
               <button type="submit" className="acceso__enviar" disabled={cargando}>
                 {cargando ? "Validando…" : recuperar === "codigo" ? "Verificar código" : "Confirmar identidad"}

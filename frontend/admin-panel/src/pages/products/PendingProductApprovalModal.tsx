@@ -333,6 +333,8 @@ export function PendingProductApprovalModal({ pendiente, categorias, unidades, o
       clase="modal-pedido modal-aprobacion"
       titulo="Revisar producto sugerido"
       onCerrar={cerrar}
+      // `cerrar` ya pregunta antes de descartar: el modal no repite la pregunta.
+      preguntaAlCerrar
       subtitulo={
         <span className="gp-meta">
           <span className="gp-meta-origen">

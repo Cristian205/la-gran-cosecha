@@ -217,6 +217,12 @@
   margin-inline: 0;
 }
 
+/* «No volver a pedir el código hoy»: entre los dígitos y el botón. */
+.acceso__confiar {
+  margin: 16px 0 20px;
+  font-size: 14px;
+}
+
 .acceso__entrada {
   position: relative;
   display: flex;

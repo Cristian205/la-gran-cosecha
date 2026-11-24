@@ -625,6 +625,7 @@ class ClienteViewSet(TenantScopedMixin, viewsets.ModelViewSet):
         if query:
             qs = qs.filter(
                 Q(nombre_cliente__icontains=query)
+                | Q(negocio_cliente__icontains=query)
                 | Q(telefono_cliente__icontains=query)
                 | Q(documento_cliente__icontains=query)
             )

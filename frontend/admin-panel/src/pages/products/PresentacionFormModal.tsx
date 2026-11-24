@@ -350,6 +350,8 @@ export function PresentacionFormModal({
         />
       }
       onCerrar={cerrar}
+      // `cerrar` ya pregunta antes de descartar: el modal no repite la pregunta.
+      preguntaAlCerrar
       footer={pie}
     >
       <form

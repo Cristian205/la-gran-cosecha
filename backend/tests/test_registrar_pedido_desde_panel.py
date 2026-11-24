@@ -125,3 +125,106 @@ def test_una_presentacion_inactiva_no_se_puede_apuntar(
 
     assert respuesta.status_code == 400, respuesta.content
     assert Pedido.objects.count() == 0
+
+
+# ==========================================================================
+# CANAL Y PRODUCTOS MANUALES (asistente «Registrar pedido»)
+# ==========================================================================
+def test_guarda_por_donde_llego_el_pedido(api_owner, presentacion, cliente_negocio):
+    respuesta = api_owner.post(
+        RUTA,
+        {
+            "cliente_id": cliente_negocio.id,
+            "items": [{"presentacion_id": presentacion.id, "cantidad": "1"}],
+            "canal": "WHATSAPP",
+        },
+        format="json",
+    )
+    assert respuesta.status_code == 201, respuesta.content
+    assert Pedido.objects.get(pk=respuesta.json()["pedido_id"]).canal == "WHATSAPP"
+
+
+def test_sin_canal_queda_vacio(api_owner, presentacion, cliente_negocio):
+    respuesta = api_owner.post(
+        RUTA,
+        {"cliente_id": cliente_negocio.id, "items": [{"presentacion_id": presentacion.id, "cantidad": "1"}]},
+        format="json",
+    )
+    assert Pedido.objects.get(pk=respuesta.json()["pedido_id"]).canal == ""
+
+
+def test_un_canal_desconocido_se_rechaza(api_owner, presentacion, cliente_negocio):
+    respuesta = api_owner.post(
+        RUTA,
+        {
+            "cliente_id": cliente_negocio.id,
+            "items": [{"presentacion_id": presentacion.id, "cantidad": "1"}],
+            "canal": "PALOMA",
+        },
+        format="json",
+    )
+    assert respuesta.status_code == 400
+    assert not Pedido.objects.exists()
+
+
+def test_apunta_productos_manuales_junto_a_los_del_catalogo(
+    api_owner, presentacion, cliente_negocio, unidad
+):
+    respuesta = api_owner.post(
+        RUTA,
+        {
+            "cliente_id": cliente_negocio.id,
+            "items": [{"presentacion_id": presentacion.id, "cantidad": "2"}],
+            "personalizados": [
+                {"nombre": " Guascas ", "cantidad": "3", "precio_unitario": "1500", "unidad_id": unidad.id}
+            ],
+        },
+        format="json",
+    )
+
+    assert respuesta.status_code == 201, respuesta.content
+    pedido = Pedido.objects.get(pk=respuesta.json()["pedido_id"])
+    manual = pedido.detalles.get(es_catalogo=False)
+    assert manual.nombre_personalizado == "Guascas"
+    assert manual.unidad_personalizada_id == unidad.id
+    # Las puso el negocio, no el cliente.
+    assert manual.origen == "ADMIN" and manual.agregado_por is not None
+    # El total suma las dos: 2 × 10000 + 3 × 1500.
+    assert pedido.total_pedido == 24500
+
+
+def test_un_pedido_solo_con_productos_manuales_se_apunta(api_owner, cliente_negocio):
+    respuesta = api_owner.post(
+        RUTA,
+        {"cliente_id": cliente_negocio.id, "personalizados": [{"nombre": "Guascas", "cantidad": "1"}]},
+        format="json",
+    )
+    assert respuesta.status_code == 201, respuesta.content
+    pedido = Pedido.objects.get(pk=respuesta.json()["pedido_id"])
+    assert pedido.detalles.count() == 1 and pedido.total_pedido == 0
+
+
+def test_el_cliente_nuevo_guarda_el_negocio_y_su_contacto(api_owner, presentacion):
+    respuesta = api_owner.post(
+        RUTA,
+        {
+            "cliente_nuevo": {"nombre": " Carlos Ruiz ", "negocio": " Restaurante El Fogón "},
+            "items": [{"presentacion_id": presentacion.id, "cantidad": "1"}],
+        },
+        format="json",
+    )
+    assert respuesta.status_code == 201, respuesta.content
+    cliente = Pedido.objects.get(pk=respuesta.json()["pedido_id"]).cliente
+    assert cliente.nombre_cliente == "Carlos Ruiz"
+    assert cliente.negocio_cliente == "Restaurante El Fogón"
+
+
+def test_los_clientes_se_buscan_tambien_por_el_negocio(api_owner, negocio):
+    from apps.tenancy.context import usar_tenant
+
+    with usar_tenant(negocio):
+        Cliente.objects.create(nombre_cliente="Carlos Ruiz", negocio_cliente="Restaurante El Fogón")
+        Cliente.objects.create(nombre_cliente="Ana Gómez", negocio_cliente="Panadería La Espiga")
+    datos = api_owner.get("/api/clients/", {"q": "fogón"}).json()
+    filas = datos["results"] if isinstance(datos, dict) else datos
+    assert [c["nombre_cliente"] for c in filas] == ["Carlos Ruiz"]

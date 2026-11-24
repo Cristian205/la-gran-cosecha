@@ -15,14 +15,31 @@ function usePieALaVista(): boolean {
   const pathname = usePathname();
 
   useEffect(() => {
-    const pie = document.querySelector("footer.footer");
-    if (!pie || typeof IntersectionObserver === "undefined") return;
+    if (typeof IntersectionObserver === "undefined") return;
     const observador = new IntersectionObserver(
       ([entrada]) => setVisible(entrada.isIntersecting),
       { threshold: 0 }
     );
-    observador.observe(pie);
-    return () => observador.disconnect();
+    // El pie puede montarse después que este botón (llega como bloque del
+    // armazón): si aún no está, se espera a que aparezca en el DOM.
+    let espera: MutationObserver | null = null;
+    const pie = document.querySelector("footer.footer");
+    if (pie) {
+      observador.observe(pie);
+    } else {
+      espera = new MutationObserver(() => {
+        const encontrado = document.querySelector("footer.footer");
+        if (!encontrado) return;
+        observador.observe(encontrado);
+        espera?.disconnect();
+        espera = null;
+      });
+      espera.observe(document.body, { childList: true, subtree: true });
+    }
+    return () => {
+      observador.disconnect();
+      espera?.disconnect();
+    };
   }, [pathname]);
 
   return visible;

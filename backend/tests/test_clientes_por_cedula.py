@@ -30,7 +30,7 @@ def por_cedula(negocio):
 def _pedido(presentacion, **cliente):
     # La tienda siempre manda la autorización de datos (Ley 1581) marcada:
     # sin ella no deja enviar el pedido. Ver test_consentimiento.py.
-    cliente = {"autoriza_datos": True, **cliente}
+    cliente = {"autoriza_datos": True, "negocio": "Negocio de prueba", **cliente}
     return {"cliente": cliente, "items": [{"presentacion_id": presentacion.id, "cantidad": 2}]}
 
 
@@ -72,11 +72,11 @@ def test_por_defecto_consultar_una_cedula_no_existe(api, negocio):
 # PRIMER PEDIDO: LOS DATOS Y EL ACUERDO, UNA SOLA VEZ
 # ==========================================================================
 def test_el_primer_pedido_exige_datos_y_acuerdo(api, por_cedula, presentacion):
-    respuesta = api.post("/api/orders/", _pedido(presentacion, cedula=CEDULA), format="json")
+    respuesta = api.post("/api/orders/", _pedido(presentacion, cedula=CEDULA, negocio=""), format="json")
 
     assert respuesta.status_code == 400
     faltan = respuesta.json()["cliente"]
-    assert set(faltan) == {"nombre", "telefono", "direccion", "acepta_precios"}
+    assert set(faltan) == {"nombre", "negocio", "telefono", "direccion", "acepta_precios"}
     assert not Pedido.objects.exists()
 
 

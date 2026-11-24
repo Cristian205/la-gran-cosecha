@@ -3038,98 +3038,61 @@ h1, h2, h3 {
 }
 
 /* ---------- Footer ----------
-   El cierre de la tienda y la firma de la marca. La jerarquía baja por
-   escalones: marca, las dos acciones (tienda y WhatsApp), títulos de columna,
-   enlaces, identificación del comercio y copyright. Cada escalón pierde peso
-   o contraste respecto al anterior; nada compite con la marca.
-   En móvil las listas colapsan en acordeones para no apilar un pie enorme
-   sobre el carrito y la barra de navegación. */
+   La última pieza publicitaria de la marca. Tres capas:
+     1. Vitrina: titular + CTA y un bodegón fotográfico (una sola escena, con
+        luz y sombras coherentes) que se funde con el verde, se posa sobre un
+        filo dorado y asoma por encima del borde superior.
+     2. Franja institucional en una fila: marca | contacto | legales.
+     3. Copyright y crédito.
+   Fondo verde bosque con luz ambiental detrás de los productos; el dorado y
+   el verde claro son los únicos acentos. */
 .footer {
+  --f-fondo: var(--footer-fondo, var(--marca-900));
   --f-fuerte: var(--footer-texto, white);
-  --f-texto: color-mix(in srgb, var(--footer-texto, white) 74%, transparent);
-  --f-suave: color-mix(in srgb, var(--footer-texto, white) 58%, transparent);
-  --f-linea: color-mix(in srgb, var(--footer-texto, white) 9%, transparent);
+  --f-texto: color-mix(in srgb, var(--footer-texto, white) 78%, transparent);
+  --f-suave: color-mix(in srgb, var(--footer-texto, white) 60%, transparent);
+  --f-linea: color-mix(in srgb, var(--footer-texto, white) 12%, transparent);
   --f-acento: var(--marca-400);
+  --f-oro: #f0b93a;
+  --f-dur: 0.22s;
   --f-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --f-dur: 0.24s;
   position: relative;
   isolation: isolate;
-  margin-top: 3rem;
-  background: linear-gradient(
-    180deg,
-    var(--footer-fondo, var(--tinta)),
-    color-mix(in srgb, var(--footer-fondo, var(--marca-900)) 86%, black)
-  );
+  /* El bodegón asoma por arriba y sale por la derecha: se recorta en
+     horizontal (sin barra de desplazamiento) pero sigue subiendo. */
+  overflow-x: clip;
+  margin-top: 5.5rem;
+  background:
+    radial-gradient(48% 70% at 74% 38%, color-mix(in srgb, var(--marca-500) 22%, transparent), transparent 70%),
+    radial-gradient(30% 40% at 30% 10%, color-mix(in srgb, var(--acento-400) 6%, transparent), transparent 70%),
+    radial-gradient(60% 80% at 0% 100%, color-mix(in srgb, black 28%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--f-fondo), color-mix(in srgb, var(--f-fondo) 84%, black));
   color: var(--f-texto);
+  font-size: 0.84rem;
 }
-/* Curva orgánica en el borde superior: separa el pie del contenido sin una
-   línea dura, guiño al carácter agrícola sin llenar de ilustraciones. */
-.footer::before {
-  content: "";
-  position: absolute;
-  top: -22px;
-  left: 0;
-  right: 0;
-  height: 24px;
-  background: inherit;
-  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-}
-/* La atmósfera: dos luces verdes muy tenues, curvas de nivel en una esquina
-   (campo y cartografía: lo agrícola y lo técnico a la vez) y un grano casi
-   imperceptible que le quita el plano de color digital. Todo por debajo del
-   contenido y sin capturar el puntero. */
+/* Borde superior: una loma larga y suave, no una ola marcada. */
+.footer::before,
 .footer::after {
   content: "";
   position: absolute;
-  inset: 0;
-  z-index: -1;
+  left: 0;
+  right: 0;
+  bottom: calc(100% - 1px);
+  height: clamp(30px, 4.2vw, 64px);
   pointer-events: none;
-  background:
-    radial-gradient(55% 60% at 6% 0%, color-mix(in srgb, var(--marca-400) 9%, transparent), transparent 70%),
-    radial-gradient(40% 55% at 100% 100%, color-mix(in srgb, var(--marca-300) 6%, transparent), transparent 70%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400' fill='none' stroke='white' stroke-opacity='0.055'%3E%3Cpath d='M300 25c115 0 205 65 205 165s-110 185-215 185S90 300 90 200 185 25 300 25Z'/%3E%3Cpath d='M300 60c90 0 170 50 170 130s-90 150-180 150-160-60-160-140S210 60 300 60Z'/%3E%3Cpath d='M300 95c70 0 135 40 135 100s-70 115-140 115-125-45-125-108S230 95 300 95Z'/%3E%3Cpath d='M300 130c50 0 100 28 100 68s-50 80-100 80-90-32-90-75 40-73 90-73Z'/%3E%3Cpath d='M302 165c30 0 62 16 62 38s-32 46-62 46-55-18-55-42 25-42 55-42Z'/%3E%3C/svg%3E")
-      right -140px top -90px / 680px auto no-repeat,
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+}
+.footer::before {
+  background: var(--f-fondo);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 64' preserveAspectRatio='none'%3E%3Cpath d='M0 64V44C300 10 620 2 900 20s400 34 540 10v34Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 64' preserveAspectRatio='none'%3E%3Cpath d='M0 64V44C300 10 620 2 900 20s400 34 540 10v34Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+/* Un hilo dorado sigue la curva y se desvanece: une el pie con la sección
+   anterior sin una línea dura. */
+.footer::after {
+  bottom: calc(100% + 3px);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 64' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%23f0b93a' stop-opacity='0'/%3E%3Cstop offset='.25' stop-color='%23f0b93a' stop-opacity='.8'/%3E%3Cstop offset='.6' stop-color='%23f0b93a' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 44C300 10 620 2 900 20s400 34 540 10' fill='none' stroke='url(%23g)' stroke-width='2' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
 }
 
-/* El CTA se lee como un bloque comercial aparte y no como la primera fila del
-   pie: una tarjeta propia, con esquinas redondeadas y aire alrededor, en vez
-   de una franja a todo lo ancho pegada al resto. */
-.footer-cta {
-  position: relative;
-  margin: 0 clamp(1rem, 4vw, 2.5rem) 0.5rem;
-  padding-top: 2.6rem;
-  border-radius: var(--radio-lg);
-  background:
-    radial-gradient(560px 220px at 15% 0%, rgba(34, 197, 94, 0.26), transparent 65%),
-    radial-gradient(460px 220px at 88% 100%, rgba(245, 158, 11, 0.18), transparent 60%),
-    color-mix(in srgb, var(--footer-fondo, var(--tinta)) 60%, black 12%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.22);
-}
-.footer-cta-inner {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 2.6rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-.footer-cta h2 {
-  margin: 0 0 0.4rem;
-  color: white;
-  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
-}
-.footer-cta p { margin: 0; font-size: 0.94rem; color: rgba(255, 255, 255, 0.75); }
-.footer-cta-acciones { display: flex; gap: 0.7rem; flex-wrap: wrap; }
-.footer-cta-acciones .btn { transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease; }
-.footer-cta-acciones .btn svg { transition: transform 0.18s ease; }
-.footer-cta-acciones .btn:hover svg { transform: translateX(2px); }
-@media (prefers-reduced-motion: reduce) {
-  .footer-cta-acciones .btn, .footer-cta-acciones .btn svg { transition: none; }
-}
 .btn-whatsapp {
   background: var(--whatsapp);
   color: white;
@@ -3137,36 +3100,124 @@ h1, h2, h3 {
 }
 .btn-whatsapp:hover { filter: brightness(1.06); transform: translateY(-1px); }
 
-/* Escritorio: Marca | Contacto | Productos | Empresa | Legal y ayuda. */
-.footer-top {
+/* -- 1. Vitrina -- */
+.footer-vitrina {
+  position: relative;
   max-width: 1240px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 2.75rem;
+  padding: 0 1.5rem;
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.15fr) minmax(0, 0.9fr) minmax(0, 0.9fr);
-  gap: 2.5rem;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: end;
+  min-height: clamp(250px, 19vw, 320px);
+  gap: 1rem;
 }
-.footer-top--con-legal {
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.15fr) minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.1fr);
-  gap: 2.25rem;
+.footer-vitrina-texto { align-self: center; padding: 0.6rem 0 2.2rem; position: relative; z-index: 1; }
+.footer-vitrina-antetitulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0 0 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--f-oro);
+}
+.footer-vitrina-antetitulo::before {
+  content: "";
+  width: 30px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--f-oro);
+}
+.footer-vitrina-titular {
+  margin: 0;
+  max-width: 15ch;
+  font-size: clamp(1.75rem, 3.15vw, 2.8rem);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--f-fuerte);
+  text-wrap: balance;
+}
+.footer-vitrina-titular em {
+  position: relative;
+  font-style: normal;
+  color: var(--marca-300);
+  white-space: nowrap;
+}
+/* Trazo a mano bajo la palabra resaltada, en el dorado de la marca. */
+.footer-vitrina-titular em::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: -4%;
+  bottom: -0.14em;
+  height: 0.26em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14' preserveAspectRatio='none'%3E%3Cpath d='M3 10C50 4 120 2 197 6' fill='none' stroke='%23f0b93a' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+/* La foto del camión: una capa panorámica a la derecha de la vitrina, a
+   sangre hasta el borde de la pantalla. Sin rectángulo: el borde izquierdo
+   es una curva que se disuelve en el verde (máscara radial) y arriba y abajo
+   se funde con el fondo. El camión queda a la derecha (`object-position`). */
+.footer-vitrina-visual {
+  position: absolute;
+  z-index: 0;
+  top: -36px;
+  bottom: 0;
+  right: calc(50% - 50vw);
+  /* Ancho acotado: la foto nunca pasa de ~3:1 y el camión no se recorta. */
+  width: min(66vw, 1060px);
+  pointer-events: none;
+}
+.footer-vitrina-foto {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 85% 58%;
+  filter: saturate(1.05) contrast(1.03);
+  -webkit-mask-image:
+    radial-gradient(130% 150% at 100% 50%, #000 52%, transparent 78%),
+    linear-gradient(180deg, transparent 0, #000 18%, #000 80%, transparent 100%);
+  -webkit-mask-composite: source-in;
+          mask-image:
+    radial-gradient(130% 150% at 100% 50%, #000 52%, transparent 78%),
+    linear-gradient(180deg, transparent 0, #000 18%, #000 80%, transparent 100%);
+          mask-composite: intersect;
+}
+/* Filo dorado ondulado a todo el ancho. */
+.footer-vitrina-filo {
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  width: 100vw;
+  height: 34px;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
-/* -- 1. Marca -- */
-.footer-marca {
-  display: flex;
+/* -- 2. Franja institucional: marca y contacto en una línea (contacto a la
+   derecha); los legales debajo, a todo el ancho y con aire. -- */
+.footer-institucional {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1.3rem 1.5rem 1.15rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.85rem;
-  margin-bottom: 1.4rem;
+  column-gap: 2rem;
 }
+.footer-marca-bloque { display: flex; align-items: center; gap: 0.9rem; min-width: 0; flex: 0 1 auto; }
 .footer-logo {
   flex: none;
   display: grid;
   place-items: center;
   width: 56px;
   height: 56px;
-  border-radius: 16px;
+  border-radius: 15px;
   overflow: hidden;
-  font-size: 1.45rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: var(--f-fuerte);
 }
@@ -3175,402 +3226,273 @@ h1, h2, h3 {
   background: color-mix(in srgb, var(--marca-400) 20%, transparent);
   border: 1px solid color-mix(in srgb, var(--f-fuerte) 14%, transparent);
 }
-.footer-marca-texto { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.footer-marca-texto { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 .footer-marca-nombre {
-  font-size: 1.32rem;
+  font-family: var(--fuente-titulos, var(--fuente-sitio));
+  font-size: 1.15rem;
   font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  line-height: 1.2;
   color: var(--f-fuerte);
 }
-/* La frase institucional firma, no explica: pequeña, espaciada y en el verde
-   claro de la marca, un paso por debajo del nombre. */
-.footer-firma {
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: color-mix(in srgb, var(--marca-300) 78%, transparent);
-}
-.footer-tagline {
-  margin: 0 0 0.45rem;
-  max-width: 340px;
-  font-size: 1.05rem;
-  font-weight: 700;
-  line-height: 1.4;
-  color: var(--f-fuerte);
-}
+/* Una sola línea, en verde: firma la marca, no la explica. */
 .footer-lema {
-  margin: 0 0 1.1rem;
-  max-width: 340px;
-  font-size: 0.88rem;
-  line-height: 1.65;
-  color: var(--f-texto);
-}
-.footer-info-lineas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem 1.25rem;
-  margin: 0 0 1.5rem;
-  padding: 0;
-  list-style: none;
-}
-.footer-info-linea {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
+  margin: 0;
+  max-width: 42ch;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 0.82rem;
-  color: var(--f-suave);
-}
-.footer-info-linea svg { color: var(--f-acento); flex-shrink: 0; }
-
-/* "Explorar tienda": cápsula de vidrio con la flecha en su propio círculo de
-   marca. Presencia sin gritar; el botón lleno es WhatsApp. */
-.footer-btn-tienda {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  min-height: 44px;
-  padding: 0.4rem 0.4rem 0.4rem 1.15rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--f-fuerte) 16%, transparent);
-  background: color-mix(in srgb, var(--f-fuerte) 6%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--f-fuerte) 7%, transparent);
-  color: var(--f-fuerte);
-  font-size: 0.88rem;
-  font-weight: 700;
-  transition:
-    background var(--f-dur) var(--f-ease),
-    border-color var(--f-dur) var(--f-ease),
-    box-shadow var(--f-dur) var(--f-ease),
-    transform var(--f-dur) var(--f-ease);
-}
-.footer-btn-tienda-flecha {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--f-acento);
-  color: var(--marca-900);
-  transition: transform var(--f-dur) var(--f-ease);
-}
-.footer-btn-tienda:hover {
-  background: color-mix(in srgb, var(--f-fuerte) 11%, transparent);
-  border-color: color-mix(in srgb, var(--f-acento) 55%, transparent);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 color-mix(in srgb, var(--f-fuerte) 9%, transparent);
-  transform: translateY(-1px);
-}
-.footer-btn-tienda:hover .footer-btn-tienda-flecha { transform: translateX(3px); }
-.footer-btn-tienda:active { transform: translateY(0); }
-
-.footer-redes { display: flex; gap: 0.6rem; margin-top: 1.4rem; }
-.footer-redes a {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--f-fuerte) 14%, transparent);
-  color: var(--f-texto);
-  transition:
-    background var(--f-dur) var(--f-ease),
-    border-color var(--f-dur) var(--f-ease),
-    color var(--f-dur) var(--f-ease),
-    transform var(--f-dur) var(--f-ease);
-}
-.footer-redes a:hover {
-  background: color-mix(in srgb, var(--f-acento) 18%, transparent);
-  border-color: color-mix(in srgb, var(--f-acento) 50%, transparent);
-  color: var(--f-fuerte);
-  transform: translateY(-2px);
+  font-weight: 600;
+  color: var(--marca-300);
+  text-align: left;
 }
 
-/* -- Títulos de columna: pequeños, espaciados, con una raya de marca -- */
-.footer-col h4 {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin: 0 0 1.05rem;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--f-fuerte);
-}
-.footer-col h4::before {
-  content: "";
-  flex: none;
-  width: 12px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--f-acento);
-}
-.footer-col-toggle { display: none; }
-
-/* -- Enlaces: peso menor que los títulos; al pasar, se aclaran y avanzan -- */
-.footer-col-panel { display: flex; flex-direction: column; align-items: flex-start; }
-.footer-col-panel a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 32px;
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: var(--f-texto);
-  transition: color var(--f-dur) var(--f-ease), transform var(--f-dur) var(--f-ease);
-}
-.footer-col-panel a:hover { color: var(--f-fuerte); transform: translateX(3px); }
-/* "Ver catálogo" es la puerta a la tienda: blanco, más peso y su flecha. */
-.footer-col-panel a.footer-enlace-principal {
-  margin-bottom: 0.2rem;
-  font-weight: 700;
-  color: var(--f-fuerte);
-}
-.footer-enlace-principal svg {
-  color: var(--f-acento);
-  transition: transform var(--f-dur) var(--f-ease);
-}
-.footer-enlace-principal:hover svg { transform: translateX(2px); }
-
-/* Legal y Ayuda comparten columna en escritorio. */
-.footer-col-grupo { display: flex; flex-direction: column; gap: 1.6rem; min-width: 0; }
-
-/* -- 2. Contacto: WhatsApp es la acción; el resto, datos ligeros -- */
-.footer-ayuda-texto { margin: -0.35rem 0 1rem; font-size: 0.85rem; line-height: 1.6; }
-.footer-btn-wsp {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  min-height: 46px;
-  margin-bottom: 1.3rem;
-  padding: 0.6rem 1.25rem;
-  border-radius: 999px;
-  background: var(--whatsapp);
-  color: white;
-  font-size: 0.88rem;
-  font-weight: 700;
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--whatsapp) 24%, transparent);
-  transition:
-    transform var(--f-dur) var(--f-ease),
-    box-shadow var(--f-dur) var(--f-ease),
-    filter var(--f-dur) var(--f-ease);
-}
-.footer-btn-wsp:hover {
-  filter: brightness(1.05);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 26px color-mix(in srgb, var(--whatsapp) 32%, transparent);
-}
-.footer-btn-wsp:active { transform: translateY(0); }
 .footer-contacto {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem clamp(1rem, 2vw, 1.75rem);
   margin: 0;
   padding: 0;
   list-style: none;
+  justify-content: flex-end;
 }
 .footer-contacto-item {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.5rem;
   min-height: 32px;
-  font-size: 0.86rem;
-  color: var(--f-texto);
-  overflow-wrap: anywhere;
+  color: var(--f-fuerte);
+  font-weight: 500;
+  white-space: nowrap;
 }
-.footer-contacto-item svg { flex: none; color: var(--f-acento); }
-a.footer-contacto-item {
-  transition: color var(--f-dur) var(--f-ease), transform var(--f-dur) var(--f-ease);
-}
-a.footer-contacto-item:hover { color: var(--f-fuerte); transform: translateX(3px); }
+.footer-contacto-item svg { flex: none; width: 17px; height: 17px; color: var(--f-acento); }
+a.footer-contacto-item { transition: color var(--f-dur) ease; }
+a.footer-contacto-item:hover { color: var(--f-acento); }
 
-.footer-col-panel a:focus-visible,
-.footer-btn-tienda:focus-visible,
-.footer-btn-wsp:focus-visible,
-.footer-col-toggle:focus-visible,
-.footer-redes a:focus-visible,
-a.footer-contacto-item:focus-visible,
-.footer-identidad a:focus-visible,
-.footer-legal a:focus-visible {
-  outline: 2px solid var(--f-acento);
-  outline-offset: 3px;
-  border-radius: 8px;
-}
-
-/* -- 5. Barra institucional: quién vende y cómo encontrarlo -- */
-.footer-identidad {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 1.05rem 1.5rem;
-  border-top: 1px solid var(--f-linea);
+/* Legales: más aire y un separador fino entre cada uno. */
+.footer-legal {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.35rem 2rem;
+  grid-column: 1 / -1;
+  row-gap: 0.35rem;
+  margin-top: 0.9rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--f-linea);
   font-size: 0.8rem;
-  line-height: 1.55;
-  color: var(--f-suave);
 }
-.footer-identidad-datos { display: flex; flex-wrap: wrap; align-items: center; margin: 0; }
-/* El separador es un punto dibujado, no un "·" de texto: no se queda
-   colgando al final de una línea cuando la fila se parte. */
-.footer-identidad-datos > span + span::before {
+.footer-legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--f-texto);
+  white-space: nowrap;
+  transition: color var(--f-dur) ease;
+}
+.footer-legal a + a::before {
   content: "";
-  display: inline-block;
-  width: 3px;
-  height: 3px;
-  margin: 0 0.65rem;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.55;
-  vertical-align: middle;
+  width: 1px;
+  height: 0.9em;
+  margin: 0 0.85rem;
+  background: var(--f-linea);
 }
-.footer-identidad-nombre { font-weight: 600; color: var(--f-texto); }
-.footer-identidad a { color: inherit; transition: color var(--f-dur) var(--f-ease); }
-.footer-identidad a:hover { color: var(--f-fuerte); }
+.footer-legal a:hover { color: var(--f-fuerte); }
 
-/* -- 6. Copyright: el último escalón, pero legible -- */
+/* -- 3. Franja inferior -- */
 .footer-bottom {
   max-width: 1240px;
   margin: 0 auto;
   border-top: 1px solid var(--f-linea);
-  padding: 1.1rem 1.5rem 1.4rem;
+  padding: 0.8rem 1.5rem 0.9rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
   flex-wrap: wrap;
-  font-size: 0.8rem;
+  gap: 0.35rem 1.5rem;
+  font-size: 0.76rem;
   color: var(--f-suave);
 }
-.footer-legal { display: flex; gap: 1.4rem; }
-.footer-legal a { color: var(--f-suave); transition: color var(--f-dur) var(--f-ease); }
-.footer-legal a:hover { color: var(--f-fuerte); }
-.footer--minimo .footer-legal { flex-wrap: wrap; row-gap: 0.4rem; }
+.footer-bottom p { margin: 0; text-align: left; }
+.footer-credito strong { font-weight: 700; color: var(--f-fuerte); letter-spacing: 0.01em; }
 
-/* Tablet: marca a dos columnas junto al contacto; los enlaces, debajo. */
-@media (max-width: 1100px) {
-  .footer-top,
-  .footer-top--con-legal {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 2.5rem 2rem;
-  }
-  .footer-marca-col { grid-column: span 2; }
-  .footer::after { background-size: auto, auto, 520px auto, auto; }
+a.footer-contacto-item:focus-visible,
+.footer-legal a:focus-visible {
+  outline: 2px solid var(--f-oro);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
-/* Móvil: un pie pensado para el pulgar. Marca, contacto completo y luego las
-   listas como acordeones: todo sigue ahí, a un toque, sin un pie interminable. */
+/* Tablet: el contacto baja bajo la marca. */
+@media (max-width: 1180px) {
+  .footer-contacto { grid-column: 1 / -1; justify-content: flex-start; margin-top: 0.9rem; }
+}
+
+/* Tablet: el bodegón se encoge, el ritmo se mantiene. */
+@media (max-width: 1100px) {
+  .footer-vitrina { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
+}
+
+/* Móvil: el bodegón arriba, a sangre y asomando sobre el borde; luego
+   titular y CTA a todo el ancho; la franja institucional se apila. */
 @media (max-width: 780px) {
-  .footer { margin-top: 2rem; }
-  .footer::after {
-    background-position: 0 0, 0 0, right -190px top -120px, 0 0;
-    background-size: auto, auto, 460px auto, auto;
-  }
-  .footer-cta { margin: 0 0.7rem 0.5rem; }
-  .footer-cta-inner { padding: 1.8rem 1.1rem; text-align: center; justify-content: center; }
-  .footer-cta h2 { font-size: 1.15rem; }
-  .footer-cta-acciones { width: 100%; flex-direction: column; }
-  .footer-cta-acciones .btn { width: 100%; justify-content: center; }
-
-  .footer-top {
-    display: flex;
-    flex-direction: column;
+  .footer { margin-top: 4.5rem; }
+  .footer-vitrina {
+    grid-template-columns: 1fr;
     gap: 0;
-    padding: 2.25rem 1.25rem 0.75rem;
+    padding: 0 1.25rem;
   }
-  .footer-marca-col { padding-bottom: 1.6rem; }
-  .footer-marca { margin-bottom: 1.1rem; }
-  .footer-logo { width: 50px; height: 50px; border-radius: 14px; }
-  .footer-marca-nombre { font-size: 1.22rem; }
-  .footer-tagline, .footer-lema { max-width: none; }
-  .footer-lema { margin-bottom: 1rem; font-size: 0.86rem; line-height: 1.6; }
-  .footer-info-lineas { margin-bottom: 1.25rem; }
+  /* Móvil: la foto pasa arriba, a todo el ancho; el encuadre centra el
+     camión (cabina y furgón completos). */
+  .footer-vitrina { min-height: 0; }
+  .footer-vitrina-visual {
+    position: relative;
+    order: -1;
+    top: auto;
+    right: auto;
+    width: auto;
+    height: 220px;
+    margin: -28px -1.25rem 0;
+  }
+  .footer-vitrina-foto {
+    object-position: 90% 60%;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16%, #000 72%, transparent 100%);
+            mask-image: linear-gradient(180deg, transparent 0, #000 16%, #000 72%, transparent 100%);
+  }
+  .footer-vitrina-texto { padding: 0.25rem 0 2rem; }
+  .footer-vitrina-titular { max-width: none; font-size: clamp(1.65rem, 7.6vw, 2.1rem); margin-bottom: 0; }
 
-  .footer-ayuda {
-    padding: 1.4rem 0 1.25rem;
-    border-top: 1px solid var(--f-linea);
-  }
-  .footer-ayuda-texto { margin: -0.45rem 0 0.85rem; }
-  .footer-btn-wsp { width: 100%; min-height: 48px; margin-bottom: 0.9rem; }
-  /* Teléfono y correo en dos columnas: los datos caben y el bloque no se
-     estira; ciudad y horario completan la rejilla. */
-  .footer-contacto {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 0.1rem 1rem;
-  }
-  .footer-contacto-item { min-height: 40px; }
-
-  /* Las listas colapsan; el <h4> cede su papel al botón del acordeón. */
-  .footer-col-grupo { gap: 0; }
-  .footer-col:not(.footer-ayuda) { border-top: 1px solid var(--f-linea); }
-  .footer-col:not(.footer-ayuda) h4 { display: none; }
-  .footer-col-toggle {
+  .footer-institucional {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    width: 100%;
-    min-height: 54px;
-    padding: 0.2rem 0;
-    border: none;
-    background: none;
-    color: var(--f-fuerte);
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    text-align: left;
-  }
-  .footer-col-toggle svg { transition: transform var(--f-dur) var(--f-ease); color: var(--f-suave); }
-  .footer-col-toggle svg.girado { transform: rotate(45deg); color: var(--f-acento); }
-  .footer-col:not(.footer-ayuda) .footer-col-panel { display: none; }
-  .footer-col:not(.footer-ayuda) .footer-col-panel.abierto {
-    display: flex;
-    padding-bottom: 1rem;
-    animation: footer-panel-in 0.2s var(--f-ease);
-  }
-  .footer-col-panel a { min-height: 42px; font-size: 0.92rem; }
-
-  .footer-identidad {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.3rem;
-    padding: 1.1rem 1.25rem;
-    font-size: 0.78rem;
+    gap: 1rem;
+    padding: 1.4rem 1.25rem 1.2rem;
   }
-  .footer-bottom {
-    padding: 1rem 1.25rem 1.25rem;
-    font-size: 0.78rem;
-  }
-  .footer-legal { flex-wrap: wrap; row-gap: 0.4rem; }
-}
-@keyframes footer-panel-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  .footer-logo { width: 54px; height: 54px; border-radius: 14px; }
+  .footer-lema { max-width: none; white-space: normal; }
+  .footer-contacto { flex-direction: column; align-items: flex-start; gap: 0; }
+  .footer-contacto-item { min-height: 38px; white-space: normal; overflow-wrap: anywhere; }
+  .footer-legal { justify-content: flex-start; width: 100%; gap: 0 1.25rem; margin-top: 0; }
+  .footer-legal a { min-height: 36px; }
+  /* En varias líneas el separador quedaría colgando: aquí separa el aire. */
+  .footer-legal a + a::before { display: none; }
+  .footer-bottom { flex-direction: column; align-items: flex-start; padding: 0.9rem 1.25rem 1rem; }
+  .footer-bottom .footer-credito { align-self: center; text-align: center; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .footer-col-panel.abierto { animation: none; }
-  .footer-col-toggle svg,
-  .footer-col-panel a,
-  .footer-enlace-principal svg,
-  a.footer-contacto-item,
-  .footer-btn-tienda,
-  .footer-btn-tienda-flecha,
-  .footer-btn-wsp,
-  .footer-redes a { transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease; }
-  .footer-col-panel a:hover,
-  .footer-enlace-principal:hover svg,
-  a.footer-contacto-item:hover,
-  .footer-btn-tienda:hover,
-  .footer-btn-tienda:hover .footer-btn-tienda-flecha,
-  .footer-btn-wsp:hover,
-  .footer-redes a:hover,
   .btn-whatsapp:hover { transform: none; }
+}
+
+/* ---------- Aviso de cookies ----------
+   Tarjeta flotante abajo a la izquierda (el WhatsApp vive a la derecha). No
+   bloquea la tienda. «Solo necesarias» y «Aceptar todas» con el mismo peso. */
+.aviso-cookies {
+  position: fixed;
+  left: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 47;
+  width: min(400px, calc(100vw - 2.5rem));
+  max-height: calc(100dvh - 2.5rem);
+  overflow-y: auto;
+  padding: 1.1rem 1.2rem 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  box-shadow: var(--sombra-lg);
+  color: var(--tinta);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  animation: aviso-cookies-in 0.25s ease;
+}
+.aviso-cookies-titulo { margin: 0 0 0.35rem; font-size: 0.95rem; font-weight: 800; }
+.aviso-cookies-texto { margin: 0; color: color-mix(in srgb, var(--tinta) 72%, transparent); }
+.aviso-cookies-texto a { color: var(--marca-700, var(--marca-600)); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.aviso-cookies-categorias {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.85rem 0 0;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--borde);
+  list-style: none;
+}
+.aviso-cookies-categorias li { display: flex; gap: 0.6rem; align-items: flex-start; }
+.aviso-cookies-categorias input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 0.15rem;
+  accent-color: var(--marca-600);
+}
+.aviso-cookies-categorias label { display: flex; flex-direction: column; gap: 0.1rem; cursor: pointer; }
+.aviso-cookies-categorias strong { font-size: 0.84rem; }
+.aviso-cookies-categorias strong span { font-weight: 500; color: color-mix(in srgb, var(--tinta) 55%, transparent); }
+.aviso-cookies-categorias label > span { font-size: 0.78rem; color: color-mix(in srgb, var(--tinta) 66%, transparent); }
+.aviso-cookies-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+.aviso-cookies-btn {
+  min-height: 38px;
+  padding: 0.45rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid var(--marca-600);
+  background: var(--marca-600);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.aviso-cookies-btn:hover { filter: brightness(1.08); }
+.aviso-cookies-btn--texto {
+  margin-right: auto;
+  border-color: transparent;
+  background: none;
+  color: var(--tinta);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.aviso-cookies-btn:focus-visible,
+.aviso-cookies-texto a:focus-visible,
+.aviso-cookies-reabrir:focus-visible {
+  outline: 2px solid var(--marca-500, var(--marca-600));
+  outline-offset: 2px;
+}
+/* Botón «Configurar cookies» dentro de la política: se lee como un enlace. */
+.aviso-cookies-reabrir {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--marca-700, var(--marca-600));
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+@media (max-width: 900px) {
+  .aviso-cookies {
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    bottom: calc(var(--reserva-inferior, 0px) + 0.75rem);
+    max-height: calc(100dvh - var(--reserva-inferior, 0px) - 1.5rem);
+  }
+}
+@media (max-width: 420px) {
+  .aviso-cookies-acciones .aviso-cookies-btn:not(.aviso-cookies-btn--texto) { flex: 1; }
+}
+@keyframes aviso-cookies-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aviso-cookies { animation: none; }
 }
 
 /* ---------- Página: Contacto ----------
@@ -6002,17 +5924,6 @@ a.footer-contacto-item:focus-visible,
 
 /* ---------- Variantes que faltaban ---------- */
 
-/* El pie minimo: una sola fila. Las columnas no se ocultan, no se pintan
-   —lo decide el componente—, asi que aqui solo hay que dejar de rejillar. */
-.footer--minimo .footer-top {
-  display: flex; flex-wrap: wrap; align-items: center;
-  justify-content: space-between; gap: 1rem;
-}
-.footer--minimo .footer-menu-min {
-  display: flex; flex-wrap: wrap; gap: 1rem;
-}
-.footer--minimo .footer-menu-min a { font-size: .86rem; }
-
 /* La llamada a la accion, metida en una caja en vez de a sangre. */
 .cta-banda--tarjeta {
   border-radius: var(--radio-lg);
@@ -7443,6 +7354,71 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
   .pgrid-sep-nombre { font-size: 1.05rem; }
   .pgrid-sep-sub { font-size: 0.72rem; }
   .pgrid-sep-cuenta { padding: 0.22rem 0.55rem; font-size: 0.68rem; }
+}
+
+/* Cada categoría de «Todos» en su propio bloque (GridProductos): fondo con
+   el tono suave de su familia, mezclado con la superficie para que quede
+   apagado y las tarjetas blancas sigan siendo lo que resalta. Así, al bajar,
+   el cambio de color dice «empieza otra categoría» antes de leer el nombre.
+   `data-alterno` da un segundo neutro a las categorías sin familia, para que
+   dos seguidas no se lean como una sola. */
+.pgrid-grupos { display: flex; flex-direction: column; gap: 1.1rem; }
+.pgrid-grupo[data-alterno],
+.pgrid-grupo[data-alterno] [data-familia="otra"] {
+  --fam-fondo: #e9eef1;
+  --fam-tinta: #3d4b56;
+  --fam-acento: #7f909c;
+}
+.pgrid-grupo {
+  padding: 1.1rem 1.2rem 1.3rem;
+  border-radius: var(--radio-lg);
+  background: color-mix(in srgb, var(--fam-fondo) 62%, var(--superficie));
+  border: 1px solid color-mix(in srgb, var(--fam-acento) 16%, transparent);
+}
+/* El encabezado es lo que tiene que saltar a la vista al bajar: una franja
+   de lado a lado del bloque, más intensa que su fondo, con una línea de
+   acento gruesa debajo. Mismo tono apagado de la familia, con más cuerpo. */
+.pgrid-grupo .pgrid-separador {
+  margin: -1.1rem -1.2rem 1.1rem;
+  padding: 0.95rem 1.2rem;
+  gap: 0.9rem;
+  border-radius: var(--radio-lg) var(--radio-lg) 0 0;
+  background: color-mix(in srgb, var(--fam-acento) 30%, var(--fam-fondo));
+  border-bottom: 3px solid var(--fam-acento);
+}
+/* La línea corta de acento sobra: ahora la línea es todo el borde. */
+.pgrid-grupo .pgrid-separador::after { display: none; }
+.pgrid-grupo .pgrid-sep-icono {
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 15px;
+  background: var(--superficie);
+  box-shadow: 0 4px 12px rgba(var(--sombra-tinte), 0.12), inset 0 0 0 1px color-mix(in srgb, var(--fam-acento) 30%, transparent);
+}
+.pgrid-grupo .pgrid-sep-nombre {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--fam-tinta);
+}
+.pgrid-grupo .pgrid-sep-sub { color: color-mix(in srgb, var(--fam-tinta) 78%, transparent); font-weight: 600; }
+.pgrid-grupo .pgrid-sep-cuenta {
+  padding: 0.38rem 0.85rem;
+  background: var(--fam-tinta);
+  color: #fff;
+  font-size: 0.8rem;
+}
+@media (max-width: 767px) {
+  .pgrid-grupos { gap: 0.8rem; }
+  .pgrid-grupo { padding: 0.8rem 0.6rem 0.9rem; border-radius: var(--radio); }
+  .pgrid-grupo .pgrid-separador {
+    margin: -0.8rem -0.6rem 0.8rem;
+    padding: 0.7rem 0.8rem;
+    gap: 0.65rem;
+    border-radius: var(--radio) var(--radio) 0 0;
+  }
+  .pgrid-grupo .pgrid-sep-icono { width: 2.5rem; height: 2.5rem; border-radius: 12px; }
+  .pgrid-grupo .pgrid-sep-nombre { font-size: 1.18rem; }
+  .pgrid-grupo .pgrid-sep-cuenta { padding: 0.25rem 0.6rem; font-size: 0.7rem; }
 }
 
 .catalogo { padding: 0.9rem 0 3rem; scroll-margin-top: calc(var(--navbar-alto, 62px) + var(--tbar-alto, 4.5rem)); }
@@ -10843,26 +10819,14 @@ button.nav-inferior-item { border: 0; background: none; padding: 0; font-family:
 }
 
 /* Pie en escritorio: el contenido usa el mismo ancho que el resto de la
-   página (`--contenedor-ancho`), no 1240 px centrados con márgenes vacíos a
-   los lados. Columnas, franja de identidad, barra inferior y CTA. */
+   página (`--contenedor-ancho`), no 1240 px centrados con márgenes vacíos. */
 @media (min-width: 1101px) {
-  .footer .footer-top,
-  .footer .footer-identidad,
-  .footer .footer-bottom,
-  .footer .footer-cta-inner {
+  .footer .footer-vitrina,
+  .footer .footer-institucional,
+  .footer .footer-bottom {
     max-width: var(--contenedor-ancho, 1440px);
     padding-inline: clamp(1.5rem, 3vw, 3rem);
   }
-  .footer .footer-cta { margin-inline: clamp(1.5rem, 3vw, 3rem); }
-  /* La barra inferior centrada: el copyright al centro y, si hay enlaces
-     legales en ella, centrados debajo. */
-  .footer .footer-bottom {
-    flex-direction: column;
-    justify-content: center;
-    gap: 0.45rem;
-    text-align: center;
-  }
-  .footer .footer-top { column-gap: clamp(2.25rem, 4vw, 4.5rem); }
 }
 
 /* ==========================================================================

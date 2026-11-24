@@ -21,7 +21,7 @@ def pedido(api, presentacion):
     respuesta = api.post(
         "/api/orders/",
         {
-            "cliente": {"nombre": "Doña Marta", "direccion": "Calle 1 # 2-3", "autoriza_datos": True},
+            "cliente": {"nombre": "Doña Marta", "negocio": "Negocio de prueba", "direccion": "Calle 1 # 2-3", "autoriza_datos": True},
             "items": [{"presentacion_id": presentacion.id, "cantidad": "2"}],
             "observaciones": "Tocar el timbre",
         },
@@ -303,7 +303,7 @@ def test_un_pedido_con_producto_sugerido_se_muestra_por_revisar(api_owner, api, 
     r = api.post(
         "/api/orders/",
         {
-            "cliente": {"nombre": "Don Luis", "direccion": "Calle 9", "autoriza_datos": True},
+            "cliente": {"nombre": "Don Luis", "negocio": "Negocio de prueba", "direccion": "Calle 9", "autoriza_datos": True},
             "items": [{"presentacion_id": presentacion.id, "cantidad": "1"}],
             "personalizados": [{"nombre": "Yuca criolla", "cantidad": "3", "unidad_id": presentacion.unidad_venta_id}],
         },

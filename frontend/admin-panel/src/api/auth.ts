@@ -4,6 +4,39 @@ import { api, tokenStore } from "./client";
 
 const baseURL = import.meta.env.VITE_API_URL ?? "/api";
 
+/**
+ * «Dispositivo de confianza hasta medianoche» (backend: accounts/dispositivo.py).
+ *
+ * Tras confirmar el código del correo, el servidor puede devolver un testigo
+ * que en ESTE navegador permite entrar el resto del día solo con la
+ * contraseña. Se guarda por cuenta (correo en minúsculas): dos personas que
+ * compartan el equipo no se prestan el testigo, y además el backend lo ata a
+ * la persona. Vive en `localStorage` a propósito: tiene que sobrevivir a
+ * cerrar sesión y a cerrar el navegador, que es justo cuando se vuelve a
+ * entrar. Sin la contraseña no sirve de nada.
+ */
+const CLAVE_DISPOSITIVO = "kryonx_dispositivo_confiable";
+
+function testigosGuardados(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_DISPOSITIVO) ?? "{}") ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function guardarTestigo(email: string, testigo: string | null) {
+  try {
+    const todos = testigosGuardados();
+    const clave = email.trim().toLowerCase();
+    if (testigo) todos[clave] = testigo;
+    else delete todos[clave];
+    localStorage.setItem(CLAVE_DISPOSITIVO, JSON.stringify(todos));
+  } catch {
+    /* sin almacenamiento: se pedirá el código cada vez, como antes */
+  }
+}
+
 export interface LoginPaso1 {
   success: boolean;
   step: number;
@@ -11,35 +44,57 @@ export interface LoginPaso1 {
   message: string;
 }
 
-export async function loginPaso1(
-  email: string,
-  password: string
-): Promise<LoginPaso1> {
-  const { data } = await api.post<LoginPaso1>("/auth/login/", {
-    email_usuario: email,
-    password,
-  });
-  return data;
-}
-
 export interface VerifyResp {
   success: boolean;
   access: string;
   refresh: string;
   user: Usuario;
+  /** Solo si se pidió confiar en el dispositivo. */
+  dispositivo?: string;
+  /** Entró sin código, con el dispositivo de confianza de hoy. */
+  sin_codigo?: boolean;
+}
+
+/**
+ * Paso 1. Si este navegador ya confirmó el código hoy para esta cuenta, el
+ * servidor responde directamente con la sesión (`sin_codigo`) y no hay paso 2.
+ */
+export async function loginPaso1(
+  email: string,
+  password: string,
+  /** Sin esto la sesión muere al cerrar el navegador. */
+  recordar = true
+): Promise<LoginPaso1 | VerifyResp> {
+  const testigo = testigosGuardados()[email.trim().toLowerCase()];
+  const { data } = await api.post<LoginPaso1 | VerifyResp>("/auth/login/", {
+    email_usuario: email,
+    password,
+    ...(testigo ? { dispositivo: testigo } : {}),
+  });
+  if ("access" in data) {
+    tokenStore.set(data.access, data.refresh, recordar);
+  } else if (testigo) {
+    // Pidió código pese a tener testigo: caducó (otro día, otra contraseña).
+    guardarTestigo(email, null);
+  }
+  return data;
 }
 
 export async function verificarOtp(
   otpTicket: string,
   otpToken: string,
   /** Sin esto la sesión muere al cerrar el navegador. */
-  recordar = true
+  recordar = true,
+  /** No volver a pedir el código hoy en este navegador para esta cuenta. */
+  confiar?: { email: string }
 ): Promise<VerifyResp> {
   const { data } = await api.post<VerifyResp>("/auth/verify-otp/", {
     otp_ticket: otpTicket,
     otp_token: otpToken,
+    confiar_dispositivo: Boolean(confiar),
   });
   tokenStore.set(data.access, data.refresh, recordar);
+  if (confiar) guardarTestigo(confiar.email, data.dispositivo ?? null);
   return data;
 }
 
