@@ -254,6 +254,21 @@ export async function obtenerProductosPorIds(ids: number[]): Promise<Producto[]>
   return ordenarPorIds(desempaquetar(datos), ids);
 }
 
+/**
+ * Los datos actuales de productos ya conocidos (la caché del catálogo al
+ * recargar). Devuelve solo los que siguen visibles en la tienda: el que se
+ * desactivó o se borró, simplemente no vuelve. Sin orden: decide quien pide.
+ */
+export async function refrescarProductos(ids: number[], signal?: AbortSignal): Promise<Producto[]> {
+  if (ids.length === 0) return [];
+  const datos = await pedir<Paginated<Producto> | Producto[]>(
+    "/catalog/products/",
+    { ids: ids.join(","), page_size: ids.length },
+    signal
+  );
+  return desempaquetar(datos);
+}
+
 export function ordenarPorIds(productos: Producto[], ids: number[]): Producto[] {
   const porId = new Map(productos.map((p) => [p.id, p]));
   return ids.map((id) => porId.get(id)).filter((p): p is Producto => Boolean(p));

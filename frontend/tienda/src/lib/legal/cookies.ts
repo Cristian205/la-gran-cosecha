@@ -104,6 +104,15 @@ export const ELEMENTOS: ElementoAlmacenado[] = [
     finalidad: "Recuerda los productos de tu último pedido para que puedas repetirlo con un clic.",
     duracion: "Hasta tu siguiente pedido o hasta que borres los datos del navegador",
   },
+  {
+    nombre: "kryonx-catalogo",
+    tipo: "Almacenamiento local",
+    categoria: "funcionales",
+    proveedor: "Propia",
+    finalidad:
+      "Guarda los productos del catálogo que ya cargaste y dónde ibas, para que al recargar la página no tengas que volver a bajar desde el principio. No guarda datos tuyos.",
+    duracion: "12 horas, o hasta que borres los datos del navegador",
+  },
 ];
 
 /** Servicios externos que la tienda carga y lo que reciben. */
