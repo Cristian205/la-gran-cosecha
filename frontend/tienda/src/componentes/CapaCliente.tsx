@@ -28,6 +28,13 @@ import type { SiteConfig } from "@/lib/tipos";
  */
 const ContextoConfig = createContext<SiteConfig | null>(null);
 
+declare global {
+  interface Window {
+    /** La app ya montó y recuperó su estado (la lee la pantalla de carga). */
+    __tiendaLista?: boolean;
+  }
+}
+
 /**
  * Conserva la forma `{ config, cargando }` que ya usaban los componentes.
  *
@@ -83,9 +90,16 @@ export function CapaCliente({
   // cliente sale igual que el servidor, y aqui -ya montado, fuera del
   // render- se cargan de verdad desde el `localStorage`.
   useEffect(() => {
-    useCart.persist.rehydrate();
-    useUltimoPedido.persist.rehydrate();
-    useClienteTienda.persist.rehydrate();
+    // Con todo recuperado la app está lista: es la última etapa de la
+    // pantalla de carga de la app instalada (ver PantallaArranque).
+    Promise.allSettled([
+      useCart.persist.rehydrate(),
+      useUltimoPedido.persist.rehydrate(),
+      useClienteTienda.persist.rehydrate(),
+    ]).finally(() => {
+      window.__tiendaLista = true;
+      window.dispatchEvent(new Event("tienda:lista"));
+    });
   }, []);
 
   return (

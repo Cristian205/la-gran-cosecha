@@ -186,9 +186,11 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = env("MEDIA_ROOT", default=str(BASE_DIR / "media"))
 
 # Imágenes subidas (apps/media/optimizador.py): se reducen a este lado máximo
-# y se guardan en WebP con esta calidad.
+# y se guardan en WebP con esta calidad. Los PNG pasan a WebP sin pérdida; si
+# son fotos (el sin pérdida pesaría megas), con pérdida a la calidad ALTA.
 IMAGENES_LADO_MAXIMO = env.int("IMAGENES_LADO_MAXIMO", default=2000)
 IMAGENES_CALIDAD_WEBP = env.int("IMAGENES_CALIDAD_WEBP", default=80)
+IMAGENES_CALIDAD_WEBP_ALTA = env.int("IMAGENES_CALIDAD_WEBP_ALTA", default=90)
 
 # WhiteNoise: sirve estáticos comprimidos en producción sin depender de nginx.
 STORAGES = {

@@ -17,6 +17,8 @@ import "./campanas.css";
 import "./nosotros.css";
 import "./contacto.css";
 import "./legal.css";
+import "./arranque.css";
+import { PantallaArranque, SCRIPT_DECIDIR_ARRANQUE } from "@/componentes/PantallaArranque";
 
 /**
  * Los metadatos salen de la configuración del negocio, no del código.
@@ -110,8 +112,13 @@ export default async function RootLayout({
     : null;
 
   return (
-    <html lang="es">
+    // `suppressHydrationWarning`: el script de la pantalla de carga pone
+    // `data-arranque` en <html> antes de hidratar (solo cubre esta etiqueta).
+    <html lang="es" suppressHydrationWarning>
       <head>
+        {/* Antes que nada: si es la app instalada, la pantalla de carga se
+            decide aquí, antes del primer pintado (ver PantallaArranque). */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_DECIDIR_ARRANQUE }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* Las fuentes NO bloquean el primer pintado: la hoja entra con
@@ -159,6 +166,7 @@ export default async function RootLayout({
           previa?.tokens["--estilo-tarjeta"]?.trim() || estiloDeTarjeta(config)
         }
       >
+        <PantallaArranque nombre={config.nombre_empresa || "Tienda en línea"} logoUrl={config.logo_url} />
         <CapaCliente config={config}>
           {/*
             La cabecera y el pie salen de la composicion de `/_layout`, con sus

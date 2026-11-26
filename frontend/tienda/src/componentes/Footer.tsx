@@ -11,9 +11,20 @@ import type { EnlaceCabecera } from "@/componentes/Navbar";
 import { whatsappHref } from "@/lib/utiles";
 import { WhatsAppLineaIcon } from "@/componentes/icons/WhatsAppLineaIcon";
 import { srcSetImagen } from "@/lib/imagen";
+import { claseDeVariante } from "@/bloques/Seccion";
+
+/**
+ * `columnas` es el pie aprobado, con la vitrina y la foto del camión: el de
+ * por defecto. `minimo` deja solo la franja institucional y el copyright,
+ * para las tiendas a las que la vitrina no les corresponde. No es CSS que
+ * esconde lo que sobra: en `minimo` la vitrina (y su foto) NO se pinta ni se
+ * descarga.
+ */
+const VARIANTES = ["columnas", "minimo"] as const;
 
 /** Dueña de la plataforma sobre la que corren las tiendas (crédito en el pie). */
-const PROPIETARIO_PLATAFORMA = "CraftTech";
+const PROPIETARIO_PLATAFORMA = "Crafteech";
+const SITIO_PLATAFORMA = "https://crafteech.com";
 
 /** Un solo trazo para todos los íconos del pie. */
 const TRAZO = 1.75;
@@ -75,6 +86,7 @@ interface Props {
   terminos_href?: string;
   terminos_texto?: string;
   soporte_titulo?: string;
+  /** `columnas` (por defecto, con la vitrina) o `minimo`. */
   variante?: string;
 }
 
@@ -113,7 +125,10 @@ export function Footer({
   nota_legal = "",
   mostrar_legal = true,
   legal_titulo = "Información legal",
+  variante,
 }: Props = {}) {
+  const clase = claseDeVariante(variante, VARIANTES, "footer", "columnas");
+  const minimo = clase === "footer--minimo";
   const { config } = useSiteConfig();
   const [legal, setLegal] = useState<LegalGuardado | null>(null);
   const idTitular = useId();
@@ -139,8 +154,9 @@ export function Footer({
   const hayContacto = Boolean(hrefWhatsapp || config.email || ubicacion);
 
   return (
-    <footer className="footer">
-      {/* 1. Vitrina comercial */}
+    <footer className={`footer ${clase}`}>
+      {/* 1. Vitrina comercial (no va en el pie mínimo) */}
+      {!minimo && (
       <section className="footer-vitrina" aria-labelledby={idTitular}>
         <div className="footer-vitrina-texto">
           {antetitulo && <p className="footer-vitrina-antetitulo">{antetitulo}</p>}
@@ -176,6 +192,7 @@ export function Footer({
           <path d="M0 30C260 6 520 2 780 16s470 22 660 4" fill="none" stroke={`url(#${idTitular}-oro)`} strokeWidth="2.5" />
         </svg>
       </section>
+      )}
 
       {/* 2. Franja institucional */}
       <div className="footer-institucional">
@@ -237,7 +254,10 @@ export function Footer({
           {mostrar_legal && nit ? ` · NIT ${nit}` : ""}. {nota_legal || "Todos los derechos reservados."}
         </p>
         <p className="footer-credito">
-          Desarrollado por <strong>{PROPIETARIO_PLATAFORMA}</strong>
+          Desarrollado por{" "}
+          <a href={SITIO_PLATAFORMA} target="_blank" rel="noopener">
+            <strong>{PROPIETARIO_PLATAFORMA}</strong>
+          </a>
         </p>
       </div>
     </footer>

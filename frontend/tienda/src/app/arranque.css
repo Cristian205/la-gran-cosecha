@@ -1,0 +1,242 @@
+/* ==========================================================================
+   PANTALLA DE CARGA DE LA APP INSTALADA (ver componentes/PantallaArranque.tsx)
+
+   Oculta por defecto: solo la muestra el script del <head>, que pone
+   `data-arranque` en <html> antes del primer pintado cuando la tienda se
+   abre como app instalada.
+
+   Reparto vertical en flujo (flex), no a posiciones fijas: arriba el adorno,
+   en el centro marca + carga + atributos, abajo las frutas y verduras. Las
+   medidas se reparten con `dvh` y `clamp()` para que quepa sin desplazarse
+   desde un Android de 640 px de alto hasta una tableta.
+   ========================================================================== */
+
+#arranque { display: none; }
+
+html[data-arranque] #arranque {
+  --arr-verde: var(--marca-500, #16a34a);
+  --arr-verde-osc: var(--marca-700, #0f5132);
+  --arr-verde-prof: var(--marca-900, #062e1a);
+  --arr-verde-suave: color-mix(in srgb, var(--arr-verde) 10%, white);
+  --arr-gris: #e8ede9;
+
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: var(--arr-verde-prof);
+  overflow: hidden;
+  /* Respeta la barra de estado y los bordes curvos/recortes del teléfono. */
+  padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) 0 env(safe-area-inset-left, 0);
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-arranque="activo"] body,
+html[data-arranque="fijo"] body { overflow: hidden; }
+
+/* Salida hacia la tienda: se desvanece y se abre un poco. */
+html[data-arranque="saliendo"] #arranque {
+  animation: arr-salir .55s cubic-bezier(.4, 0, .2, 1) forwards;
+  pointer-events: none;
+}
+@keyframes arr-salir { to { opacity: 0; transform: scale(1.04); visibility: hidden; } }
+
+/* --------------------------------------------------------------------------
+   Adorno superior: ondas en tres verdes y hojas pequeñas
+   -------------------------------------------------------------------------- */
+#arranque .arr-decor {
+  position: absolute; inset: 0 0 auto 0;
+  height: clamp(84px, 17dvh, 170px);
+  pointer-events: none;
+}
+#arranque .arr-ondas-sup { display: block; width: 100%; height: 100%; }
+#arranque .arr-onda-1 { fill: color-mix(in srgb, var(--arr-verde) 12%, white); }
+#arranque .arr-onda-2 { fill: color-mix(in srgb, var(--arr-verde) 30%, white); }
+#arranque .arr-onda-3 { fill: var(--arr-verde); }
+
+#arranque .arr-hoja {
+  position: absolute; display: block;
+  color: var(--arr-verde);
+  transform-origin: 15% 85%;
+  animation: arr-mecer 5.5s ease-in-out infinite;
+}
+#arranque .arr-hoja svg { display: block; width: 100%; height: 100%; }
+#arranque .arr-hoja--1 { width: clamp(18px, 5vw, 28px); aspect-ratio: 1; top: 62%; right: 12%; color: var(--arr-verde-osc); }
+#arranque .arr-hoja--2 { width: clamp(13px, 3.6vw, 20px); aspect-ratio: 1; top: 78%; right: 24%; transform: rotate(-35deg); animation-delay: -1.8s; }
+#arranque .arr-hoja--3 { width: clamp(14px, 4vw, 22px); aspect-ratio: 1; top: 74%; left: 9%; transform: scaleX(-1); animation-delay: -3.4s; color: color-mix(in srgb, var(--arr-verde) 60%, white); }
+@keyframes arr-mecer {
+  0%, 100% { rotate: -6deg; translate: 0 0; }
+  50% { rotate: 7deg; translate: 0 -3px; }
+}
+
+/* --------------------------------------------------------------------------
+   Contenido: marca, carga y atributos
+   -------------------------------------------------------------------------- */
+#arranque .arr-contenido {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(100%, 440px);
+  margin: 0 auto;
+  padding: clamp(80px, 17dvh, 168px) clamp(20px, 7vw, 32px) clamp(8px, 2dvh, 20px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(14px, 3.4dvh, 34px);
+  box-sizing: border-box;
+}
+
+#arranque .arr-marca { display: flex; flex-direction: column; align-items: center; text-align: center; }
+#arranque .arr-logo {
+  width: min(46vw, 22dvh, 200px);
+  aspect-ratio: 1;
+  display: grid; place-items: center;
+  margin-bottom: clamp(8px, 1.6dvh, 16px);
+  animation: arr-logo .8s cubic-bezier(.16, 1, .3, 1) both;
+}
+#arranque .arr-logo img { width: 100%; height: 100%; object-fit: contain; }
+#arranque .arr-logo-letra {
+  width: 100%; height: 100%; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--arr-verde-suave); color: var(--arr-verde-osc);
+  font-size: min(16vw, 8dvh, 70px); font-weight: 800;
+}
+@keyframes arr-logo { from { opacity: 0; transform: translateY(10px) scale(.92); } }
+
+#arranque .arr-nombre {
+  margin: 0;
+  font-family: var(--fuente-titulos, inherit);
+  font-size: clamp(1.35rem, min(7vw, 3.8dvh), 2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+  color: var(--arr-verde-osc);
+  animation: arr-subir .7s .15s cubic-bezier(.16, 1, .3, 1) both;
+}
+#arranque .arr-eslogan {
+  margin: .35rem 0 0;
+  max-width: 30ch;
+  text-align: center;
+  text-wrap: balance;
+  font-size: clamp(.86rem, min(3.9vw, 2.1dvh), 1.02rem);
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--arr-verde-prof) 62%, white);
+  animation: arr-subir .7s .25s cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes arr-subir { from { opacity: 0; transform: translateY(8px); } }
+
+/* Barra de progreso: la anchura la pone el script con el avance REAL. */
+#arranque .arr-carga { animation: arr-subir .7s .35s cubic-bezier(.16, 1, .3, 1) both; }
+#arranque .arr-pista {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--arr-gris);
+  margin-top: 14px; /* espacio para el camión que va encima */
+}
+#arranque .arr-barra {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--arr-verde) 75%, white), var(--arr-verde));
+  transform: scaleX(.1);
+  transform-origin: left center;
+  transition: transform .45s cubic-bezier(.4, 0, .2, 1);
+}
+#arranque .arr-camion {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 10%;
+  width: 22px; height: 22px;
+  margin-left: -11px;
+  color: var(--arr-verde-osc);
+  transition: left .45s cubic-bezier(.4, 0, .2, 1);
+}
+#arranque .arr-camion svg { width: 100%; height: 100%; display: block; }
+#arranque .arr-estado {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;
+  margin-top: .6rem;
+  font-size: clamp(.8rem, 3.5vw, .9rem);
+}
+#arranque .arr-mensaje {
+  color: color-mix(in srgb, var(--arr-verde-prof) 70%, white);
+  transition: opacity .18s ease, transform .18s ease;
+}
+#arranque .arr-mensaje--sale { opacity: 0; transform: translateY(-3px); }
+#arranque .arr-porcentaje { font-weight: 700; color: var(--arr-verde-osc); font-variant-numeric: tabular-nums; }
+
+/* Tres atributos en fila. */
+#arranque .arr-atributos {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: clamp(6px, 2.5vw, 14px);
+  animation: arr-subir .7s .45s cubic-bezier(.16, 1, .3, 1) both;
+}
+#arranque .arr-atributos li {
+  display: flex; flex-direction: column; align-items: center; gap: .4rem;
+  text-align: center;
+  font-size: clamp(.7rem, 3.1vw, .82rem);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--arr-verde-prof);
+}
+#arranque .arr-icono {
+  width: clamp(38px, min(11vw, 6dvh), 52px);
+  aspect-ratio: 1;
+  display: grid; place-items: center;
+  border-radius: 16px;
+  background: var(--arr-verde-suave);
+  color: var(--arr-verde);
+}
+#arranque .arr-icono svg { width: 52%; height: 52%; }
+
+/* --------------------------------------------------------------------------
+   Frutas y verduras abajo, fundidas con el blanco y con ondas verdes
+   -------------------------------------------------------------------------- */
+/* La composición es un PNG recortado (3:1, fondo transparente): se ve ENTERA
+   —tomates a un lado, pimentón al otro— y apoyada en las ondas. Su alto lo
+   da su proporción, con un tope para que en pantallas bajas no empuje la
+   barra de carga fuera de la vista. */
+#arranque .arr-cosecha {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  /* El margen inferior deja asomar las ondas bajo las verduras. */
+  padding-bottom: calc(clamp(34px, 6.5dvh, 66px) + env(safe-area-inset-bottom, 0px));
+}
+#arranque .arr-cosecha img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: min(100%, 720px);
+  height: auto;
+  max-height: 26dvh;
+  object-fit: contain;
+  object-position: center bottom;
+  animation: arr-aparecer .9s .3s cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes arr-aparecer { from { opacity: 0; transform: translateY(14px); } }
+#arranque .arr-ondas-inf {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  width: 100%;
+  height: calc(clamp(64px, 12dvh, 120px) + env(safe-area-inset-bottom, 0px));
+  display: block;
+}
+#arranque .arr-onda-4 { fill: color-mix(in srgb, var(--arr-verde) 55%, white); }
+#arranque .arr-onda-5 { fill: var(--arr-verde-osc); }
+
+/* Pantallas bajas (Android pequeño en horizontal o de 640 px): menos aire. */
+@media (max-height: 620px) {
+  #arranque .arr-contenido { gap: 12px; }
+  #arranque .arr-eslogan { margin-top: .2rem; }
+  #arranque .arr-cosecha img { max-height: 21dvh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #arranque *,
+  html[data-arranque="saliendo"] #arranque { animation: none !important; transition: none !important; }
+  html[data-arranque="saliendo"] #arranque { opacity: 0; visibility: hidden; }
+}

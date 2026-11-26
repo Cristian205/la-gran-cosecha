@@ -22,6 +22,7 @@ import { useAuth } from "../auth/AuthContext";
 import { extraerMensajeError } from "../utils";
 import { ForzarCambioPasswordPage } from "./ForzarCambioPasswordPage";
 import type { Usuario } from "../types";
+import { MENSAJES_CIERRE, tomarMotivoCierre } from "../auth/inactividad";
 import "./LoginPage.css";
 
 const OTP_LENGTH = 6;
@@ -47,6 +48,11 @@ export function LoginPage() {
   const [ticket, setTicket] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Si se llegó aquí porque la sesión se cerró sola, se explica una vez.
+  const [motivoCierre] = useState(() => {
+    const motivo = tomarMotivoCierre();
+    return motivo ? MENSAJES_CIERRE[motivo] : null;
+  });
   const [aviso, setAviso] = useState<string | null>(null);
   const [recuperar, setRecuperar] = useState<PasoRecuperar | null>(null);
   const [resetTicket, setResetTicket] = useState("");
@@ -328,6 +334,12 @@ export function LoginPage() {
                       ? aviso || "Ingresa tus credenciales para continuar."
                       : aviso || "Hemos enviado un código de acceso a su correo."}
           </p>
+
+          {motivoCierre && !error && paso === 1 && !recuperar && (
+            <p className="acceso__error" role="alert">
+              {motivoCierre}
+            </p>
+          )}
 
           {error && (
             <p className="acceso__error" role="alert">

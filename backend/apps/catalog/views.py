@@ -1,5 +1,8 @@
+import logging
+
 from django.db import transaction
-from django.db.models import Count, DecimalField, Min, OuterRef, Prefetch, Q, Subquery, Sum, Value
+from django.db.models import Count, DecimalField, Min, OuterRef, Prefetch, ProtectedError, Q, Subquery, Sum, Value
+from django.db.models.deletion import Collector
 from django.db.models.functions import Coalesce
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -22,6 +25,8 @@ from .serializers import (
     ProductoWriteSerializer,
     UnidadMedidaSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 TIPOS_IMAGEN_VALIDOS = ("image/jpeg", "image/png", "image/webp")
 LIMITE_IMAGEN_MB = 5
@@ -117,7 +122,7 @@ class ProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ("update", "partial_update", "subir_imagen"):
             return [requiere_permiso("catalog.change_producto")()]
-        if self.action == "destroy":
+        if self.action in ("destroy", "eliminar_definitivo", "consecuencias_eliminar"):
             return [requiere_permiso("catalog.delete_producto")()]
         return [SoloLecturaPublicaOStaff()]
 
@@ -197,6 +202,156 @@ class ProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(detail=True, methods=["delete"], url_path="eliminar-definitivo")
+    def eliminar_definitivo(self, request, pk=None):
+        """
+        Borra el producto del sistema: es el «Eliminar» de la papelera.
+
+        Solo desde la papelera (inactivo): un producto activo se desactiva
+        primero, para que nadie borre de un clic algo que está a la venta.
+
+        Se lleva consigo sus presentaciones, su historial de precios, sus
+        existencias y sus ofertas. Lo que NO puede llevarse es la historia de
+        otros: si ya figura en pedidos, ventas del POS o movimientos de
+        inventario, borrarlo dejaría esos registros sin producto (los protege
+        `PROTECT`). Entonces responde 409, dice por qué y el producto se queda
+        en la papelera, que ya lo saca del catálogo y de la tienda.
+        """
+        producto = self.get_object()
+        if producto.estado_producto:
+            return Response(
+                {"detail": "Desactiva el producto antes de eliminarlo: solo se borra desde la papelera."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        usos = self._usos_que_impiden_borrar(producto)
+        if usos:
+            return Response(
+                {
+                    "detail": (
+                        f"«{producto.nombre_producto}» no se puede eliminar porque figura en "
+                        f"{' y '.join(usos)}. Borrarlo dañaría ese historial; "
+                        "se queda en la papelera, fuera del catálogo y de la tienda."
+                    ),
+                    "usos": usos,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        nombre = producto.nombre_producto
+        fotos = self._fotos_propias(producto)
+        try:
+            with transaction.atomic():
+                producto.delete()
+                # Los archivos se borran solo si la base confirmó: un fallo a
+                # mitad no puede dejar un producto vivo sin su foto.
+                transaction.on_commit(lambda: _borrar_archivos(fotos))
+        except ProtectedError:
+            # Una relación protegida que el recuento de arriba no conoce.
+            return Response(
+                {"detail": f"«{nombre}» tiene registros asociados y no se puede eliminar."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response({"ok": True, "mensaje": f"{nombre} eliminado definitivamente"})
+
+    @action(detail=True, methods=["get"], url_path="consecuencias-eliminar")
+    def consecuencias_eliminar(self, request, pk=None):
+        """
+        Lo que pasaría al eliminar el producto, para la alerta del panel.
+
+        Sale del MISMO recolector que usa Django al borrar, así que la alerta
+        no puede prometer menos (ni más) de lo que de verdad se borra.
+
+        - `bloqueos`: lo que impide borrarlo (pedidos, ventas, movimientos).
+        - `se_borra`: lo que desaparece con él, contado.
+        - `fotos`: cuántos archivos de foto propios se borran del almacenamiento.
+        """
+        producto = self.get_object()
+        bloqueos = self._usos_que_impiden_borrar(producto)
+        se_borra = [] if bloqueos else self._lo_que_se_borra(producto)
+        return Response(
+            {
+                "puede_eliminar": not bloqueos and not producto.estado_producto,
+                "activo": producto.estado_producto,
+                "bloqueos": bloqueos,
+                "se_borra": se_borra,
+                "fotos": len(self._fotos_propias(producto)),
+            }
+        )
+
+    #: Cómo se nombra en la alerta cada cosa que se borra con el producto.
+    NOMBRES_EN_CASCADA = {
+        "catalog.presentacionproducto": ("presentación", "presentaciones"),
+        "catalog.historialprecio": ("cambio de precio del historial", "cambios de precio del historial"),
+        "inventory.existencia": ("registro de existencias", "registros de existencias"),
+        "content.ofertaproducto": ("oferta de la semana", "ofertas de la semana"),
+        "logistica.reglacarga": ("regla de carga", "reglas de carga"),
+    }
+
+    @classmethod
+    def _lo_que_se_borra(cls, producto) -> list[str]:
+        collector = Collector(using=producto._state.db)
+        try:
+            collector.collect([producto])
+        except ProtectedError:
+            return []
+        cuentas: dict = {}
+        for modelo, instancias in collector.data.items():
+            cuentas[modelo] = cuentas.get(modelo, 0) + len(instancias)
+        for qs in collector.fast_deletes:
+            cuentas[qs.model] = cuentas.get(qs.model, 0) + qs.count()
+
+        partes = []
+        for modelo, n in cuentas.items():
+            if modelo is Producto or not n:
+                continue
+            uno, varios = cls.NOMBRES_EN_CASCADA.get(
+                modelo._meta.label_lower,
+                (str(modelo._meta.verbose_name).lower(), str(modelo._meta.verbose_name_plural).lower()),
+            )
+            partes.append(f"{n} {uno if n == 1 else varios}")
+        return partes
+
+    @staticmethod
+    def _fotos_propias(producto) -> list[tuple]:
+        """(almacenamiento, ruta) de las fotos del producto y sus presentaciones."""
+        fotos = []
+        campos = [producto.imagen] + [
+            p.imagen for p in PresentacionProducto.all_tenants.filter(producto=producto)
+        ]
+        for campo in campos:
+            if campo and campo.name:
+                fotos.append((campo.storage, campo.name))
+        return fotos
+
+    @staticmethod
+    def _usos_que_impiden_borrar(producto) -> list[str]:
+        """Los registros que protegen al producto, contados para el mensaje."""
+        from apps.inventory.models import MovimientoInventario  # noqa: PLC0415
+        from apps.orders.models import DetallePedido  # noqa: PLC0415
+        from apps.pos.models import LineaVenta  # noqa: PLC0415
+
+        def plural(n, uno, varios):
+            return f"{n} {uno if n == 1 else varios}"
+
+        usos = []
+        pedidos = (
+            DetallePedido.all_tenants.filter(presentacion__producto=producto)
+            .values("pedido_id").distinct().count()
+        )
+        if pedidos:
+            usos.append(plural(pedidos, "pedido", "pedidos"))
+        ventas = (
+            LineaVenta.all_tenants.filter(presentacion__producto=producto)
+            .values("venta_id").distinct().count()
+        )
+        if ventas:
+            usos.append(plural(ventas, "venta del POS", "ventas del POS"))
+        movimientos = MovimientoInventario.all_tenants.filter(producto=producto).count()
+        if movimientos:
+            usos.append(plural(movimientos, "movimiento de inventario", "movimientos de inventario"))
+        return usos
+
     @action(
         detail=True,
         methods=["get"],
@@ -247,6 +402,27 @@ class ProductoViewSet(TenantScopedMixin, viewsets.ModelViewSet):
             {"ok": True, "mensaje": "Imagen actualizada correctamente",
              **ProductoSerializer(producto, context={"request": request}).data}
         )
+
+
+def _borrar_archivos(fotos):
+    """
+    Borra del almacenamiento las fotos de un producto eliminado.
+
+    Son copias propias (cada subida tiene su ruta con uuid), no los archivos
+    de la biblioteca, que siguen intactos. Si alguna otra fila apuntara a la
+    misma ruta, se deja: un archivo compartido no es de este producto.
+    """
+    for almacenamiento, ruta in fotos:
+        compartida = (
+            Producto.all_tenants.filter(imagen=ruta).exists()
+            or PresentacionProducto.all_tenants.filter(imagen=ruta).exists()
+        )
+        if compartida:
+            continue
+        try:
+            almacenamiento.delete(ruta)
+        except Exception:  # noqa: BLE001 — una foto que no se borra no deshace el borrado
+            logger.warning("No se pudo borrar la foto %s del producto eliminado", ruta, exc_info=True)
 
 
 def _validar_imagen(imagen):

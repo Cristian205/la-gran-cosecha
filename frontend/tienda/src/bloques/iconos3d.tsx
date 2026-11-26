@@ -17,7 +17,22 @@ export interface PropsIcono {
 export type ComponenteIcono = ComponentType<PropsIcono>;
 
 /**
- * Envuelve un PNG de `/public/icons3d` con la interfaz de un icono.
+ * La URL WebP de un icono 3D. Acepta el nombre con `.png` porque así está
+ * guardado en el contenido de las tiendas; los WebP salen de esos PNG con
+ * `npm run iconos3d` (sin pérdida, en 256 y 128 px).
+ */
+export function rutaIcono3D(archivo: string, lado: 128 | 256 = 256): string {
+  const base = archivo.replace(/\.(png|webp)$/i, "");
+  return `/icons3d/${base}${lado === 128 ? "-128" : ""}.webp`;
+}
+
+/** `srcSet` para que cada pantalla baje solo el tamaño que necesita. */
+export function srcSetIcono3D(archivo: string): string {
+  return `${rutaIcono3D(archivo, 128)} 128w, ${rutaIcono3D(archivo, 256)} 256w`;
+}
+
+/**
+ * Envuelve un icono de `/public/icons3d` con la interfaz de un icono.
  *
  * Los archivos son el estilo "3D" de Fluent Emoji (Microsoft, MIT): un
  * único render ya iluminado, no un SVG que se pueda teñir con el color de
@@ -29,7 +44,9 @@ export function icono3D(archivo: string): ComponenteIcono {
   function Icono3D({ size = 24, strokeWidth: _strokeWidth, className, ...resto }: PropsIcono) {
     return (
       <img
-        src={`/icons3d/${archivo}`}
+        src={rutaIcono3D(archivo, 128)}
+        srcSet={srcSetIcono3D(archivo)}
+        sizes={`${size}px`}
         width={size}
         height={size}
         alt=""

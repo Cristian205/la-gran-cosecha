@@ -189,6 +189,31 @@ export async function desactivarProducto(id: number): Promise<void> {
 }
 
 /**
+ * Borra del sistema un producto de la papelera. El backend lo rechaza (409)
+ * si ya figura en pedidos, ventas o movimientos de inventario.
+ */
+export async function eliminarProductoDefinitivo(id: number): Promise<void> {
+  await api.delete(`/catalog/products/${id}/eliminar-definitivo/`);
+}
+
+/** Lo que pasaría al eliminar un producto (para avisarlo antes). */
+export interface ConsecuenciasEliminar {
+  puede_eliminar: boolean;
+  activo: boolean;
+  /** Lo que impide borrarlo: «3 pedidos», «1 venta del POS»… */
+  bloqueos: string[];
+  /** Lo que desaparece con él: «4 presentaciones», «12 cambios de precio…» */
+  se_borra: string[];
+  /** Archivos de foto propios que se borran del almacenamiento. */
+  fotos: number;
+}
+
+export async function obtenerConsecuenciasEliminar(id: number): Promise<ConsecuenciasEliminar> {
+  const { data } = await api.get<ConsecuenciasEliminar>(`/catalog/products/${id}/consecuencias-eliminar/`);
+  return data;
+}
+
+/**
  * Cambia el precio de una o varias presentaciones de un producto, todo o nada
  * (ver `actualizar_precios` en catalog/views.py). Devuelve todas las
  * presentaciones del producto ya actualizadas.

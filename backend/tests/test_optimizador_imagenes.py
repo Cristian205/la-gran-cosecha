@@ -12,7 +12,7 @@ import pytest
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from PIL import Image, ImageFilter, ImageOps
+from PIL import Image, ImageChops, ImageFilter, ImageOps
 
 from apps.media.models import Archivo
 from apps.media.optimizador import ACEPTABLE, BAJA, BUENA, diagnosticar, procesar
@@ -124,6 +124,40 @@ def test_conserva_la_transparencia():
     img.putalpha(Image.linear_gradient("L").resize(img.size))
     r = procesar(io.BytesIO(_bytes(img)), "logo.png")
     assert Image.open(io.BytesIO(r.contenido)).mode == "RGBA"
+
+
+def _grafico(ancho=800, alto=600):
+    """Un logo o icono: pocos colores, bordes duros y transparencia."""
+    from PIL import ImageDraw
+
+    img = Image.new("RGBA", (ancho, alto), (0, 0, 0, 0))
+    dibujo = ImageDraw.Draw(img)
+    for i in range(12):
+        dibujo.ellipse((i * 50, i * 30, i * 50 + 220, i * 30 + 160), fill=(30 + i * 15, 120, 200 - i * 10, 255))
+    dibujo.rectangle((100, 400, 700, 450), fill=(255, 80, 0, 180))
+    return img
+
+
+def test_un_png_grafico_pasa_a_webp_sin_perder_un_pixel():
+    original = _grafico()
+    r = procesar(io.BytesIO(_bytes(original)), "logo-tienda.png")
+    assert r.optimizada and r.nombre == "logo-tienda.webp"
+    assert r.tamano < r.tamano_original
+    salida = Image.open(io.BytesIO(r.contenido))
+    assert salida.format == "WEBP" and salida.mode == "RGBA"
+    # Sin pérdida: píxel por píxel igual al PNG.
+    assert ImageChops.difference(salida.convert("RGBA"), original).getbbox() is None
+
+
+def test_una_foto_en_png_pasa_a_webp_de_calidad_alta(settings):
+    """Sin pérdida pesaría megas: se usa el con pérdida, pero de calidad alta."""
+    settings.IMAGENES_CALIDAD_WEBP_ALTA = 90
+    original = _bytes(_foto(1600, 1200))
+    r = procesar(io.BytesIO(original), "foto.png")
+    assert r.optimizada and r.content_type == "image/webp"
+    assert r.tamano < r.tamano_original / 3
+    alta = _bytes(Image.open(io.BytesIO(original)).convert("RGB"), "WEBP", quality=90, method=4)
+    assert r.contenido == alta
 
 
 def test_quita_los_metadatos_y_endereza_por_exif():

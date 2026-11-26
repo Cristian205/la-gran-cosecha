@@ -9,6 +9,7 @@ import { WhatsAppIcon } from "@/componentes/icons/WhatsAppIcon";
 import { useCart } from "@/estado/carrito";
 import { telHref, whatsappHref } from "@/lib/utiles";
 import { TipografiaEditorial } from "../campanas/comunes";
+import { rutaIcono3D, srcSetIcono3D } from "../iconos3d";
 import { ENLACE_DE, intencionDelEnlace, type Intencion } from "./intenciones";
 import { CONVERSACION, COTIZACION, PRODUCTO_ESPECIAL, Solicitud } from "./Solicitud";
 
@@ -161,7 +162,16 @@ export function ContactIntentSelector({
                 >
                   <span className="ct-camino-icono" aria-hidden="true">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/icons3d/${o.icono || ICONO_DE[o.clave]}`} alt="" width={64} height={64} loading="lazy" decoding="async" />
+                    <img
+                      src={rutaIcono3D(o.icono || ICONO_DE[o.clave], 128)}
+                      srcSet={srcSetIcono3D(o.icono || ICONO_DE[o.clave])}
+                      sizes="64px"
+                      alt=""
+                      width={64}
+                      height={64}
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </span>
                   <span className="ct-camino-titulo">{o.titulo}</span>
                   {o.texto && <span className="ct-camino-texto">{o.texto}</span>}

@@ -3208,6 +3208,8 @@ h1, h2, h3 {
   align-items: center;
   column-gap: 2rem;
 }
+/* Pie mínimo: sin vitrina, la franja institucional abre el pie. */
+.footer--minimo .footer-institucional { padding-top: 1.8rem; }
 .footer-marca-bloque { display: flex; align-items: center; gap: 0.9rem; min-width: 0; flex: 0 1 auto; }
 .footer-logo {
   flex: none;
@@ -3315,6 +3317,9 @@ a.footer-contacto-item:hover { color: var(--f-acento); }
 }
 .footer-bottom p { margin: 0; text-align: left; }
 .footer-credito strong { font-weight: 700; color: var(--f-fuerte); letter-spacing: 0.01em; }
+.footer-credito a { color: inherit; text-decoration: none; text-underline-offset: 3px; }
+.footer-credito a:hover { text-decoration: underline; }
+.footer-credito a:focus-visible { outline: 2px solid var(--f-oro); outline-offset: 2px; border-radius: 2px; }
 
 a.footer-contacto-item:focus-visible,
 .footer-legal a:focus-visible {
@@ -5228,7 +5233,7 @@ a.footer-contacto-item:focus-visible,
   border-radius: 50%;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.4));
   border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 14px 28px rgba(6, 46, 26, 0.14), inset 0 2px 8px rgba(255, 255, 255, 0.7);
+  box-shadow: 0 14px 28px rgba(var(--sombra-tinte), 0.14), inset 0 2px 8px rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(6px);
   color: var(--marca-700);
 }

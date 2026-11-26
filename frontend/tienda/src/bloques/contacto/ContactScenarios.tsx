@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
 import { TipografiaEditorial } from "../campanas/comunes";
+import { rutaIcono3D } from "../iconos3d";
 import { Medio, tieneMedio, type MedioDatos } from "../nosotros/Medio";
 
 /**
@@ -64,7 +65,7 @@ export function ContactScenarios({ kicker = "", titulo = "", titulo_resaltado = 
                   ) : (
                     e.icono && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img className="ct-esc-icono" src={`/icons3d/${e.icono}`} alt="" loading="lazy" decoding="async" />
+                      <img className="ct-esc-icono" src={rutaIcono3D(e.icono)} alt="" loading="lazy" decoding="async" />
                     )
                   )}
                 </div>

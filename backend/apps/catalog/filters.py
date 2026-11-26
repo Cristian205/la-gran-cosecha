@@ -4,6 +4,10 @@ from django.db.models import Exists, OuterRef
 from .models import PresentacionProducto, Producto
 
 
+# Tope de ids por petición: lo que la tienda revalida de una vez al recargar.
+MAX_IDS = 200
+
+
 class ProductoFilter(django_filters.FilterSet):
     categoria = django_filters.NumberFilter(field_name="categoria_id")
     estado = django_filters.ChoiceFilter(
@@ -20,7 +24,9 @@ class ProductoFilter(django_filters.FilterSet):
     # mismo producto— y un rango sobre eso no significaría nada.
     unidad = django_filters.NumberFilter(method="filtrar_unidad")
     # Productos concretos, por id ("?ids=4,18,2"): los que el negocio eligió a
-    # mano para una sección de destacados. El orden lo decide quien pide.
+    # mano para una sección de destacados, o las tandas que la tienda guardó
+    # en el navegador y revalida al recargar (ver `cacheCatalogo.ts`). El
+    # orden lo decide quien pide.
     ids = django_filters.CharFilter(method="filtrar_ids")
 
     class Meta:
@@ -28,7 +34,7 @@ class ProductoFilter(django_filters.FilterSet):
         fields = ["categoria", "estado", "slug", "unidad", "ids"]
 
     def filtrar_ids(self, queryset, name, value):
-        ids = [int(x) for x in value.split(",") if x.strip().isdigit()][:50]
+        ids = [int(x) for x in value.split(",") if x.strip().isdigit()][:MAX_IDS]
         return queryset.filter(id__in=ids)
 
     def filtrar_estado(self, queryset, name, value):
