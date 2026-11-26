@@ -1,4 +1,5 @@
 import axios from "axios";
+import { anotarMotivoCierre } from "../auth/inactividad";
 
 const baseURL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -92,7 +93,8 @@ api.interceptors.response.use(
         original.headers.Authorization = `Bearer ${nuevo}`;
         return api(original);
       }
-      // Sesión expirada: redirige al login
+      // Sesión expirada: redirige al login, que explica por qué.
+      anotarMotivoCierre("expirada");
       window.location.href = "/login";
     }
     return Promise.reject(error);

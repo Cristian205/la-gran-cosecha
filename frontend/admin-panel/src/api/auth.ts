@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { NodoSidebar, Usuario } from "../types";
+import { registrarActividad } from "../auth/inactividad";
 import { api, tokenStore } from "./client";
 
 const baseURL = import.meta.env.VITE_API_URL ?? "/api";
@@ -73,6 +74,7 @@ export async function loginPaso1(
   });
   if ("access" in data) {
     tokenStore.set(data.access, data.refresh, recordar);
+    registrarActividad(true);
   } else if (testigo) {
     // Pidió código pese a tener testigo: caducó (otro día, otra contraseña).
     guardarTestigo(email, null);
@@ -94,6 +96,7 @@ export async function verificarOtp(
     confiar_dispositivo: Boolean(confiar),
   });
   tokenStore.set(data.access, data.refresh, recordar);
+  registrarActividad(true);
   if (confiar) guardarTestigo(confiar.email, data.dispositivo ?? null);
   return data;
 }

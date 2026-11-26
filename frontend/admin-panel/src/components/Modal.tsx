@@ -101,6 +101,9 @@ export function Modal({
 }: Props) {
   const id = useId();
   const [expandido, setExpandido] = useState(false);
+  // ¿Se abre encima de otro modal (la biblioteca sobre el producto)? Se fija
+  // al montar: el de abajo ya está en la pila porque se abrió antes.
+  const [encima] = useState(() => pila.length > 0);
   const caja = useRef<HTMLDivElement>(null);
   // La foto de los campos se toma en la PRIMERA interacción del usuario, no
   // al abrir: muchos formularios rellenan sus campos al llegar los datos, y
@@ -186,7 +189,7 @@ export function Modal({
 
   const contenido = (
     <div
-      className={`modal-overlay ${lateral ? "lateral" : ""} ${amplio ? "amplio" : ""}`}
+      className={`modal-overlay ${lateral ? "lateral" : ""} ${amplio ? "amplio" : ""} ${encima ? "encima" : ""}`}
       onMouseDown={(e) => {
         pulsadoEnFondo.current = e.target === e.currentTarget;
       }}
@@ -240,5 +243,10 @@ export function Modal({
   // `backdrop-filter` (que convierten en referencia a cualquier
   // `position: fixed` de dentro). Los eventos de React siguen subiendo por el
   // árbol de siempre.
-  return amplio ? createPortal(contenido, document.body) : contenido;
+  //
+  // Lo mismo para CUALQUIER modal abierto encima de otro: dibujado dentro del
+  // de abajo, quedaba atrapado en su contexto de apilamiento y los campos del
+  // formulario de debajo (los desplegables de categoría y unidad) asomaban por
+  // encima de la biblioteca.
+  return amplio || encima ? createPortal(contenido, document.body) : contenido;
 }

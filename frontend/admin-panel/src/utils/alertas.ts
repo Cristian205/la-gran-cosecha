@@ -93,6 +93,68 @@ export function confirmarEliminar(titulo: string, detalle?: string): Promise<boo
   return confirmarAccion(titulo, detalle, "Eliminar");
 }
 
+function escaparHtml(texto: string): string {
+  return texto.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
+function listaHtml(items: string[]): string {
+  return `<ul class="swal-consecuencias">${items.map((i) => `<li>${escaparHtml(i)}</li>`).join("")}</ul>`;
+}
+
+/**
+ * Confirmar algo que no se puede deshacer, diciendo antes qué va a pasar.
+ *
+ * `consecuencias` es la lista de lo que desaparece; `seConserva`, lo que NO
+ * se toca (para que nadie dude de si se lleva algo más). El botón seguro
+ * («Cancelar») queda enfocado: un Enter distraído no borra nada.
+ */
+export async function confirmarConConsecuencias(opciones: {
+  titulo: string;
+  intro: string;
+  consecuencias: string[];
+  seConserva?: string[];
+  textoConfirmar: string;
+}): Promise<boolean> {
+  const { titulo, intro, consecuencias, seConserva, textoConfirmar } = opciones;
+  const html =
+    `<p class="swal-consecuencias-intro">${escaparHtml(intro)}</p>` +
+    listaHtml(consecuencias) +
+    (seConserva?.length
+      ? `<p class="swal-consecuencias-intro">No se toca:</p>${listaHtml(seConserva)}`
+      : "") +
+    `<p class="swal-consecuencias-final">Esta acción no se puede deshacer.</p>`;
+  const res = await swalBase.fire({
+    icon: "warning",
+    title: titulo,
+    html,
+    showCancelButton: true,
+    reverseButtons: true,
+    focusCancel: true,
+    confirmButtonText: textoConfirmar,
+    cancelButtonText: "Cancelar",
+    customClass: {
+      popup: "swal-panel",
+      title: "swal-panel-titulo",
+      confirmButton: "btn peligro",
+      cancelButton: "btn secundario",
+    },
+  });
+  return res.isConfirmed;
+}
+
+/** Un aviso con explicación y lista, sin nada que confirmar. */
+export function alertaConLista(titulo: string, intro: string, items: string[], cierre?: string): Promise<unknown> {
+  return swalBase.fire({
+    icon: "info",
+    title: titulo,
+    html:
+      `<p class="swal-consecuencias-intro">${escaparHtml(intro)}</p>` +
+      listaHtml(items) +
+      (cierre ? `<p class="swal-consecuencias-final">${escaparHtml(cierre)}</p>` : ""),
+    confirmButtonText: "Entendido",
+  });
+}
+
 export function confirmarRechazo(titulo: string, detalle?: string): Promise<boolean> {
   return confirmarAccion(titulo, detalle, "Rechazar");
 }

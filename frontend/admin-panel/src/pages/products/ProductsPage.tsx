@@ -12,14 +12,18 @@ import {
   PackageX,
   Pencil,
   Plus,
-  Power,
   PowerOff,
   Search,
+  Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 import {
   actualizarProductoParcial,
   desactivarProducto,
+  eliminarProductoDefinitivo,
+  obtenerConsecuenciasEliminar,
+  type ConsecuenciasEliminar,
   obtenerCategorias,
   obtenerPaginaProductos,
   obtenerUnidades,
@@ -27,7 +31,7 @@ import {
 import type { Categoria, Presentacion, Producto, UnidadMedida } from "../../types";
 import { extraerMensajeError, formatoPrecio, tienePermiso } from "../../utils";
 import { describirRegla } from "../../utils/cantidades";
-import { alertaError, confirmarAccion } from "../../utils/alertas";
+import { alertaConLista, alertaError, alertaExito, confirmarAccion, confirmarConConsecuencias } from "../../utils/alertas";
 import { Tooltip } from "../../components/Tooltip";
 import { useAuth } from "../../auth/AuthContext";
 import { CategoriesManagerModal } from "./CategoriesManagerModal";
@@ -35,13 +39,6 @@ import { ProductFormModal } from "./ProductFormModal";
 import { PriceHistoryModal } from "./PriceHistoryModal";
 import { obtenerHistorialPrecios } from "../../api/resources";
 
-type EstadoFiltro = "todos" | "activos" | "inactivos";
-
-const OPCIONES_ESTADO: { valor: EstadoFiltro; etiqueta: string }[] = [
-  { valor: "todos", etiqueta: "Todos" },
-  { valor: "activos", etiqueta: "Activos" },
-  { valor: "inactivos", etiqueta: "Inactivos" },
-];
 
 const TAMANOS_PAGINA = [50, 100, 150, 200];
 
@@ -81,7 +78,13 @@ export function ProductsPage() {
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [busqueda, setBusqueda] = useState(() => searchParams.get("q") ?? "");
   const [categoriaFiltro, setCategoriaFiltro] = useState<number | "">("");
-  const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("todos");
+  /**
+   * Papelera: los productos inactivos viven aparte del catálogo. El catálogo
+   * muestra solo los activos; desactivar uno lo manda aquí, y desde aquí se
+   * restaura o se elimina del sistema.
+   */
+  const [papelera, setPapelera] = useState(false);
+  const [enPapelera, setEnPapelera] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(TAMANOS_PAGINA[0]);
@@ -105,15 +108,14 @@ export function ProductsPage() {
 
   const coloresCategoria = useMemo(() => coloresPorCategoria(categorias), [categorias]);
 
-  const hayFiltrosActivos =
-    busqueda !== "" || categoriaFiltro !== "" || estadoFiltro !== "todos";
+  const hayFiltrosActivos = busqueda !== "" || categoriaFiltro !== "";
 
   function cargar() {
     setCargando(true);
     obtenerPaginaProductos({
       search: busqueda || undefined,
       categoria: categoriaFiltro === "" ? undefined : categoriaFiltro,
-      estado: estadoFiltro,
+      estado: papelera ? "inactivos" : "activos",
       page: pagina,
       page_size: porPagina,
     })
@@ -122,6 +124,14 @@ export function ProductsPage() {
         setTotal(total);
       })
       .finally(() => setCargando(false));
+    contarPapelera();
+  }
+
+  /** Cuántos hay en la papelera, para el botón (aunque no se esté en ella). */
+  function contarPapelera() {
+    obtenerPaginaProductos({ estado: "inactivos", page: 1, page_size: 1 })
+      .then(({ total }) => setEnPapelera(total))
+      .catch(() => {});
   }
 
   function cargarCategorias() {
@@ -137,13 +147,13 @@ export function ProductsPage() {
     const t = setTimeout(cargar, 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busqueda, categoriaFiltro, estadoFiltro, pagina, porPagina]);
+  }, [busqueda, categoriaFiltro, papelera, pagina, porPagina]);
 
   // Al cambiar un filtro hay que volver al principio: quedarse en la página 7
   // de un resultado que ahora tiene dos páginas mostraría una lista vacía.
   useEffect(() => {
     setPagina(1);
-  }, [busqueda, categoriaFiltro, estadoFiltro, porPagina]);
+  }, [busqueda, categoriaFiltro, papelera, porPagina]);
 
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
   const desde = total === 0 ? 0 : (pagina - 1) * porPagina + 1;
@@ -152,7 +162,6 @@ export function ProductsPage() {
   function limpiarFiltros() {
     setBusqueda("");
     setCategoriaFiltro("");
-    setEstadoFiltro("todos");
   }
 
   function abrirNuevo() {
@@ -166,7 +175,13 @@ export function ProductsPage() {
 
   async function alternarEstado(p: Producto) {
     if (p.estado_producto) {
-      if (!(await confirmarAccion(`¿Desactivar "${p.nombre_producto}" del catálogo?`, undefined, "Desactivar")))
+      if (
+        !(await confirmarAccion(
+          `¿Desactivar "${p.nombre_producto}"?`,
+          "Sale del catálogo y de la tienda y pasa a la papelera, desde donde puedes restaurarlo o eliminarlo.",
+          "Desactivar"
+        ))
+      )
         return;
     }
     try {
@@ -185,6 +200,59 @@ export function ProductsPage() {
   }
 
   /**
+   * Antes de borrar, el backend dice qué se llevaría consigo y si algo lo
+   * impide; la alerta lo muestra tal cual, con las cifras de ESTE producto.
+   */
+  async function eliminarDefinitivo(p: Producto) {
+    let c: ConsecuenciasEliminar;
+    try {
+      c = await obtenerConsecuenciasEliminar(p.id);
+    } catch (err) {
+      alertaError(extraerMensajeError(err, "No se pudo comprobar qué implica eliminar el producto."));
+      return;
+    }
+
+    if (!c.puede_eliminar) {
+      await alertaConLista(
+        `"${p.nombre_producto}" no se puede eliminar`,
+        c.activo
+          ? "Está activo. Desactívalo primero para enviarlo a la papelera."
+          : "Ya forma parte del historial de tu negocio. Figura en:",
+        c.bloqueos,
+        c.activo
+          ? undefined
+          : "Borrarlo dejaría esos registros sin producto. Se queda en la papelera: no aparece en el catálogo ni en la tienda."
+      );
+      return;
+    }
+
+    const consecuencias = [
+      "El producto desaparece del sistema: no se podrá restaurar ni volver a consultar.",
+      ...c.se_borra.map((x) => `Se borran ${x}.`),
+      ...(c.fotos > 0
+        ? [c.fotos === 1 ? "Se borra su foto del almacenamiento." : `Se borran sus ${c.fotos} fotos del almacenamiento.`]
+        : []),
+    ];
+    if (
+      !(await confirmarConConsecuencias({
+        titulo: `¿Eliminar "${p.nombre_producto}" definitivamente?`,
+        intro: "Esto es lo que va a pasar:",
+        consecuencias,
+        seConserva: ["Los pedidos, ventas e informes: este producto no figura en ninguno.", "Los archivos de la Biblioteca."],
+        textoConfirmar: "Eliminar definitivamente",
+      }))
+    )
+      return;
+    try {
+      await eliminarProductoDefinitivo(p.id);
+      cargar();
+      alertaExito(`"${p.nombre_producto}" se eliminó del sistema.`);
+    } catch (err) {
+      alertaError(extraerMensajeError(err, "No se pudo eliminar el producto."));
+    }
+  }
+
+  /**
    * La presentación ACTIVA más barata, para el "Desde": el precio va con su
    * unidad ("$2.000 / kg") porque un mínimo que mezcla kilos y bultos sin
    * decir cuál es no significa nada. Sin activas no hay precio que mostrar.
@@ -198,14 +266,25 @@ export function ProductsPage() {
   return (
     <>
       <div className="topbar">
-        <h1>Catálogo</h1>
+        <h1>{papelera ? "Papelera" : "Catálogo"}</h1>
         <div style={{ display: "flex", gap: ".6rem" }}>
-          <button className="btn secundario" onClick={() => setModalCategorias(true)}>
-            <FolderCog size={16} /> Categorías
-          </button>
-          <button className="btn primario" onClick={abrirNuevo}>
-            <Plus size={16} /> Nuevo producto
-          </button>
+          {papelera ? (
+            <button className="btn secundario" onClick={() => setPapelera(false)}>
+              <ChevronLeft size={16} /> Volver al catálogo
+            </button>
+          ) : (
+            <>
+              <button className="btn secundario" onClick={() => setPapelera(true)}>
+                <Trash2 size={16} /> Papelera{enPapelera > 0 ? ` (${enPapelera})` : ""}
+              </button>
+              <button className="btn secundario" onClick={() => setModalCategorias(true)}>
+                <FolderCog size={16} /> Categorías
+              </button>
+              <button className="btn primario" onClick={abrirNuevo}>
+                <Plus size={16} /> Nuevo producto
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -213,7 +292,7 @@ export function ProductsPage() {
         <div className="panel">
           <div className="cabecera">
             <h2>
-              Productos{" "}
+              {papelera ? "Productos inactivos" : "Productos"}{" "}
               <span style={{ color: "var(--gris)", fontWeight: 500 }}>
                 ({total})
               </span>
@@ -247,19 +326,6 @@ export function ProductsPage() {
               ))}
             </select>
 
-            <div className="segmentado">
-              {OPCIONES_ESTADO.map((o) => (
-                <button
-                  key={o.valor}
-                  type="button"
-                  className={estadoFiltro === o.valor ? "activo" : ""}
-                  onClick={() => setEstadoFiltro(o.valor)}
-                >
-                  {o.etiqueta}
-                </button>
-              ))}
-            </div>
-
             {hayFiltrosActivos && (
               <button type="button" className="btn-limpiar" onClick={limpiarFiltros}>
                 <X size={14} /> Limpiar filtros
@@ -283,7 +349,11 @@ export function ProductsPage() {
           ) : productos.length === 0 ? (
             <div className="vacio">
               <PackageX size={34} style={{ opacity: 0.5, marginBottom: ".5rem" }} />
-              <div>Sin productos que coincidan con los filtros</div>
+              <div>
+                {papelera && !hayFiltrosActivos
+                  ? "La papelera está vacía: aquí llegan los productos que desactives."
+                  : "Sin productos que coincidan con los filtros"}
+              </div>
             </div>
           ) : (
             <div className="catalogo-grid">
@@ -408,20 +478,32 @@ export function ProductsPage() {
                           actual,
                           p.estado_producto ? "catalog.delete_producto" : "catalog.change_producto"
                         ) && (
-                          <Tooltip label={p.estado_producto ? "Desactivar" : "Activar"}>
+                          <Tooltip label={p.estado_producto ? "Desactivar" : "Restaurar al catálogo"}>
                             <button
                               type="button"
                               className={`btn-icon ${
                                 p.estado_producto ? "peligro" : "exito"
                               }`}
                               onClick={() => alternarEstado(p)}
-                              aria-label={p.estado_producto ? "Desactivar" : "Activar"}
+                              aria-label={p.estado_producto ? "Desactivar" : "Restaurar al catálogo"}
                             >
                               {p.estado_producto ? (
                                 <PowerOff size={16} />
                               ) : (
-                                <Power size={16} />
+                                <Undo2 size={16} />
                               )}
+                            </button>
+                          </Tooltip>
+                        )}
+                        {papelera && !p.estado_producto && tienePermiso(actual, "catalog.delete_producto") && (
+                          <Tooltip label="Eliminar definitivamente">
+                            <button
+                              type="button"
+                              className="btn-icon peligro"
+                              onClick={() => eliminarDefinitivo(p)}
+                              aria-label="Eliminar definitivamente"
+                            >
+                              <Trash2 size={16} />
                             </button>
                           </Tooltip>
                         )}

@@ -4,7 +4,7 @@ import { eliminarArchivo, obtenerArchivos, subirArchivo } from "../../api/media"
 import { ArchivosGrid } from "../../components/ArchivosGrid";
 import { Tooltip } from "../../components/Tooltip";
 import type { Archivo } from "../../types";
-import { extraerMensajeError } from "../../utils";
+import { extraerMensajeError, formatoTamano } from "../../utils";
 import { alertaError, confirmarEliminar } from "../../utils/alertas";
 
 const FILTROS: { valor: Archivo["tipo"] | ""; etiqueta: string }[] = [
@@ -78,7 +78,14 @@ export function ArchivosTab() {
   return (
     <div className="panel">
       <div className="cabecera">
-        <h2>Biblioteca de archivos ({archivos.length})</h2>
+        <h2>
+          Biblioteca de archivos ({archivos.length})
+          {archivos.length > 0 && (
+            <span className="archivos-peso-total" title="Lo que ocupan los archivos que se ven ahora">
+              {" "}· {formatoTamano(archivos.reduce((suma, a) => suma + (a.tamano || 0), 0))} en total
+            </span>
+          )}
+        </h2>
         <label className="btn primario sm archivos-subir-btn">
           <FolderUp size={15} /> {subiendo ? "Subiendo…" : "Subir archivos"}
           <input

@@ -9,7 +9,10 @@ Aquí cada imagen que entra a la plataforma:
 1. Se endereza según su EXIF y pierde los metadatos (ubicación del teléfono
    incluida: no tienen por qué acabar en un bucket público).
 2. Se reduce si pasa del lado máximo; nunca se agranda.
-3. Se recodifica en WebP, que conserva la transparencia de los PNG. Si el
+3. Se recodifica en WebP, que conserva la transparencia de los PNG. Un PNG
+   pasa a WebP SIN pérdida (mismos píxeles, menos peso); solo si es una foto
+   guardada como PNG, donde el sin pérdida seguiría pesando megas, se usa
+   WebP con pérdida de calidad alta. Un JPEG va con la calidad normal. Si el
    resultado no es más liviano que el original y no hubo que reducirla, se
    queda el original: recomprimir un JPEG ya bueno solo le resta calidad.
 4. Se diagnostica: ¿está pixelada?, ¿es una foto pequeña que alguien amplió?,
@@ -93,6 +96,20 @@ def lado_maximo() -> int:
 
 def calidad_webp() -> int:
     return getattr(settings, "IMAGENES_CALIDAD_WEBP", 80)
+
+
+def calidad_webp_alta() -> int:
+    return getattr(settings, "IMAGENES_CALIDAD_WEBP_ALTA", 90)
+
+
+# Formatos que guardan los píxeles tal cual: su WebP se intenta sin pérdida.
+FORMATOS_SIN_PERDIDA = {"PNG", "BMP", "TIFF"}
+
+# Un WebP sin pérdida se acepta mientras no pese más de esto veces su versión
+# con pérdida de calidad alta. En logos, iconos y capturas el sin pérdida
+# suele pesar MENOS que el con pérdida; en una foto guardada como PNG pesa
+# 5 a 10 veces más, y ahí se usa el de calidad alta (a la vista idéntico).
+FACTOR_SIN_PERDIDA = 2.0
 
 
 # --------------------------------------------------------------------------
@@ -321,6 +338,25 @@ def _con_extension(nombre: str, ext: str) -> str:
     return f"{raiz or 'imagen'}.{ext}"
 
 
+def _webp_desde_sin_perdida(img: Image.Image) -> bytes:
+    """
+    El WebP de un PNG (o BMP/TIFF) sin restarle calidad.
+
+    Primero sin pérdida: los mismos píxeles, transparencia incluida, y en
+    logos, iconos y gráficos bastante menos peso que el PNG. Si es una foto
+    guardada como PNG, el sin pérdida seguiría pesando megas (lo que PageSpeed
+    reclama), y se usa el WebP con pérdida de calidad alta.
+    """
+    sin_perdida = io.BytesIO()
+    # En modo sin pérdida `quality` es el esfuerzo de compresión, no calidad.
+    img.save(sin_perdida, "WEBP", lossless=True, quality=80, method=4)
+    con_perdida = io.BytesIO()
+    img.save(con_perdida, "WEBP", quality=calidad_webp_alta(), method=4)
+    if sin_perdida.tell() <= con_perdida.tell() * FACTOR_SIN_PERDIDA:
+        return sin_perdida.getvalue()
+    return con_perdida.getvalue()
+
+
 def procesar(archivo, nombre: str = "", formato: str = "WEBP") -> Resultado | None:
     """
     Optimiza y diagnostica un archivo de imagen (cualquier objeto con `read`).
@@ -387,9 +423,12 @@ def procesar(archivo, nombre: str = "", formato: str = "WEBP") -> Resultado | No
     # es el punto medio de velocidad: 6 comprime un poco más y tarda el doble.
     if formato == "PNG":
         img.save(salida, "PNG", optimize=True)
+        nuevo = salida.getvalue()
+    elif formato_original in FORMATOS_SIN_PERDIDA:
+        nuevo = _webp_desde_sin_perdida(img)
     else:
         img.save(salida, "WEBP", quality=calidad_webp(), method=4)
-    nuevo = salida.getvalue()
+        nuevo = salida.getvalue()
 
     # Si el original ya era más liviano que su versión WebP, se queda: no se
     # ganaría nada y se perdería calidad (pasa con JPEG bien comprimidos y con

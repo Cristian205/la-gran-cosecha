@@ -526,6 +526,35 @@ def test_la_plantilla_se_copia_y_no_se_referencia(negocio, home):
 RAIZ_TIENDA = Path(__file__).resolve().parents[2] / "frontend" / "tienda"
 
 
+def _hojas_de_la_tienda():
+    """
+    Todas las hojas de la tienda, no solo `global.css`.
+
+    El rediseno repartio los estilos por secciones (`campanas.css`,
+    `contacto.css`, `nosotros.css`...). Un guardia que solo mira `global.css`
+    denuncia como ausente lo que vive en otra hoja, y deja pasar lo que se
+    reescribe fuera de ella.
+    """
+    return sorted((RAIZ_TIENDA / "src").rglob("*.css"))
+
+
+def _css_de_la_tienda():
+    return "".join(h.read_text(encoding="utf-8") for h in _hojas_de_la_tienda())
+
+
+#: Variantes que no siguen la convencion `<rejilla>--<variante>` porque pintan
+#: su PROPIO marcado, y la clase raiz de ese marcado. Se exige que la hoja la
+#: defina: sin ella la variante tampoco se veria.
+VARIANTES_CON_MARCADO_PROPIO = {
+    "por-que-elegirnos:marmol": (
+        ".pqe-marmol",
+        "Cambia la estructura entera —encabezado centrado, fondo de marmol, "
+        "tarjetas con caja de icono—, no solo el estilo de la rejilla, asi que "
+        "`PorQueElegirnos.tsx` pinta otro arbol con su propia clase raiz.",
+    ),
+}
+
+
 def test_cada_bloque_del_catalogo_tiene_componente_en_el_registro():
     """
     Un `codigo` sin entrada en el registro no pinta nada: el lienzo lo salta en
@@ -550,7 +579,7 @@ def test_cada_variante_declarada_tiene_estilo_que_la_aplique():
     defecto de cada bloque no necesita regla —no cambia nada— así que solo se
     exige la primera.
     """
-    css = (RAIZ_TIENDA / "src" / "app" / "global.css").read_text(encoding="utf-8")
+    css = _css_de_la_tienda()
 
     sin_estilo = []
     for bloque in Bloque.objects.exclude(variantes=[]):
@@ -558,8 +587,11 @@ def test_cada_variante_declarada_tiene_estilo_que_la_aplique():
         for variante in bloque.codigos_de_variante() - {
             bloque.variantes[0]["codigo"]
         }:
-            if f"--{variante}" not in css:
-                sin_estilo.append(f"{bloque.codigo}:{variante}")
+            clave = f"{bloque.codigo}:{variante}"
+            propia = VARIANTES_CON_MARCADO_PROPIO.get(clave)
+            selector = propia[0] if propia else f"--{variante}"
+            if selector not in css:
+                sin_estilo.append(clave)
 
     assert not sin_estilo, f"variantes sin estilo: {sorted(sin_estilo)}"
 
@@ -626,34 +658,42 @@ def test_toda_plantilla_sembrada_es_una_composicion_valida():
 
 def test_la_plantilla_de_la_gran_cosecha_compone_el_diseno():
     """
-    Las cinco piezas del diseno, en orden, y ninguna escrita en codigo.
+    Las piezas de la campana publicitaria (migracion 0045), en orden, y
+    ninguna escrita en codigo.
 
-    Es la prueba de que el reparto esta bien puesto: de una portada entera, lo
-    unico que hubo que programar son dos componentes; el titular, los cuatro
-    publicos y los cuatro pasos son datos.
+    El Home dejo de ser una fila de secciones de igual peso (portada,
+    publicos, pasos, insignias) para contar un recorrido: campo, producto,
+    historia, seleccion, negocios, clientes y compra. Los separadores en onda
+    entre piezas son decoracion y no cuentan para el orden.
     """
     from apps.storefront.models import Plantilla
 
     plantilla = Plantilla.objects.get(slug="la-gran-cosecha")
     home = plantilla.paginas["/"]
-    tipos = [b["tipo"] for b in home]
+    piezas = [b["tipo"] for b in home if b["tipo"] != "separador"]
 
-    assert tipos[:4] == [
-        "portada",
-        "publicos-objetivo",
-        "como-funciona",
-        "insignias-confianza",
+    assert piezas == [
+        "hero-campana",
+        "producto-spotlight",
+        "video-campana",
+        "historia-marca",
+        "video-campana",
+        "campana-editorial",
+        "campana-negocios",
+        "testimonios-editorial",
+        "cierre-cta",
     ]
     # No es la de arranque: un negocio nuevo no deberia estrenar la portada
     # pensada para un mayorista concreto.
     assert plantilla.es_predeterminada is False
 
-    portada = home[0]["props"]
-    assert len(portada["ventajas"]) == 4
-    assert home[1]["props"]["publicos"][0]["titulo"] == "Restaurantes"
-    # Los pasos van en fila y numerados: es una variante, no un bloque nuevo.
-    assert home[2]["variante"] == "linea"
-    assert len(home[2]["props"]["pasos"]) == 4
+    # El titular y la foto del hero son datos, no codigo.
+    hero = home[0]["props"]
+    assert hero["titulo"] and hero["imagen"]
+    # La campana editorial con la foto a la derecha es una variante, no un
+    # bloque nuevo.
+    editorial = next(b for b in home if b["tipo"] == "campana-editorial")
+    assert editorial["variante"] == "imagen-derecha"
 
 
 # ==========================================================================
@@ -712,11 +752,18 @@ def test_adoptar_una_plantilla_marca_bien_el_armazon(negocio):
 
 
 def test_la_plantilla_de_la_gran_cosecha_trae_todas_sus_paginas():
-    """Una plantilla que solo compone la home deja el resto sin administrar."""
+    """
+    Una plantilla que solo compone la home deja el resto sin administrar.
+
+    `/tienda` es el catalogo hecho de bloques (0025) y `/_no-encontrada` la
+    pagina del 404 (0026): ambas se administran como cualquier otra.
+    """
     from apps.storefront.models import Plantilla
 
     plantilla = Plantilla.objects.get(slug="la-gran-cosecha")
-    assert set(plantilla.paginas) == {"/", "/_layout", "/nosotros", "/contacto"}
+    assert set(plantilla.paginas) == {
+        "/", "/_layout", "/nosotros", "/contacto", "/tienda", "/_no-encontrada",
+    }
 
     armazon = [b["tipo"] for b in plantilla.paginas["/_layout"]]
     assert armazon == ["cabecera", "pie"]
@@ -846,7 +893,7 @@ TOKENS_SIN_VARIABLE = {
 #: solo es deliberado —un negocio tiene una identidad, no dos— y esta explicado
 #: en `TokenTema.Grupo.CAJA`.
 HOJAS = (
-    RAIZ_TIENDA / "src" / "app" / "global.css",
+    *_hojas_de_la_tienda(),
     RAIZ_TIENDA.parent / "admin-panel" / "src" / "index.css",
 )
 
@@ -985,11 +1032,7 @@ def _reglas_de_la_hoja() -> str:
     los comentarios se denunciarian a si mismos. Un guardia que denuncia de mas
     se acaba desactivando, que es peor que no tenerlo.
     """
-    hoja = (
-        Path(__file__).resolve().parents[2]
-        / "frontend" / "tienda" / "src" / "app" / "global.css"
-    )
-    fuente = hoja.read_text(encoding="utf-8")
+    fuente = _css_de_la_tienda()
     # CSS solo tiene comentarios de bloque, asi que basta con este recorte.
     return re.sub(r"/\*.*?\*/", "", fuente, flags=re.S)
 

@@ -9,6 +9,7 @@ import {
 import { aplicarTipografiaDeMarca, pilaFuente, radioPx } from "../api/apariencia";
 import { cambiarNegocio as apiCambiarNegocio, cerrarSesion as apiLogout, obtenerPerfil } from "../api/auth";
 import { tokenStore } from "../api/client";
+import { anotarMotivoCierre, inactividadVencida, vigilarInactividad } from "./inactividad";
 import { obtenerSiteConfig } from "../api/content";
 import type { Negocio, Usuario } from "../types";
 
@@ -75,6 +76,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCargando(false);
       return;
     }
+    // Volver al panel después de más de media hora sin usarlo (pestaña
+    // cerrada, equipo apagado) también cierra la sesión.
+    if (inactividadVencida()) {
+      apiLogout();
+      anotarMotivoCierre("inactividad");
+      setCargando(false);
+      return;
+    }
     obtenerPerfil()
       .then(setUsuario)
       .catch(() => tokenStore.clear())
@@ -100,6 +109,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     apiLogout();
     setUsuario(null);
   };
+
+  // Con sesión abierta, MINUTOS_INACTIVIDAD sin tocar nada la cierran. Sin
+  // usuario no se vigila: la pantalla de acceso no tiene nada que proteger.
+  const hayUsuario = usuario !== null;
+  useEffect(() => {
+    if (!hayUsuario) return;
+    return vigilarInactividad(() => {
+      apiLogout();
+      anotarMotivoCierre("inactividad");
+      // Recarga completa: no queda en memoria nada de lo que se veía.
+      window.location.assign("/login");
+    });
+  }, [hayUsuario]);
 
   const negocios = usuario?.negocios ?? [];
   const negocioActivo = negocios.find((n) => n.activo) ?? null;

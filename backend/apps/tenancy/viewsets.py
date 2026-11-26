@@ -76,7 +76,14 @@ class ExigeNegocioMixin:
         si no, una ruta con `requiere_permiso` responde 403 —«no tienes
         permiso»— a una dirección que sencillamente no es de ningún negocio, y
         eso confunde a quien depura tanto como a quien usa la API.
+
+        Pero si no se resolvió negocio, primero se autentica: con el token
+        caducado el middleware no pudo leer el `tenant_id`, y el 404 tapaba
+        el 401 que el panel necesita para renovar la sesión. Lo dejaba en
+        «No hay ningún negocio…» en vez de seguir trabajando.
         """
+        if getattr(request, "tenant", None) is None:
+            self.perform_authentication(request)
         self.obtener_tenant()
         super().initial(request, *args, **kwargs)
 

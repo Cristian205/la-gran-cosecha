@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import { TipografiaEditorial } from "../campanas/comunes";
+import { rutaIcono3D } from "../iconos3d";
 import { Medio, tieneMedio, type MedioDatos } from "./Medio";
 
 /**
@@ -108,7 +109,7 @@ function Visual({ tipo }: { tipo: TipoNegocio }) {
     <div className="nn-medio nn-medio--icono" aria-hidden="true">
       {tipo.icono && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={`/icons3d/${tipo.icono}`} alt="" loading="lazy" decoding="async" />
+        <img src={rutaIcono3D(tipo.icono)} alt="" loading="lazy" decoding="async" />
       )}
     </div>
   );
