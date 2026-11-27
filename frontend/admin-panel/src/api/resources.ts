@@ -41,6 +41,20 @@ export async function obtenerReporteVentas(params: {
 }
 
 // ---------- Catálogo base ----------
+
+/**
+ * La categoría viaja en multipart (por la foto). Las listas —las preguntas
+ * frecuentes— van como JSON: `String()` las convertiría en «[object Object]»;
+ * el `JSONField` del backend lo decodifica al recibirlo.
+ */
+function formularioDeCategoria(payload: Partial<Categoria>): FormData {
+  const form = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    form.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+  });
+  return form;
+}
 export async function obtenerCategorias(): Promise<Categoria[]> {
   const { data } = await api.get<Paginated<Categoria> | Categoria[]>(
     "/catalog/categories/"
@@ -49,11 +63,10 @@ export async function obtenerCategorias(): Promise<Categoria[]> {
 }
 
 export async function crearCategoria(
-  payload: Omit<Categoria, "id" | "imagen_url">,
+  payload: Omit<Categoria, "id" | "imagen_url" | "slug" | "num_productos">,
   imagen?: File | null
 ): Promise<Categoria> {
-  const form = new FormData();
-  Object.entries(payload).forEach(([key, value]) => form.append(key, String(value)));
+  const form = formularioDeCategoria(payload);
   if (imagen) form.append("imagen", imagen);
   const { data } = await api.post<Categoria>("/catalog/categories/", form, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -63,11 +76,10 @@ export async function crearCategoria(
 
 export async function actualizarCategoria(
   id: number,
-  payload: Omit<Categoria, "id" | "imagen_url">,
+  payload: Omit<Categoria, "id" | "imagen_url" | "slug" | "num_productos">,
   imagen?: File | null
 ): Promise<Categoria> {
-  const form = new FormData();
-  Object.entries(payload).forEach(([key, value]) => form.append(key, String(value)));
+  const form = formularioDeCategoria(payload);
   if (imagen) form.append("imagen", imagen);
   const { data } = await api.patch<Categoria>(`/catalog/categories/${id}/`, form, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -144,6 +156,10 @@ export interface ProductoPayload {
   codigo_barras: string;
   /** Texto corto que la tienda muestra en el detalle del producto. */
   descripcion?: string;
+  seo_titulo?: string;
+  seo_descripcion?: string;
+  imagen_alt?: string;
+  palabra_clave?: string;
   /** Opcional: al editar un producto existente el panel ya no lo manda
    *  (cada presentación se guarda por su endpoint) y el servidor no las toca. */
   presentaciones?: PresentacionAnidada[];

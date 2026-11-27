@@ -127,6 +127,9 @@ export function agotadoProducto(producto: Producto): boolean {
 const LARGO_TITULO = 50;
 
 export function tituloDeProducto(producto: Producto): string {
+  // El que escribió el negocio en el panel manda; lo generado es el respaldo.
+  const propio = producto.seo_titulo?.trim();
+  if (propio) return propio;
   const { variedades, unidades } = resumirPresentaciones(producto);
   const nombre = producto.nombre_producto.trim();
   for (let v = Math.min(variedades.length, 2); v >= 0; v--) {
@@ -144,6 +147,8 @@ export function tituloDeProducto(producto: Producto): string {
  * armada con las presentaciones reales del producto.
  */
 export function descripcionDeProducto(producto: Producto, negocio?: string): string {
+  const meta = producto.seo_descripcion?.trim();
+  if (meta) return recortar(meta, 160);
   const propia = producto.descripcion?.trim();
   if (propia) return recortar(propia, 158);
 
@@ -283,6 +288,8 @@ export function descripcionDeCategoria(
   total: number,
   negocio?: string
 ): string {
+  const propia = categoria.seo_descripcion?.trim();
+  if (propia) return recortar(propia, 160);
   const nombres = productos.slice(0, 5).map((p) => p.nombre_producto.toLowerCase());
   const donde = negocio ? ` en ${negocio}` : "";
   const ejemplos = nombres.length ? `: ${enumerar(nombres)}${total > nombres.length ? " y más" : ""}` : "";
@@ -311,4 +318,16 @@ export function introduccionDeCategoria(categoria: Categoria, productos: Product
   ];
   if (precios.length) frases.push(`Precios desde ${precioCOP(Math.min(...precios))}.`);
   return frases.join(" ");
+}
+
+// ------------------------------------------------- categoría: campos del panel
+
+/** El título de /tienda/<slug>: el del panel o uno con los datos reales. */
+export function tituloDeCategoria(categoria: Categoria): string {
+  return categoria.seo_titulo?.trim() || `${categoria.nombre_categoria}: precios y presentaciones`;
+}
+
+/** Las preguntas frecuentes del panel, sin filas incompletas. */
+export function preguntasDeCategoria(categoria: Categoria): { pregunta: string; respuesta: string }[] {
+  return (categoria.preguntas_frecuentes ?? []).filter((p) => p?.pregunta?.trim() && p?.respuesta?.trim());
 }

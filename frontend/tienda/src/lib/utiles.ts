@@ -317,3 +317,24 @@ export function parsearCantidad(texto: string, paso: number, minimo: number = pa
   if (!(total > 0)) return null;
   return ajustarARegla(total, { minimo, paso, decimales: 2 });
 }
+
+/**
+ * El texto alternativo de la foto de un producto.
+ *
+ * El que escribió el negocio, si lo hay; si no, el nombre y la variedad que se
+ * está viendo («Mango Tommy»), que describe la foto mejor que el nombre solo y
+ * sin inventar nada. La variedad se omite si no aporta («Común») o ya está en
+ * el nombre.
+ */
+export function altDeProducto(
+  producto: { nombre_producto: string; imagen_alt?: string | null },
+  variedad?: string | null
+): string {
+  const base = producto.imagen_alt?.trim() || producto.nombre_producto.trim();
+  const extra = variedad?.trim() ?? "";
+  const clave = normalizarTexto(extra);
+  if (!extra || ["comun", "normal", "unica", "unico"].includes(clave) || normalizarTexto(base).includes(clave)) {
+    return base;
+  }
+  return `${base} ${extra}`;
+}

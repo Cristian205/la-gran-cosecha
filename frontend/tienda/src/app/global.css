@@ -11779,3 +11779,14 @@ blockquote {
 /* Pie: las categorías encima de los legales, con el mismo formato. */
 .footer-categorias { font-weight: 600; }
 .footer-categorias + .footer-legal { margin-top: 0.2rem; }
+
+/* Categoría: introducción del negocio y preguntas frecuentes. */
+.categoria-intro { color: var(--tinta); }
+.categoria-intro + .catalogo-subtitulo { margin-top: 0.6rem; }
+.categoria-preguntas { margin-top: clamp(2.5rem, 5vw, 3.5rem); max-width: 50rem; }
+.categoria-preguntas h2 { margin: 0 0 0.8rem; font-size: clamp(1.1rem, 1.6vw, 1.3rem); color: var(--tinta); }
+.categoria-preguntas details { border-top: 1px solid color-mix(in srgb, var(--borde) 80%, transparent); }
+.categoria-preguntas details:last-child { border-bottom: 1px solid color-mix(in srgb, var(--borde) 80%, transparent); }
+.categoria-preguntas summary { cursor: pointer; padding: 0.9rem 0; font-weight: 700; color: var(--tinta); list-style-position: inside; }
+.categoria-preguntas summary:focus-visible { outline: 2px solid var(--marca-700); outline-offset: 2px; border-radius: 4px; }
+.categoria-preguntas details p { margin: 0 0 1rem; color: var(--gris-600); line-height: 1.6; max-width: 70ch; }

@@ -31,6 +31,10 @@ class CategoriaSerializer(serializers.ModelSerializer):
             "imagen_url",
             "subtitulo",
             "cta_texto",
+            "descripcion",
+            "seo_titulo",
+            "seo_descripcion",
+            "preguntas_frecuentes",
             "num_productos",
         ]
         read_only_fields = ["slug"]
@@ -38,6 +42,34 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
     def get_num_productos(self, obj):
         return getattr(obj, "num_productos", None)
+
+    def validate_preguntas_frecuentes(self, valor):
+        """
+        Lista de {"pregunta", "respuesta"}, sin filas vacías y con un tope:
+        es contenido de la página pública, no un cajón donde cabe cualquier
+        JSON. Las filas a medio escribir se descartan en vez de rechazar todo
+        el guardado.
+        """
+        if valor in (None, ""):
+            return []
+        if not isinstance(valor, list):
+            raise serializers.ValidationError("Debe ser una lista de preguntas.")
+        limpias = []
+        for fila in valor:
+            if not isinstance(fila, dict):
+                raise serializers.ValidationError("Cada pregunta debe tener «pregunta» y «respuesta».")
+            pregunta = " ".join(str(fila.get("pregunta", "")).split())
+            respuesta = str(fila.get("respuesta", "")).strip()
+            if not pregunta or not respuesta:
+                continue
+            if len(pregunta) > 200 or len(respuesta) > 1000:
+                raise serializers.ValidationError(
+                    "Una pregunta admite 200 caracteres y su respuesta 1000."
+                )
+            limpias.append({"pregunta": pregunta, "respuesta": respuesta})
+        if len(limpias) > 10:
+            raise serializers.ValidationError("Como máximo 10 preguntas por categoría.")
+        return limpias
 
     def get_imagen_url(self, obj):
         if not obj.imagen:
@@ -169,6 +201,10 @@ class ProductoSerializer(serializers.ModelSerializer):
             "controla_stock",
             "codigo_barras",
             "descripcion",
+            "seo_titulo",
+            "seo_descripcion",
+            "imagen_alt",
+            "palabra_clave",
             "disponible",
         ]
 
@@ -505,6 +541,10 @@ class ProductoWriteSerializer(serializers.ModelSerializer):
             "controla_stock",
             "codigo_barras",
             "descripcion",
+            "seo_titulo",
+            "seo_descripcion",
+            "imagen_alt",
+            "palabra_clave",
             "presentaciones",
         ]
 

@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Producto } from "@/lib/tipos";
-import { colorCategoriaTematicoTinte, iconoCategoria } from "@/lib/utiles";
+import { altDeProducto, colorCategoriaTematicoTinte, iconoCategoria } from "@/lib/utiles";
 import { esOptimizable, srcSetImagen } from "@/lib/imagen";
 
 interface Props {
-  producto: Pick<Producto, "nombre_producto" | "imagen_url" | "categoria" | "categoria_nombre">;
+  producto: Pick<Producto, "nombre_producto" | "imagen_url" | "categoria" | "categoria_nombre" | "imagen_alt">;
+  /** Texto alternativo; sin él, el propio del producto o su nombre (ver `altDeProducto`). */
+  alt?: string;
   /** Tamaño del ícono de respaldo, en px. La foto siempre llena el marco. */
   tamanoIcono?: number;
   /** Solo para lo que está sobre el pliegue (la vista rápida, la ficha): la
@@ -31,7 +33,7 @@ interface Props {
  * compilar. `loading="lazy"` + `decoding="async"` y ancho/alto declarados
  * para que el navegador reserve el hueco y no salte el diseño.
  */
-export function ImagenProducto({ producto, tamanoIcono = 72, prioridad = false, className = "" }: Props) {
+export function ImagenProducto({ producto, alt, tamanoIcono = 72, prioridad = false, className = "" }: Props) {
   const [cargada, setCargada] = useState(false);
   const [fallo, setFallo] = useState(false);
   // Si el optimizador no puede con una foto, se vuelve a la original una vez.
@@ -71,7 +73,7 @@ export function ImagenProducto({ producto, tamanoIcono = 72, prioridad = false, 
           src={producto.imagen_url!}
           srcSet={original ? undefined : srcSetImagen(producto.imagen_url, [384, 640, 828])}
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
-          alt={producto.nombre_producto}
+          alt={alt ?? altDeProducto(producto)}
           width={600}
           height={600}
           loading={prioridad ? "eager" : "lazy"}
