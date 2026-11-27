@@ -1,6 +1,8 @@
 export interface Categoria {
   id: number;
   nombre_categoria: string;
+  /** La URL pública de la categoría: /tienda/<slug>. Puede faltar si el backend es anterior. */
+  slug?: string | null;
   abreviatura: string;
   orden: number;
   estado_categoria: boolean;

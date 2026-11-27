@@ -13,6 +13,7 @@ from .views import (
     AdoptarPlantillaView,
     BloqueViewSet,
     CatalogoDeBloquesView,
+    IndiceSeoView,
     PaginaPublicaView,
     PaginaViewSet,
     PlantillaViewSet,
@@ -25,6 +26,8 @@ from .views import (
 publicas = [
     path("pagina/", PaginaPublicaView.as_view(), name="storefront-pagina"),
     path("rutas/", RutasPublicasView.as_view(), name="storefront-rutas"),
+    # La fuente del sitemap.xml: lo publicable de la tienda, con fechas reales.
+    path("indice-seo/", IndiceSeoView.as_view(), name="storefront-indice-seo"),
 ]
 
 # --- el panel del negocio ----------------------------------------------

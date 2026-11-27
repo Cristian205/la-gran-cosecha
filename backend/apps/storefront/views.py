@@ -164,6 +164,118 @@ class RutasPublicasView(ExigeNegocioMixin, APIView):
         return Response({"rutas": sorted(rutas)})
 
 
+#: Bloques que convierten una página en una pantalla de servicio y no en una
+#: página que alguien busque en Google: la de acceso es para quien ya es
+#: cliente, y en un buscador competiría con el inicio por el nombre del negocio.
+BLOQUES_NO_INDEXABLES = {"acceso"}
+
+
+class IndiceSeoView(ExigeNegocioMixin, APIView):
+    """
+    Lo que esta tienda tiene para indexar, con su fecha real de cambio.
+
+    Es la fuente del `sitemap.xml`. Existe aparte del listado del catálogo
+    porque el sitemap necesita otras cosas: solo lo PUBLICABLE (producto activo,
+    de una categoría activa y con al menos una presentación a la venta) y una
+    fecha que diga de verdad cuándo cambió algo. Poner «ahora» en todas las
+    entradas —lo que se hacía— enseña a Google a ignorar el `lastmod`.
+
+    La fecha de un producto es la más reciente entre su propia edición y el
+    último cambio de precio de cualquiera de sus presentaciones: el precio es
+    la información que más cambia y la que más le importa a quien busca.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.db.models import Exists, Max, OuterRef, Subquery
+
+        from apps.catalog.models import Categoria, HistorialPrecio, PresentacionProducto, Producto
+
+        a_la_venta = PresentacionProducto.objects.filter(
+            producto=OuterRef("pk"), estado_presentacion=True
+        )
+        ultimo_precio = (
+            HistorialPrecio.objects.filter(presentacion__producto=OuterRef("pk"))
+            .values("presentacion__producto")
+            .annotate(ultima=Max("fecha_cambio"))
+            .values("ultima")
+        )
+        productos = (
+            Producto.objects.filter(estado_producto=True, categoria__estado_categoria=True)
+            .filter(Exists(a_la_venta))
+            .annotate(ultimo_precio=Subquery(ultimo_precio))
+            .select_related("categoria")
+            .order_by("categoria__orden", "orden", "nombre_producto")
+        )
+
+        def fecha_de(producto):
+            fechas = [f for f in (producto.fecha_actualizacion, producto.ultimo_precio) if f]
+            return max(fechas) if fechas else None
+
+        lista_productos = []
+        por_categoria = {}
+        for producto in productos:
+            fecha = fecha_de(producto)
+            lista_productos.append(
+                {
+                    "slug": producto.slug,
+                    "categoria": producto.categoria_id,
+                    "lastmod": fecha.isoformat() if fecha else None,
+                }
+            )
+            registro = por_categoria.setdefault(producto.categoria_id, {"num": 0, "fecha": None})
+            registro["num"] += 1
+            if fecha and (registro["fecha"] is None or fecha > registro["fecha"]):
+                registro["fecha"] = fecha
+
+        # Solo las categorías con algo que vender: una página de categoría vacía
+        # es justo el contenido pobre que Google decide no indexar.
+        categorias = []
+        for categoria in Categoria.objects.filter(estado_categoria=True, pk__in=por_categoria.keys()):
+            registro = por_categoria[categoria.pk]
+            fechas = [f for f in (categoria.fecha_actualizacion, registro["fecha"]) if f]
+            categorias.append(
+                {
+                    "id": categoria.pk,
+                    "slug": categoria.slug,
+                    "nombre": categoria.nombre_categoria,
+                    "num_productos": registro["num"],
+                    "lastmod": max(fechas).isoformat() if fechas else None,
+                }
+            )
+
+        paginas = []
+        publicadas = (
+            VersionPagina.objects.filter(
+                estado=VersionPagina.Estado.PUBLICADA, pagina__activa=True
+            )
+            .exclude(pagina__tipo=Pagina.Tipo.LAYOUT)
+            .select_related("pagina")
+        )
+        for version in publicadas:
+            ruta = version.pagina.ruta
+            tipos = {b.get("tipo") for b in (version.composicion or []) if isinstance(b, dict)}
+            paginas.append(
+                {
+                    "ruta": ruta,
+                    "tipo": version.pagina.tipo,
+                    # Las rutas que empiezan por «_» son internas del motor (la
+                    # página de «no encontrada», el armazón): responden 404 o no
+                    # son páginas, y no pueden ir a un sitemap.
+                    "indexable": bool(tipos)
+                    and not ruta.startswith("/_")
+                    and not (tipos & BLOQUES_NO_INDEXABLES),
+                    "lastmod": version.fecha_publicacion.isoformat()
+                    if version.fecha_publicacion
+                    else None,
+                }
+            )
+        paginas.sort(key=lambda p: p["ruta"])
+
+        return Response({"paginas": paginas, "categorias": categorias, "productos": lista_productos})
+
+
 # ==========================================================================
 # 2. EL NEGOCIO — edición de su propia tienda
 # ==========================================================================

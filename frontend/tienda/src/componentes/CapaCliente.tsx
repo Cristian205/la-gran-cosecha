@@ -15,7 +15,7 @@ import { useCart } from "@/estado/carrito";
 import { useClienteTienda } from "@/estado/clienteTienda";
 import { useTienda } from "@/estado/tienda";
 import { useUltimoPedido } from "@/estado/ultimoPedido";
-import type { SiteConfig } from "@/lib/tipos";
+import type { Categoria, SiteConfig } from "@/lib/tipos";
 
 /**
  * El envoltorio interactivo de la tienda.
@@ -72,11 +72,27 @@ export function useEnvoltorio(): Envoltorio {
   return ctx;
 }
 
+/**
+ * Las categorías de la tienda, resueltas en el servidor por el layout.
+ *
+ * Las usa el pie para enlazar cada categoría desde TODAS las páginas: son los
+ * enlaces HTML que llevan a un rastreador del inicio a `/tienda/<slug>` y de
+ * ahí a cada producto. Vienen del servidor (y no de un `fetch` al montar) para
+ * que estén en el HTML que Google recibe.
+ */
+const ContextoCategorias = createContext<Categoria[]>([]);
+
+export function useCategoriasDeLaTienda(): Categoria[] {
+  return useContext(ContextoCategorias);
+}
+
 export function CapaCliente({
   config,
+  categorias = [],
   children,
 }: {
   config: SiteConfig;
+  categorias?: Categoria[];
   children: ReactNode;
 }) {
   const [carritoAbierto, setCarritoAbierto] = useState(false);
@@ -105,6 +121,7 @@ export function CapaCliente({
   return (
     <MotionConfig reducedMotion="user">
       <ContextoConfig.Provider value={config}>
+      <ContextoCategorias.Provider value={categorias}>
         <ContextoEnvoltorio.Provider
           value={{
             abrirCarrito: () => {
@@ -131,6 +148,7 @@ export function CapaCliente({
           <ProductQuickView />
           {carritoAbierto && <CartDrawer onCerrar={() => setCarritoAbierto(false)} />}
         </ContextoEnvoltorio.Provider>
+      </ContextoCategorias.Provider>
       </ContextoConfig.Provider>
     </MotionConfig>
   );

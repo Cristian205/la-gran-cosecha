@@ -20,6 +20,10 @@ class CategoriaSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "nombre_categoria",
+            # La URL pública de la categoría en la tienda (/tienda/<slug>). Lo
+            # genera el modelo al guardar; no se edita desde aquí para que un
+            # cambio de nombre no rompa los enlaces que Google ya conoce.
+            "slug",
             "abreviatura",
             "orden",
             "estado_categoria",
@@ -29,6 +33,7 @@ class CategoriaSerializer(serializers.ModelSerializer):
             "cta_texto",
             "num_productos",
         ]
+        read_only_fields = ["slug"]
         extra_kwargs = {"imagen": {"write_only": True, "required": False}}
 
     def get_num_productos(self, obj):

@@ -24,9 +24,12 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
     rules: {
       userAgent: "*",
       allow: "/",
-      // El checkout es transaccional y personal — nada que un rastreador deba
-      // indexar — y `/api/` es el proxy hacia Django, no una página.
-      disallow: ["/tienda/pedido", "/api/"],
+      // `/api/` es el proxy hacia Django, no una página. El checkout, «mis
+      // pedidos» y la pantalla de acceso NO se bloquean aquí a propósito: llevan
+      // `noindex`, y una URL bloqueada en robots.txt no se rastrea, así que
+      // Google nunca leería ese `noindex` y podría indexarla igual (sin
+      // contenido) si alguien la enlaza.
+      disallow: ["/api/"],
     },
     sitemap: `${base}/sitemap.xml`,
   };

@@ -33,15 +33,32 @@ export function datosEstructuradosDelNegocio(
         }
       : undefined;
 
+  // Un solo bloque con dos nodos enlazados por `@id`, en vez de esquemas
+  // sueltos: la ficha de producto declara su vendedor como
+  // `{"@id": ".../#negocio"}` y Google lo une con este, sin repetir el negocio
+  // entero en cada página ni arriesgar dos versiones que no coinciden.
   return {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    name: config.nombre_empresa,
-    url: base,
-    ...(config.logo_url ? { logo: config.logo_url, image: config.logo_url } : {}),
-    ...(config.telefono ? { telephone: config.telefono } : {}),
-    ...(config.email ? { email: config.email } : {}),
-    ...(direccion ? { address: direccion } : {}),
-    ...(redes.length ? { sameAs: redes } : {}),
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${base}/#sitio`,
+        url: base,
+        name: config.nombre_empresa,
+        inLanguage: "es-CO",
+        publisher: { "@id": `${base}/#negocio` },
+      },
+      {
+        "@type": "LocalBusiness",
+        "@id": `${base}/#negocio`,
+        name: config.nombre_empresa,
+        url: base,
+        ...(config.logo_url ? { logo: config.logo_url, image: config.logo_url } : {}),
+        ...(config.telefono ? { telephone: config.telefono } : {}),
+        ...(config.email ? { email: config.email } : {}),
+        ...(direccion ? { address: direccion } : {}),
+        ...(redes.length ? { sameAs: redes } : {}),
+      },
+    ],
   };
 }

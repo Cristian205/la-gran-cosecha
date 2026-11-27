@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { hrefDeCategoria } from "@/lib/rutas";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useState, type CSSProperties } from "react";
 import { desempaquetar, obtenerCategorias } from "@/lib/datos";
@@ -79,7 +80,7 @@ export function CategoriasDestacadas({
             return (
               <Link
                 key={c.id}
-                href={`/tienda?categoria=${c.id}`}
+                href={hrefDeCategoria(c)}
                 className="categoria-vidriera"
                 style={{ background: colorCategoriaTematico(c.nombre_categoria, c.id) }}
               >
@@ -105,7 +106,7 @@ export function CategoriasDestacadas({
           return (
             <Link
               key={c.id}
-              href={`/tienda?categoria=${c.id}`}
+              href={hrefDeCategoria(c)}
               className={`categoria-tile ${c.imagen_url ? "con-foto" : ""}`}
               style={
                 c.imagen_url
