@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { comprobacionesSeo, nivelSeo } from "./SeoProducto";
 import { useSearchParams } from "react-router-dom";
 import {
   ChevronDown,
@@ -390,7 +391,10 @@ export function ProductsPage() {
                     </div>
 
                     <div className="producto-body">
-                      <span className="codigo">{p.codigo_producto}</span>
+                      <span className="codigo">
+                        {p.codigo_producto}
+                        <ChipSeo producto={p} />
+                      </span>
                       <span className="nombre">{p.nombre_producto}</span>
 
                       {barata ? (
@@ -594,5 +598,29 @@ export function ProductsPage() {
         />
       )}
     </>
+  );
+}
+
+/**
+ * El estado SEO de la ficha, de un vistazo: el mismo cálculo que la sección
+ * «Posicionamiento en Google» del formulario (descripción, foto, palabra clave).
+ */
+function ChipSeo({ producto }: { producto: Producto }) {
+  const comprobaciones = comprobacionesSeo({
+    nombre: producto.nombre_producto,
+    descripcion: producto.descripcion ?? "",
+    tieneFoto: Boolean(producto.imagen_url),
+    palabraClave: producto.palabra_clave ?? "",
+  });
+  const nivel = nivelSeo(comprobaciones, producto.descripcion ?? "");
+  const pendientes = comprobaciones.filter((c) => !c.ok).map((c) => c.texto);
+  const texto = { completo: "SEO completo", mejorable: "SEO mejorable", incompleto: "SEO incompleto" }[nivel];
+  return (
+    <span
+      className={`seo-chip seo-chip--${nivel}`}
+      title={pendientes.length ? `Falta: ${pendientes.join("; ")}` : "Ficha lista para Google"}
+    >
+      {texto}
+    </span>
   );
 }

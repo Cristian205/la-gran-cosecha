@@ -5,6 +5,7 @@ import { imagenDeGrupo, type SeleccionProducto } from "@/hooks/useSeleccionProdu
 import type { Producto } from "@/lib/tipos";
 import { srcSetImagen } from "@/lib/imagen";
 import { ImagenProducto } from "./ImagenProducto";
+import { altDeProducto } from "@/lib/utiles";
 
 /**
  * La galería de la ficha: una foto por presentación, conectada al selector.
@@ -64,7 +65,12 @@ export function GaleriaProducto({ producto, seleccion }: { producto: Producto; s
     <div className={`galeria ${elementos.length > 1 ? "galeria--con-miniaturas" : ""}`}>
       <div className="galeria-principal" key={principal ?? "sin-foto"}>
         {/* Sin rótulo encima: qué se eligió ya lo dice el panel de compra. */}
-        <ImagenProducto producto={{ ...producto, imagen_url: principal ?? null }} tamanoIcono={200} prioridad />
+        <ImagenProducto
+          producto={{ ...producto, imagen_url: principal ?? null }}
+          alt={altDeProducto(producto, verGeneral ? null : grupo?.nombre)}
+          tamanoIcono={200}
+          prioridad
+        />
       </div>
 
       {elementos.length > 1 && (

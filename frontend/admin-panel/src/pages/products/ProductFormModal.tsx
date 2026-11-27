@@ -19,6 +19,7 @@ import { leerNumero } from "../../utils/cantidades";
 import type { Categoria, Producto, UnidadMedida } from "../../types";
 import { extraerMensajeError, tienePermiso } from "../../utils";
 import { PresentacionesComerciales } from "./PresentacionesComerciales";
+import { SeoProducto, type ValoresSeo } from "./SeoProducto";
 import "./producto-modal.css";
 import {
   aAnidada,
@@ -76,6 +77,12 @@ export function ProductFormModal({
   const [controlaStock, setControlaStock] = useState(producto?.controla_stock ?? false);
   const [codigoBarras, setCodigoBarras] = useState(producto?.codigo_barras ?? "");
   const [descripcion, setDescripcion] = useState(producto?.descripcion ?? "");
+  const [seo, setSeo] = useState<ValoresSeo>({
+    seo_titulo: producto?.seo_titulo ?? "",
+    seo_descripcion: producto?.seo_descripcion ?? "",
+    imagen_alt: producto?.imagen_alt ?? "",
+    palabra_clave: producto?.palabra_clave ?? "",
+  });
   const [imagen, setImagen] = useState<File | null>(null);
 
   const [unidadesLocales, setUnidadesLocales] = useState(unidades);
@@ -108,8 +115,8 @@ export function ProductFormModal({
   useEffect(cargarPresentaciones, [producto?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const datosProducto = useMemo(
-    () => JSON.stringify([nombre.trim(), categoria, unidadBase, estado, controlaStock, codigoBarras.trim(), descripcion.trim(), imagen?.name]),
-    [nombre, categoria, unidadBase, estado, controlaStock, codigoBarras, descripcion, imagen]
+    () => JSON.stringify([nombre.trim(), categoria, unidadBase, estado, controlaStock, codigoBarras.trim(), descripcion.trim(), imagen?.name, seo]),
+    [nombre, categoria, unidadBase, estado, controlaStock, codigoBarras, descripcion, imagen, seo]
   );
   const datosIniciales = useRef(datosProducto);
   // Con producto existente las presentaciones se guardan al momento; con uno
@@ -183,6 +190,10 @@ export function ProductFormModal({
       controla_stock: controlaStock,
       codigo_barras: codigoBarras.trim(),
       descripcion: descripcion.trim(),
+      seo_titulo: seo.seo_titulo.trim(),
+      seo_descripcion: seo.seo_descripcion.trim(),
+      imagen_alt: seo.imagen_alt.trim(),
+      palabra_clave: seo.palabra_clave.trim(),
     };
 
     setGuardando(true);
@@ -501,7 +512,7 @@ export function ProductFormModal({
 
                 <div className="campo prd-campo">
                   <label htmlFor="pr-descripcion">
-                    Descripción <span className="prd-opc">Opcional</span>
+                    Descripción comercial <span className="prd-opc">Recomendada</span>
                   </label>
                   <textarea
                     id="pr-descripcion"
@@ -513,7 +524,7 @@ export function ProductFormModal({
                     aria-describedby="pr-descripcion-ayuda"
                   />
                   <p className="campo-ayuda prd-ayuda-fila" id="pr-descripcion-ayuda">
-                    <span>Se muestra en el detalle del producto en la tienda.</span>
+                    <span>Se muestra en la ficha de la tienda y es lo que más ayuda a aparecer en Google: qué es, sus variedades y para qué se usa. Solo datos ciertos.</span>
                     <span className={`prd-contador ${descripcion.length > 450 ? "cerca" : ""}`}>{descripcion.length}/500</span>
                   </p>
                 </div>
@@ -581,6 +592,24 @@ export function ProductFormModal({
                 </span>
               </label>
             </div>
+
+            <SeoProducto
+              valores={seo}
+              onCambiar={(cambios) => setSeo((prev) => ({ ...prev, ...cambios }))}
+              nombre={nombre}
+              descripcion={descripcion}
+              categoria={categoriaNombre}
+              tieneFoto={Boolean(imagen || producto?.imagen_url)}
+              variedades={[...new Set(presentaciones.filter((p) => p.estado_presentacion).map((p) => p.nombre_presentacion.trim()).filter(Boolean))]}
+              unidades={[
+                ...new Set(
+                  presentaciones
+                    .filter((p) => p.estado_presentacion)
+                    .map((p) => unidadesLocales.find((u) => u.id === p.unidad_venta)?.nombre_unidad ?? "")
+                    .filter(Boolean)
+                ),
+              ]}
+            />
 
             {!esEdicion && (
               <div className="producto-resumen">

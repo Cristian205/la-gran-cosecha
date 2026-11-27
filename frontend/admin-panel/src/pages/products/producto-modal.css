@@ -141,3 +141,25 @@
   .modal.modal-producto header .modal-subtitulo { display: none; }
   .pasos-modal--progreso .pasos-modal-texto strong { font-size: .74rem; }
 }
+
+/* ---- Posicionamiento en Google (SeoProducto) ---- */
+.prd-seo { margin-top: 1.4rem; padding-top: 1.4rem; border-top: 1px solid var(--prd-linea); }
+.prd-seo .prd-grupo-titulo { display: flex; align-items: center; gap: 0.6rem; }
+.prd-seo-nivel { padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.prd-seo-nivel--completo { background: var(--verde-claro, #e6f4ea); color: var(--verde-texto, #1e6b3a); }
+.prd-seo-nivel--mejorable { background: var(--ambar-claro, #fff4db); color: var(--ambar-texto, #8a5a00); }
+.prd-seo-nivel--incompleto { background: var(--gris-claro); color: var(--gris); }
+.prd-seo-previa { padding: 0.8rem 1rem; border: 1px solid var(--prd-linea); border-radius: 12px; background: var(--superficie, #fff); }
+.prd-seo-previa-titulo { display: flex; align-items: center; gap: 0.35rem; margin: 0; color: #1a0dab; font-size: 1rem; line-height: 1.3; }
+.prd-seo-previa-texto { margin: 0.25rem 0 0; color: var(--gris); font-size: 0.82rem; line-height: 1.45; }
+.prd-seo-lista { display: flex; flex-direction: column; gap: 0.35rem; margin: 0; padding: 0; list-style: none; font-size: 0.84rem; color: var(--gris); }
+.prd-seo-lista li { display: flex; align-items: center; gap: 0.45rem; }
+.prd-seo-lista li.ok { color: var(--verde-texto, #1e6b3a); }
+.prd-seo-lista svg { flex: none; }
+
+/* ---- Categoría: SEO y preguntas frecuentes ---- */
+.campo-grupo-seo { margin: 1.2rem 0; padding: 1rem 1rem 0.4rem; border: 1px solid var(--gris-claro); border-radius: 12px; }
+.campo-grupo-seo legend { padding: 0 0.4rem; font-weight: 700; }
+.campo-grupo-seo > .campo-ayuda { display: block; margin: 0 0 0.9rem; }
+.pregunta-frecuente { display: grid; gap: 0.4rem; margin: 0.6rem 0; padding: 0.7rem; border: 1px dashed var(--gris-claro); border-radius: 10px; }
+.pregunta-frecuente .btn { justify-self: end; }

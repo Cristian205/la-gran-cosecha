@@ -10,6 +10,11 @@ export interface Categoria {
   /** Copy publicitario opcional, para la variante "vidriera" del bloque de categorías. */
   subtitulo?: string;
   cta_texto?: string;
+  /** SEO opcional de /tienda/<slug> (panel). Vacíos, se generan con los datos. */
+  descripcion?: string;
+  seo_titulo?: string;
+  seo_descripcion?: string;
+  preguntas_frecuentes?: { pregunta: string; respuesta: string }[];
   /** Productos activos en la categoría. Lo anota el backend. */
   num_productos?: number | null;
 }
@@ -48,6 +53,12 @@ export interface Producto {
   imagen_url: string | null;
   /** Descripción corta que escribe el negocio; vacía si no la puso. */
   descripcion?: string;
+  /** SEO opcional (panel). Vacíos, la tienda los genera con los datos reales. */
+  seo_titulo?: string;
+  seo_descripcion?: string;
+  /** Texto alternativo propio de la foto; vacío = nombre y variedad. */
+  imagen_alt?: string;
+  palabra_clave?: string;
   orden: number;
   /** Precio más bajo entre las presentaciones activas; lo anota el backend. */
   precio_desde: string | null;

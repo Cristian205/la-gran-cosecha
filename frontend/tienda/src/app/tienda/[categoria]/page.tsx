@@ -12,6 +12,8 @@ import {
   hrefDeCategoria,
   introduccionDeCategoria,
   migasEstructuradas,
+  preguntasDeCategoria,
+  tituloDeCategoria,
 } from "@/lib/seo";
 import type { Categoria, Paginated, Producto } from "@/lib/tipos";
 import { subtituloCategoria } from "@/lib/utiles";
@@ -76,7 +78,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const sufijo = pagina > 1 ? ` (página ${pagina})` : "";
 
   return {
-    title: `${categoria.nombre_categoria}: precios y presentaciones${sufijo}`,
+    title: `${tituloDeCategoria(categoria)}${sufijo}`,
     description: descripcionDeCategoria(categoria, productos, datos.count, config?.nombre_empresa),
     // Cada página de la serie es canónica de sí misma: apuntarlas todas a la
     // primera le diría a Google que ignore los productos de las siguientes.
@@ -114,6 +116,8 @@ export default async function PaginaCategoria({ params, searchParams }: Props) {
   const base = `https://${host}`;
   const propio = categoria.subtitulo?.trim();
   const lema = subtituloCategoria(categoria.nombre_categoria, propio);
+  const intro = categoria.descripcion?.trim() ?? "";
+  const preguntas = preguntasDeCategoria(categoria);
   const otras = categorias.filter((c) => c.id !== categoria.id && (c.num_productos ?? 1) > 0);
 
   const jsonLdMigas = migasEstructuradas(base, [
@@ -155,6 +159,18 @@ export default async function PaginaCategoria({ params, searchParams }: Props) {
       <header className="catalogo-cabecera categoria-cabecera">
         {lema && <p className="catalogo-kicker">{lema}</p>}
         <h1>{categoria.nombre_categoria}</h1>
+        {/* La introducción del negocio (panel), solo en la primera página: en
+            las siguientes repetirla sería contenido duplicado. Debajo, lo que
+            el catálogo dice de la categoría, que siempre es cierto. */}
+        {pagina === 1 &&
+          intro
+            .split(/\n{2,}/)
+            .filter((parrafo) => parrafo.trim())
+            .map((parrafo, i) => (
+              <p key={i} className="catalogo-subtitulo categoria-intro">
+                {parrafo.trim()}
+              </p>
+            ))}
         <p className="catalogo-subtitulo">
           {introduccionDeCategoria(categoria, productos, total)}
           {pagina > 1 && ` Página ${pagina} de ${paginas}.`}
@@ -191,6 +207,18 @@ export default async function PaginaCategoria({ params, searchParams }: Props) {
             </Link>
           )}
         </nav>
+      )}
+
+      {pagina === 1 && preguntas.length > 0 && (
+        <section className="categoria-preguntas" aria-labelledby="preguntas-categoria">
+          <h2 id="preguntas-categoria">Preguntas frecuentes sobre {categoria.nombre_categoria.toLowerCase()}</h2>
+          {preguntas.map((p, i) => (
+            <details key={i}>
+              <summary>{p.pregunta}</summary>
+              <p>{p.respuesta}</p>
+            </details>
+          ))}
+        </section>
       )}
 
       {otras.length > 0 && (

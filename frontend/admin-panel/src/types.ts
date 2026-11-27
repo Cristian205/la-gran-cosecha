@@ -66,6 +66,19 @@ export interface Categoria {
   /** Copy publicitario opcional para la vidriera de categorías de Inicio. */
   subtitulo: string;
   cta_texto: string;
+  /** URL pública: /tienda/<slug>. La genera el servidor. */
+  slug?: string;
+  /** SEO de la página de la categoría. Opcionales: vacíos, se generan. */
+  descripcion?: string;
+  seo_titulo?: string;
+  seo_descripcion?: string;
+  preguntas_frecuentes?: PreguntaFrecuente[];
+  num_productos?: number | null;
+}
+
+export interface PreguntaFrecuente {
+  pregunta: string;
+  respuesta: string;
 }
 
 export interface UnidadMedida {
@@ -127,6 +140,11 @@ export interface Producto {
   codigo_barras: string;
   /** Descripción corta que ve el cliente en la ficha de la tienda. */
   descripcion?: string;
+  /** SEO opcional: vacíos, la tienda los genera con los datos reales. */
+  seo_titulo?: string;
+  seo_descripcion?: string;
+  imagen_alt?: string;
+  palabra_clave?: string;
   /** Anotado por el servidor: `cantidad - reservada`, sumando ubicaciones. */
   disponible: string;
   /** El más bajo de sus presentaciones activas. Lo anota el servidor. */

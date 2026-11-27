@@ -7,7 +7,7 @@ import { claseDeVariante } from "@/bloques/Seccion";
 import { useTienda } from "@/estado/tienda";
 import { useSeleccionProducto } from "@/hooks/useSeleccionProducto";
 import type { Producto } from "@/lib/tipos";
-import { colorCategoriaTematicoTinte, normalizarTexto } from "@/lib/utiles";
+import { altDeProducto, colorCategoriaTematicoTinte, normalizarTexto } from "@/lib/utiles";
 import { BadgeCategoria } from "@/componentes/tienda/IdentidadCategoria";
 import { ImagenProducto } from "@/componentes/tienda/ImagenProducto";
 import { PrecioProducto } from "@/componentes/tienda/PrecioProducto";
@@ -155,6 +155,7 @@ function TarjetaProducto({
         <ImagenProducto
           key={imagenUrl ?? "sin-foto"}
           producto={{ ...producto, imagen_url: imagenUrl ?? null }}
+          alt={altDeProducto(producto, seleccion.grupo?.nombre)}
           tamanoIcono={esCompacta ? 30 : 76}
           className={fotoCambiada ? "pimg--cambio" : ""}
         />

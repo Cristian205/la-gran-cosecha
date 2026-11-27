@@ -5,7 +5,7 @@ import { composicionDe, datosDeLosBloques } from "@/lib/pagina";
 import { configuracionDeLaTienda, tituloDePagina } from "@/lib/negocio";
 import { CatalogoProvider } from "@/contextos/CatalogoContexto";
 import { desempaquetar } from "@/lib/datos";
-import { categoriasDeLaTienda, rutaDeCategoria } from "@/lib/seo";
+import { categoriasDeLaTienda, rutaDeCategoria, tituloDeCategoria } from "@/lib/seo";
 import type { Categoria, Paginated, Producto } from "@/lib/tipos";
 
 /**
@@ -38,7 +38,7 @@ export async function generateMetadata({
     const ruta = categoria ? rutaDeCategoria(categoria) : null;
     if (categoria && ruta) {
       return {
-        title: `${categoria.nombre_categoria}: precios y presentaciones`,
+        title: tituloDeCategoria(categoria),
         alternates: { canonical: ruta },
       };
     }

@@ -61,6 +61,17 @@ class Categoria(ModeloConTenant):
     subtitulo = models.CharField(max_length=160, blank=True, default="")
     cta_texto = models.CharField(max_length=60, blank=True, default="")
 
+    # --- SEO de la página /tienda/<slug> -------------------------------------
+    # Todo opcional: vacío, la tienda arma el título, la descripción y la
+    # introducción con los datos reales de la categoría (cuántos productos,
+    # cuáles, por qué unidades se venden). Se llenan solo para decir algo que
+    # el catálogo no sabe: a quién se le vende, cómo se trabaja.
+    descripcion = models.TextField(max_length=1200, blank=True, default="")
+    seo_titulo = models.CharField(max_length=70, blank=True, default="")
+    seo_descripcion = models.CharField(max_length=160, blank=True, default="")
+    #: [{"pregunta": "...", "respuesta": "..."}], en el orden en que se muestran.
+    preguntas_frecuentes = models.JSONField(default=list, blank=True)
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -145,6 +156,20 @@ class Producto(ModeloConTenant):
     # alimenta los datos estructurados para Google. Opcional: sin él la ficha
     # queda como siempre.
     descripcion = models.CharField(max_length=500, blank=True, default="")
+
+    # --- SEO de la ficha /productos/<slug> ----------------------------------
+    # Opcionales a propósito: vacíos, la tienda los genera con las
+    # presentaciones reales (variedades, unidades, precios) — ver
+    # `frontend/tienda/src/lib/seo.ts`. Solo hacen falta para afinar una ficha
+    # concreta, no para que funcione.
+    seo_titulo = models.CharField(max_length=70, blank=True, default="")
+    seo_descripcion = models.CharField(max_length=160, blank=True, default="")
+    #: Texto alternativo de la foto principal; vacío = nombre y variedad.
+    imagen_alt = models.CharField(max_length=125, blank=True, default="")
+    #: La búsqueda por la que debería encontrarse esta ficha («mango tommy»).
+    #: No se pinta en ninguna parte: guía al redactar y la usa el indicador
+    #: de estado SEO del panel.
+    palabra_clave = models.CharField(max_length=80, blank=True, default="")
 
     categoria = models.ForeignKey(
         Categoria, on_delete=models.PROTECT, related_name="productos"
