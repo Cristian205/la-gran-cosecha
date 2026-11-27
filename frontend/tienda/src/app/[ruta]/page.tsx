@@ -30,6 +30,9 @@ interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+/** Bloques que hacen de una página una pantalla de servicio, no indexable. */
+const BLOQUES_NO_INDEXABLES = new Set(["acceso"]);
+
 /** Las rutas que existen pero no son páginas que se visiten. */
 function esReservada(ruta: string): boolean {
   // El armazón se pinta ALREDEDOR de las demás; servirlo como página daría una
@@ -49,12 +52,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ]);
   if (!pagina) return {};
 
+  // Una pantalla de servicio (la de acceso, `/entrar`) funciona igual para
+  // quien la usa, pero no compite en Google con el inicio por el nombre del
+  // negocio. `follow`: sus enlaces (al catálogo, a contacto) siguen contando.
+  // Mismo criterio que `BLOQUES_NO_INDEXABLES` en el backend, que la saca
+  // del sitemap.
+  const deServicio = pagina.bloques.some((b) => BLOQUES_NO_INDEXABLES.has(b.tipo));
+
   return {
     title: tituloDePagina(pagina.seo_titulo || pagina.titulo, config?.nombre_empresa),
     description:
       pagina.seo_descripcion ||
       `${pagina.titulo} · ${config?.nombre_empresa ?? ""}`.trim(),
     alternates: { canonical: camino },
+    ...(deServicio ? { robots: { index: false, follow: true } } : {}),
   };
 }
 

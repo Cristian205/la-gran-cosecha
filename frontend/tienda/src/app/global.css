@@ -11737,3 +11737,45 @@ blockquote {
   .pedreg-tarjeta,
   .pedreg-paso--actual .pedreg-paso-icono { animation: none; }
 }
+
+/* ===================================================================
+   SEO: piezas rastreables de la ficha y de la página de categoría.
+   Mismo lenguaje visual que la ficha (tintas, bordes, radios): son
+   contenido nuevo, no un estilo nuevo.
+   =================================================================== */
+
+/* Ficha: todas las presentaciones con su precio, en una tabla sobria. */
+.ficha-presentaciones { margin-top: clamp(2rem, 4vw, 3rem); max-width: 46rem; }
+.ficha-presentaciones h2 { margin: 0 0 0.8rem; font-size: clamp(1.1rem, 1.6vw, 1.3rem); letter-spacing: -0.015em; color: var(--tinta); }
+.ficha-presentaciones-marco { overflow-x: auto; border: 1px solid var(--borde); border-radius: 14px; background: var(--superficie); }
+.ficha-presentaciones table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.ficha-presentaciones th,
+.ficha-presentaciones td { padding: 0.6rem 0.9rem; text-align: left; white-space: nowrap; }
+.ficha-presentaciones th { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gris-600); background: color-mix(in srgb, var(--borde) 30%, transparent); }
+.ficha-presentaciones td:last-child,
+.ficha-presentaciones th:last-child { text-align: right; }
+.ficha-presentaciones td:last-child { font-weight: 700; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.ficha-presentaciones tbody tr + tr td { border-top: 1px solid color-mix(in srgb, var(--borde) 70%, transparent); }
+
+.ficha-relacionados-cabecera { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.3rem 1rem; margin-bottom: 1rem; }
+.ficha-relacionados-cabecera h2 { margin: 0; }
+.ficha-relacionados-todo { font-size: 0.9rem; font-weight: 700; color: var(--marca-700); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Página de categoría. */
+.categoria-cabecera { margin: 0.4rem 0 1.4rem; }
+.categoria-cabecera h1 { margin: 0.2rem 0 0; font-size: calc(clamp(1.8rem, 3.4vw, 2.6rem) * var(--titulo-escala, 1)); line-height: 1.05; letter-spacing: -0.03em; color: var(--tinta); }
+.categoria-cabecera .catalogo-subtitulo { max-width: 62ch; line-height: 1.55; }
+.categoria-paginas { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-top: 2rem; }
+.categoria-paginas a,
+.categoria-paginas span { min-width: 2.5rem; min-height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 0 0.8rem; border: 1px solid var(--borde); border-radius: 999px; font-weight: 700; font-size: 0.9rem; }
+.categoria-paginas span[aria-current] { background: var(--marca-700); border-color: var(--marca-700); color: #fff; }
+.categoria-paginas a:hover { border-color: var(--marca-700); color: var(--marca-700); }
+.categoria-otras { margin-top: clamp(2.5rem, 5vw, 3.5rem); }
+.categoria-otras h2 { margin: 0 0 0.8rem; font-size: clamp(1.1rem, 1.6vw, 1.3rem); color: var(--tinta); }
+.categoria-otras ul { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.categoria-otras a { display: inline-flex; min-height: 2.5rem; align-items: center; padding: 0 1rem; border: 1px solid var(--borde); border-radius: 999px; background: var(--superficie); font-weight: 600; font-size: 0.9rem; }
+.categoria-otras a:hover { border-color: var(--marca-700); color: var(--marca-700); }
+
+/* Pie: las categorías encima de los legales, con el mismo formato. */
+.footer-categorias { font-weight: 600; }
+.footer-categorias + .footer-legal { margin-top: 0.2rem; }

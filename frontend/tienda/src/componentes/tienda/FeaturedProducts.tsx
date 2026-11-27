@@ -219,7 +219,12 @@ function BannerProtagonista({
   textoBoton: string;
 }) {
   const catalogo = useCatalogoContexto();
-  const href = `/tienda?categoria=${producto.categoria}&producto=${producto.id}`;
+  // Dentro del catálogo el clic se intercepta (lleva a la tarjeta en la
+  // rejilla), así que el enlace puede apuntar a la ficha: es lo que lee el
+  // rastreador y lo que abre «en otra pestaña». Fuera, la navegación de siempre.
+  const href = catalogo
+    ? `/productos/${producto.slug}`
+    : `/tienda?categoria=${producto.categoria}&producto=${producto.id}`;
   const foto = fotoDe(producto);
   const IconoCampana = ICONO_CAMPANA[campana];
   const desde = mostrarPrecio ? precioDesde(producto) : null;

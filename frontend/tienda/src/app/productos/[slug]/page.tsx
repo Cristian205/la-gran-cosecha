@@ -8,6 +8,17 @@ import { Migas } from "@/componentes/tienda/Migas";
 import { pedirAlBackend } from "@/lib/api";
 import { desempaquetar } from "@/lib/datos";
 import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
+import {
+  categoriasDeLaTienda,
+  datosEstructuradosDeProducto,
+  descripcionDeProducto,
+  hrefDeCategoria,
+  migasEstructuradas,
+  nombreDePresentacion,
+  precioCOP,
+  resumenDeVentaProducto,
+  tituloDeProducto,
+} from "@/lib/seo";
 import type { Paginated, Producto } from "@/lib/tipos";
 
 /**
@@ -15,69 +26,69 @@ import type { Paginated, Producto } from "@/lib/tipos";
  *
  * El catálogo (`/tienda`) es la vitrina completa; esto es la puerta de
  * entrada de UN producto por su propio enlace — lo que permite que "mango"
- * se posicione por separado y que un enlace compartido lleve directo a él,
- * en vez de a la tienda entera con un filtro que hay que explicar.
+ * se posicione por separado y que un enlace compartido lleve directo a él.
  *
- * El backend ya traía `slug` en el modelo (pensado para esto: "dos negocios
- * pueden vender ambos un mango y cada uno merece /productos/mango"), pero el
- * serializer público no lo exponía. Se sirve por `?slug=` y no por el pk en
- * la URL para no cambiar cómo el resto del sistema (panel, POS, inventario)
- * ya busca productos por id.
+ * Todo lo que Google necesita sale en el HTML del servidor: título y
+ * descripción propios (armados con las presentaciones reales, ver
+ * `lib/seo.ts`), la tabla de presentaciones y precios, las migas hasta la
+ * página de su categoría y enlaces a otros productos de la misma categoría.
  */
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
 async function obtenerProductoPorSlug(slug: string): Promise<Producto | null> {
-  const pagina = await pedirAlBackend<Paginated<Producto> | Producto[]>(
-    "/catalog/products/",
-    { params: { slug, page_size: 1 } }
-  );
+  const pagina = await pedirAlBackend<Paginated<Producto> | Producto[]>("/catalog/products/", {
+    params: { slug, page_size: 1 },
+  });
   if (!pagina) return null;
   const [producto] = desempaquetar(pagina);
-  return producto ?? null;
+  // El filtro por slug es exacto, pero se comprueba igual: si el backend
+  // ignorara el parámetro, devolvería el primer producto del catálogo y esta
+  // URL mostraría (e indexaría) un producto que no es el suyo.
+  return producto && producto.slug === slug ? producto : null;
 }
 
 /**
- * Otros productos de la misma categoría, sin el propio. Se resuelven en el
- * servidor (salen en el HTML, enlazan entre fichas) y solo se muestran si de
- * verdad hay alguno: un "También te puede interesar" vacío, o que repite el
- * producto que se está viendo, es peor que no tenerlo.
+ * Productos de la misma categoría, sin el propio.
+ *
+ * Antes eran «los 4 primeros de la categoría», los mismos en todas las fichas:
+ * esos cuatro recibían enlaces desde todas partes y los demás desde ninguna.
+ * Ahora son los que SIGUEN a este en el orden de la categoría (dando la vuelta
+ * al final), así que cada producto recibe enlaces de sus vecinos y ninguno se
+ * queda huérfano.
  */
-async function obtenerRelacionados(producto: Producto): Promise<Producto[]> {
+const RELACIONADOS = 4;
+
+async function obtenerRelacionados(producto: Producto): Promise<{ lista: Producto[]; total: number }> {
   const pagina = await pedirAlBackend<Paginated<Producto> | Producto[]>("/catalog/products/", {
-    params: { categoria: producto.categoria, page_size: 5 },
+    params: { categoria: producto.categoria, page_size: 200 },
   });
-  if (!pagina) return [];
-  return desempaquetar(pagina)
-    .filter((p) => p.id !== producto.id)
-    .slice(0, 4);
+  if (!pagina) return { lista: [], total: 0 };
+  const todos = desempaquetar(pagina);
+  const total = Array.isArray(pagina) ? todos.length : pagina.count;
+  const posicion = todos.findIndex((p) => p.id === producto.id);
+  const otros = posicion < 0 ? todos : [...todos.slice(posicion + 1), ...todos.slice(0, posicion)];
+  return { lista: otros.filter((p) => p.id !== producto.id).slice(0, RELACIONADOS), total };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const [producto, config] = await Promise.all([
-    obtenerProductoPorSlug(slug),
-    configuracionDeLaTienda(),
-  ]);
+  const [producto, config] = await Promise.all([obtenerProductoPorSlug(slug), configuracionDeLaTienda()]);
   if (!producto) return {};
 
-  const nombreNegocio = config?.nombre_empresa;
-  const titulo = `${producto.nombre_producto} · ${producto.categoria_nombre}`;
-  const descripcion =
-    producto.descripcion?.trim() ||
-    `${producto.nombre_producto} para tu negocio${
-      nombreNegocio ? `, con ${nombreNegocio}` : ""
-    }. Pide en línea por ${producto.unidad_base_nombre ?? "unidad"} y recíbelo donde trabajas.`;
+  const titulo = tituloDeProducto(producto);
+  const descripcion = descripcionDeProducto(producto, config?.nombre_empresa);
 
   return {
     title: titulo,
     description: descripcion,
-    alternates: { canonical: `/productos/${slug}` },
+    alternates: { canonical: `/productos/${producto.slug}` },
     openGraph: {
       title: titulo,
       description: descripcion,
       type: "website",
+      url: `/productos/${producto.slug}`,
       ...(producto.imagen_url ? { images: [producto.imagen_url] } : {}),
     },
   };
@@ -85,91 +96,52 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductoPage({ params }: Props) {
   const { slug } = await params;
-  const [producto, { host }, config] = await Promise.all([
+  const [producto, { host }, config, categorias] = await Promise.all([
     obtenerProductoPorSlug(slug),
     negocioDeLaPeticion(),
     configuracionDeLaTienda(),
+    categoriasDeLaTienda(),
   ]);
 
   if (!producto) notFound();
   const nombreNegocio = config?.nombre_empresa;
+  const { lista: relacionados, total: totalCategoria } = await obtenerRelacionados(producto);
 
-  const relacionados = await obtenerRelacionados(producto);
+  const categoria = categorias.find((c) => c.id === producto.categoria);
+  const hrefCategoria = hrefDeCategoria(categoria ?? { id: producto.categoria });
 
   const base = `https://${host}`;
-  const urlProducto = `${base}/productos/${producto.slug}`;
-  const precioDesde = producto.precio_desde ? Number(producto.precio_desde) : null;
-  const agotado = producto.controla_stock === true && Number(producto.disponible ?? 0) <= 0;
   // Todas las fotos reales del producto: la general y las de sus presentaciones.
   const imagenes = Array.from(
     new Set([producto.imagen_url, ...producto.presentaciones.map((p) => p.imagen_url)].filter(Boolean))
   ) as string[];
 
-  const jsonLdProducto = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: producto.nombre_producto,
-    category: producto.categoria_nombre,
-    url: urlProducto,
-    description:
-      producto.descripcion?.trim() ||
-      `${producto.nombre_producto} para tu negocio${
-        nombreNegocio ? `, con ${nombreNegocio}` : ""
-      }. Pide en línea por ${producto.unidad_base_nombre ?? "unidad"} y recíbelo donde trabajas.`,
-    ...(nombreNegocio ? { brand: { "@type": "Brand", name: nombreNegocio } } : {}),
-    // Sin foto propia, el logo del negocio: `image` es obligatorio para Google.
-    ...(imagenes.length > 0
-      ? { image: imagenes }
-      : config?.logo_url
-        ? { image: [config.logo_url] }
-        : {}),
-    ...(precioDesde
-      ? {
-          offers: {
-            "@type": "Offer",
-            url: urlProducto,
-            priceCurrency: "COP",
-            price: precioDesde,
-            availability: agotado
-              ? "https://schema.org/OutOfStock"
-              : "https://schema.org/InStock",
-          },
-        }
-      : {}),
-  };
+  const jsonLdProducto = datosEstructuradosDeProducto(producto, {
+    base,
+    negocio: nombreNegocio,
+    imagenes,
+  });
+  const jsonLdMigas = migasEstructuradas(base, [
+    { nombre: "Inicio", ruta: "/" },
+    { nombre: "Tienda", ruta: "/tienda" },
+    { nombre: producto.categoria_nombre, ruta: hrefCategoria },
+    { nombre: producto.nombre_producto, ruta: `/productos/${producto.slug}` },
+  ]);
 
-  const jsonLdMigas = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Inicio", item: base },
-      { "@type": "ListItem", position: 2, name: "Tienda", item: `${base}/tienda` },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: producto.categoria_nombre,
-        item: `${base}/tienda?categoria=${producto.categoria}`,
-      },
-      { "@type": "ListItem", position: 4, name: producto.nombre_producto, item: urlProducto },
-    ],
-  };
+  const descripcionPropia = producto.descripcion?.trim();
+  const resumen = resumenDeVentaProducto(producto);
+  const presentaciones = producto.presentaciones.filter((p) => Number(p.precio_unitario) > 0);
 
   return (
     <div className="ficha contenedor">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdProducto) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdMigas) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdProducto) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdMigas) }} />
 
       <Migas
         migas={[
           { etiqueta: "Inicio", href: "/" },
           { etiqueta: "Tienda", href: "/tienda" },
-          { etiqueta: producto.categoria_nombre, href: `/tienda?categoria=${producto.categoria}` },
+          { etiqueta: producto.categoria_nombre, href: hrefCategoria },
           { etiqueta: producto.nombre_producto },
         ]}
       />
@@ -181,12 +153,14 @@ export default async function ProductoPage({ params }: Props) {
         producto={producto}
         cabecera={
           <>
-            <Link className="ficha-cat" href={`/tienda?categoria=${producto.categoria}`}>
+            <Link className="ficha-cat" href={hrefCategoria}>
               {producto.categoria_nombre}
             </Link>
             <h1>{producto.nombre_producto}</h1>
-            {producto.descripcion?.trim() && (
-              <p className="ficha-descripcion">{producto.descripcion.trim()}</p>
+            {/* La descripción del negocio si la escribió; si no, lo que el
+                catálogo dice de cómo se vende (nunca una frase de relleno). */}
+            {(descripcionPropia || resumen) && (
+              <p className="ficha-descripcion">{descripcionPropia || resumen}</p>
             )}
           </>
         }
@@ -204,9 +178,44 @@ export default async function ProductoPage({ params }: Props) {
         }
       />
 
+      {/* Todas las presentaciones de un vistazo, en HTML plano: el selector de
+          arriba enseña una a la vez, y esta tabla es lo que distingue de
+          verdad la ficha del mango de la del lulo para quien la lee y para
+          Google. Solo con más de una: con una, ya está todo arriba. */}
+      {presentaciones.length > 1 && (
+        <section className="ficha-presentaciones" aria-labelledby="presentaciones-titulo">
+          <h2 id="presentaciones-titulo">Presentaciones y precios de {producto.nombre_producto.toLowerCase()}</h2>
+          <div className="ficha-presentaciones-marco">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Presentación</th>
+                  <th scope="col">Se vende por</th>
+                  <th scope="col">Precio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {presentaciones.map((p) => (
+                  <tr key={p.id}>
+                    <td>{nombreDePresentacion(p, producto)}</td>
+                    <td>{p.unidad_venta_nombre}</td>
+                    <td>{precioCOP(Number(p.precio_unitario))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       {relacionados.length > 0 && (
         <section className="ficha-relacionados" aria-labelledby="relacionados-titulo">
-          <h2 id="relacionados-titulo">Más de {producto.categoria_nombre}</h2>
+          <div className="ficha-relacionados-cabecera">
+            <h2 id="relacionados-titulo">Más de {producto.categoria_nombre}</h2>
+            <Link href={hrefCategoria} className="ficha-relacionados-todo">
+              Ver {totalCategoria > 0 ? `los ${totalCategoria} productos` : "todo"} de {producto.categoria_nombre.toLowerCase()}
+            </Link>
+          </div>
           <div className="pgrid">
             {relacionados.map((p, i) => (
               <ProductCard key={p.id} producto={p} indice={i} />

@@ -6,7 +6,8 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 import { obtenerLegal } from "@/lib/datos";
 import { resolverDatos } from "@/lib/legal/datos";
 import type { LegalGuardado } from "@/lib/legal/tipos";
-import { useSiteConfig } from "@/componentes/CapaCliente";
+import { useCategoriasDeLaTienda, useSiteConfig } from "@/componentes/CapaCliente";
+import { hrefDeCategoria } from "@/lib/rutas";
 import type { EnlaceCabecera } from "@/componentes/Navbar";
 import { whatsappHref } from "@/lib/utiles";
 import { WhatsAppLineaIcon } from "@/componentes/icons/WhatsAppLineaIcon";
@@ -130,6 +131,7 @@ export function Footer({
   const clase = claseDeVariante(variante, VARIANTES, "footer", "columnas");
   const minimo = clase === "footer--minimo";
   const { config } = useSiteConfig();
+  const categorias = useCategoriasDeLaTienda();
   const [legal, setLegal] = useState<LegalGuardado | null>(null);
   const idTitular = useId();
 
@@ -235,6 +237,18 @@ export function Footer({
               </li>
             )}
           </ul>
+        )}
+        {/* Las categorías, desde todas las páginas: el camino rastreable del
+            inicio a cada categoría y, desde ella, a cada producto. Mismo
+            formato discreto que los enlaces legales de abajo. */}
+        {categorias.length > 0 && (
+          <nav className="footer-legal footer-categorias" aria-label="Categorías de productos">
+            {categorias.map((c) => (
+              <Link key={c.id} href={hrefDeCategoria(c)}>
+                {c.nombre_categoria}
+              </Link>
+            ))}
+          </nav>
         )}
         {mostrar_legal && (
           <nav className="footer-legal" aria-label={legal_titulo}>

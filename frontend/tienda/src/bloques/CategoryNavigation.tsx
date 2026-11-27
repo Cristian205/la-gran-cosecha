@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { LayoutGrid } from "lucide-react";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { obtenerCategorias } from "@/lib/datos";
 import type { Categoria } from "@/lib/tipos";
 import { colorCategoriaTematicoTinte, iconoCategoria } from "@/lib/utiles";
 import { claseDeVariante } from "./Seccion";
 import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
+import { esClicNormal, hrefDeCategoria } from "@/lib/rutas";
 
 /**
  * La navegación de categorías DENTRO del catálogo (CategoryNav) — distinta de
@@ -32,8 +33,11 @@ import { useCatalogoContexto } from "@/contextos/CatalogoContexto";
  * se bajó por la lista, porque quedarse al fondo de una categoría nueva hace
  * creer que se acabaron los productos.
  *
- * Sin `CatalogoProvider` (puesto suelto, fuera de una página de catálogo)
- * cae a enlaces normales a "/tienda?categoria=X".
+ * Cada ficha es SIEMPRE un enlace HTML real a la página de su categoría
+ * (`/tienda/<slug>`), también dentro del catálogo: es lo que Google sigue para
+ * llegar a cada categoría y, desde ahí, a todos sus productos. Dentro de un
+ * `CatalogoProvider`, el clic normal se intercepta y filtra en el sitio, como
+ * siempre; abrir en otra pestaña (Ctrl/⌘, botón central) lleva a la página.
  */
 const VARIANTES = ["pills"] as const;
 
@@ -89,7 +93,7 @@ export function CategoryNavigation({ todos_texto = "Todos", titulo = "", variant
               <Ficha
                 activa={activa === c.id}
                 onClick={() => elegir(c.id)}
-                href={`/tienda?categoria=${c.id}`}
+                href={hrefDeCategoria(c)}
                 enContexto={Boolean(catalogo)}
                 tinte={colorCategoriaTematicoTinte(c.nombre_categoria, c.id)}
                 icono={<Icono size={40} aria-hidden="true" />}
@@ -137,16 +141,21 @@ function Ficha({
     </>
   );
 
-  // Con contexto, un botón que filtra en el sitio; sin él, un enlace normal.
-  if (enContexto) {
-    return (
-      <button type="button" className={clase} style={estilo} onClick={onClick} aria-pressed={activa}>
-        {contenido}
-      </button>
-    );
+  // Con contexto, el clic normal filtra en el sitio (sin navegar); el enlace
+  // sigue ahí para el rastreador y para abrir la categoría en otra pestaña.
+  function alPulsar(e: MouseEvent<HTMLAnchorElement>) {
+    if (!enContexto || !esClicNormal(e)) return;
+    e.preventDefault();
+    onClick();
   }
   return (
-    <Link href={href} className={clase} style={estilo} aria-current={activa ? "page" : undefined}>
+    <Link
+      href={href}
+      className={clase}
+      style={estilo}
+      onClick={alPulsar}
+      aria-current={activa ? (enContexto ? "true" : "page") : undefined}
+    >
       {contenido}
     </Link>
   );

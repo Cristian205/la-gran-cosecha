@@ -5,6 +5,7 @@ import { composicionDe, datosDeLosBloques } from "@/lib/pagina";
 import { configuracionDeLaTienda, tituloDePagina } from "@/lib/negocio";
 import { CatalogoProvider } from "@/contextos/CatalogoContexto";
 import { desempaquetar } from "@/lib/datos";
+import { categoriasDeLaTienda, rutaDeCategoria } from "@/lib/seo";
 import type { Categoria, Paginated, Producto } from "@/lib/tipos";
 
 /**
@@ -16,11 +17,32 @@ import type { Categoria, Paginated, Producto } from "@/lib/tipos";
  * catálogo (`categorias-navegacion`, `catalogo-toolbar`, `grid-productos` en
  * modo interactivo), ver `contextos/CatalogoContexto.tsx`.
  */
-export async function generateMetadata(): Promise<Metadata> {
-  const [config, pagina] = await Promise.all([
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  const [config, pagina, parametros] = await Promise.all([
     configuracionDeLaTienda(),
     composicionDe("/tienda"),
+    searchParams,
   ]);
+
+  // `/tienda?categoria=2` es el catálogo filtrado por el visitante; su
+  // contenido es el de la página propia de esa categoría, que es la que debe
+  // indexarse. El resto de combinaciones (orden, unidad, producto) son la
+  // misma vitrina y apuntan a `/tienda`.
+  const idCategoria = Number(parametros.categoria);
+  if (Number.isInteger(idCategoria) && idCategoria > 0) {
+    const categoria = (await categoriasDeLaTienda()).find((c) => c.id === idCategoria);
+    const ruta = categoria ? rutaDeCategoria(categoria) : null;
+    if (categoria && ruta) {
+      return {
+        title: `${categoria.nombre_categoria}: precios y presentaciones`,
+        alternates: { canonical: ruta },
+      };
+    }
+  }
 
   const titulo = tituloDePagina(pagina?.seo_titulo, config?.nombre_empresa) ?? "Catálogo";
   const descripcion =

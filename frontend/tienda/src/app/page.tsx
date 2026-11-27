@@ -26,13 +26,24 @@ export async function generateMetadata(): Promise<Metadata> {
 
   // El SEO de la página manda sobre el del negocio: es lo específico frente a
   // lo general, y es lo que el administrador escribió pensando en esta ruta.
-  const titulo = pagina?.seo_titulo || config?.nombre_empresa || "Inicio";
+  const nombre = config?.nombre_empresa?.trim() ?? "";
+  const propio = pagina?.seo_titulo?.trim() || nombre || "Inicio";
+  // La plantilla « · <negocio>» del layout NO se aplica a esta página: Next
+  // solo la usa en los segmentos hijos, y el inicio es el mismo segmento que el
+  // layout. Por eso Google veía «Frutas y verduras frescas para tu mesa y tu
+  // negocio» sin la marca. Se añade aquí, salvo que el título ya la lleve.
+  const titulo =
+    nombre && !propio.toLowerCase().includes(nombre.toLowerCase()) ? `${propio} | ${nombre}` : propio;
   const descripcion =
     pagina?.seo_descripcion ||
     config?.mision?.slice(0, 160) ||
     (config ? `Haz tu pedido en línea en ${config.nombre_empresa}.` : "");
 
-  return { title: titulo, description: descripcion };
+  return {
+    title: { absolute: titulo },
+    description: descripcion,
+    alternates: { canonical: "/" },
+  };
 }
 
 export default async function Inicio({

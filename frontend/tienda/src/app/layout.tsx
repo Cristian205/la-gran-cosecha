@@ -4,6 +4,7 @@ import { CapaCliente } from "@/componentes/CapaCliente";
 import { armazonDeLaTienda } from "@/lib/pagina";
 import { configuracionDeLaTienda, negocioDeLaPeticion } from "@/lib/negocio";
 import { datosEstructuradosDelNegocio } from "@/lib/jsonld";
+import { categoriasDeLaTienda } from "@/lib/seo";
 import {
   colorDeMarca,
   estiloDeTarjeta,
@@ -60,7 +61,10 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     // Abierta desde el ícono del iPhone, a pantalla completa como una app.
     appleWebApp: { capable: true, title: nombre, statusBarStyle: "default" },
-    alternates: { canonical: "/" },
+    // SIN `alternates.canonical` aquí: lo heredaba toda página que no
+    // declarara el suyo —el 404, el checkout, «mis pedidos»— y les decía a
+    // Google que eran copias del inicio. Cada página declara su propia URL
+    // canónica (el inicio, en `app/page.tsx`).
   };
 }
 
@@ -98,6 +102,11 @@ export default async function RootLayout({
 
   const { host } = await negocioDeLaPeticion();
   const jsonLd = datosEstructuradosDelNegocio(config, host);
+  // Para los enlaces del pie. Un fallo aquí no puede tumbar la tienda entera:
+  // sin categorías el pie sale como siempre.
+  const categorias = (await categoriasDeLaTienda().catch(() => [])).filter(
+    (c) => c.slug && (c.num_productos ?? 1) > 0
+  );
 
   // En la vista de prueba manda lo que propone la plantilla, encima del tema
   // del negocio. Va DESPUES en la hoja, que es como gana en CSS.
@@ -167,7 +176,7 @@ export default async function RootLayout({
         }
       >
         <PantallaArranque nombre={config.nombre_empresa || "Tienda en línea"} logoUrl={config.logo_url} />
-        <CapaCliente config={config}>
+        <CapaCliente config={config} categorias={categorias}>
           {/*
             La cabecera y el pie salen de la composicion de `/_layout`, con sus
             textos, sus enlaces y su visibilidad por dispositivo — el mismo
